@@ -91,15 +91,18 @@ Notation used in the tables:
 the <A HREF="#TOP">results</A> or the <A HREF="#TOP">log file</A> 
 links under the machine names for more information.
 </ul>
-Scores shown below each day are the ratio of achieved and maximum possible
-total test results some weights for the machines and for the tests
-based on their relevance for certain projects (CCHM, CWMM, CRASH). 
-The test results themselves are given a simple numeric value
+The test results are given a simple numeric value for quantitative evaluation:
 <ul>
 <li>1.0 - <FONT COLOR=green>passed</FONT>
 <li>0.5 - <FONT COLOR=red>result</FONT>
-<li>0.1 - <FONT COLOR=red>run</FONT>
+<li>0.1 - <FONT COLOR=red>run</FONT> or <FONT COLOR=red>rundir</FONT>
 <li>0.0 - <FONT COLOR=red>compile</FONT>
 </ul>
-The same scores are saved into the <b>all_scores.txt</b> files in the
-<A HREF=SWMF_TEST_RESULTS>test result archive</A>.
+The score shown below each day is the success rate of all the tests that
+were performed that day on all the machines.
+If the score is green, then either too few tests were
+done or the success ratio was too low (below 95 per cent).
+If the score is green, the master Git branch is merged into the stable 
+Git branch for all repositories that have a stable branch.
+The scores are also saved into the <b>all_scores.txt</b> files in the
+<A HREF=SWMF_TEST_RESULTS>test result archive</A> for each day.

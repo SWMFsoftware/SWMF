@@ -11,7 +11,7 @@ my $SiteDir = `pwd`; chop($SiteDir);
 my $MinScore = 600;  # minimum for total score: most tests ran
 my $MinRate  = 0.95; # minimum 95% success rate
 my $merge_stable =   # command to merge master into stable branch
-    'cd SWMF/GM/BATSRUS; git pull --depth=10000; git checkout stable; git merge master; git push';
+    'cd SWMF && gitall checkout stable && git pull --depth=1000 && git merge master && git push';
 
 # weights for each platform to calculate skill scores
 my %WeightMachine = (
@@ -296,17 +296,17 @@ foreach $day (@days){
     # Calculate score per centages and save them into file and table
     my $score = sprintf("%.1f", 100*$Scores/($MaxScores+1e-30)). '%';
 
-    if($merge_stable){
-	print "day=$day score=$score MaxScores=$MaxScores\n";
-	if($MaxScores > $MinScore and $Scores > $MinRate*$MaxScores){
+    print "day=$day score=$score MaxScores=$MaxScores\n";
+    if($MaxScores > $MinScore and $Scores > $MinRate*$MaxScores){
+	$Table =~ s/_SCORE_/$score/;
+	if($merge_stable){
 	    print "$merge_stable\n";
 	    `$merge_stable`;
 	}
-	$merge_stable = '';
+    }else{
+	$Table =~ s/GREEN\>_SCORE_/RED\>$score/;
     }
-
-    $Table =~ s/_SCORE_/$score/;
-
+#    $merge_stable = '';
     open SCORE, ">$day/all_scores.txt";
     $score =~ s/, /\n/g;
     print SCORE "ALL: $score\n";
