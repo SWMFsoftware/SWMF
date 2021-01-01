@@ -88,7 +88,7 @@ foreach (@Arguments){
 my $gitclone;
 $gitclone  = "sleep $Sleep; " if $Sleep;
 $gitclone .= "git clone";
-$gitclone .= " --depth=1" unless $History;
+$gitclone .= " --depth=1 --no-single-branch" unless $History;
 $gitclone .= ' '.$remote;
 
 my $repo;
