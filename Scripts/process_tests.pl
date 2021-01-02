@@ -40,7 +40,6 @@ my $resfile = "test_swmf.res";
 my $htmlfile = "test_swmf.html";
 my $logfile = "test_swmf.log";
 my $indexfile = "index.html";
-my $changefile = "test.diff";
 my $codefile = "code.diff";
 my $manerrorfile = "manual.err";
 my $paramerrorfile = "param.err";
@@ -260,24 +259,12 @@ foreach $day (@days){
 		    $Scores    += $WeightMachine*$score;
 		}
 
+		# Indicate changes with upper case
 		if($day eq $days[0] or $day eq $days[1]){
 		    my $resultnew = $result{$days[0]}{$test}{$machine};
 		    my $resultold = $result{$days[1]}{$test}{$machine};
 
-		    # remove HTML (font colors)
-		    $resultnew =~ s/<[^>]*>//g; 
-		    $resultold =~ s/<[^>]*>//g;
-
-		    $resultnew .= " failed" 
-			unless $resultnew =~ /passed|failed/;
-		    $resultold .= " failed" 
-			unless $resultold =~ /passed|failed/;
-
-		    if($resultnew ne $resultold){
-			$change{"$test on $machine     today: $resultnew\n"
-				    ."$test on $machine yesterday: $resultold\n\n"}++;
-			$result = uc($result);
-		    }
+		    $result = uc($result) if $resultnew ne $resultold;
 		}
 
 		# Add HTML link for failed tests
@@ -293,32 +280,29 @@ foreach $day (@days){
 	$Table .= "  </tr>\n";
     }
 
-    # Calculate score per centages and save them into file and table
+    # Calculate success rate score and save it into file and table
     my $score = sprintf("%.1f", 100*$Scores/($MaxScores+1e-30)). '%';
 
     print "day=$day score=$score MaxScores=$MaxScores\n";
+    unlink "$day/stable.txt", "$day/unstable.txt";
     if($MaxScores > $MinScore and $Scores > $MinRate*$MaxScores){
-	$Table =~ s/_SCORE_/$score/;
-	if($merge_stable){
+	$Table =~ s/_SCORE_/$score/; # stable score is green
+	# Merge last day into stable branch if it has not been done yet
+	if($day eq $days[0] and not -f "$day/stable.txt"){
 	    print "$merge_stable\n";
 	    `$merge_stable`;
 	}
+	open SCORE, ">$day/stable.txt";          # indicates stable score
     }else{
-	$Table =~ s/GREEN\>_SCORE_/RED\>$score/;
+	$Table =~ s/GREEN\>_SCORE_/RED\>$score/; # unstable score is red
+	open SCORE, ">$day/unstable.txt";        # indicate unstable score
     }
-    $merge_stable = '';
-    open SCORE, ">$day/all_scores.txt";
-    $score =~ s/, /\n/g;
-    print SCORE "ALL: $score\n";
+    print SCORE "ALL: $score\n";                 # set/update score
     close SCORE;
 
     $Table .= "  </tr>\n</table>\n";
 }
 $Table .= "</center>\n";
-
-open CHANGE, ">$changefile" or die "$ERROR: could not open $changefile\n";
-print CHANGE sort keys %change;
-close CHANGE;
 
 open FILE, ">$indexfile" or die "$ERROR: could not open $indexfile\n";
 
@@ -363,14 +347,6 @@ if(-s $codefile){
     print FILE "
 <h3><A HREF=$codefile TARGET=swmf_code_changes>
 Source code changed: diff -r SWMF SWMF_yesterday
-</A></h3>
-";
-}
-
-if(-s $changefile){
-    print FILE "
-<h3><A HREF=test.diff TARGET=swmf_test_summary>
-Summary of test differences between $days[0] and $days[1]
 </A></h3>
 ";
 }
