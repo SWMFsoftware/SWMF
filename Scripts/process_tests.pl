@@ -284,17 +284,18 @@ foreach $day (@days){
     my $score = sprintf("%.1f", 100*$Scores/($MaxScores+1e-30)). '%';
 
     print "day=$day score=$score MaxScores=$MaxScores\n";
-    unlink "$day/stable.txt", "$day/unstable.txt";
     if($MaxScores > $MinScore and $Scores > $MinRate*$MaxScores){
 	$Table =~ s/_SCORE_/$score/; # stable score is green
 	# Merge last day into stable branch if it has not been done yet
 	if($day eq $days[0] and not -f "$day/stable.txt"){
 	    print "$merge_stable\n";
-	    `$merge_stable`;
+	    print `$merge_stable`;
 	}
+	unlink "$day/unstable.txt";
 	open SCORE, ">$day/stable.txt";          # indicates stable score
     }else{
 	$Table =~ s/GREEN\>_SCORE_/RED\>$score/; # unstable score is red
+	unlink "$day/stable.txt";
 	open SCORE, ">$day/unstable.txt";        # indicate unstable score
     }
     print SCORE "ALL: $score\n";                 # set/update score
