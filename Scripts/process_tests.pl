@@ -11,11 +11,13 @@ my $SiteDir = `pwd`; chop($SiteDir);
 my $MinScore = 600;  # minimum for total score: most tests ran
 my $MinRate  = 0.95; # minimum 95% success rate
 my $merge_stable =   # command to merge master into stable branch
-    'cd SWMF && gitall checkout stable && git pull --depth=1000 && git merge master && git push';
+    'cd SWMF && share/Scripts/gitall "checkout stable && ' . 
+    'git pull --depth=100 && git merge master && git push"';
 
 # weights for each platform to calculate skill scores
 my %WeightMachine = (
     "pleiades"     => "1.0",  # ifort pleiades
+    "pgi"          => "0.0",  # pgif90 pleiades
     "gfortran"     => "1.0",  # gfortran optimized
     "grid"         => "1.0",  # nagfor debug
     "mesh"         => "1.0",  # nagfor optimized
@@ -24,6 +26,7 @@ my %WeightMachine = (
 # Describe machine in the Html table
 my %HtmlMachine = (
     "pleiades"     => "ifort<br>pleiades",
+    "pgi"          => "pgf90<br>pleiades",
     "gfortran"     => "gfortran<br>optimized",
     "grid"         => "nagfor<br>debug",
     "mesh"         => "nagfor<br>optimized",
@@ -289,7 +292,7 @@ foreach $day (@days){
 	# Merge last day into stable branch if it has not been done yet
 	if($day eq $days[0] and not -f "$day/stable.txt"){
 	    print "$merge_stable\n";
-	    print `$merge_stable`;
+	    print `$merge_stable 2>&1`;
 	}
 	unlink "$day/unstable.txt";
 	open SCORE, ">$day/stable.txt";          # indicates stable score
