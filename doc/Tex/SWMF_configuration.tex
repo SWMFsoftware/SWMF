@@ -242,11 +242,9 @@ in the main SWMF directory
 \begin{verbatim}
 Config.pl -o=GM:e=MhdIonsPe
 \end{verbatim}
-The grid sizes of the various components can be set with the 
-{\tt -g} flag of the {\tt Config.pl} script.
-For example the
+To set the grid for GITM, for example, 
 \begin{verbatim}
-  Config.pl -g=UA:36,36,50,16
+  Config.pl -o=UA:g=36,36,50,16
 \end{verbatim}
 will set the blocks size to $36\times 36\times 50$ and the number of blocks to 
 16 for the UA/GITM2 component. This command runs the {\tt Config.pl}
