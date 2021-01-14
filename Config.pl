@@ -140,7 +140,6 @@ my %Version;               # Hash table to get version for a component
 my $ListVersions;
 my $ShowShort;
 my @NewVersion;
-my $GridSize;
 my $Options;
 
 # Set actions based on the switches
@@ -148,7 +147,6 @@ foreach (@Arguments){
     if(/^-l(ist)?$/)          {$ListVersions=1;                 next;}
     if(/^-s$/)                {$ShowShort=1;                    next;}
     if(/^-v=(.*)/)            {push(@NewVersion,split(/,/,$1)); next;}
-    if(/^-g=(.*)/)            {$GridSize.="$1,";                next;}
     if(/^-o=(.*)/)            {$Options.=",$1";                 next;}
     if(/^-sleep=\d+/)         {next;}
     
@@ -190,8 +188,6 @@ if($Installed){
 	if $Version{"SC"} eq "BATSRUS" and not -f "SC/BATSRUS/src/Makefile";
 
 }
-
-&set_grid_size if $GridSize;
 
 &set_options if $Options;
 
@@ -366,32 +362,6 @@ sub set_versions{
 
 ##############################################################################
 
-sub set_grid_size{
-
-    # Create a %GridSize{CompID} hash from the GridSize string
-    my %GridSize;
-    while( $GridSize =~ s/^($ValidComp)[:,]([\d,\/]+)// ){
-	my $Comp=$1;
-	my $Grid=$2;
-	$Grid =~ s/,$//;            # remove trailing comma
-	$GridSize{$Comp} = $Grid;
-    }
-    
-    die "$ERROR -g=...$GridSize has incorrect format\n" if $GridSize;
-
-    # Set the size of the grid for all the components listed in %GridSize
-    my $Comp;
-    foreach $Comp (sort keys %GridSize){
-	die "$ERROR -g=..$Comp:.. version is not known for this component\n"
-	    unless $Version{$Comp};
-
-	&shell_command("cd $Comp/$Version{$Comp}; ".
-		       "./$ConfigScript -g=$GridSize{$Comp}");
-    }
-}
-
-##############################################################################
-
 sub set_options{
 
     # Create a %Options{CompID} hash from the Options string
@@ -494,10 +464,6 @@ sub print_help{
 	       in combination with the -install and -clone options. 
                Default is set by the \$GITLABSLEEP environment variable.
 
--g=ID:GRIDSIZE set the size of the grid to GRIDSIZE for the component 
-               identified with ID. This flag can occur multiple times and/or 
-               multiple grid sizes can be given in a comma separated list.
-
 -o=ID:OPTIONS  set options OPTIONS for the component identified with ID.
                This flag can occur multiple times and/or options for
                multiple components can be given in a comma separated list.
@@ -538,7 +504,7 @@ Select IH/BATSRUS, IM/RCM2 and UA/GITM2 component versions:
 
 Set the grid size for GM and IH:
 
-    Config.pl -g=GM:8,8,8,400,100 -g=IH:6,6,6,800,1
+    Config.pl -o=GM:g=8,8,8,IH:g=6,6,6
 
 Show the currently set options for the GM and SC component:
 
