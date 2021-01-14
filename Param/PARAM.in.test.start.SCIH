@@ -1,23 +1,20 @@
 For a single-temperature solar wind simulation, configure SWMF with
 
 ./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
-./Config.pl -o=SC:u=Awsom,e=MhdWaves
-./Config.pl -o=IH:u=Awsom,e=MhdWaves
-./Config.pl -g=SC:6,4,4,IH:4,4,4
+./Config.pl -o=SC:u=Awsom,e=MhdWaves,g=6,4,4
+./Config.pl -o=IH:u=Awsom,e=MhdWaves,g=4,4,4
 
 For a two-temperature solar wind simulation, configure SWMF with
 
 ./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
-./Config.pl -o=SC:u=Awsom,e=Awsom
-./Config.pl -o=IH:u=Awsom,e=Awsom
-./Config.pl -g=SC:6,4,4,IH:4,4,4
+./Config.pl -o=SC:u=Awsom,e=Awsom,g=6,4,4
+./Config.pl -o=IH:u=Awsom,e=Awsom,g=4,4,4
 
-For a three-temperature solar wind simulation, configure SWMF with
+For a three-temperature solar wind simulation with 5th order scheme use
 
 ./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
-./Config.pl -o=SC:u=Awsom,e=AwsomAnisoPi
-./Config.pl -o=IH:u=Awsom,e=AwsomAnisoPi
-./Config.pl -g=SC:6,8,8,IH:8,8,8
+./Config.pl -o=SC:u=Awsom,e=AwsomAnisoPi,ng=3,g=6,8,8
+./Config.pl -o=IH:u=Awsom,e=AwsomAnisoPi,ng=3,g=8,8,8
 
 Begin session: 1
 
