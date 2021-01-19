@@ -1896,7 +1896,7 @@ test12_aniso:
 
 test12_aniso_compile:
 	./Config.pl -v=Empty,PC/IPIC3D2,GM/BATSRUS
-	./Config.pl -o=GM:u=Waves,e=MhdAnisoP,ng=2,,g=8,8,1
+	./Config.pl -o=GM:u=Waves,e=MhdAnisoP,ng=2,g=8,8,1
 	$(MAKE) SWMF
 	$(MAKE) PIDL
 	
