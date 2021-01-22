@@ -30,9 +30,9 @@ module CON_coupler
   integer, parameter :: lTypeGeometry = 15
   integer, parameter :: lNameVar      = 500
 
-  type CoordSystemType    
-     real, dimension(:),pointer    :: Coord1_I, Coord2_I, Coord3_I
-     integer, dimension(3)         :: nCoord_D
+  type CoordSystemType
+     integer                       :: nCoord_D(3) = 0
+     real, pointer                 :: Coord1_I(:), Coord2_I(:), Coord3_I(:)
      character (len=lTypeCoord)    :: TypeCoord
      character (len=lTypeGeometry) :: TypeGeometry
      integer                       :: nVar
@@ -209,7 +209,7 @@ module CON_coupler
   ! 09/07/03 I.Sokolov - bug fixes in init_coord_system_all and
   !                 in set_coord_system. Add gen_to_stretched and 
   !                 streched_to_gen
-  ! 08/10/04 I.Sokolov - to avoid an inproper use of init_coord_system_all
+  ! 08/10/04 I.Sokolov - to avoid an improper use of init_coord_system_all
   !                      which destroys the Grid_C structure. 
   ! 01/30/10 G. Toth - added nVar and NameVar to Grid_C
   ! 04/07/11 R. Oran - added subroutine set_couple_var_info for determining
@@ -350,7 +350,7 @@ contains
               Grid_C(iComp)%Coord1_I, &
               Grid_C(iComp)%Coord2_I, &
               Grid_C(iComp)%Coord3_I)
-         Grid_C(iComp)%nCoord_D    = 0
+!!!      Grid_C(iComp)%nCoord_D    = 0 !!! pgf90 20.4 with debug flags fails on this
          Grid_C(iComp)%TypeCoord   = '???'
          Grid_C(iComp)%TypeGeometry = 'cartesian'
          Grid_C(iComp)%nVar         = 0
