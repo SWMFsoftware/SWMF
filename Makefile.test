@@ -1553,35 +1553,35 @@ test17_run:
 	
 
 test17_check:
-	-@(${DIFFNUM} -b -r=1e-7 \
+	-@(${DIFFNUM} -b -r=1e-7 -a=1e-14 \
 	   ${TESTDIR}/RESULTS/2restart/PC/z=0_fluid_region0_0_t00000005_n00000004.out \
 	   output/test17/z=0_FLEKS0.ref.gz \
 		> test17.diff)
-	-@(${DIFFNUM} -b -r=1e-7 \
+	-@(${DIFFNUM} -b -r=1e-7 -a=1e-14 \
 	   ${TESTDIR}/RESULTS/2restart/PC/z=0_fluid_region1_0_t00000004_n00000007.out \
 	   output/test17/z=0_FLEKS1.ref.gz \
 		>> test17.diff)
-	-@(${DIFFNUM} -b -r=1e-7 \
+	-@(${DIFFNUM} -b -r=1e-7 -a=1e-14 \
 	   ${TESTDIR}/RESULTS/4steps/PC/z=0_fluid_region0_0_t00000005_n00000004.out \
 	   output/test17/z=0_FLEKS0.ref.gz \
 		>> test17.diff)
-	-@(${DIFFNUM} -b -r=1e-7 \
+	-@(${DIFFNUM} -b -r=1e-7 -a=1e-14 \
 	   ${TESTDIR}/RESULTS/4steps/PC/z=0_fluid_region1_0_t00000004_n00000007.out \
 	   output/test17/z=0_FLEKS1.ref.gz \
 		>> test17.diff)					
-	-@(${DIFFNUM} -b -r=1e-7 \
+	-@(${DIFFNUM} -b -r=1e-7 -a=1e-14 \
 	   ${TESTDIR}/RESULTS/2restart/GM/z=0_var_1_t00000005_n00000004.out \
 	   output/test17/z=0_GM.ref.gz \
 		>> test17.diff)
-	-@(${DIFFNUM} -b -r=1e-7 \
+	-@(${DIFFNUM} -b -r=1e-7 -a=1e-14 \
 	   ${TESTDIR}/RESULTS/4steps/GM/z=0_var_1_t00000005_n00000004.out \
 	   output/test17/z=0_GM.ref.gz \
 		>> test17.diff)
-	-@(${DIFFNUM} -b -r=1e-7 \
+	-@(${DIFFNUM} -b -r=1e-7 -a=1e-14 \
            ${TESTDIR}/RESULTS/adapt/PC/z=0_fluid_region0_0_t00000010_n00000008.out \
            output/test17/z=0_FLEKS_adapt.ref.gz \
                 >> test17.diff)
-	-@(${DIFFNUM} -b -r=1e-7 \
+	-@(${DIFFNUM} -b -r=1e-7 -a=1e-14 \
            ${TESTDIR}/RESULTS/adapt/GM/z=0_var_1_t00000010_n00000008.out \
            output/test17/z=0_GM_adapt.ref.gz \
                 >> test17.diff)
@@ -1618,7 +1618,7 @@ test18_run:
 	cd ${TESTDIR}; ./PostProc.pl RESULTS
 
 test18_check:
-	-@(${DIFFNUM} -b -r=1e-6 \
+	-@(${DIFFNUM} -b -r=1e-6 -a=1e-15 \
 		${TESTDIR}/RESULTS/PC/3d_var_region0_0_t00000016_n00000016.out \
 		output/test18/3d.ref.gz \
 		> test18.diff)
