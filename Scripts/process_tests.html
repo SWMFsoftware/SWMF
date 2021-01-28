@@ -48,41 +48,41 @@ the results per year, month and day.
       <td>gfortran,gcc_mpicc</td>
       <td>gfortran 10.2</td>
       <td>openmpi 4.0.1</td>
-      <td>NP=1</td>
+      <td>NP=1, NTHREAD=2</td>
       <td><font color=RED>OMPI_CXX=g++-mp-10, OMPI_CC=gcc-mp-10</font></td>
   </tr>
   <tr>
       <td><b>grid</b></td>
       <td>iMac with quad-core Intel i7</td>
       <td>nagfor,gcc_mpicc</td>
-      <td>NAGFOR v6.2(6207) with gcc 9.3<br>-debug -O0</td>
+      <td>NAGFOR v6.2(6210) with gcc 9.3<br>-debug -O0</td>
       <td>mpich-3.2.1</td>
-      <td>NP=2</td>
+      <td>NP=2, NTHREAD=1</td>
   </tr>
   <tr>
       <td><b>mesh</b></td>
       <td>iMac with quad-core Intel i7</td>
       <td>nagfor,gcc_mpicc</td>
-      <td>NAGFOR 6.2 (6106) with gcc 9.3</td>
+      <td>NAGFOR 6.2 (6210) with gcc 9.3</td>
       <td>mpich-3.2.1</td>
-      <td>NP=4</td>
+      <td>NP=4, NTHREAD=2</td>
   </tr>
   <tr>
       <td><b>pleiades</b></td>
       <td>SGI ICE, Broadwell cores</td>
       <td>ifortmpif90,iccmpicxx</td>
-      <td>comp-intel/2018.3.222, gcc/6.2</td>
-      <td><font color=RED></font>mpi-sgi/mpt.2.15r20</td>
-      <td>NP=8</td>
+      <td>comp-intel/2016.2.181, gcc/6.2</td>
+      <td>mpi-sgi/mpt.2.15r20</td>
+      <td>NP=8, NTHREAD=2</td>
       <td><font color=RED>MPICC_CC=icc, MPICXX_CXX=icpc</font></td>
   </tr>
   <tr>
       <td><b>pleiades</b></td>
-      <td>SGI ICE, CPU+GPU</td>
+      <td>Skylake CPU, V100 GPU</td>
       <td>pgf90,pgccmpicxx</td>
-      <td>purge,comp-pgi</td>
-      <td><font color=RED></font>mpi-hpe</td>
-      <td>NP=8</td>
+      <td>purge, comp-pgi<br>-O1</td>
+      <td>mpi-hpe</td>
+      <td>NP=8, NTHREAD=1, OpenACC</td>
       <td><font color=RED>MPICC_CC=pgcc, MPICXX_CXX=pgc++</font></td>
   </tr>
 </table>
