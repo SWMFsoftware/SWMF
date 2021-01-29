@@ -1,0 +1,75 @@
+#!/bin/tcsh
+
+# This script checks out the latest version of the SWMF, 
+# executes the SWMF tests and sends the results back. 
+# This script is meant to be used by the SWMF developers. 
+# Most users should execute the SWMF test by simply typing
+#
+# make test 
+#
+# in the main directory of an installed SWMF distribution.
+#
+# The script is written to be fairly general, but some 
+# customization may be necessary. 
+#
+# You can place this script anywhere, e.g. in your home directory, 
+# your personal bin/ directory.
+#
+# The script can be executed by simply typing 
+#
+# ./test_swmf
+#
+# To run the SWMF tests perodically, you can use the crontab facility.
+# Type 'crontab -e' to add a new entry to your crontab.
+# Here is the crontab used on pleiades for nightly runs at 4:30 pm (7:30pm EST)
+# and then scp the results back to herot at 5:30 am (8:30 am EST).
+#
+# MAILTO=""
+# 30 16 * * * $HOME/bin/test_swmf
+# 30 05 * * * scp $HOME/Tmp/SWMF/test_swmf.??? gtoth@herot.engin.umich.edu:Sites/Current/pleiades/
+# 
+# The MAILTO="" tells crontab not to send an automated e-mail.
+
+# The script starts here
+
+# Execute systemwide startup files (may or may not be necessary)
+source /etc/csh.cshrc
+
+# Go to your home directory
+cd $HOME
+
+# execute local startup file (may or may not be necessary)
+source .cshrc
+
+# update SWMF_data and CRASH_data
+#cd $HOME/SWMF_data; git pull
+#cd $HOME/CRASH_data; git pull
+#cd $HOME
+
+# Create a temporary directory for the tests
+mkdir -p /nobackup/gtoth1/Tmp_pgi
+cd /nobackup/gtoth1/Tmp_pgi
+
+# Remove the previous test directories if necessary
+rm -rf SWMF BATL HYPRE
+
+# Checkout and install the latest code
+gitclone SWMF
+
+# Install part of the code. CIMI2 does not work with pgf90
+cd SWMF
+./Config.pl -install=BATSRUS,RCM2,Ridley_serial,RBE,FLEKS,PWOM -compiler=pgf90,pgccmpicxx -O1 >& test_swmf.log
+
+# Clone libraries now, because they cannot be cloned from compute nodes
+gitclone AMREX util/AMREX
+#gitclone HYPRE util/HYPRE  # HYPRE does not compile with pgcc
+
+#gitclone BATL # BATL tests do not work with pgf90
+#cd BATL
+#./Config.pl -install -compiler=pgf90,pgccmpicxx -O1 >>& ../test_swmf.log
+#cd /nobackup/gtoth1/Tmp_pgi
+
+#
+# Submit job
+#
+/PBS/bin/qsub /u/gtoth1/bin/test_swmf_pgi.job
