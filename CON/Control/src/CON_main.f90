@@ -194,6 +194,10 @@ contains
     !\end{itemize}
     ! The actual code is longer: verbose information is printed, timing
     ! report is shown and the SWMF.SUCCESS and SWMF.DONE files are written.
+
+    use ModConst, ONLY: &
+         cSecondPerYear, cSecondPerDay, cSecondPerHour, cSecondPerMinute
+    
     !EOP ---------------------------------------------------------------------
 
     if(is_proc0())then
@@ -201,10 +205,26 @@ contains
           write(*,*)
           write(*,'(a)')'    Finished Numerical Simulation'
           write(*,'(a)')'    -----------------------------'
-          if (DoTimeAccurate)   write(*, '(a,e13.5,a,f12.6,a,f12.6,a)') &
-               '   Simulated Time T = ',tSimulation, &
-               ' (',tSimulation/60.00, &
-               ' min, ',tSimulation/3600.00,' hrs)'
+          if (DoTimeAccurate)then
+             write(*, '(a,es13.5,a)') &
+               '   Simulated time = ', tSimulation, ' s '
+             if(tSimulation > 1e6*cSecondPerYear) then
+                write(*, '(a,es13.5,a)') &
+                     tSimulation/cSecondPerYear
+             elseif(tSimulation > cSecondPerYear) then
+                write(*, '(a,f13.6,a)') '    Simulated time = ', &
+                     tSimulation/cSecondPerYear, ' years'
+             elseif(tSimulation > cSecondPerDay) then
+                write(*, '(a,f13.6,a)') '    Simulated time = ', &
+                     tSimulation/cSecondPerDay, ' days'
+             elseif(tSimulation > cSecondPerHour) then
+                write(*, '(a,f13.6,a)') '    Simulated time = ', &
+                     tSimulation/cSecondPerHour, ' hours'
+             elseif(tSimulation > cSecondPerMinute) then
+                write(*, '(a,f13.6,a)') '    Simulated time = ', &
+                     tSimulation/cSecondPerMinute, ' mins'
+             end if
+          end if
        end if
     end if
     if (DnTiming > -2) call timing_report
