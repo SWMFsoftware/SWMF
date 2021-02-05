@@ -14,6 +14,7 @@ MODULES = \
 	CON_grid_descriptor.o\
 	CON_router.o\
 	CON_global_message_pass.o\
+	CON_mflampa.o\
 	CON_coupler.o\
 	CON_couple_points.o\
 	CON_transfer_data.o
