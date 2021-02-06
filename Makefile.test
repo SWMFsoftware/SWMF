@@ -489,7 +489,7 @@ test_swpc_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2,RB/RBE
 	./Config.pl -o=GM:u=Default,e=Mhd,ng=2,g=8,8,8,IE:g=91,181
 	${MAKE} SWMF
-	make PIDL
+	make PIDL INTERPOLATE
 
 test_swpc_rundir:
 	rm -rf ${TESTDIR}
@@ -498,6 +498,7 @@ test_swpc_rundir:
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in_SWPC_v2_init
 	perl -pi -e 'if(/MaxIter|MaxBlock/){s/700/70/; s/1500/200/; s/5000/350/}; s/#BORIS/BORIS/; s/^\#(COMPONENTMAP.*production)/$$1/i; s/^(COMPONENTMAP.*nightly)/\#$$1/i' ${TESTDIR}/PARAM.in_SWPC_v2_init
 	cp ${TESTDIR}/PARAM.in_SWPC_v2_init ${TESTDIR}/PARAM.in
+	ln -s ${BINDIR}/INTERPOLATE.exe ${TESTDIR}/
 
 test_swpc_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
@@ -509,6 +510,7 @@ test_swpc_restart:
 	cd ${TESTDIR}; cp PARAM.in_SWPC_v2_restart PARAM.in
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_restart
 	cd ${TESTDIR}; ./PostProc.pl -noptec
+	cd ${TESTDIR}; ./INTERPOLATE.exe < INTERPOLATE.in
 
 test_swpc_check:
 	-@(${DIFFNUM} -b -r=1e-5 -a=1e-8 \
