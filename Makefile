@@ -66,7 +66,8 @@ help:
 	@#^CMP END IE
 	@#^CMP IF GM BEGIN
 	@echo '    PIDL        (bin/PostIDL.exe post-processes *.idl files)'
-	@echo '    SNAPSHOT    (SNAPSHOT.exe extract snapshots from *.outs movies)'
+	@echo '    SNAPSHOT    (SNAPSHOT.exe extract snapshots from *.outs files)'
+	@echo '    INTERPOLATE (INTERPOLATE.exe interpolate from *.outs files)'
 	@echo '    EARTH_TRAJ  (bin/EARTH_TRAJ.exe generates Earth trajectory)'
 	@echo '    ALL         (make SWMF PIDL EARTH_TRAJ)'
 	@#^CMP END GM
@@ -224,6 +225,10 @@ FDIPS:	ENV_CHECK
 
 SNAPSHOT: ENV_CHECK
 	cd GM/BATSRUS; $(MAKE) SNAPSHOT
+	@echo ' '
+
+INTERPOLATE: ENV_CHECK
+	cd GM/BATSRUS; $(MAKE) INTERPOLATE
 	@echo ' '
 
 #
