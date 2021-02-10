@@ -1,17 +1,18 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !
-!QUOTE: \clearpage
+! QUOTE: \clearpage
 !
-!BOP -------------------------------------------------------------------
+! BOP -------------------------------------------------------------------
 !
-!QUOTE: \section{CON/Stubs: Wrapper and Coupler for Stub Components}
+! QUOTE: \section{CON/Stubs: Wrapper and Coupler for Stub Components}
 !
-!MODULE: CON_wrapper_stub - Stub wrapper for component specific subroutines
+! MODULE: CON_wrapper_stub - Stub wrapper for component specific subroutines
 !
 !DESCRIPTION:
 !
-! Contains general subroutines which mimic the behaviour of the 
+! Contains general subroutines which mimic the behaviour of the
 ! physics components. Based on the real wrapper and the real physical
 ! components. Selectt INTVERION = Stubs in Makefile.def and you can select
 ! the Empty version for all the components.
@@ -89,7 +90,7 @@ module CON_wrapper
   ! 30Jul03 - Gabor Toth <gtoth@umich.edu> - initial prototype/prolog/code
   !                                          based on the actual wrapper
   ! 20Jul04 - Gabor Toth added exceptions for SP coupling (experimental)
-  !EOP ___________________________________________________________________
+  ! EOP ___________________________________________________________________
 
   character(len=*),parameter :: NameMod='CON_wrapper_stub'
 
@@ -100,44 +101,42 @@ module CON_wrapper
   integer, dimension(MaxComp) :: nRestart_C=0
 
   character (len=100) :: NameFile, NameCommand
-  
-contains
 
-  !BOP -------------------------------------------------------------------
-  !IROUTINE: set_param_name - Set parameters for component given by name
+contains
+  !============================================================================
+
+  ! BOP -------------------------------------------------------------------
+  ! IROUTINE: set_param_name - Set parameters for component given by name
   !
   !INTERFACE:
   subroutine set_param_name(NameComp,TypeAction)
-
-    implicit none
 
     !INPUT PARAMETERS:
     !
     character(len=*), intent(in)           :: NameComp, TypeAction
 
     !DESCRIPTION:
-    ! This routine calls set\_param\_id with the component ID defined by the 
+    ! This routine calls set\_param\_id with the component ID defined by the
     ! name of the component.
 
     !REVISION HISTORY:
     ! 29Aug03 - G. Toth <gtoth@umich.edu> - initial prototype
-    !EOP ___________________________________________________________________
+    ! EOP ___________________________________________________________________
 
-    character(len=*),parameter :: NameSub=NameMod//'.set_param_name'
-
-    !-------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'set_param_name'
+    !--------------------------------------------------------------------------
     call set_param_id(i_comp(NameComp),TypeAction)
 
   end subroutine set_param_name
+  !============================================================================
 
-  !BOP -------------------------------------------------------------------
-  !IROUTINE: set_param_id - Set parameters for component given by ID
+  ! BOP -------------------------------------------------------------------
+  ! IROUTINE: set_param_id - Set parameters for component given by ID
   !
   !INTERFACE:
   subroutine set_param_id(iComp,TypeAction)
 
     use CON_comp_info
-    implicit none
 
     !INPUT PARAMETERS:
     !
@@ -145,18 +144,17 @@ contains
     character(len=*), intent(in) :: TypeAction
 
     !DESCRIPTION:
-    ! This routine calls $**$\_set\_param for component $**$ 
+    ! This routine calls $**$\_set\_param for component $**$
     ! defined with the component ID.
 
     !REVISION HISTORY:
     ! 29Aug03 - G. Toth <gtoth@umich.edu> - initial prototype/prolog/code
-    !EOP ___________________________________________________________________
-
-    character(len=*),parameter :: NameSub=NameMod//'.set_param_id'
+    ! EOP ___________________________________________________________________
 
     type(CompInfoType) :: CompInfo
     integer :: iUnitOut
-    !-------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'set_param_id'
+    !--------------------------------------------------------------------------
     if(.not.use_comp(iComp)) call CON_stop(NameSub//' '//TypeAction// &
          ' SWMF_ERROR component '//NameComp_I(iComp)//' is not used')
 
@@ -205,20 +203,19 @@ contains
        call put_comp_info(iComp,Use=CompInfo%Use,Version=CompInfo%Version,&
             NameVersion=CompInfo%NameVersion)
     end select
-    
-  end subroutine set_param_id
 
-  !BOP -------------------------------------------------------------------
-  !IROUTINE: get_version_name - call **_get_version for named component
+  end subroutine set_param_id
+  !============================================================================
+
+  ! BOP -------------------------------------------------------------------
+  ! IROUTINE: get_version_name - call **_get_version for named component
   !
   !DESCRIPTION:
-  ! Obtain ON/OFF status, version name and version number 
-  ! for component specified by its name! 
+  ! Obtain ON/OFF status, version name and version number
+  ! for component specified by its name!
 
   !INTERFACE:
   subroutine get_version_name(NameComp,IsOn,NameVersion,Version)
-
-    implicit none
 
     !INPUT PARAMETERS:
     character (len=*),            intent(in)  :: NameComp
@@ -229,23 +226,24 @@ contains
 
     !REVISION HISTORY:
     ! 30Aug03 - G. Toth <gtoth@umich.edu> - initial prototype/prolog/code
-    !EOP ___________________________________________________________________
+    ! EOP ___________________________________________________________________
 
-    character(len=*),parameter :: NameSub=NameMod//'::get_version_name'
-    !-------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'get_version_name'
+    !--------------------------------------------------------------------------
     if(.not.is_valid_comp_name(NameComp)) call CON_stop(NameSub// &
          ' SWMF_ERROR '//NameComp//' is not a valid component name')
 
     call get_version_id(i_comp(NameComp),IsOn,NameVersion,Version)
 
   end subroutine get_version_name
+  !============================================================================
 
-  !BOP -------------------------------------------------------------------
-  !IROUTINE: get_version_id - call **_version for component given by ID
+  ! BOP -------------------------------------------------------------------
+  ! IROUTINE: get_version_id - call **_version for component given by ID
   !
   !DESCRIPTION:
-  ! Obtain ON/OFF status, version name and version number 
-  ! for component specified by its ID! 
+  ! Obtain ON/OFF status, version name and version number
+  ! for component specified by its ID!
 
   !INTERFACE:
   subroutine get_version_id(iComp,IsOn,NameVersion,Version)
@@ -260,21 +258,21 @@ contains
     !REVISION HISTORY:
     ! 21Jul03 - G. Toth <gtoth@umich.edu> - use temporary CompInfo
     ! 15Jul03 - G. Toth <gtoth@umich.edu> - initial prototype/prolog/code
-    !EOP ___________________________________________________________________
-
-    character(len=*),parameter :: NameSub=NameMod//'::get_version_id'
+    ! EOP ___________________________________________________________________
 
     type(CompInfoType) :: CompInfo
 
-    !-------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'get_version_id'
+    !--------------------------------------------------------------------------
     IsOn=.true.
     NameVersion=NameComp_I(iComp)//' stub'
     Version=1.0
 
   end subroutine get_version_id
+  !============================================================================
 
-  !BOP -------------------------------------------------------------------
-  !IROUTINE: init_session_comp_id - call **_init_session for component given by ID
+  ! BOP -------------------------------------------------------------------
+  ! IROUTINE: init_session_comp_id - call **_init_session for component given by ID
   !INTERFACE:
   subroutine init_session_comp_id(iComp, iSession, TimeSimulation)
 
@@ -287,13 +285,13 @@ contains
     ! Initialize component for the session. Session numbers start from 1.
 
     !REVISION HISTORY:
-    ! 18Aug03 - G. Toth <gtoth@umich.edu> O. Volberg <volov@umich.edu> 
+    ! 18Aug03 - G. Toth <gtoth@umich.edu> O. Volberg <volov@umich.edu>
     !         - initial prototype/prolog/code
-    !EOP ___________________________________________________________________
-    character(len=*), parameter :: NameSub = NameMod//'::init_session_comp_id'
+    ! EOP ___________________________________________________________________
     integer :: iUnitOut
-    !-------------------------------------------------------------------
-    
+
+    character(len=*), parameter:: NameSub = 'init_session_comp_id'
+    !--------------------------------------------------------------------------
     call check_i_comp(iComp,NameSub)
 
     if(.not.use_comp(iComp) .or. .not.is_proc(iComp)) RETURN
@@ -312,9 +310,10 @@ contains
          i_proc(),iSession,TimeSimulation
 
   end subroutine init_session_comp_id
+  !============================================================================
 
-  !BOP -------------------------------------------------------------------
-  !IROUTINE: finalize_comp_id - call **_finalize for component given by ID
+  ! BOP -------------------------------------------------------------------
+  ! IROUTINE: finalize_comp_id - call **_finalize for component given by ID
   !
   !INTERFACE:
   subroutine finalize_comp_id(iComp, TimeSimulation)
@@ -328,13 +327,13 @@ contains
     ! report errors, etc.
 
     !REVISION HISTORY:
-    ! 18Aug03 - G. Toth <gtoth@umich.edu> O. Volberg <volov@umich.edu> 
+    ! 18Aug03 - G. Toth <gtoth@umich.edu> O. Volberg <volov@umich.edu>
     !         - initial prototype/prolog/code
-    !EOP ___________________________________________________________________
-    character(len=*), parameter :: NameSub = NameMod//'::finalize_comp_id'
+    ! EOP ___________________________________________________________________
     integer :: iUnitOut
-    !-------------------------------------------------------------------
-    
+    character(len=*), parameter:: NameSub = 'finalize_comp_id'
+    !--------------------------------------------------------------------------
+
     call check_i_comp(iComp,NameSub)
 
     if(.not.use_comp(iComp) .or. .not.is_proc(iComp)) RETURN
@@ -345,9 +344,10 @@ contains
          i_proc(),TimeSimulation
 
   end subroutine finalize_comp_id
+  !============================================================================
 
-  !BOP -------------------------------------------------------------------
-  !IROUTINE: save_restart_comp_id - call **_save_restart for component given by ID
+  ! BOP -------------------------------------------------------------------
+  ! IROUTINE: save_restart_comp_id - call **_save_restart for component given by ID
 
   !INTERFACE:
   subroutine save_restart_comp_id(iComp, TimeSimulation)
@@ -360,13 +360,13 @@ contains
     ! Save restart information for the component.
 
     !REVISION HISTORY:
-    ! 18Aug03 - G. Toth <gtoth@umich.edu> O. Volberg <volov@umich.edu> 
+    ! 18Aug03 - G. Toth <gtoth@umich.edu> O. Volberg <volov@umich.edu>
     !         - initial prototype/prolog/code
-    !EOP ___________________________________________________________________
-    character(len=*), parameter :: NameSub = NameMod//'::save_restart_comp_id'
+    ! EOP ___________________________________________________________________
     integer :: iUnitOut
-    !-------------------------------------------------------------------
-    
+    character(len=*), parameter:: NameSub = 'save_restart_comp_id'
+    !--------------------------------------------------------------------------
+
     call check_i_comp(iComp,NameSub)
 
     if(.not.use_comp(iComp) .or. .not.is_proc(iComp)) RETURN
@@ -387,9 +387,10 @@ contains
     end if
 
   end subroutine save_restart_comp_id
+  !============================================================================
 
-  !BOP -------------------------------------------------------------------
-  !IROUTINE: run_comp_id - call **_run for component given by ID
+  ! BOP -------------------------------------------------------------------
+  ! IROUTINE: run_comp_id - call **_run for component given by ID
   !INTERFACE:
   subroutine run_comp_id(iComp, TimeSimulation, TimeSimulationLimit)
 
@@ -407,12 +408,12 @@ contains
 
     !REVISION HISTORY:
     ! 30Aug03 - G. Toth <gtoth@umich.edu> initial prototype/prolog/code
-    !EOP
+    ! EOP
 
-    character(len=*), parameter :: NameSub = NameMod//'::run_comp_id'
     integer :: iUnitOut, iError
-    !-------------------------------------------------------------------
-    
+
+    character(len=*), parameter:: NameSub = 'run_comp_id'
+    !--------------------------------------------------------------------------
     call check_i_comp(iComp,NameSub)
 
     if(.not.use_comp(iComp) .or. .not.is_proc(iComp)) RETURN
@@ -425,12 +426,10 @@ contains
 
     TimeSimulation = min(TimeSimulationLimit, TimeSimulation + DtRun_C(iComp))
 
-    !\
     ! SP can only solve up to the last coupling time TimeNewInputSp
-    !/
     if(iComp==SP_)then
-       !write(iUnitOut,*)'SP: ',NameSub,' TimeNewInputSp=',TimeNewInputSp
-       !write(iUnitOut,*)'SP: ',NameSub,' TimeSp        =',TimeSp
+       ! write(iUnitOut,*)'SP: ',NameSub,' TimeNewInputSp=',TimeNewInputSp
+       ! write(iUnitOut,*)'SP: ',NameSub,' TimeSp        =',TimeSp
        if(TimeNewInputSp > TimeSp)then
           ! Advance SP time by one step
           TimeSp = min(TimeNewInputSp, TimeSp + DtRun_C(iComp))
@@ -445,9 +444,7 @@ contains
        end if
     end if
 
-    !\
     ! IE only solves if there is new info
-    !/
     if(iComp==IE_)then
        if(.not.IsNewInputIe)then
           write(iUnitOut,*)'IE: ',NameSub,' no need to solve iProc=',i_proc()
@@ -457,7 +454,6 @@ contains
           IsNewInputIe = .false.
        end if
     end if
-
 
     ! Synchronize PE-s used by the component
     call timing_start(NameComp_I(iComp)//'_barrier')
@@ -470,5 +466,6 @@ contains
     call timing_stop(NameComp_I(iComp)//'_run')
 
   end subroutine run_comp_id
+  !============================================================================
 
 end module CON_wrapper

@@ -1,14 +1,14 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !^CMP FILE IH
 !^CMP FILE PT
 
-!BOP
-!MODULE: CON_couple_ih_pt - couple IH and PT components
+! BOP
+! MODULE: CON_couple_ih_pt - couple IH and PT components
 !
 !DESCRIPTION:
-! Couple IH and PT components: IH -> PT. 
+! Couple IH and PT components: IH -> PT.
 !
 !INTERFACE:
 module CON_couple_ih_pt
@@ -37,33 +37,35 @@ module CON_couple_ih_pt
 
   !REVISION HISTORY:
   ! 03/16/2015 A.Michael and G.Toth - initial version
-  !EOP
+  ! EOP
 
   ! Router communicator info
   type(CouplePointsType) :: CouplerIhToPt
 
 contains
+  !============================================================================
 
-  !BOP =======================================================================
-  !IROUTINE: couple_ih_pt_init - initialize IH-PT couplings
+  ! BOP =======================================================================
+  ! IROUTINE: couple_ih_pt_init - initialize IH-PT couplings
   !INTERFACE:
   subroutine couple_ih_pt_init
 
     !DESCRIPTION:
     ! Initialize IH->PT coupler.
     ! This subroutine should be called from all PE-s
-    !EOP
+    ! EOP
 
     logical :: DoTest, DoTestMe
-    character(len=*), parameter :: NameSub = 'couple_ih_pt_init'
-    !------------------------------------------------------------------------
+
+    character(len=*), parameter:: NameSub = 'couple_ih_pt_init'
+    !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
     if(DoTestMe)write(*,*) NameSub,' starting'
 
     CouplerIhToPt%iCompTarget = PT_
     CouplerIhToPt%iCompSource = IH_
-    
+
     ! IH sends all its variables to PT. Take information from Grid_C
     CouplerIhToPt%NameVar = Grid_C(IH_)%NameVar
     CouplerIhToPt%nVar    = Grid_C(IH_)%nVar
@@ -73,9 +75,10 @@ contains
     if(DoTestMe)write(*,*) NameSub,' finished'
 
   end subroutine couple_ih_pt_init
+  !============================================================================
 
-  !BOP =======================================================================
-  !IROUTINE: couple_ih_pt - couple IH to PT
+  ! BOP =======================================================================
+  ! IROUTINE: couple_ih_pt - couple IH to PT
   !INTERFACE:
   subroutine couple_ih_pt(tSimulation)
     use CON_transfer_data, ONLY: transfer_real
@@ -87,18 +90,19 @@ contains
     !    Inner Heliosphere          (IH) source\\
     !    Particle Tracker           (PT) target
     !
-    ! Send information from IH to PT. 
-    !EOP
+    ! Send information from IH to PT.
+    ! EOP
 
     logical :: DoTest, DoTestMe
     real:: DtSi ! time step in SI units
-    character(len=*), parameter :: NameSub = 'couple_ih_pt'
-    !-------------------------------------------------------------------------
+
+    character(len=*), parameter:: NameSub = 'couple_ih_pt'
+    !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
     if(DoTest)write(*,*) NameSub,' starting iProc=', CouplerIhToPt%iProcWorld
 
-    if(IsTightCouple_CC(IH_,PT_)) then 
+    if(IsTightCouple_CC(IH_,PT_)) then
        if(is_proc(IH_)) call IH_get_for_pt_dt(DtSi)
        call transfer_real(IH_,PT_,DtSi)
        if(is_proc(PT_)) call PT_put_from_ih_dt(DtSi)
@@ -110,6 +114,6 @@ contains
     if(DoTest)write(*,*) NameSub,' finished iProc=', CouplerIhToPt%iProcWorld
 
   end subroutine couple_ih_pt
+  !============================================================================
 
-  !=======================================================================
 end module CON_couple_ih_pt

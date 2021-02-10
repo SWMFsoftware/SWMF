@@ -1,11 +1,11 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !^CMP FILE IE
 !^CMP FILE PS
 
-!BOP
-!MODULE: CON_couple_ie_ps - couple IE and PS components
+! BOP
+! MODULE: CON_couple_ie_ps - couple IE and PS components
 !
 !DESCRIPTION:
 ! Couple between two components:\\
@@ -32,7 +32,7 @@ module CON_couple_ie_ps
 
   !REVISION HISTORY:
   ! 01/31/2012 A.Dodger <adodger@umich.edu> - Updated to allow IE-PS coupling
-  !EOP
+  ! EOP
 
   character(len=lNameVersion):: NameVersionPs
   logical :: IsInitialized = .false.
@@ -47,9 +47,10 @@ module CON_couple_ie_ps
   character (len=*), parameter :: NameMod='CON_couple_ie_ps'
 
 contains
+  !============================================================================
 
-  !BOP =======================================================================
-  !IROUTINE: couple_ie_ps_init - initialize IE-PS coupling
+  ! BOP =======================================================================
+  ! IROUTINE: couple_ie_ps_init - initialize IE-PS coupling
   !INTERFACE:
   subroutine couple_ie_ps_init
 
@@ -57,10 +58,10 @@ contains
     ! This subroutine should be called from all PE-s so that
     ! a union group can be formed. Since both IE and PS grids are
     ! static, the router is formed here for the whole run.
-    !EOP
+    ! EOP
 
     use CON_world, ONLY: get_comp_info
-    !------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
 
     if(IsInitialized) RETURN
     IsInitialized = .true.
@@ -74,8 +75,9 @@ contains
     iCommWorld = i_comm()
 
   end subroutine couple_ie_ps_init
-  !BOP =======================================================================
-  !IROUTINE: couple_ps_ie - couple PS to IE component
+  !============================================================================
+  ! BOP =======================================================================
+  ! IROUTINE: couple_ps_ie - couple PS to IE component
   !INTERFACE:
   subroutine couple_ps_ie(tSimulation)
 
@@ -88,20 +90,21 @@ contains
     !    Ionosphere Electrodynamics (IE) Target
     !
     ! Send field-align current from PS to IE.
-    !EOP
+    ! EOP
 
     integer, parameter :: nVarPsIe=3
     real :: tSimulationTmp
-    character(len=*), parameter:: NameSub = NameMod//'::couple_ps_ie'
-    !-------------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'couple_ps_ie'
+    !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
 
     write(*,*) "There is no PS->IE coupling!"
 
   end subroutine couple_ps_ie
+  !============================================================================
 
-  !BOP =======================================================================
-  !IROUTINE: couple_ie_ps - couple IE to PS component
+  ! BOP =======================================================================
+  ! IROUTINE: couple_ie_ps - couple IE to PS component
   !INTERFACE:
   subroutine couple_ie_ps(tSimulation)
 
@@ -114,13 +117,14 @@ contains
     !    Plasmasphere (PS)        Target
     !
     ! Send electrostatic potential from IE to PS.
-    !EOP
+    ! EOP
 
     integer, parameter :: nVarIePs=4
     real :: tSimulationTmp
     integer :: iProcWorld
-    character(len=*), parameter:: NameSub = NameMod//'::couple_ie_ps'
-    !-------------------------------------------------------------------------
+
+    character(len=*), parameter:: NameSub = 'couple_ie_ps'
+    !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
     iProcWorld = i_proc()
     call couple_mpi
@@ -128,8 +132,8 @@ contains
     if(DoTest)write(*,*)NameSub,': finished iProc=',iProcWorld
 
   contains
-
     !==========================================================================
+
     subroutine couple_mpi
 
       use CON_coupler
@@ -159,7 +163,7 @@ contains
       ! Size of IE grid:
       iSize = Grid_C(IE_) % nCoord_D(1)
       jSize = Grid_C(IE_) % nCoord_D(2)
-      
+
       ! Get Potential from IE:
       if(is_proc0(IE_)) &
            call IE_get_for_ps(Buffer_II, iSize, jSize, tSimulation)
@@ -185,7 +189,9 @@ contains
       if(DoTest)write(*,*)NameSubSub,' finished, iProc=',iProcWorld
 
     end subroutine couple_mpi
+    !==========================================================================
 
   end subroutine couple_ie_ps
+  !============================================================================
 
 end module CON_couple_ie_ps

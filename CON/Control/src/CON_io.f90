@@ -2,9 +2,9 @@
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !
-!BOP
+! BOP
 !
-!MODULE: CON_io - Input and output methods for CON
+! MODULE: CON_io - Input and output methods for CON
 !
 !DESCRIPTION:
 ! Input and output methods used by CON
@@ -43,7 +43,7 @@ module CON_io
   ! 05/20/04 G.Toth - added #CYCLE command
   ! 09/01/05 G.Toth - replaced call CON_stop with call world_clean and RETURN
   !                   check first read condition for each command separately.
-  !EOP
+  ! EOP
 
   character (len=*), parameter :: NameMod='CON_io'
 
@@ -71,7 +71,7 @@ module CON_io
   type(FreqType), public :: &
        SaveRestart = FreqType(.true.,100000,huge(1.0),-1,-1.0)
 
-  ! The restart files should not be saved twice (first in the 
+  ! The restart files should not be saved twice (first in the
   ! subroutint 'do_session', and then in 'finalize') for the same time.
   logical, public :: IsRestartSaved = .false.
 
@@ -80,9 +80,10 @@ module CON_io
   integer, public :: DnShowProgressLong  = 100
 
 contains
+  !============================================================================
 
-  !BOP =======================================================================
-  !IROUTINE: read_inputs - read, broadcast and distribute parameters
+  ! BOP =======================================================================
+  ! IROUTINE: read_inputs - read, broadcast and distribute parameters
   !INTERFACE:
   subroutine read_inputs(IsLastRead)
 
@@ -92,9 +93,6 @@ contains
          DoCoupleOnTime_C, IsTightCouple_CC
     use CON_physics
 
-    implicit none
-
-    character (LEN=*), parameter:: NameSub = NameMod//'::read_inputs'
     real :: VersionRead
 
     !OUTPUT ARGUMENTS:
@@ -117,7 +115,7 @@ contains
     ! The ordering of the commands is more or less arbitrary
     ! with the exception of \#PLANET (\#MOON, \#COMET) that must preceed
     ! commands that idealize or overwrite the real parameters of the planet.
-    !EOP
+    ! EOP
 
     ! True if first session will be read
     logical :: IsFirstRead = .true.
@@ -161,7 +159,8 @@ contains
     character (len=lNameComp) :: NameComp, NameComp1, NameComp2
     character (len=lNameComp) :: NameSourceTarget_I(2)
     character (len=lStringLine) :: NameSourceTarget, StringLayout
-    !-------------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'read_inputs'
+    !--------------------------------------------------------------------------
     if(is_proc0())write(*,'(a,i3)')NameSub//': iSession=',iSession
 
     ! Proc 0 reads the file and broadcasts to all PE-s
@@ -209,13 +208,13 @@ contains
              iErrorSwmf = 11
              RETURN
           end if
-          
+
           ! Store that this component read parameters
           DoneBeginComp_C(i_comp(NameComp)) = .true.
 
           ! Find #END_COMP MODULENAME and read module parameters
           iLineModule = iLine
-          MODULELINES: do
+          moduleLINES: do
              if(.not.read_line(StringLine, iLine)) then
                 if(is_proc0()) write(*,*) NameSub// &
                      ' SWMF_ERROR: could not find #END_COMP '//trim(NameComp)
@@ -346,11 +345,11 @@ contains
           call read_var('CpuTimeMax', CpuTimeMax)
 
        case("#CHECKTIMESTEP")
-          
+
           call read_var('DoCheckTimeStep', DoCheckTimeStep)
           call read_var('DnCheckTimeStep', DnCheckTimeStep)
           call read_var('TimeStepMin'   ,  TimeStepMin)
-          
+
        case("#CHECKSTOPFILE")
 
           call read_var('DoCheckStopFile', DoCheckStopFile)
@@ -597,7 +596,7 @@ contains
 
        case("#UPDATEB0")
           call read_planet_var(NameCommand)
-          
+
        case("#ROTATEHGR")
           if(.not.is_first_read())then
              if(UseStrict)RETURN
@@ -775,6 +774,7 @@ contains
     !==========================================================================
     logical function is_first_read()
 
+      !------------------------------------------------------------------------
       if(.not.IsFirstRead)then
          if(is_proc0()) write(*,*) NameSub,' ERROR: command ',&
                   trim(NameCommand),&
@@ -787,9 +787,10 @@ contains
     end function is_first_read
     !==========================================================================
   end subroutine read_inputs
+  !============================================================================
 
-  !BOP ========================================================================
-  !IROUTINE: set_stdout - redirect standard output of components
+  ! BOP ========================================================================
+  ! IROUTINE: set_stdout - redirect standard output of components
   !INTERFACE:
   subroutine set_stdout
     !DESCRIPTION:
@@ -800,12 +801,12 @@ contains
     ! Tell each component to write STDOUT into the file, which has
     ! a unique unit number.
     ! Empty files will be deleted if the run ends in a normal fashion.
-    !EOP
-    character (len=*), parameter :: NameSub=NameMod//'::set_stdout'
+    ! EOP
 
     integer :: lComp, iComp, iUnitOut
     character (len=lNameFile) :: NameFile
-    !-------------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'set_stdout'
+    !--------------------------------------------------------------------------
     ! Make STDOUTDIR if STDOUT is sent to files
     if(.not.UseStdout .and. is_proc0())call make_dir(NameStdoutDir)
 
@@ -842,9 +843,10 @@ contains
        end if
     end do
   end subroutine set_stdout
+  !============================================================================
 
-  !BOP =======================================================================
-  !IROUTINE: save_restart - save restart information for SWMF
+  ! BOP =======================================================================
+  ! IROUTINE: save_restart - save restart information for SWMF
   !INTERFACE:
   subroutine save_restart
 
@@ -862,14 +864,14 @@ contains
     ! with the \#INCLUDE file command.
     ! Set the name of the restart directory based on the DATE-TIME if required.
     ! Set NameRestartOutDirComp for the components too.
-    !EOP
+    ! EOP
 
     integer :: lComp, iComp, iError
     integer :: i
     type(TimeType):: TimeCurrent
 
-    character(len=*), parameter :: NameSub=NameMod//'::save_restart'
-    !------------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'save_restart'
+    !--------------------------------------------------------------------------
 
     if(lVerbose>0 .and. is_proc0(CON_)) &
          write(*,*)NameSub,' is called at nStep,tSimulation=',&
@@ -958,5 +960,6 @@ contains
     call close_file
 
   end subroutine save_restart
+  !============================================================================
 
 end module CON_io

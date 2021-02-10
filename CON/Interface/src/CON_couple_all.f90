@@ -1,10 +1,10 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !
-!BOP
+! BOP
 !
-!MODULE: CON_couple_all - provide access to all the couplers
+! MODULE: CON_couple_all - provide access to all the couplers
 !
 !DESCRIPTION:
 ! This module uses all the pairwise couplers. It also provides public
@@ -46,15 +46,15 @@ module CON_couple_all
   !^CMP IF IH BEGIN
   use CON_couple_ih_sc        !^CMP IF SC
   use CON_couple_ih_oh        !^CMP IF OH
-  use CON_couple_ih_pt        !^CMP IF PT 
+  use CON_couple_ih_pt        !^CMP IF PT
   !^CMP END IH
   !^CMP IF SC BEGIN
   use CON_couple_ee_sc        !^CMP IF EE
-  use CON_couple_sc_pt        !^CMP IF PT 
+  use CON_couple_sc_pt        !^CMP IF PT
   !^CMP END SC
   use CON_couple_mh_sp        !^CMP IF SP
   !^CMP IF OH BEGIN
-  use CON_couple_oh_pt	      !^CMP IF PT	
+  use CON_couple_oh_pt	      !^CMP IF PT
   !^CMP END OH
 
   implicit none
@@ -75,18 +75,20 @@ module CON_couple_all
   ! 18Feb14 - L. Daldorff added GM-PC coupling
   ! 12Mar15 - A. Michael added OH-PT coupling
   ! 15Sep20 - V. Tenishev added IH-PT coupling
-  !EOP
+  ! EOP
   character(len=*), parameter :: NameMod='CON_couple_all'
 
 contains
+  !============================================================================
 
-  !BOP -------------------------------------------------------------------
-  !IROUTINE: couple_all_init - initialize all the couplers
+  ! BOP -------------------------------------------------------------------
+  ! IROUTINE: couple_all_init - initialize all the couplers
   !INTERFACE:
   subroutine couple_all_init
-    !EOP
-    !BOC
+    ! EOP
+    ! BOC
     !                                                     ^CMP IF GM BEGIN
+    !--------------------------------------------------------------------------
     if(use_comp(GM_).and.use_comp(IE_))call couple_gm_ie_init  !^CMP IF IE
     if(use_comp(GM_).and.use_comp(IM_))call couple_gm_im_init  !^CMP IF IM
     if(use_comp(GM_).and.use_comp(PS_))call couple_gm_ps_init  !^CMP IF PS
@@ -107,11 +109,11 @@ contains
     !                                                     ^CMP IF IH BEGIN
     if(use_comp(IH_).and.use_comp(SC_))call couple_ih_sc_init  !^CMP IF SC
     if(use_comp(IH_).and.use_comp(OH_))call couple_ih_oh_init  !^CMP IF OH
-    if(use_comp(IH_).and.use_comp(PT_))call couple_ih_pt_init  !^CMP IF PT 
+    if(use_comp(IH_).and.use_comp(PT_))call couple_ih_pt_init  !^CMP IF PT
     !                                                     ^CMP END IH
     !                                                     ^CMP IF SC BEGIN
     if(use_comp(SC_).and.use_comp(EE_))call couple_ee_sc_init  !^CMP IF EE
-    if(use_comp(SC_).and.use_comp(PT_))call couple_sc_pt_init  !^CMP IF PT 
+    if(use_comp(SC_).and.use_comp(PT_))call couple_sc_pt_init  !^CMP IF PT
     !                                                     ^CMP END SC
     if((&                                                 !^CMP IF SP BEGIN
          use_comp(IH_).or.&                               !^CMP IF IH
@@ -120,11 +122,12 @@ contains
     !	 				 		       ^CMP IF OH BEGIN
     if(use_comp(OH_).and.use_comp(PT_))call couple_oh_pt_init  !^CMP IF PT
     !					    		       ^CMP END OH
-    !EOC
+    ! EOC
   end subroutine couple_all_init
+  !============================================================================
 
-  !BOP =======================================================================
-  !IROUTINE: couple_two_comp - call couple_**_** for components given by IDs
+  ! BOP =======================================================================
+  ! IROUTINE: couple_two_comp - call couple_**_** for components given by IDs
   !INTERFACE:
   subroutine couple_two_comp(iCompSource, iCompTarget, TimeSimulation)
 
@@ -141,15 +144,15 @@ contains
     ! 27Aug03 - G. Toth <gtoth@umich.edu> initial prototype/prolog/code
     ! 03Jun08 - R. Oran <oran@umich.edu> add IH OH coupling
     ! 22Dec11 - R. Oran   added capability to use global mpi coupler.
-    !EOP
+    ! EOP
 
     ! indexes by component list
     integer:: lCompSource, lCompTarget
 
-    character(len=*), parameter :: NameSub = NameMod//'::couple_two_comp'
-
     logical :: DoTest, DoTestMe
-    !-------------------------------------------------------------------
+
+    character(len=*), parameter:: NameSub = 'couple_two_comp'
+    !--------------------------------------------------------------------------
     call check_i_comp(iCompSource,NameSub//': source')
     call check_i_comp(iCompTarget,NameSub//': target')
 
@@ -177,7 +180,7 @@ contains
 
     lCompSource = lComp_I(iCompSource)
     lCompTarget = lComp_I(iCompTarget)
-    
+
     if(allocated(iVarSource_VCC))then
        nVarBuffer    = nVarBuffer_CC(lCompSource,lCompTarget)
        iVarSource_V  = iVarSource_VCC(:,lCompSource,lCompTarget)
@@ -186,12 +189,12 @@ contains
 
     select case(iCompSource)
     case(EE_)                                 !^CMP IF EE BEGIN
-       select case(iCompTarget)               
+       select case(iCompTarget)
        case(GM_)                              !^CMP IF GM
           call couple_ee_gm(TimeSimulation)   !^CMP IF GM
        case(SC_)                              !^CMP IF SC
           call couple_ee_sc(TimeSimulation)   !^CMP IF SC
-       case default                           
+       case default
           call error
        end select                             !^CMP END EE
     case(SC_)                                 !^CMP IF SC BEGIN
@@ -202,9 +205,9 @@ contains
           call couple_sc_sp(TimeSimulation)   !^CMP IF SP
        case(EE_)                              !^CMP IF EE
           call couple_sc_ee(TimeSimulation)   !^CMP IF EE
-       case(PT_)                              !^CMP IF PT 
-          call couple_sc_pt(TimeSimulation)   !^CMP IF PT 
-       case default                           
+       case(PT_)                              !^CMP IF PT
+          call couple_sc_pt(TimeSimulation)   !^CMP IF PT
+       case default
           call error
        end select                             !^CMP END SC
     case(IH_)                                 !^CMP IF IH BEGIN
@@ -215,8 +218,8 @@ contains
           call couple_ih_sc(TimeSimulation)        !^CMP IF SC
        case(OH_)                                   !^CMP IF OH
           call couple_ih_oh(TimeSimulation)        !^CMP IF OH
-       case(PT_)                                   !^CMP IF PT 
-          call couple_ih_pt(TimeSimulation)        !^CMP IF PT 
+       case(PT_)                                   !^CMP IF PT
+          call couple_ih_pt(TimeSimulation)        !^CMP IF PT
        case(SP_)                                   !^CMP IF SP
           call couple_ih_sp(TimeSimulation)        !^CMP IF SP
        case default
@@ -256,7 +259,7 @@ contains
           call couple_ua_ie(TimeSimulation)        !^CMP IF IE
        case default
           call error
-       end select                             !^CMP END UA 
+       end select                             !^CMP END UA
     case(IE_)                                 !^CMP IF IE BEGIN
        select case(iCompTarget)
        case(GM_)                                   !^CMP IF GM
@@ -321,13 +324,17 @@ contains
          NameComp_I(iCompSource),' --> ',NameComp_I(iCompTarget)
 
   contains
+    !==========================================================================
 
     subroutine error
+      !------------------------------------------------------------------------
       call CON_stop(NameSub//' SWMF_ERROR: no coupling implemented for '//&
            NameComp_I(iCompSource)//' --> '//&
            NameComp_I(iCompTarget))
     end subroutine error
+    !==========================================================================
 
   end subroutine couple_two_comp
+  !============================================================================
 
 end module CON_couple_all

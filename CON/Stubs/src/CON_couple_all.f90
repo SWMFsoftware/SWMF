@@ -1,5 +1,5 @@
-!BOP
-!MODULE: CON_couple_all - mimic real coupling of physics components
+! BOP
+! MODULE: CON_couple_all - mimic real coupling of physics components
 !
 !DESCRIPTION:
 ! This module mimics the coupling between real physics components.
@@ -28,26 +28,29 @@ module CON_couple_all
 
   !REVISION HISTORY:
   ! 27Aug03 - G. Toth <gtoth@umich.edu> initial prototype/prolog/code
-  !EOP
+  ! EOP
 
   character(len=*), parameter :: NameMod='CON_couple_all'
 
   integer :: iStatus_I(MPI_STATUS_SIZE), iError, iProc0Source
 
 contains
+  !============================================================================
 
-  !BOP -------------------------------------------------------------------
-  !IROUTINE: couple_all_init - initialize all the couplers
+  ! BOP -------------------------------------------------------------------
+  ! IROUTINE: couple_all_init - initialize all the couplers
   !INTERFACE:
   subroutine couple_all_init
-    !EOP
-    !BOC
+    ! EOP
+    ! BOC
+    !--------------------------------------------------------------------------
     write(*,*)'couple_all_init was called'
-    !EOC
+    ! EOC
   end subroutine couple_all_init
+  !============================================================================
 
-  !BOP =======================================================================
-  !IROUTINE: couple_two_comp - call couple_**_** for components given by IDs
+  ! BOP =======================================================================
+  ! IROUTINE: couple_two_comp - call couple_**_** for components given by IDs
   !INTERFACE:
   subroutine couple_two_comp(iCompSource, iCompTarget, TimeSimulation)
 
@@ -62,21 +65,18 @@ contains
 
     !REVISION HISTORY:
     ! 27Aug03 - G. Toth <gtoth@umich.edu> initial prototype/prolog/code
-    !EOP
-
-    character(len=*), parameter :: NameSub = NameMod//'::couple_two_comp'
+    ! EOP
 
     integer :: iUnitOut
     logical :: DoTest,DoTestMe
-    !-------------------------------------------------------------------
-    
+
+    character(len=*), parameter:: NameSub = 'couple_two_comp'
+    !--------------------------------------------------------------------------
     call check_i_comp(iCompSource,NameSub//': source')
     call check_i_comp(iCompTarget,NameSub//': target')
 
-    !\
     ! Return if any component is not used or if the PE is
     ! used by neither components.
-    !/
     if(.not.(use_comp(iCompSource))) RETURN
     if(.not.(use_comp(iCompTarget))) RETURN
     if(.not.(is_proc(iCompSource).or.is_proc(iCompTarget))) RETURN
@@ -87,15 +87,11 @@ contains
 
     iProc0Source = i_proc()
 
-    !\
     ! SP is special as it can only solve up to the last coupling time
-    !/
     if(iCompTarget == SP_)TimeNewInputSp = TimeSimulation
 
-    !\
-    ! IE is special as it does not have time. 
+    ! IE is special as it does not have time.
     ! It solves when data is requested and new info is given.
-    !/
     if(iCompTarget == IE_)IsNewInputIe = .true.
 
     if(iCompSource == IE_ .and. is_proc(IE_) .and. IsNewInputIe)then
@@ -106,7 +102,7 @@ contains
        IsNewInputIe = .false.
     end if
 
-    !if(is_proc0(iCompSource))write(*,*)NameSub,' sending iProc0Source=',&
+    ! if(is_proc0(iCompSource))write(*,*)NameSub,' sending iProc0Source=',&
     !     iProc0Source
 
     if(is_proc(iCompSource))call MPI_bcast(iProc0Source,1,MPI_INTEGER,&
@@ -129,9 +125,10 @@ contains
 
     ! write(*,*)'bcast target done',i_proc()
 
-    !if(is_proc0(iCompTarget))write(*,*)NameSub,' received iProc0Source=',&
+    ! if(is_proc0(iCompTarget))write(*,*)NameSub,' received iProc0Source=',&
     !     iProc0Source,' on iProc0Target=',i_proc()
 
   end subroutine couple_two_comp
+  !============================================================================
 
 end module CON_couple_all

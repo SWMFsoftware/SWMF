@@ -1,14 +1,14 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !^CMP FILE OH
 !^CMP FILE PT
 
-!BOP
-!MODULE: CON_couple_oh_pt - couple OH and PT components
+! BOP
+! MODULE: CON_couple_oh_pt - couple OH and PT components
 !
 !DESCRIPTION:
-! Couple OH and PT components both ways. 
+! Couple OH and PT components both ways.
 !
 !INTERFACE:
 module CON_couple_oh_pt
@@ -38,33 +38,35 @@ module CON_couple_oh_pt
 
   !REVISION HISTORY:
   ! 03/16/2015 A.Michael and G.Toth - initial version
-  !EOP
+  ! EOP
 
   ! Router communicator info
   type(CouplePointsType) :: CouplerOhToPt, CouplerPtToOh
 
 contains
+  !============================================================================
 
-  !BOP =======================================================================
-  !IROUTINE: couple_oh_pt_init - initialize OH-PT couplings
+  ! BOP =======================================================================
+  ! IROUTINE: couple_oh_pt_init - initialize OH-PT couplings
   !INTERFACE:
   subroutine couple_oh_pt_init
 
     !DESCRIPTION:
     ! Initialize OH->PT coupler.
     ! This subroutine should be called from all PE-s
-    !EOP
+    ! EOP
 
     logical :: DoTest, DoTestMe
+
     character(len=*), parameter:: NameSub = 'couple_oh_pt_init'
-    !------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
     if(DoTestMe)write(*,*) NameSub,' starting'
 
     CouplerOhToPt%iCompTarget = PT_
     CouplerOhToPt%iCompSource = OH_
-    
+
     ! OH sends all its variables to PT. Take information from Grid_C
     CouplerOhToPt%NameVar = Grid_C(OH_)%NameVar
     CouplerOhToPt%nVar    = Grid_C(OH_)%nVar
@@ -79,9 +81,9 @@ contains
 
     ! charge exchange sources
     if(CouplerPtToOh%nVar == 5)then
-       CouplerPtToOh%NameVar = 'Srho Smx Smy Smz Se' 
+       CouplerPtToOh%NameVar = 'Srho Smx Smy Smz Se'
     else
-       CouplerPtToOh%NameVar = 'Srho Smx Smy Smz Se Srho2 Smx2 Smy2 Smz2 Se2' 
+       CouplerPtToOh%NameVar = 'Srho Smx Smy Smz Se Srho2 Smx2 Smy2 Smz2 Se2'
     end if
 
     call couple_points_init(CouplerPtToOh)
@@ -89,9 +91,10 @@ contains
     if(DoTestMe)write(*,*) NameSub,' finished'
 
   end subroutine couple_oh_pt_init
+  !============================================================================
 
-  !BOP =======================================================================
-  !IROUTINE: couple_oh_pt - couple OH to PT
+  ! BOP =======================================================================
+  ! IROUTINE: couple_oh_pt - couple OH to PT
   !INTERFACE:
   subroutine couple_oh_pt(tSimulation)
     use CON_transfer_data, ONLY: transfer_real
@@ -103,18 +106,19 @@ contains
     !    Ourer Heliosphere          (OH) source\\
     !    Particle Tracker           (PT) target
     !
-    ! Send information from OH to PT. 
-    !EOP
+    ! Send information from OH to PT.
+    ! EOP
 
     logical :: DoTest, DoTestMe
     real:: DtSi ! time step in SI units
-    character (len=*), parameter:: NameSub = 'couple_oh_pt'
-    !-------------------------------------------------------------------------
+
+    character(len=*), parameter:: NameSub = 'couple_oh_pt'
+    !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
     if(DoTest)write(*,*) NameSub,' starting iProc=', CouplerOhToPt%iProcWorld
 
-    if(IsTightCouple_CC(OH_,PT_)) then 
+    if(IsTightCouple_CC(OH_,PT_)) then
        if(is_proc(OH_)) call OH_get_for_pt_dt(DtSi)
        call transfer_real(OH_,PT_,DtSi)
        if(is_proc(PT_)) call PT_put_from_oh_dt(DtSi)
@@ -126,8 +130,8 @@ contains
     if(DoTest)write(*,*) NameSub,' finished iProc=', CouplerOhToPt%iProcWorld
 
   end subroutine couple_oh_pt
+  !============================================================================
 
-  !=======================================================================
   subroutine couple_pt_oh(tSimulation)
 
     ! List of variables to pass
@@ -138,8 +142,8 @@ contains
     logical:: IsFirstTime = .true.
 
     logical :: DoTest, DoTestMe
-    character (len=*), parameter :: NameSub='couple_pt_oh'
-    !-------------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'couple_pt_oh'
+    !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
     if(DoTest)write(*,*)NameSub,' starting iProc=',CouplerPTtoOH%iProcWorld
@@ -150,5 +154,6 @@ contains
     if(DoTest) write(*,*) NameSub,' finished, iProc=', i_proc()
 
   end subroutine couple_pt_oh
+  !============================================================================
 
 end module CON_couple_oh_pt

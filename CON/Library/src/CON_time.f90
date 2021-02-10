@@ -1,14 +1,14 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !
-!QUOTE: \clearpage
+! QUOTE: \clearpage
 !
-!BOP
+! BOP
 !
-!QUOTE: \section{CON/Library: Shared by CON and Components}
+! QUOTE: \section{CON/Library: Shared by CON and Components}
 !
-!MODULE: CON_time - time related variables of CON
+! MODULE: CON_time - time related variables of CON
 !
 !DESCRIPTION:
 ! This module contains the time related variables of SWMF such
@@ -57,7 +57,7 @@ module CON_time
 
   ! Date/time to finish the simulation
   type(TimeType) :: TimeEnd
-  
+
   ! Is the end time set and to be saved into the final restart file
   logical :: UseEndTime = .false.
 
@@ -78,7 +78,7 @@ module CON_time
   integer:: nIterationCheck  = -1     ! Iteration number last checked
   real   :: tSimulationCheck = -1.0   ! Simulation time DnCheckTimeStep ago
   real   :: TimeStepMin      = -1.0   ! Average time step should exceed this
-  
+
   ! Shall we check for the stop file?
   logical :: DoCheckStopFile = .true.
 
@@ -100,20 +100,22 @@ module CON_time
   ! 25May04 G. Toth - added DnRun_C for steady state runs and
   !                   removed TimeCurrent variable
   ! 22Jun15 G. Toth - added NameCompCheckKill variable
-  !EOP
+  ! EOP
 
   character(len=*), parameter, private :: NameMod='CON_time'
 
 contains
+  !============================================================================
 
-  !BOP ========================================================================
-  !IROUTINE: init_time - initialize start time
+  ! BOP ========================================================================
+  ! IROUTINE: init_time - initialize start time
   !INTERFACE:
   subroutine init_time
-    !EOP
-    character (len=*), parameter :: NameSub = NameMod//'::init_time'
+    ! EOP
 
-    !BOC
+    ! BOC
+    character(len=*), parameter:: NameSub = 'init_time'
+    !--------------------------------------------------------------------------
     TimeStart % iYear   = 2000
     TimeStart % iMonth  = 3
     TimeStart % iDay    = 21
@@ -133,12 +135,13 @@ contains
     TimeEnd % FracSecond = 0.0
 
     call time_int_to_real(TimeEnd)
-    !EOC
+    ! EOC
 
   end subroutine init_time
+  !============================================================================
 
-  !BOP ========================================================================
-  !IROUTINE: get_time - get time related parameters
+  ! BOP ========================================================================
+  ! IROUTINE: get_time - get time related parameters
   !INTERFACE:
   subroutine get_time(&
        DoTimeAccurateOut, tSimulationOut, TimeStartOut, TimeCurrentOut, &
@@ -153,8 +156,8 @@ contains
     real(Real8_),     optional, intent(out) :: tStartOut
     real(Real8_),     optional, intent(out) :: tCurrentOut
     integer,          optional, intent(out) :: nStepOut
-    !EOP
-    !-------------------------------------------------------------------------
+    ! EOP
+    !--------------------------------------------------------------------------
 
     if(present(DoTimeAccurateOut)) DoTimeAccurateOut = DoTimeAccurate
     if(present(tSimulationOut))    tSimulationOut    = tSimulation
@@ -169,21 +172,23 @@ contains
     end if
 
   end subroutine get_time
-  !BOP ========================================================================
-  !IROUTINE: save_end_time - save TimeEnd instead of TimeStart and tSimulation
+  !============================================================================
+  ! BOP ========================================================================
+  ! IROUTINE: save_end_time - save TimeEnd instead of TimeStart and tSimulation
   !INTERFACE:
   subroutine save_end_time
 
     ! Set TimeStart to TimeEnd and set simulation time to zero
     ! Also set nStep to zero. These will be saved into RESTART.out
 
-    !EOP
-    !-------------------------------------------------------------------------
+    ! EOP
+    !--------------------------------------------------------------------------
 
     TimeStart = TimeEnd
     tSimulation = 0
     nStep       = 0
 
   end subroutine save_end_time
+  !============================================================================
 
 end module CON_time

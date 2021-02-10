@@ -19,7 +19,7 @@ module CON_mflampa
        Bx_         = 9, & !                                   |or
        By_         =10, & ! Background magnetic field         |received
        Bz_         =11, & !                                   |from
-       Wave1_      =12, & !\                                  |coupler
+       Wave1_      =12, & !                                   |coupler
        Wave2_      =13    ! Alfven wave turbulence            v
   !
   ! State vector is a pointer, which is joined to a target array

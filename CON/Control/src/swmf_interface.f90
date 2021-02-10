@@ -1,13 +1,13 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!BOP
-!MODULE: SWMF interface - a set of external subroutines to drive the SWMF
+! BOP
+! MODULE: SWMF interface - a set of external subroutines to drive the SWMF
 !DESCRIPTION:
-! The subroutines in this file provide an interface to the SWMF library, 
+! The subroutines in this file provide an interface to the SWMF library,
 ! when it does not run in stand alone mode.
-! These are all external subroutines, so that the external application 
-! does not have to compile any SWMF modules 
+! These are all external subroutines, so that the external application
+! does not have to compile any SWMF modules
 ! (which avoids a lot of compilation problems).
 ! All subroutines return an error code, which is 0 on success.
 
@@ -15,10 +15,10 @@
 ! 09/01/05 G.Toth - initial version
 ! 02/06/06          modified SWMF_run to pass coupling time
 !                   added SWMF_couple to transfer 2D grid data
-!EOP
+! EOP
 
-!BOP ==========================================================================
-!ROUTINE: SWMF_initialize - initialize the SWMF (for the first session)
+! BOP ==========================================================================
+! ROUTINE: SWMF_initialize - initialize the SWMF (for the first session)
 !INTERFACE:
 subroutine SWMF_initialize(iComm, iTimeStart_I, TimeSim, TimeStop, &
      IsLastSession, iError)
@@ -28,7 +28,7 @@ subroutine SWMF_initialize(iComm, iTimeStart_I, TimeSim, TimeStop, &
   use CON_variables, ONLY: iErrorSwmf
   use CON_time,      ONLY: TimeStart, tSimulation, tSimulationMax, &
        DoTimeAccurate, MaxIteration
-  use ModTimeConvert,ONLY: time_int_to_real, time_real_to_int
+  use ModTimeConvert, ONLY: time_int_to_real, time_real_to_int
   use ModKind,       ONLY: Real8_
 
   implicit none
@@ -51,9 +51,10 @@ subroutine SWMF_initialize(iComm, iTimeStart_I, TimeSim, TimeStop, &
   ! The current and final simulation times are passed as 8 byte reals,
   ! because this is available on all platforms.
   ! \newpage
-  !EOP
-  !BOC ------------------------------------------------------------------------
+  ! EOP
+  ! BOC ------------------------------------------------------------------------
   ! Initialize SWMF
+  !----------------------------------------------------------------------------
   call initialize(iComm)
   iError = iErrorSwmf
   if(iError /= 0) RETURN
@@ -75,11 +76,11 @@ subroutine SWMF_initialize(iComm, iTimeStart_I, TimeSim, TimeStop, &
 
   ! Initialize first session
   call SWMF_initialize_session(IsLastSession, iError)
-  !EOC
+  ! EOC
 end subroutine SWMF_initialize
 
-!BOP ==========================================================================
-!ROUTINE: SWMF_initialize_session - read parameters and initialize session
+! BOP ==========================================================================
+! ROUTINE: SWMF_initialize_session - read parameters and initialize session
 !INTERFACE:
 subroutine SWMF_initialize_session(IsLastSession, iError)
   !USES:
@@ -94,16 +95,17 @@ subroutine SWMF_initialize_session(IsLastSession, iError)
   ! Read input parameters and initialize a session.
   ! The IsLastSession argument indicates if this is the last session to run
   ! according to the PARAM.in file.
-  !EOP
-  !BOC ------------------------------------------------------------------------
+  ! EOP
+  ! BOC ------------------------------------------------------------------------
+  !----------------------------------------------------------------------------
   call read_inputs(IsLastSession)
   if(iErrorSwmf == 0) call init_session
   iError = iErrorSwmf
-  !EOC
+  ! EOC
 end subroutine SWMF_initialize_session
 
-!BOP ==========================================================================
-!ROUTINE: SWMF_run - run the SWMF
+! BOP ==========================================================================
+! ROUTINE: SWMF_run - run the SWMF
 !INTERFACE:
 subroutine SWMF_run(NameComp, tCouple, tSimulationOut, DoStop, iError)
   !USES:
@@ -122,16 +124,17 @@ subroutine SWMF_run(NameComp, tCouple, tSimulationOut, DoStop, iError)
   integer,      intent(out):: iError         ! Error code, 0 on success
   !DESCRIPTION:
   ! Run the SWMF until the coupling time or a stop condition is reached.
-  ! If NameComp is the name of one of the SWMF components then the coupling 
+  ! If NameComp is the name of one of the SWMF components then the coupling
   ! time tCouple affects only the processors that run component NameComp.
   ! If NameComp is set to ** then all the SWMF processors synchronize
-  ! and return at the coupling time. The tSimulationOut contains the 
-  ! simulation time at return. The DoStop argument indicates if a 
+  ! and return at the coupling time. The tSimulationOut contains the
+  ! simulation time at return. The DoStop argument indicates if a
   ! final stop has been requested by the SWMF.
-  !EOP
+  ! EOP
   !LOCAL VARIABLES:
   real    :: tCouple_C(MaxComp)
-  !BOC ------------------------------------------------------------------------
+  ! BOC ------------------------------------------------------------------------
+  !----------------------------------------------------------------------------
   tCouple_C = -1.0
   if(tCouple >= 0.0)then
      if(NameComp == '**')then
@@ -147,11 +150,11 @@ subroutine SWMF_run(NameComp, tCouple, tSimulationOut, DoStop, iError)
 
   tSimulationOut = tSimulation
   iError = iErrorSwmf
-  !EOC
+  ! EOC
 end subroutine SWMF_run
 
-!BOP ==========================================================================
-!ROUTINE: SWMF_finalize - finalize the SWMF
+! BOP ==========================================================================
+! ROUTINE: SWMF_finalize - finalize the SWMF
 !INTERFACE:
 subroutine SWMF_finalize(iError)
   !USES:
@@ -162,17 +165,18 @@ subroutine SWMF_finalize(iError)
   integer, intent(out):: iError ! Error code, 0 on success
   !DESCRIPTION:
   ! Finalize the SWMF after the last session is done.
-  !EOP
-  !BOC ------------------------------------------------------------------------
+  ! EOP
+  ! BOC ------------------------------------------------------------------------
+  !----------------------------------------------------------------------------
   call finalize
   iError = iErrorSwmf
-  !EOC
+  ! EOC
 end subroutine SWMF_finalize
 
 !^CMP IF IH BEGIN
 !^CMP IF GM BEGIN
-!BOP ==========================================================================
-!ROUTINE: SWMF_couple - SWMF coupling with an external code
+! BOP ==========================================================================
+! ROUTINE: SWMF_couple - SWMF coupling with an external code
 !INTERFACE:
 subroutine SWMF_couple(NameFrom, NameTo, NameCoord, &
      nVar, nX, nY, xMin, xMax, yMin, yMax, Data_VII, iError)
@@ -202,7 +206,7 @@ subroutine SWMF_couple(NameFrom, NameTo, NameCoord, &
   integer, intent(out):: iError ! Error code, 0 on success
   !DESCRIPTION:
   ! The coupling interface of the SWMF when coupled to an external code.
-  ! This subroutine can be used to couple with various components. 
+  ! This subroutine can be used to couple with various components.
   ! The couplings are identified by the NameFrom and NameTo strings.
   ! One of the strings must be the name of an SWMF component, the
   ! other string identifies the external component and it should not
@@ -213,11 +217,12 @@ subroutine SWMF_couple(NameFrom, NameTo, NameCoord, &
   ! The coordinate ranges and the data must be in SI units.
   ! The coordinate system description is a 3 character string (e.g. GSM)
   ! which is used to do the coordinate transformation between the SWMF
-  ! component and the buffer grid. 
-  !EOP
+  ! component and the buffer grid.
+  ! EOP
   integer :: iComm
-  character(len=*), parameter :: NameSub='SWMF_receive'
-  !BOC ------------------------------------------------------------------------
+  ! BOC ------------------------------------------------------------------------
+  character(len=*), parameter:: NameSub = 'SWMF_couple'
+  !----------------------------------------------------------------------------
   iError = 1
 
   ! Do the appropriate coupling depending on the NameFrom-NameTo pair
@@ -231,7 +236,7 @@ subroutine SWMF_couple(NameFrom, NameTo, NameCoord, &
            RETURN
         end if
 
-        ! Broadcast information from the root processor 
+        ! Broadcast information from the root processor
         ! to the rest of the component
         iComm = i_comm(NameTo)
         call MPI_bcast(Data_VII, nVar*nX*nY, MPI_DOUBLE_PRECISION, 0, &
@@ -257,7 +262,7 @@ subroutine SWMF_couple(NameFrom, NameTo, NameCoord, &
   end select
 
   iError = 0
-  !EOC
+  ! EOC
 
 end subroutine SWMF_couple
 !^CMP IF GM END

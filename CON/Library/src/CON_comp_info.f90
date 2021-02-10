@@ -1,21 +1,22 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 !               Space Weather Modeling Framework (SWMF)                !
 !    Center for Space Environment Modeling, The University of Michigan !
 !-----------------------------------------------------------------------
-!BOP -------------------------------------------------------------------------
+! BOP -------------------------------------------------------------------------
 !
-!MODULE: CON_comp_info - Component information creation and handling
-! 
-!DESCRIPTION: 
+! MODULE: CON_comp_info - Component information creation and handling
+!
+!DESCRIPTION:
 ! This module provides a public derived type {\bf CompInfoType}
-! to store component information such as name, version name and number, 
-! whether the component is used, the unit number for (redirected) STDOUT, 
-! and 7 MPI parameters, such as the MPI communicator, MPI group, 
-! number of processors used by the component, the global rank of the 
+! to store component information such as name, version name and number,
+! whether the component is used, the unit number for (redirected) STDOUT,
+! and 7 MPI parameters, such as the MPI communicator, MPI group,
+! number of processors used by the component, the global rank of the
 ! first and last processors used by the component, the stride between
-! the used processors, and the rank of the current PE 
+! the used processors, and the rank of the current PE
 ! within the component group.
 !
 ! The MPI information is created with the {\bf init} subroutine.
@@ -26,7 +27,7 @@
 !
 ! The data can be released with the {\bf clean} subroutine.
 
-!INTERFACE:	
+!INTERFACE:
 !
 module CON_comp_info
   !
@@ -58,22 +59,23 @@ module CON_comp_info
   !
   !PUBLIC MEMBER FUNCTIONS:
   public :: init   ! constructor creates layout information from PE range
-  public :: clean  ! destructor 
+  public :: clean  ! destructor
   public :: get    ! get component information
   public :: put    ! put component information not set by init
 
   !
-  !REVISION HISTORY: 
+  !REVISION HISTORY:
   !
   !  June 2003 - O. Volberg <volov@umich.edu> - initial version
   !  July 2003 - G. Toth <gtoth@umich.edu>    - major rewrite
   !  Aug  2003 - G. Toth <gtoth@umich.edu>    - improved description
   !
-  !EOP ------------------------------------------------------------------------
+  ! EOP ------------------------------------------------------------------------
 
   character(len=*),parameter :: NameMod='CON_comp_info'
 
 contains
+  !============================================================================
 
   subroutine init(Info, Name, iGroupWorld, iCommWorld, iProcRange_I, nThread, &
        iError)
@@ -82,7 +84,7 @@ contains
     character (len=*), intent(in)     :: Name
     integer, intent(in)               :: iGroupWorld,iCommWorld
     ! Processor range contains first rank, last rank and stride
-    ! indicating ranks in group or processors to be included in the new group 
+    ! indicating ranks in group or processors to be included in the new group
     integer, intent(in)               :: iProcRange_I(ProcZero_:ProcStride_)
     integer, intent(in)               :: nThread
     integer, intent(out)              :: iError
@@ -90,8 +92,8 @@ contains
     ! local variables
     integer :: iProcWorld, nProcWorld, iStride
 
-    character(len=*), parameter :: NameSub = NameMod//'::init'
-    !------------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'init'
+    !--------------------------------------------------------------------------
 
     iError = 0
 
@@ -152,7 +154,7 @@ contains
        RETURN
     endif
 
-    ! get the rank in the world communicator 
+    ! get the rank in the world communicator
     call MPI_comm_rank(iCommWorld, iProcWorld, iError)
 
     ! Let the root PE of the group calculate the size of the group
@@ -189,21 +191,21 @@ contains
        ! If there are enough threads to cover the stride, then iThride=iStride
        if(iStride < nThread) Info%iThread = iStride
     end if
-         
+
     Info % iUnitOut    = STDOUT_
     Info % Use         = .true.
     Info % NameVersion = 'unset'
     Info % Version     = -1.0
 
   end subroutine init
+  !============================================================================
 
-  !============================================================
   subroutine clean(Info, iError)
 
     type(CompInfoType), intent(inout) :: Info
     integer, intent(out) :: iError ! return code
-    character(len=*), parameter :: NameSub = NameMod//':: clean_' 
-    !------------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'clean'
+    !--------------------------------------------------------------------------
     call MPI_group_free(Info%iMpiParam_I(Group_), iError)
     if (iError /=  MPI_SUCCESS) then
        write(*,'(a)')NameSub// &
@@ -216,20 +218,21 @@ contains
     Info%iMpiParam_I = MPI_UNDEFINED
 
   end subroutine clean
+  !============================================================================
 
-  !===========================================================================
   subroutine get(Info, iProc, nProc, iComm, iGroup, iFirst, iLast, iStride, &
        nThread, iUnitOut, Use, Name, NameVersion, Version)
 
     type(CompInfoType), intent(in) :: Info
     integer,                     optional, intent(out) :: &
          iProc, nProc, iComm, iGroup,iFirst,  iLast, iStride, nThread, iUnitOut
-    logical,                     optional, intent(out) :: Use
+    logical,                     optional, intent(out) :: use
     character(len=lNameComp),    optional, intent(out) :: Name
     character(len=lNameVersion), optional, intent(out) :: NameVersion
     real,                        optional, intent(out) :: Version
-    !-------------------------------------------------------------------------
-    if( present(iProc)   ) iProc   = Info%iMpiParam_I(Proc_) 
+
+    !--------------------------------------------------------------------------
+    if( present(iProc)   ) iProc   = Info%iMpiParam_I(Proc_)
     if( present(nProc)   ) nProc   = Info%iMpiParam_I(nProc_)
     if( present(iComm)   ) iComm   = Info%iMpiParam_I(Comm_)
     if( present(iGroup)  ) iGroup  = Info%iMpiParam_I(Group_)
@@ -244,20 +247,22 @@ contains
     if( present(NameVersion) ) NameVersion  = Info%NameVersion
     if( present(Version)     ) Version      = Info%Version
   end subroutine get
-  !===========================================================================
+  !============================================================================
   subroutine put(Info, iUnitOut, Use, NameVersion, Version)
 
     type(CompInfoType), intent(inout) :: Info
     integer,          optional, intent(in) :: iUnitOut
-    logical,          optional, intent(in) :: Use
+    logical,          optional, intent(in) :: use
     character(len=*), optional, intent(in) :: NameVersion
     real,             optional, intent(in) :: Version
-    !-------------------------------------------------------------------------
+
+    !--------------------------------------------------------------------------
     if( present(iUnitOut)    ) Info%iUnitOut    = iUnitOut
     if( present(Use)         ) Info%Use         = Use
     if( present(NameVersion) ) Info%NameVersion = NameVersion
     if( present(Version)     ) Info%Version     = Version
 
   end subroutine put
+  !============================================================================
 
 end module CON_comp_info

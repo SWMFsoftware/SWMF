@@ -1,11 +1,11 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !^CMP FILE IE
 !^CMP FILE PW
 
-!BOP
-!MODULE: CON_couple_ie_pw - couple IE and PW components
+! BOP
+! MODULE: CON_couple_ie_pw - couple IE and PW components
 !
 !DESCRIPTION:
 ! Couple IE and PW components both ways.
@@ -30,8 +30,8 @@ module CON_couple_ie_pw
   public :: couple_ie_pw      ! couple IE to PW
 
   !REVISION HISTORY:
-  ! 11/17/2006 A.Glocer and G.Toth - initial version 
-  !EOP
+  ! 11/17/2006 A.Glocer and G.Toth - initial version
+  ! EOP
 
   ! Communicator and logicals to simplify message passing and execution
   logical :: IsInitialized = .false.
@@ -40,17 +40,19 @@ module CON_couple_ie_pw
   integer, save :: iSize, jSize
 
 contains
+  !============================================================================
 
-  !BOP =======================================================================
-  !IROUTINE: couple_ie_pw_init - initialize IE-PW couplings
+  ! BOP =======================================================================
+  ! IROUTINE: couple_ie_pw_init - initialize IE-PW couplings
   !INTERFACE:
   subroutine couple_ie_pw_init
 
     !DESCRIPTION:
     ! This subroutine should be called from all PE-s so that
     ! a union group can be formed. The IE grid size is also stored.
-    !EOP
+    ! EOP
 
+    !--------------------------------------------------------------------------
     if(IsInitialized) RETURN
     IsInitialized = .true.
 
@@ -59,9 +61,10 @@ contains
     jSize = Grid_C(IE_) % nCoord_D(2)
 
   end subroutine couple_ie_pw_init
+  !============================================================================
 
-  !BOP =======================================================================
-  !IROUTINE: couple_ie_pw - couple IE component to PW component
+  ! BOP =======================================================================
+  ! IROUTINE: couple_ie_pw - couple IE component to PW component
   !INTERFACE:
   subroutine couple_ie_pw(tSimulation)
 
@@ -75,7 +78,7 @@ contains
     !
     ! Send electrostatic potential, field aligned current,
     ! average energy and electron flux from IE to PW.
-    !EOP
+    ! EOP
 
     ! "block" index for IE model (south = 2)
     integer, parameter :: North_ = 1
@@ -85,14 +88,15 @@ contains
 
     ! Names of variables to pass
     character (len=*), parameter, dimension(nVar) :: &
-         NameVar_V = (/'Pot','Jr ','Ave','Tot'/)
+         NameVar_V = ['Pot','Jr ','Ave','Tot']
 
     ! Buffer for the variables on the 2D IE grid
     real, allocatable :: Buffer_IIV(:,:,:)
 
     logical :: DoTest, DoTestMe
-    character (len=*), parameter :: NameSub='couple_ie_pw'
-    !-------------------------------------------------------------------------
+
+    character(len=*), parameter:: NameSub = 'couple_ie_pw'
+    !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
     if(DoTest)write(*,*)NameSub,' starting, iProc=', i_proc()
 
@@ -111,6 +115,7 @@ contains
     if(DoTest)write(*,*)NameSub,': finished iProc=', i_proc()
 
   end subroutine couple_ie_pw
+  !============================================================================
 
 end module CON_couple_ie_pw
 

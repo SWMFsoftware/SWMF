@@ -1,5 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 module CON_transfer_data
@@ -17,12 +17,12 @@ module CON_transfer_data
   !               UseSourceRootOnly=.false., UseTargetRootOnly=.false.)
   !    if(is_proc(Target_) call put_data_into_target_comp(iData)
   !
-  ! Transfer a 2D array of type real that is obtained as the sum of the data 
+  ! Transfer a 2D array of type real that is obtained as the sum of the data
   ! returned by the source processors. Result is needed on root target only:
   !
   !    allocate(Data_II(iSize,jSize))
   !    if(is_proc(Source_) call get_data_from_source_comp(Data_II)
-  !    call transfer_real_array(Source_, Target_, iSize*jSize, Data_II, 
+  !    call transfer_real_array(Source_, Target_, iSize*jSize, Data_II,
   !            UseSourceSum=.true., UseTargetRootOnly=.true.)
   !    if(is_proc0(Target_) call put_data_into_target_comp(Data_II)
   !    deallocate(Data_II)
@@ -36,7 +36,7 @@ module CON_transfer_data
   ! if the data is availale/needed only on the Source/Target root processor.
   ! The default is the worst case scenario, i.e.:
   !
-  !   UseSourceRootOnly = .true.  (data is only avaialable on the source root) 
+  !   UseSourceRootOnly = .true.  (data is only avaialable on the source root)
   !   UseTargetRootOnly = .false. (data is needed on all target processors)
   !
   ! Setting these logicals to non-default values can reduce the communication.
@@ -48,7 +48,7 @@ module CON_transfer_data
   implicit none
 
   private ! except
-  
+
   public:: transfer_integer       ! transfer up to 4 integers
   public:: transfer_integer_array ! transfer an integer array
   public:: transfer_real          ! transfer a single real
@@ -71,8 +71,7 @@ module CON_transfer_data
   logical:: UseAllReduce      ! use an MPI_allreduce or MPI_reduce
 
 contains
-
-  !===========================================================================
+  !============================================================================
 
   subroutine transfer_data_action(DoTest, iCompSource, iCompTarget, &
        UseSourceSum, UseSourceRootOnlyIn, UseTargetRootOnlyIn)
@@ -87,9 +86,9 @@ contains
     integer:: iProc0Source, iProc0Target
     logical:: UseSourceRootOnly, UseTargetRootOnly
 
-    character(len=*), parameter:: NameSub = 'transfer_data_action'
-    !-------------------------------------------------------------------------
     ! Do source addition on source processors if needed. Default is false.
+    character(len=*), parameter:: NameSub = 'transfer_data_action'
+    !--------------------------------------------------------------------------
     DoSourceSum = .false.
     if(present(UseSourceSum)) DoSourceSum = UseSourceSum &
          .and. is_proc(iCompSource) .and. n_proc(iCompSource) > 0
@@ -155,7 +154,7 @@ contains
     ! If only the source root has the data, broadcast is unavoidable
     if(UseSourceRootOnly) RETURN
 
-    ! If the target root was not covered by source, it is unlikely 
+    ! If the target root was not covered by source, it is unlikely
     ! that the other target processors are all covered by source
     if(DoRootTransfer) RETURN
 
@@ -173,12 +172,12 @@ contains
        write(*,*)NameSub,': modulo(stride(Target),stride(Source))=', &
             modulo(i_proc_stride(iCompTarget), i_proc_stride(iCompSource))
        write(*,*)NameSub,': final DoTargetBroadcast=', DoTargetBroadcast
-       
+
     end if
 
   end subroutine transfer_data_action
+  !============================================================================
 
-  !===========================================================================
   subroutine transfer_integer_array(iCompSource, iCompTarget, nData, iData_I, &
        UseSourceSum, UseSourceRootOnly, UseTargetRootOnly)
 
@@ -192,8 +191,8 @@ contains
     integer, parameter:: iTag = 1001
 
     logical:: DoTest, DoTestMe
-    character(len=*), parameter:: NameSub = 'transfer_integer'
-    !-------------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'transfer_integer_array'
+    !--------------------------------------------------------------------------
     if(n_proc()<=1)RETURN
 
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
@@ -225,8 +224,8 @@ contains
          iData_I, nData, MPI_INTEGER, 0, i_comm(iCompTarget), iError)
 
   end subroutine transfer_integer_array
+  !============================================================================
 
-  !===========================================================================
   subroutine transfer_integers(iCompSource, iCompTarget, &
        iData1, iData2, iData3, iData4, &
        UseSourceSum, UseSourceRootOnly, UseTargetRootOnly)
@@ -238,7 +237,8 @@ contains
          UseSourceSum, UseSourceRootOnly, UseTargetRootOnly
 
     integer:: nData, iData_I(4)
-    !------------------------------------------------------------------------
+
+    !--------------------------------------------------------------------------
     nData = 2
     iData_I(1) = iData1
     iData_I(2) = iData2
@@ -261,7 +261,7 @@ contains
     end if
 
   end subroutine transfer_integers
-  !===========================================================================
+  !============================================================================
   subroutine transfer_integer(iCompSource, iCompTarget, iData, &
        UseSourceSum, UseSourceRootOnly, UseTargetRootOnly)
 
@@ -274,8 +274,9 @@ contains
     integer, parameter:: iTag = 1002
 
     logical:: DoTest, DoTestMe
+
     character(len=*), parameter:: NameSub = 'transfer_integer'
-    !-------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     if(n_proc()<=1)RETURN
 
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
@@ -307,8 +308,7 @@ contains
          iData, 1, MPI_INTEGER, 0, i_comm(iCompTarget), iError)
 
   end subroutine transfer_integer
-
-  !===========================================================================
+  !============================================================================
 
   subroutine transfer_real_array(iCompSource, iCompTarget, nData, Data_I, &
        UseSourceSum, UseSourceRootOnly, UseTargetRootOnly)
@@ -321,7 +321,7 @@ contains
          UseSourceSum, UseSourceRootOnly, UseTargetRootOnly
 
     integer, parameter:: iTag = 1003
-    !-------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     if(n_proc()<=1)RETURN
 
     call transfer_data_action(.false., iCompSource, iCompTarget, &
@@ -351,8 +351,7 @@ contains
          Data_I, nData, MPI_REAL, 0, i_comm(iCompTarget), iError)
 
   end subroutine transfer_real_array
-
-  !===========================================================================
+  !============================================================================
 
   subroutine transfer_real(iCompSource, iCompTarget, Data, &
        UseSourceSum, UseSourceRootOnly, UseTargetRootOnly)
@@ -364,7 +363,7 @@ contains
          UseSourceSum, UseSourceRootOnly, UseTargetRootOnly
 
     integer, parameter:: iTag = 1004
-    !-------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     if(n_proc()<=1)RETURN
 
     call transfer_data_action(.false., iCompSource, iCompTarget, &
@@ -394,8 +393,7 @@ contains
          Data, 1, MPI_REAL, 0, i_comm(iCompTarget), iError)
 
   end subroutine transfer_real
-
-  !===========================================================================
+  !============================================================================
 
   subroutine transfer_string_array(&
        iCompSource, iCompTarget, nString, String_I,&
@@ -410,7 +408,8 @@ contains
     integer:: nData
 
     integer, parameter:: iTag = 1005
-    !-------------------------------------------------------------------------
+
+    !--------------------------------------------------------------------------
     if(n_proc()<=1)RETURN
 
     call transfer_data_action(.false., iCompSource, iCompTarget, &
@@ -430,8 +429,7 @@ contains
          String_I, nData, MPI_CHARACTER, 0, i_comm(iCompTarget), iError)
 
   end subroutine transfer_string_array
-
-  !===========================================================================
+  !============================================================================
 
   subroutine transfer_string(iCompSource, iCompTarget, String,&
        UseSourceRootOnly, UseTargetRootOnly)
@@ -444,7 +442,7 @@ contains
     integer:: nData
 
     integer, parameter:: iTag = 1006
-    !-------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     if(n_proc()<=1)RETURN
 
     call transfer_data_action(.false., iCompSource, iCompTarget, &
@@ -464,7 +462,6 @@ contains
          String, nData, MPI_CHARACTER, 0, i_comm(iCompTarget), iError)
 
   end subroutine transfer_string
-
-  !===========================================================================
+  !============================================================================
 
 end module CON_transfer_data

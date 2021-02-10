@@ -1,14 +1,14 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !^CMP FILE EE
 !^CMP FILE SC
 
-!BOP
-!MODULE: CON_couple_ee_sc - couple EE and SC components
+! BOP
+! MODULE: CON_couple_ee_sc - couple EE and SC components
 !
 !DESCRIPTION:
-! Couple EE and SC components both ways. 
+! Couple EE and SC components both ways.
 ! EE overwrites SC in the whole EE domain. Extra SC variables are solved for in SC.
 ! SC provides boundary conditions for EE where possible.
 !
@@ -36,25 +36,27 @@ module CON_couple_ee_sc
 
   !REVISION HISTORY:
   ! 09/24/2013 G.Toth <gtoth@umich.edu> - initial version
-  !EOP
+  ! EOP
 
   ! Router communicator info
   type(CouplePointsType) :: CouplerEEtoSC,  CouplerSCtoEE
 
 contains
+  !============================================================================
 
-  !BOP =======================================================================
-  !IROUTINE: couple_ee_sc_init - initialize EE-SC couplings
+  ! BOP =======================================================================
+  ! IROUTINE: couple_ee_sc_init - initialize EE-SC couplings
   !INTERFACE:
   subroutine couple_ee_sc_init
 
     logical :: DoTest, DoTestMe
-    character(len=*), parameter :: NameSub='couple_ee_sc_init'
 
     !DESCRIPTION:
     ! This subroutine should be called from all PE-s
-    !EOP
-    !------------------------------------------------------------------------
+    ! EOP
+
+    character(len=*), parameter:: NameSub = 'couple_ee_sc_init'
+    !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
 
     ! Set up variable coupling information
@@ -80,8 +82,8 @@ contains
     call couple_points_init(CouplerSCtoEE)
 
   end subroutine couple_ee_sc_init
+  !============================================================================
 
-  !=======================================================================
   subroutine couple_ee_sc(tSimulation)
 
     !INPUT ARGUMENT:
@@ -90,8 +92,8 @@ contains
     logical :: DoTest, DoTestMe
 
     ! Name of this interface
-    character (len=*), parameter :: NameSub='couple_ee_sc'
-    !-------------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'couple_ee_sc'
+    !--------------------------------------------------------------------------
 
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
@@ -103,15 +105,15 @@ contains
     if(DoTest) write(*,*) NameSub,' finished, iProc=', i_proc()
 
   end subroutine couple_ee_sc
-  !=======================================================================
+  !============================================================================
   subroutine couple_sc_ee(tSimulation)
 
     ! List of variables to pass
     real, intent(in) :: tSimulation
 
     logical :: DoTest, DoTestMe
-    character (len=*), parameter :: NameSub='couple_sc_ee'
-    !-------------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'couple_sc_ee'
+    !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
     if(DoTest)write(*,*)NameSub,' starting iProc=',CouplerSCtoEE%iProcWorld
@@ -122,5 +124,6 @@ contains
     if(DoTest) write(*,*) NameSub,' finished, iProc=', i_proc()
 
   end subroutine couple_sc_ee
+  !============================================================================
 
 end module CON_couple_ee_sc

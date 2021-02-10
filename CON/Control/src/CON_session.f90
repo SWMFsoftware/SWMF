@@ -1,10 +1,10 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !
-!BOP
+! BOP
 !
-!MODULE: CON_session - run the framework with a set of parameters
+! MODULE: CON_session - run the framework with a set of parameters
 !INTERFACE:
 module CON_session
 
@@ -46,14 +46,13 @@ module CON_session
   ! 05/20/04 G.Toth - general steady state session model
   ! 08/11/04 G.Toth - removed 'old' and 'parallel' session models
   ! 02/09/05 G.Toth - moved related code from CON_main into init_session.
-  ! 09/09/05 G.Toth - removed read_inputs from init_session 
+  ! 09/09/05 G.Toth - removed read_inputs from init_session
   !                   (to avoid ifort compiler bug)
   !                   moved some code from CON_main into do_session.
   ! 01/20/06 G.Toth - added optional tCoupleExtra_C parameter to do_session
-  !EOP
+  ! EOP
 
   character (len=*), parameter :: NameMod = 'CON_session'
-
 
   ! Local variables
   integer :: lComp, iComp, nComp
@@ -65,23 +64,24 @@ module CON_session
   !---------------------------------------------------------------------------
 
 contains
+  !============================================================================
 
-  !BOP ======================================================================
-  !IROUTINE: init_session - initialize run with a fixed set of input parameters
+  ! BOP ======================================================================
+  ! IROUTINE: init_session - initialize run with a fixed set of input parameters
   !INTERFACE:
   subroutine init_session
 
     !DESCRIPTION:
-    ! Initialize possibly overlapping components for the current session. 
+    ! Initialize possibly overlapping components for the current session.
     ! First figure out which components belong to this PE.
     ! Then couple the components in an appropriate order for the first time.
     ! The order is determined by the iCompCoupleOrder\_II array.
     ! Do timings as needed.
-    !EOP
+    ! EOP
 
     logical:: UseCore
-    
-    character(len=*), parameter :: NameSub=NameMod//'::init_session'
+
+    character(len=*), parameter:: NameSub = 'init_session'
     !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
     DoTestMe = DoTest .and. is_proc0()
@@ -95,7 +95,7 @@ contains
     if(is_proc0().and.lVerbose>=0)&
          write(*,*)'----- Starting Session ',iSession,' ------'
 
-    !BOC
+    ! BOC
     nComp = n_comp()
 
     ! Initialize components for this session.
@@ -115,7 +115,7 @@ contains
     ! Figure out which components belong to this PE
     IsProc_C = .false.
     UseCore  = .false.
-    
+
     do lComp = 1, nComp; iComp = i_comp(lComp)
        if(.not.use_comp(iComp)) CYCLE
        IsProc_C(iComp) = is_proc(iComp)
@@ -145,7 +145,7 @@ contains
             Couple_CC(iCompSource, iCompTarget) % DoThis) &
             call couple_two_comp(iCompSource, iCompTarget, tSimulation)
     end do
-    !EOC
+    ! EOC
 
     if(iSession==1)then
        call timing_stop('SETUP')
@@ -158,9 +158,10 @@ contains
     end if
 
   end subroutine init_session
+  !============================================================================
 
-  !BOP ======================================================================
-  !IROUTINE: do_session - time loop with a fixed set of input parameters
+  ! BOP ======================================================================
+  ! IROUTINE: do_session - time loop with a fixed set of input parameters
   !INTERFACE:
   subroutine do_session(IsLastSession, tCoupleExtra_C)
 
@@ -173,9 +174,9 @@ contains
     !DESCRIPTION:
     ! This subroutine executes one session.
     ! This is general time looping routine allows overlap in
-    ! the layout of the components but allows concurrent execution 
+    ! the layout of the components but allows concurrent execution
     ! if there is no overlap.
-    ! Each component has its own tSimulation\_C(iComp). 
+    ! Each component has its own tSimulation\_C(iComp).
     ! The simulation time for control is defined as the {\bf minimum}
     ! of the component times. Always the component which is lagging behind
     ! should run. Coupling occurs when all the involved components reached or
@@ -188,7 +189,7 @@ contains
 
     real :: tSimulationCouple, tSimulationLimit
 
-    !EOP
+    ! EOP
 
     ! Indexes for tight coupling
     integer:: iCompMaster, iCompSlave
@@ -201,11 +202,11 @@ contains
 
     ! Check if the run should be killed
     logical:: DoKill
-    
+
     ! Smallest temporal frequency and a small fraction
     real:: DtTiny = 0.0
 
-    character(len=*), parameter :: NameSub=NameMod//'::do_session'
+    character(len=*), parameter:: NameSub = 'do_session'
     !--------------------------------------------------------------------------
 
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
@@ -216,7 +217,7 @@ contains
             write(*,*)NameSub,'tCoupleExtra_C=',tCoupleExtra_C(1:nComp)
     end if
 
-    !BOC
+    ! BOC
 
     ! If no component uses this PE and init_session did not stop
     ! then set tSimulation to the final time and simply return
@@ -265,11 +266,11 @@ contains
 
        ! Tiny fraction
        DtTiny = DtTiny * 1e-6
-       
+
        if(DoTestMe)write(*,*)NameSub,' final DtTiny=', DtTiny
 
     end if
-    
+
     if(DoTestMe)write(*,*)NameSub,' tSimulation_C=',tSimulation_C(1:nComp)
 
     TIMELOOP: do
@@ -326,7 +327,7 @@ contains
           nIterationCheck  = nIteration
           tSimulationCheck = tSimulation
        end if
-       ! For a new step, the restart fiels have not been saved. 
+       ! For a new step, the restart fiels have not been saved.
        IsRestartSaved = .false.
 
        ! Advance step number and iteration (in current run)
@@ -415,7 +416,7 @@ contains
              if(.not.(IsProc_C(iCompMaster) .or. IsProc_C(iCompSlave))) CYCLE
 
              ! Make sure that slaves and master have the same limiting
-             ! This loop may need to be iterated if the slave can have 
+             ! This loop may need to be iterated if the slave can have
              ! extra couplings
              tMaster = min( &
                   tSimulationLimit_C(iCompMaster), &
@@ -425,7 +426,6 @@ contains
           end do
 
        end if
-
 
        if(DoTestMe)write(*,*)NameSub,' advance solution'
 
@@ -460,7 +460,7 @@ contains
                 DoneRun_C(iComp) = .true.
 
                 ! There is no progress in time
-                !tSimulation_C(iComp) = tSimulation
+                ! tSimulation_C(iComp) = tSimulation
 
                 if(DoTestMe)write(*,*)NameSub,' run ',NameComp_I(iComp),&
                      ' at nStep=',nStep
@@ -562,14 +562,15 @@ contains
        call timing_reset_all
     end if
 
-    !EOC
+    ! EOC
 
     if(DoTestMe)write(*,*)NameSub,' finished'
 
   end subroutine do_session
+  !============================================================================
 
-  !BOP =======================================================================
-  !IROUTINE: do_stop_now - return true if stop file exists or cpu time is over
+  ! BOP =======================================================================
+  ! IROUTINE: do_stop_now - return true if stop file exists or cpu time is over
   !INTERFACE:
   function do_stop_now() result(DoStopNow)
 
@@ -582,8 +583,9 @@ contains
     ! If any of these conditions hold return true, otherwise false
     ! on all PE-s. This subroutine contains an MPI\_bcast, so frequent
     ! checks may affect parallel performance.
-    !EOP
+    ! EOP
 
+    !--------------------------------------------------------------------------
     DoStopNow=.false.
     if(is_proc0())then
        if(CpuTimeMax > 0.0 .and. MPI_WTIME()-CpuTimeStart >= CpuTimeMax)&
@@ -602,21 +604,23 @@ contains
     call MPI_bcast(DoStopNow,1,MPI_LOGICAL,0,i_comm(),iError)
 
   end function do_stop_now
+  !============================================================================
 
-  !BOP =======================================================================
-  !IROUTINE: show_progress - show how far the simulation progressed
+  ! BOP =======================================================================
+  ! IROUTINE: show_progress - show how far the simulation progressed
   !INTERFACE:
   subroutine show_progress
     !DESCRIPTION:
     ! Print information about time and time step at the periodicity
     ! given by DnShowProgressShort and DnShowProgressLong which can
     ! be set with the \#PROGRESS command in the input parameter file.
-    !EOP
+    ! EOP
 
     use CON_time, ONLY: get_time, TimeType
 
     type(TimeType):: TimeCurrent
-    !-------------------------------------------------------------------------
+
+    !--------------------------------------------------------------------------
     if(.not.is_proc0()) RETURN
 
     if(is_proc0() .and. ( &
@@ -641,5 +645,6 @@ contains
     end if
 
   end subroutine show_progress
+  !============================================================================
 
 end module CON_session

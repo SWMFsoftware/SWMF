@@ -1,11 +1,11 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !^CMP FILE IE
 !^CMP FILE UA
 
-!BOP
-!MODULE: CON_couple_ie_ua - couple IE and UA components
+! BOP
+! MODULE: CON_couple_ie_ua - couple IE and UA components
 !
 !DESCRIPTION:
 ! Couple IE and UA components both ways.
@@ -32,7 +32,7 @@ module CON_couple_ie_ua
   ! 08/25/2003 A.Ridley <ridley@umich.edu> - initial version as external
   !                                          subroutines
   ! 08/27/2003 G.Toth <gtoth@umich.edu>    - combined them into a module
-  !EOP
+  ! EOP
 
   ! Communicator and logicals to simplify message passing and execution
   integer, save :: iCommIeUa, iProc0Ua
@@ -42,13 +42,14 @@ module CON_couple_ie_ua
   integer, save :: iSize, jSize, nCells_D(2)
 
 contains
+  !============================================================================
 
-  !BOP =======================================================================
-  !IROUTINE: couple_ie_ua_init - initialize IE-UA couplings
+  ! BOP =======================================================================
+  ! IROUTINE: couple_ie_ua_init - initialize IE-UA couplings
   !INTERFACE:
   subroutine couple_ie_ua_init
 
-    use ModNumConst, only:cPi
+    use ModNumConst, ONLY:cPi
 
     ! General error code
     integer :: iError, i, j
@@ -56,8 +57,9 @@ contains
     !DESCRIPTION:
     ! This subroutine should be called from all PE-s so that
     ! a union group can be formed. The IE grid size is also stored.
-    !EOP
+    ! EOP
 
+    !--------------------------------------------------------------------------
     if(IsInitialized) RETURN
     IsInitialized = .true.
 
@@ -65,7 +67,7 @@ contains
     call set_router_comm(IE_,UA_,iCommIeUa,UseMe,iProc0Ua)
 
     ! This works for a NODE BASED regular IE grid only
-    nCells_D = ncell_id(IE_) 
+    nCells_D = ncell_id(IE_)
     iSize=nCells_D(1); jSize=nCells_D(2)
 
     write(*,*) "Initializing COUPLER!!", iSize, jSize
@@ -78,9 +80,10 @@ contains
     endif
 
   end subroutine couple_ie_ua_init
+  !============================================================================
 
-  !BOP =======================================================================
-  !IROUTINE: couple_ie_ua - couple IE component to UA component
+  ! BOP =======================================================================
+  ! IROUTINE: couple_ie_ua - couple IE component to UA component
   !INTERFACE:
   subroutine couple_ie_ua(tSimulation)
 
@@ -93,19 +96,17 @@ contains
     !    Upper Atmosphere (UA) target
     !
     ! Send electrostatic potential from IE to UA.
-    !EOP
+    ! EOP
 
-    !\
     ! General coupling variables
-    !/
 
     ! Name of this interface
-    character (len=*), parameter :: NameSub='couple_ie_ua'
 
     logical :: DoTest, DoTestMe
     integer :: iProcWorld
 
-    !-------------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'couple_ie_ua'
+    !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
     iProcWorld = i_proc()
     call couple_mpi
@@ -113,8 +114,8 @@ contains
     if(DoTest)write(*,*)NameSub,': finished iProc=',iProcWorld
 
   contains
-
     !==========================================================================
+
     subroutine couple_mpi
 
       character (len=*), parameter :: NameSubSub=NameSub//'.couple_mpi'
@@ -122,7 +123,7 @@ contains
       ! Variable to pass is potential
 
       character (len=*), parameter, dimension(3) :: &
-           NameVar_V=(/'Pot','Ave','Tot'/)
+           NameVar_V=['Pot','Ave','Tot']
 
       ! Buffer for the potential on the 2D IE grid
       real, dimension(:,:), allocatable :: Buffer_II
@@ -150,9 +151,7 @@ contains
       if(DoTest)write(*,*)NameSubSub,', iProc, UAi_iProc0, IEi_iProc0=', &
            iProcWorld,i_proc0(UA_),i_proc0(IE_)
 
-      !\
       ! Allocate buffers both in UA and IE
-      !/
       allocate(Buffer_II(iSize,jSize), stat=iError)
       call check_allocate(iError,NameSubSub//": Buffer_II")
 
@@ -161,18 +160,14 @@ contains
 
       do iVar = 1, 3
 
-         !\
          ! Get potential from IE
-         !/
 
          if(is_proc(IE_))  &
               call IE_get_for_ua(Buffer_II, iSize, jSize, &
               NameVar_V(iVar), 'North', tSimulation)
 
-         !\
          ! Transfer variables from IE to UA
-         !/ 
-         
+
          iProcFrom = i_proc0(IE_)
 
          nSize = iSize*jSize
@@ -193,9 +188,7 @@ contains
          if(DoTest)write(*,*)NameSubSub,', variables transferred',&
               ', iProc:',iProcWorld
 
-         !\
          ! Put variables into UA
-         !/
          if(is_proc(UA_))then
             call SPS_put_into_ie(Buffer_II, iSize, jSize, &
                  NameVar_V(iVar))
@@ -206,9 +199,7 @@ contains
 
       enddo
 
-      !\
       ! Deallocate buffer to save memory
-      !/
       deallocate(Buffer_II)
 
       if(DoTest)write(*,*)NameSubSub,', variables deallocated',&
@@ -217,11 +208,13 @@ contains
       if(DoTest)write(*,*)NameSubSub,' finished, iProc=',iProcWorld
 
     end subroutine couple_mpi
+    !==========================================================================
 
   end subroutine couple_ie_ua
+  !============================================================================
 
-  !BOP =======================================================================
-  !IROUTINE: couple_ua_ie - couple UA to IE component
+  ! BOP =======================================================================
+  ! IROUTINE: couple_ua_ie - couple UA to IE component
   !INTERFACE:
   subroutine couple_ua_ie(tSimulation)
 
@@ -233,18 +226,16 @@ contains
     !    Upper Atmosphere           (UA) source\\
     !    Ionosphere Electrodynamics (IE) target
     !
-    !EOP
+    ! EOP
 
-    !\
     ! General coupling variables
-    !/
 
     ! Name of this interface
-    character (len=*), parameter :: NameSub='couple_ua_ie'
 
     logical :: DoTest, DoTestMe
     integer :: iProcWorld, iError
-    !-------------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'couple_ua_ie'
+    !--------------------------------------------------------------------------
 
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
 
@@ -259,8 +250,8 @@ contains
     if(DoTest)write(*,*)NameSub,': finished iProc=',iProcWorld
 
   contains
-
     !==========================================================================
+
     subroutine couple_mpi
 
       character (len=*), parameter :: NameSubSub=NameSub//'::couple_mpi'
@@ -270,7 +261,7 @@ contains
 
       ! Names of locations for both blocks
       character (len=*), parameter, dimension(2) :: &
-           NameLoc_B=(/'North','South'/)
+           NameLoc_B=['North','South']
 
       ! Names of variables for both blocks
       character (len=*), parameter :: NameVar='Lat:MLT:FAC:SigmaP:SigmaH'
@@ -298,9 +289,8 @@ contains
 
       logical :: IsFirstTime = .true.
 
-      !------------------------------------------------------------------------
-
       ! After everything is initialized exclude PEs which are not involved
+      !------------------------------------------------------------------------
       if(.not.UseMe) RETURN
 
       if(DoTest)write(*,*)NameSubSub,' starting, iProc=',iProcWorld
@@ -313,9 +303,9 @@ contains
 
 !      stop
 
-!!!      !\
+!!!
 !!!      ! Calculate field aligned currents in UA
-!!!      !/
+!!!
 !!!      if(is_proc(UA_))then
 !!!
 !!!         if(DoTest)write(*,*)NameSubSub,': call UA_calc_fac'
@@ -338,15 +328,15 @@ contains
 !!!      end if
 !!!      if(DoTest)write(*,*)NameSubSub,': bcast'
 !!!
-!!!      !\
+!!!
 !!!      ! Broadcast information about mapping points
-!!!      !/
+!!!
 !!!
 !!!      call MPI_bcast(UAi_nMlts,1,MPI_INTEGER,iProc0Ua,iCommIeUa,iError)
 !!!      call MPI_bcast(UAi_nLats,1,MPI_INTEGER,iProc0Ua,iCommIeUa,iError)
 !!!
 !!!      nVarsToPass = 3
-!!!      if (IsFirstTime) nVarsToPass = 5 
+!!!      if (IsFirstTime) nVarsToPass = 5
 !!!
 !!!      allocate(Buffer_IIV(UAi_nMlts, UAi_nLats/2, nVarsToPass), stat=iError)
 !!!      call check_allocate(iError,NameSubSub//': '//'Buffer_IIV')
@@ -362,11 +352,11 @@ contains
 !!!         if(DoTest)write(*,*)NameSubSub,': iProcTo=',iProcTo
 !!!
 !!!         if (is_proc0(UA_)) then
-!!!            !\
+!!!
 !!!            ! UA goes from the South pole to the north pole, while IE goes
 !!!            ! from the north pole to the south pole, so the blocks have to
 !!!            ! be reversed, basically.
-!!!            !/
+!!!
 !!!            if (iBlock == 1) then
 !!!               iStart = UAi_nLats/2 + 1
 !!!               iEnd   = UAi_nLats
@@ -386,12 +376,12 @@ contains
 !!!                 ' ',NameLoc_B(iBlock),&
 !!!                 ' maxval(Hall)=',maxval(Buffer_IIV(:,40:UAi_nLats/2,3)),&
 !!!                 ' maxloc(Hall)=',maxloc(Buffer_IIV(:,40:UAi_nLats/2,3))
-!!!            
+!!!
 !!!         endif
 !!!
-!!!         !\
+!!!
 !!!         ! Transfer values from UA to IE
-!!!         !/
+!!!
 !!!
 !!!         if(iProcTo /= i_proc0(UA_))then
 !!!            nSize = UAi_nMlts * (UAi_nLats/2) * nVarsToPass
@@ -409,9 +399,9 @@ contains
 !!!              ' maxval(Hall)=',maxval(Buffer_IIV(:,40:UAi_nLats/2,3)),&
 !!!              ' maxloc(Hall)=',maxloc(Buffer_IIV(:,40:UAi_nLats/2,3))
 !!!
-!!!         !\
+!!!
 !!!         ! Put values into IE
-!!!         !/
+!!!
 !!!         if(i_proc() == iProcTo )then
 !!!            call IE_put_from_ua(Buffer_IIV, iBlock, &
 !!!                 UAi_nMlts, UAi_nLats/2, nVarsToPass)
@@ -419,9 +409,9 @@ contains
 !!!
 !!!      end do
 !!!
-!!!      !\
+!!!
 !!!      ! Deallocate buffer to save memory
-!!!      !/
+!!!
 !!!      deallocate(Buffer_IIV)
 !!!
 !!!      if(is_proc(UA_)) &
@@ -432,8 +422,10 @@ contains
       if(DoTest)write(*,*)NameSubSub,' finished, iProc=',iProcWorld
 
     end subroutine couple_mpi
+    !==========================================================================
 
   end subroutine couple_ua_ie
+  !============================================================================
 
 end module CON_couple_ie_ua
 

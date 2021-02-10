@@ -1,8 +1,8 @@
-!BOP
-!MODULE: CON_couple_gm_ps - couple GM and PS components
+! BOP
+! MODULE: CON_couple_gm_ps - couple GM and PS components
 !
 !DESCRIPTION:
-! Couple GM and PS components both ways. 
+! Couple GM and PS components both ways.
 !
 !INTERFACE:
 module CON_couple_gm_ps
@@ -13,21 +13,20 @@ module CON_couple_gm_ps
 
   use GM_wrapper, ONLY: GM_put_from_ps
   use PS_wrapper, ONLY: PS_get_for_gm
-  
+
   implicit none
-  
+
   private ! except
-  
+
   !PUBLIC MEMBER FUNCTIONS:
 
   public :: couple_gm_ps_init ! initialize both couplings
   public :: couple_gm_ps      ! couple GM to PS
   public :: couple_ps_gm      ! couple PS to GM
 
-
   !REVISION HISTORY:
   ! 11/17/2018 D.Welling <dwelling@uta.edu> - initial version
-  !EOP
+  ! EOP
 
   logical :: IsInitialized = .false.
 
@@ -39,25 +38,26 @@ module CON_couple_gm_ps
 
   ! Number of fluids in GM (useful as multifluid can have more than 2 fluids)
   integer, save :: nDensityGM
-  
-contains
 
-  !BOP =======================================================================
-  !IROUTINE: couple_gm_ps_init - initialize GM-PS coupling
+contains
+  !============================================================================
+
+  ! BOP =======================================================================
+  ! IROUTINE: couple_gm_ps_init - initialize GM-PS coupling
   !INTERFACE:
   subroutine couple_gm_ps_init
     !DESCRIPTOIN:
     ! Store PS grid size, determine number of GM fluids.
-    !EOP
+    ! EOP
     use ModProcessVarName,  ONLY: process_var_name
 
     integer :: nSpeedGm, nPGm, nPparGm, nWaveGm, nMaterialGm, nChargeStateAllGm
 
-    !------------------------------------------------------------------------
     ! Set initialization status:
+    !--------------------------------------------------------------------------
     if(IsInitialized) RETURN
     IsInitialized = .true.
-    
+
     if(.not. (is_proc(PS_) .or. is_proc(GM_))) RETURN
 
     ! This works for a regular PS grid only
@@ -69,12 +69,13 @@ contains
          nPGm, nPparGm, nWaveGm, nMaterialGm, nChargeStateAllGm)
 
     DoMultiFluidPSCoupling = nDensityGm > 1
-    !write(*,*)'!!!!DEBUG: DoMultiFluidPSCoupling = ', DoMultiFluidPSCoupling
-    
+    ! write(*,*)'!!!!DEBUG: DoMultiFluidPSCoupling = ', DoMultiFluidPSCoupling
+
   end subroutine couple_gm_ps_init
-  
-  !BOP =======================================================================
-  !IROUTINE: couple_gm_ps - couple GM to PS component
+  !============================================================================
+
+  ! BOP =======================================================================
+  ! IROUTINE: couple_gm_ps - couple GM to PS component
   !INTERFACE:
   subroutine couple_gm_ps(tSimulation)
 
@@ -90,18 +91,18 @@ contains
     !      (PS) target
     !
     ! Send field line volumes & field magnitudes to PS from GM.
-    !EOP
+    ! EOP
 
-    character(len=*), parameter:: NameSub='couple_gm_ps'
-    !-------------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'couple_gm_ps'
+    !--------------------------------------------------------------------------
 
     call CON_stop(NameSub//': GM to PS coupling not implemented yet.')
 
   end subroutine couple_gm_ps
+  !============================================================================
 
-  
-  !BOP =======================================================================
-  !IROUTINE: couple_ps_gm - couple PS to GM component
+  ! BOP =======================================================================
+  ! IROUTINE: couple_ps_gm - couple PS to GM component
   !INTERFACE:
   subroutine couple_ps_gm(tSimulation)
 
@@ -114,7 +115,7 @@ contains
     !    Global Magnetosphere (GM) target
     !
     ! Send pressure from PS to GM.
-    !EOP
+    ! EOP
 
     ! Number of variables to pass
     integer:: nVarPsGm
@@ -126,8 +127,8 @@ contains
     real, allocatable:: Buffer_IIV(:,:,:)
 
     logical:: DoTest, DoTestMe
-    character(len=*), parameter :: NameSub='couple_ps_gm'
-    !-------------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'couple_ps_gm'
+    !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
 
     if(DoTest)write(*,*)NameSub,' starting, iProc=',i_proc()
@@ -139,7 +140,7 @@ contains
        NameVar='p:rho'
        nVarPsGm=2
     end if
-    
+
     allocate(Buffer_IIV(iSize,jSize,nVarPsGm))
     if(is_proc(PS_)) &
          call PS_get_for_gm(Buffer_IIV, iSize, jSize, nVarPsGm, NameVar)
@@ -151,5 +152,6 @@ contains
     if(DoTest)write(*,*)NameSub,': finished iProc=', i_proc()
 
   end subroutine couple_ps_gm
+  !============================================================================
 
 end module CON_couple_gm_ps

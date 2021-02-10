@@ -1,10 +1,10 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !^CMP FILE IH
 !^CMP FILE OH
-!BOP
-!MODULE: CON_couple_ih_oh - couple IH and OH both ways
+! BOP
+! MODULE: CON_couple_ih_oh - couple IH and OH both ways
 !INTERFACE:
 module CON_couple_ih_oh
 
@@ -36,7 +36,7 @@ module CON_couple_ih_oh
        OH_DoCoupleVar_V => DoCoupleVar_V
 
   implicit none
-  private !except
+  private ! except
 
   !PUBLIC MEMBER FUNCTIONS:
   public:: couple_ih_oh_init
@@ -47,7 +47,7 @@ module CON_couple_ih_oh
   ! 7/23/03 Sokolov I.V.<igorsok@umich.edu> - prototype for ih-gm
   ! 7/04/04                                 - version for ih-sc
   ! 7/20/04                                 - version for sc-buffer
-  !EOP
+  ! EOP
 
   logical       :: IsInitialized=.false., DoMatchIBC = .true.
 
@@ -58,8 +58,8 @@ module CON_couple_ih_oh
   character(len=*), parameter :: NameMod='couple_ih_oh'
 
 contains
+  !============================================================================
 
-  !===========================================================================
   subroutine couple_ih_oh_init
 
     ! Couple IH and OH components via a buffer grid
@@ -74,17 +74,18 @@ contains
     ! 08/27/2003 G.Toth - combined into a module
     ! 12/01/2004 G.Toth - the GM->IE coupling is rewritten for Jr(iSize,jSize)
 
-    ! 12/12/2011 R.Oran <oran@umich.edu> version for two BATSRUS components 
+    ! 12/12/2011 R.Oran <oran@umich.edu> version for two BATSRUS components
     !                                    using a buffer grid
 
     logical :: DoTest, DoTestMe
-    character(len=*), parameter :: NameSub = 'couple_ih_oh_init'
 
-    !DESCRIPTION:                                      
+    !DESCRIPTION:
     ! This subroutine should be called from all PE-s
     ! Share buffer grid info (set in OH) with IH.
-    !EOP                                                                      
-    !------------------------------------------------------------------------
+    ! EOP
+
+    character(len=*), parameter:: NameSub = 'couple_ih_oh_init'
+    !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
     if(IsInitialized) RETURN
     IsInitialized = .true.
@@ -121,29 +122,30 @@ contains
          UseSourceRootOnly = .false.)
 
   end subroutine couple_ih_oh_init
+  !============================================================================
 
-  !BOP =======================================================================
-  !IROUTINE: couple_ih_oh - couple IH component to OH component
-  !INTERFACE:                                      
+  ! BOP =======================================================================
+  ! IROUTINE: couple_ih_oh - couple IH component to OH component
+  !INTERFACE:
   subroutine couple_ih_oh(TimeCoupling)
 
-    !INPUT ARGUMENTS:                                       
-    real, intent(in) :: TimeCoupling     ! simulation time at coupling  
+    !INPUT ARGUMENTS:
+    real, intent(in) :: TimeCoupling     ! simulation time at coupling
 
-    !DESCRIPTION:                   
-    ! Couple between two components:     
+    !DESCRIPTION:
+    ! Couple between two components:
     !    Inner Heliosphere (IH)  source
-    !    Outer Heliosphere (OH)  target   
-    !                                                                 
-    ! The IH component sends the state variables to a buffer grid.  
+    !    Outer Heliosphere (OH)  target
+    !
+    ! The IH component sends the state variables to a buffer grid.
     ! OH uses the buffer grid to calculate the inner boundary conditions.
 
-    ! Array to store state vector on all buffer grid points   
+    ! Array to store state vector on all buffer grid points
     real, allocatable:: Buffer_VIII(:,:,:,:)
 
     logical:: DoTest, DoTestMe
-    character (len=*), parameter:: NameSub='couple_ih_oh'
-    !-------------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'couple_ih_oh'
+    !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
     if(DoTest)write(*,*)NameSub,' starting, iProc=',i_proc()
 
@@ -169,47 +171,48 @@ contains
     if(DoTest)write(*,*)NameSub,' finished, iProc=',i_proc()
 
   end subroutine couple_ih_oh
+  !============================================================================
 
-  !BOP =======================================================================
-  !IROUTINE: couple_oh_ih - couple OH to IH
+  ! BOP =======================================================================
+  ! IROUTINE: couple_oh_ih - couple OH to IH
   !INTERFACE:
   subroutine couple_oh_ih(TimeCoupling)
 
-    !INPUT ARGUMENT:                                   
+    !INPUT ARGUMENT:
     real, intent(in) :: TimeCoupling
 
     !DESCRIPTION:
-    ! Couple between two components: 
+    ! Couple between two components:
     !    Outer Heliosphere (OH) source
     !    Inner Heliosphere (IH) target
-    !                                 
+    !
     ! Send state variable from OH to outer cells in IH.
-    !EOP
+    ! EOP
 
     ! Buffer for state variable to fill outer cells of IH
 
     logical :: DoTest, DoTestMe
-    character (len=*), parameter :: NameSub='couple_oh_ih'
-    !-------------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'couple_oh_ih'
+    !--------------------------------------------------------------------------
     call CON_stop(NameSub// &
          ' is not yet implemented. Correct #COUPLERTYPE command in PARAM.in')
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
 
     if(DoTest)write(*,*)NameSub,' starting iProc=',i_proc()
 
-    !allocate(Buffer_VIII(nVarCouple,iSize, jSize, kSize))
-    !if(is_proc(OH_)) &
+    ! allocate(Buffer_VIII(nVarCouple,iSize, jSize, kSize))
+    ! if(is_proc(OH_)) &
     !     call OH_get_for_mh(Buffer_VIII, iSize, jSize, kSize, nVarCouple)
     ! call transfer_real_array(OH_, IH_, iSize*jSize*kSize*nVarCouple, &
     !     Buffer_VIII)
-    !if(is_proc(IH_)) &
+    ! if(is_proc(IH_)) &
     !    call IH_put_from_mh(Buffer_VIII, iSize+1, jSize, kSize, nVarCouple)
-    !deallocate(Buffer_VIII)
+    ! deallocate(Buffer_VIII)
 
     if(DoTest)write(*,*)NameSub,' finished, iProc=',i_proc()
 
   end subroutine couple_oh_ih
+  !============================================================================
 
 end module CON_couple_ih_oh
-
 

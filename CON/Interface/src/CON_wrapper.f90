@@ -1,20 +1,20 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !
-!QUOTE: \clearpage
+! QUOTE: \clearpage
 !
-!BOP -------------------------------------------------------------------
+! BOP -------------------------------------------------------------------
 !
-!QUOTE: \section{CON/Interface: between CON and Components and between Components}
+! QUOTE: \section{CON/Interface: between CON and Components and between Components}
 !
-!MODULE: CON_wrapper - Wrapper for component specific subroutines
+! MODULE: CON_wrapper - Wrapper for component specific subroutines
 !
 !DESCRIPTION:
 !
 ! Contains general subroutines which call the specific subroutines
-! in the component wrappers. The components are identified by their 
-! name or the component ID. 
+! in the component wrappers. The components are identified by their
+! name or the component ID.
 !
 !INTERFACE:
 
@@ -98,49 +98,46 @@ module CON_wrapper
   ! 09Jul03 - Gabor Toth <gtoth@umich.edu> - initial prototype/prolog/code
   ! 20Aug03 - O. Volberg and G. Toth - added new methods to initialize,
   !                                    run session, finalize and save restart.
-  !EOP ___________________________________________________________________
+  ! EOP ___________________________________________________________________
 
   integer :: nThread, MaxThread
   character(len=*),parameter :: NameMod='CON_wrapper'
 
 contains
+  !============================================================================
 
-  !BOP -------------------------------------------------------------------
-  !IROUTINE: set_param_name - Set parameters for component given by name
+  ! BOP -------------------------------------------------------------------
+  ! IROUTINE: set_param_name - Set parameters for component given by name
   !
   !INTERFACE:
   subroutine set_param_name(NameComp,TypeAction)
-
-    implicit none
 
     !INPUT PARAMETERS:
     !
     character(len=*), intent(in)           :: NameComp, TypeAction
 
     !DESCRIPTION:
-    ! This routine calls set\_param\_id with the component ID defined by the 
+    ! This routine calls set\_param\_id with the component ID defined by the
     ! name of the component.
 
     !REVISION HISTORY:
     ! 21Jul03 - G. Toth <gtoth@umich.edu> - Pass CompInfo for safety
     ! 19Jul03 - G. Toth <gtoth@umich.edu> - simplified and generalized version
     ! 09Jul03 - G. Toth <gtoth@umich.edu> - initial prototype/prolog/code
-    !EOP ___________________________________________________________________
+    ! EOP ___________________________________________________________________
 
-    character(len=*),parameter :: NameSub=NameMod//'.set_param_name'
-
-    !-------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'set_param_name'
+    !--------------------------------------------------------------------------
     call set_param_id(i_comp(NameComp),TypeAction)
 
   end subroutine set_param_name
+  !============================================================================
 
-  !BOP -------------------------------------------------------------------
-  !IROUTINE: set_param_id - Set parameters for component given by ID
+  ! BOP -------------------------------------------------------------------
+  ! IROUTINE: set_param_id - Set parameters for component given by ID
   !
   !INTERFACE:
   subroutine set_param_id(iComp,TypeAction)
-
-    implicit none
 
     !INPUT PARAMETERS:
     !
@@ -148,19 +145,20 @@ contains
     character(len=*), intent(in) :: TypeAction
 
     !DESCRIPTION:
-    ! This routine calls $**$\_set\_param for component $**$ 
+    ! This routine calls $**$\_set\_param for component $**$
     ! defined with the component ID.
 
     !REVISION HISTORY:
     ! 19Jul03 - G. Toth <gtoth@umich.edu> - simplified and generalized version
     ! 09Jul03 - G. Toth <gtoth@umich.edu> - initial prototype/prolog/code
     ! 03Jun08 - R Oran  <oran@umich.edu>  - add component OH
-    !EOP ___________________________________________________________________
+    ! EOP ___________________________________________________________________
 
-    character(len=*),parameter :: NameSub=NameMod//'.set_param_id'
     logical :: DoTest, DoTestMe
     type(CompInfoType) :: CompInfo
-    !-------------------------------------------------------------------
+
+    character(len=*), parameter:: NameSub = 'set_param_id'
+    !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
     if(DoTestMe)write(*,*) NameSub,' starting for Comp, TypeAction=',&
          NameComp_I(iComp),' ',TypeAction
@@ -196,8 +194,8 @@ contains
        call IH_set_param(CompInfo,TypeAction)     !^CMP IF IH
     case(IM_)                                     !^CMP IF IM
        call IM_set_param(CompInfo,TypeAction)     !^CMP IF IM
-    case(OH_)                                     !^CMP IF OH                  
-       call OH_set_param(CompInfo,TypeAction)     !^CMP IF OH  
+    case(OH_)                                     !^CMP IF OH
+       call OH_set_param(CompInfo,TypeAction)     !^CMP IF OH
     case(PC_)                                     !^CMP IF PC
        call PC_set_param(CompInfo,TypeAction)     !^CMP IF PC
     case(PS_)                                     !^CMP IF PS
@@ -219,7 +217,7 @@ contains
             ' SWMF_ERROR: not implemented for component'//NameComp_I(iComp))
     end select
 
-    ! Reset the number of threads 
+    ! Reset the number of threads
     !$ MaxThread = omp_get_max_threads()
     !$ call omp_set_num_threads(MaxThread)
 
@@ -234,18 +232,17 @@ contains
          ' for ',NameComp_I(iComp)
 
   end subroutine set_param_id
+  !============================================================================
 
-  !BOP -------------------------------------------------------------------
-  !IROUTINE: get_version_name - call **_get_version for named component
+  ! BOP -------------------------------------------------------------------
+  ! IROUTINE: get_version_name - call **_get_version for named component
   !
   !DESCRIPTION:
-  ! Obtain ON/OFF status, version name and version number 
-  ! for component specified by its name! 
+  ! Obtain ON/OFF status, version name and version number
+  ! for component specified by its name!
 
   !INTERFACE:
   subroutine get_version_name(NameComp,IsOn,NameVersion,Version)
-
-    implicit none
 
     !INPUT PARAMETERS:
     character (len=*),            intent(in)  :: NameComp
@@ -256,23 +253,24 @@ contains
 
     !REVISION HISTORY:
     ! 15Jul03 - G. Toth <gtoth@umich.edu> - initial prototype/prolog/code
-    !EOP ___________________________________________________________________
+    ! EOP ___________________________________________________________________
 
-    character(len=*),parameter :: NameSub=NameMod//'::get_version_name'
-    !-------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'get_version_name'
+    !--------------------------------------------------------------------------
     if(.not.is_valid_comp_name(NameComp)) call CON_stop(NameSub// &
          ' SWMF_ERROR '//NameComp//' is not a valid component name')
 
     call get_version_id(i_comp(NameComp),IsOn,NameVersion,Version)
 
   end subroutine get_version_name
+  !============================================================================
 
-  !BOP -------------------------------------------------------------------
-  !IROUTINE: get_version_id - call **_version for component given by ID
+  ! BOP -------------------------------------------------------------------
+  ! IROUTINE: get_version_id - call **_version for component given by ID
   !
   !DESCRIPTION:
-  ! Obtain ON/OFF status, version name and version number 
-  ! for component specified by its ID! 
+  ! Obtain ON/OFF status, version name and version number
+  ! for component specified by its ID!
 
   !INTERFACE:
   subroutine get_version_id(iComp,IsOn,NameVersion,Version)
@@ -290,13 +288,13 @@ contains
     ! 21Jul03 - G. Toth <gtoth@umich.edu> - use temporary CompInfo
     ! 15Jul03 - G. Toth <gtoth@umich.edu> - initial prototype/prolog/code
     ! 03Jun08 - R. Oran <oran@umich.edu>  - added component OH
-    !EOP ___________________________________________________________________
+    ! EOP ___________________________________________________________________
 
-    character(len=*),parameter :: NameSub=NameMod//'::get_version_id'
     logical :: DoTest, DoTestMe
     type(CompInfoType) :: CompInfo
 
-    !-------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'get_version_id'
+    !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
     if(DoTestMe)write(*,*) NameSub,' starting for ',NameComp_I(iComp)
 
@@ -311,8 +309,8 @@ contains
        call IE_set_param(CompInfo,'VERSION')     !^CMP IF IE
     case(IH_)                                    !^CMP IF IH
        call IH_set_param(CompInfo,'VERSION')     !^CMP IF IH
-    case(OH_)                                    !^CMP IF OH                   
-       call OH_set_param(CompInfo,'VERSION')     !^CMP IF OH   
+    case(OH_)                                    !^CMP IF OH
+       call OH_set_param(CompInfo,'VERSION')     !^CMP IF OH
     case(IM_)                                    !^CMP IF IM
        call IM_set_param(CompInfo,'VERSION')     !^CMP IF IM
     case(PC_)                                    !^CMP IF PC
@@ -330,7 +328,7 @@ contains
     case(SP_)                                    !^CMP IF SP
        call SP_set_param(CompInfo,'VERSION')     !^CMP IF SP
     case(UA_)                                    !^CMP IF UA
-       call UA_set_param(CompInfo,'VERSION')     !^CMP IF UA 
+       call UA_set_param(CompInfo,'VERSION')     !^CMP IF UA
     case(CZ_)                                    !^CMP IF CZ
        call CZ_set_param(CompInfo,'VERSION')     !^CMP IF CZ
     case default
@@ -338,11 +336,12 @@ contains
     end select
 
     call get(CompInfo,Use=IsOn,NameVersion=NameVersion,Version=Version)
-    
-  end subroutine get_version_id
 
-  !BOP -------------------------------------------------------------------
-  !IROUTINE: init_session_comp_id - call **_init_session for component given by ID
+  end subroutine get_version_id
+  !============================================================================
+
+  ! BOP -------------------------------------------------------------------
+  ! IROUTINE: init_session_comp_id - call **_init_session for component given by ID
   !INTERFACE:
   subroutine init_session_comp_id(iComp, iSession, TimeSimulation)
 
@@ -355,13 +354,14 @@ contains
     ! Initialize component for the session. Session numbers start from 1.
 
     !REVISION HISTORY:
-    ! 18Aug03 - G. Toth <gtoth@umich.edu> O. Volberg <volov@umich.edu> 
+    ! 18Aug03 - G. Toth <gtoth@umich.edu> O. Volberg <volov@umich.edu>
     !         - initial prototype/prolog/code
     ! 03Jun   - R. Oran <oran@umich.edu> - added component OH
-    !EOP ___________________________________________________________________
-    character(len=*), parameter :: NameSub = NameMod//'::init_session_comp_id'
+    ! EOP ___________________________________________________________________
     logical :: DoTest, DoTestMe
-    !-------------------------------------------------------------------
+
+    character(len=*), parameter:: NameSub = 'init_session_comp_id'
+    !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
     call check_i_comp(iComp,NameSub)
@@ -384,8 +384,8 @@ contains
        call IE_init_session(iSession,TimeSimulation)     !^CMP IF IE
     case(IH_)                                            !^CMP IF IH
        call IH_init_session(iSession,TimeSimulation)     !^CMP IF IH
-    case(OH_)                                            !^CMP IF OH           
-       call OH_init_session(iSession,TimeSimulation)     !^CMP IF OH           
+    case(OH_)                                            !^CMP IF OH
+       call OH_init_session(iSession,TimeSimulation)     !^CMP IF OH
     case(IM_)                                            !^CMP IF IM
        call IM_init_session(iSession,TimeSimulation)     !^CMP IF IM
     case(PC_)                                            !^CMP IF PC
@@ -410,16 +410,17 @@ contains
        call CON_stop(NameSub//' SWMF_ERROR incorrect iComp value')
     end select
 
-    ! Reset the number of threads 
+    ! Reset the number of threads
     !$ MaxThread = omp_get_max_threads()
     !$ call omp_set_num_threads(MaxThread)
 
     if(DoTestMe)write(*,*) NameSub,' finished for ',NameComp_I(iComp)
 
   end subroutine init_session_comp_id
+  !============================================================================
 
-  !BOP -------------------------------------------------------------------
-  !IROUTINE: finalize_comp_id - call **_finalize for component given by ID
+  ! BOP -------------------------------------------------------------------
+  ! IROUTINE: finalize_comp_id - call **_finalize for component given by ID
   !
   !INTERFACE:
   subroutine finalize_comp_id(iComp, TimeSimulation)
@@ -433,15 +434,15 @@ contains
     ! report errors, etc.
 
     !REVISION HISTORY:
-    ! 18Aug03 - G. Toth <gtoth@umich.edu> O. Volberg <volov@umich.edu> 
+    ! 18Aug03 - G. Toth <gtoth@umich.edu> O. Volberg <volov@umich.edu>
     !         - initial prototype/prolog/code
     ! 03Jun08 - R. Oran <oran@umich.edu> - added component OH
-    !EOP ___________________________________________________________________
-    character(len=*), parameter :: NameSub = NameMod//'::finalize_comp_id'
+    ! EOP ___________________________________________________________________
     logical :: DoTest, DoTestMe
-    !-------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'finalize_comp_id'
+    !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
-    
+
     call check_i_comp(iComp,NameSub)
 
     if(DoTestMe)write(*,*) NameSub,' starting for ',NameComp_I(iComp),&
@@ -462,8 +463,8 @@ contains
        call IE_finalize(TimeSimulation)     !^CMP IF IE
     case(IH_)                               !^CMP IF IH
        call IH_finalize(TimeSimulation)     !^CMP IF IH
-    case(OH_)                               !^CMP IF OH                        
-       call OH_finalize(TimeSimulation)     !^CMP IF OH      
+    case(OH_)                               !^CMP IF OH
+       call OH_finalize(TimeSimulation)     !^CMP IF OH
     case(IM_)                               !^CMP IF IM
        call IM_finalize(TimeSimulation)     !^CMP IF IM
     case(PC_)                               !^CMP IF PC
@@ -488,16 +489,17 @@ contains
        call CON_stop(NameSub//' SWMF_ERROR incorrect iComp value')
     end select
 
-    ! Reset the number of threads 
+    ! Reset the number of threads
     !$ MaxThread = omp_get_max_threads()
     !$ call omp_set_num_threads(MaxThread)
 
     if(DoTestMe)write(*,*) NameSub,' finished for ',NameComp_I(iComp)
 
   end subroutine finalize_comp_id
+  !============================================================================
 
-  !BOP -------------------------------------------------------------------
-  !IROUTINE: save_restart_comp_id - call **_save_restart for component given by ID
+  ! BOP -------------------------------------------------------------------
+  ! IROUTINE: save_restart_comp_id - call **_save_restart for component given by ID
 
   !INTERFACE:
   subroutine save_restart_comp_id(iComp, TimeSimulation)
@@ -510,14 +512,14 @@ contains
     ! Save restart information for the component.
 
     !REVISION HISTORY:
-    ! 18Aug03 - G. Toth <gtoth@umich.edu> O. Volberg <volov@umich.edu> 
+    ! 18Aug03 - G. Toth <gtoth@umich.edu> O. Volberg <volov@umich.edu>
     !         - initial prototype/prolog/code
     ! 03Jun08 - R. Oran <oran@umich.edu> - added component OH
-    !EOP ___________________________________________________________________
-    character(len=*), parameter :: NameSub = NameMod//'::save_restart_comp_id'
+    ! EOP ___________________________________________________________________
     logical :: DoTest, DoTestMe
-    !-------------------------------------------------------------------
-    
+    character(len=*), parameter:: NameSub = 'save_restart_comp_id'
+    !--------------------------------------------------------------------------
+
     call check_i_comp(iComp,NameSub)
 
     if(.not.use_comp(iComp) .or. .not.is_proc(iComp)) RETURN
@@ -539,8 +541,8 @@ contains
        call IE_save_restart(TimeSimulation)     !^CMP IF IE
     case(IH_)                                   !^CMP IF IH
        call IH_save_restart(TimeSimulation)     !^CMP IF IH
-    case(OH_)                                   !^CMP IF OH                    
-       call OH_save_restart(TimeSimulation)     !^CMP IF OH 
+    case(OH_)                                   !^CMP IF OH
+       call OH_save_restart(TimeSimulation)     !^CMP IF OH
     case(IM_)                                   !^CMP IF IM
        call IM_save_restart(TimeSimulation)     !^CMP IF IM
     case(PC_)                                   !^CMP IF PC
@@ -565,16 +567,17 @@ contains
        call CON_stop(NameSub//' SWMF_ERROR incorrect iComp value')
     end select
 
-    ! Reset the number of threads 
+    ! Reset the number of threads
     !$ MaxThread = omp_get_max_threads()
     !$ call omp_set_num_threads(MaxThread)
 
     if(DoTestMe)write(*,*) NameSub,' finished for ',NameComp_I(iComp)
 
   end subroutine save_restart_comp_id
+  !============================================================================
 
-  !BOP -------------------------------------------------------------------
-  !IROUTINE: run_comp_id - call **_run for component given by ID
+  ! BOP -------------------------------------------------------------------
+  ! IROUTINE: run_comp_id - call **_run for component given by ID
   !INTERFACE:
   subroutine run_comp_id(iComp, TimeSimulation, TimeSimulationLimit)
 
@@ -591,13 +594,14 @@ contains
     ! The updated TimeSimulation should not exceed TimeSimulationLimit.
 
     !REVISION HISTORY:
-    ! 18Aug03 - G. Toth <gtoth@umich.edu> O. Volberg <volov@umich.edu> 
+    ! 18Aug03 - G. Toth <gtoth@umich.edu> O. Volberg <volov@umich.edu>
     !         - initial prototype/prolog/code
     ! 03Jun08 - R. Oran <oran@umich.edu - added component OH
-    !EOP ___________________________________________________________________
-    character(len=*), parameter :: NameSub = NameMod//'::run_comp_id'
+    ! EOP ___________________________________________________________________
     logical :: DoTest, DoTestMe
-    !-------------------------------------------------------------------
+
+    character(len=*), parameter:: NameSub = 'run_comp_id'
+    !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
     call check_i_comp(iComp,NameSub)
@@ -621,8 +625,8 @@ contains
        call IE_run(TimeSimulation, TimeSimulationLimit)     !^CMP IF IE
     case(IH_)                                               !^CMP IF IH
        call IH_run(TimeSimulation, TimeSimulationLimit)     !^CMP IF IH
-    case(OH_)                                               !^CMP IF OH        
-       call OH_run(TimeSimulation, TimeSimulationLimit)     !^CMP IF OH   
+    case(OH_)                                               !^CMP IF OH
+       call OH_run(TimeSimulation, TimeSimulationLimit)     !^CMP IF OH
     case(IM_)                                               !^CMP IF IM
        call IM_run(TimeSimulation, TimeSimulationLimit)     !^CMP IF IM
     case(PC_)                                               !^CMP IF PC
@@ -648,12 +652,13 @@ contains
     end select
     call timing_stop(NameComp_I(iComp)//'_run')
 
-    ! Reset the number of threads 
+    ! Reset the number of threads
     !$ MaxThread = omp_get_max_threads()
     !$ call omp_set_num_threads(MaxThread)
 
     if(DoTestMe)write(*,*) NameSub,' finished for ',NameComp_I(iComp)
 
   end subroutine run_comp_id
+  !============================================================================
 
 end module CON_wrapper

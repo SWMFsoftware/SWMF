@@ -1,16 +1,16 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!
 !               Space Weather Modeling Framework (SWMF)                !
 !    Center for Space Environment Modeling, The University of Michigan !
 !-----------------------------------------------------------------------
 !
-!BOP -------------------------------------------------------------------------
+! BOP -------------------------------------------------------------------------
 !
-!MODULE: CON_world - component registration and handling component info
-! 
-!DESCRIPTION: 
+! MODULE: CON_world - component registration and handling component info
+!
+!DESCRIPTION:
 ! CON\_world reads, stores and provides information about all the
 ! registered components. Components are registered by being listed
 ! in the LAYOUT.in file which is read by the {\bf setup} subroutine.
@@ -19,11 +19,11 @@
 ! The array is indexed from 1 to the number of registered components
 ! which can be obtained with the {\bf n\_comp} public function.
 !
-! The variable holding the index for the registered components should be 
+! The variable holding the index for the registered components should be
 ! named {\bf lComp} where {\bf l} stands for {\it listed}.
 ! The fixed component ID, on the other hand, is referred to as {\bf iComp}.
 ! Conversion from {\bf lComp} to {\bf iComp} can be done with the
-! {\bf i\_comp} public function. A typical loop accessing all 
+! {\bf i\_comp} public function. A typical loop accessing all
 ! registered and used components is like this
 ! \begin{verbatim}
 ! do lComp = 1,n_comp()
@@ -35,7 +35,7 @@
 ! end do
 ! \end{verbatim}
 ! The above example shows three access functions, {\bf use\_comp},
-! {\bf is\_proc0} and {\bf n\_proc} which are called with the fixed component 
+! {\bf is\_proc0} and {\bf n\_proc} which are called with the fixed component
 ! ID argument.
 ! All the similar functions, such as {\bf i\_comm, i\_group,
 ! i\_proc, i\_proc0} and {is\_proc} can be called with the
@@ -50,11 +50,11 @@
 !    write(*,*) n_proc()      ! number of processors used by SWMF.
 ! \end{verbatim}
 ! While functions provide a convenient access to most of the information
-! about the components, the general {\bf get\_comp\_info} and 
+! about the components, the general {\bf get\_comp\_info} and
 ! {\bf put\_comp\_info} subroutines provide access to any subset of
 ! the available information with a single call.
 
-!INTERFACE:	
+!INTERFACE:
 !
 module  CON_world
   !
@@ -106,7 +106,7 @@ module  CON_world
 
   integer, parameter, public:: &
        CON_ = 0           ! Index of MPI group of PEs used by active components
-  
+
   !LOCAL VARIABLES:
   integer :: iProcWorld   = -1 ! global PE rank
   integer :: nProcWorld   =  0 ! global number of PEs
@@ -119,7 +119,7 @@ module  CON_world
   integer :: iCommUsed  = -1 ! communicator for active PEs
   integer :: iGroupUsed = -1 ! group for active PEs
   integer :: iProc0Used = -1 ! global index of root of active PEs
-  
+
   integer :: MaxThread    =  1 ! maximum number of OpenMP threads
 
   integer, save :: iComp_C(MaxComp) ! Convert list index to named index
@@ -127,7 +127,7 @@ module  CON_world
   type(CompInfoType), save, pointer :: CompInfo_C(:) ! Component info array
 
   interface world_setup; module procedure &
-       setup_from_file  
+       setup_from_file
   end interface
   interface use_comp; module procedure &
        use_comp_name, use_comp_id
@@ -185,39 +185,39 @@ module  CON_world
        i_group_name, i_group_id, i_group_world
   end interface
 
-  !REVISION HISTORY: 
+  !REVISION HISTORY:
   !
   !  June 2003 - O. Volberg <volov@umich.edu> - initial version
   !  this code was inspired by Multi Program-Comp Handshaking (MPH) Utility
-  !  written by Yun He and Chris Ding, NERSC/LBL, January 2001, and by 
-  !  MCTWorld class in the Model Coupling Tooolkit (MCT) written by 
-  !  J.W. Larson and R. Jacob at the Argonne National Laboratory, 
+  !  written by Yun He and Chris Ding, NERSC/LBL, January 2001, and by
+  !  MCTWorld class in the Model Coupling Tooolkit (MCT) written by
+  !  J.W. Larson and R. Jacob at the Argonne National Laboratory,
   !  release 1.0.6, 2002.
   !
   !  July 12 2003 - G. Toth <gtoth@umich.edu> - simplify and add useful methods
   !  2019 - H. Zhou and G. Toth added thread related methods
-  !EOP ------------------------------------------------------------------------
+  ! EOP ------------------------------------------------------------------------
 
   character(len=*),parameter :: NameMod='CON_world'
 
 contains
+  !============================================================================
 
   subroutine world_init(iComm)
-    !\  
+
     ! Initalize and start up MPI for the application.
     ! If the optional argument is present, use it as the communicator
     ! for the SWMF, and do not call MPI_init.
     ! If the optional argument is not present, use MPI_COMM_WORLD
     ! and call MPI_init.
-    !/
     use omp_lib
 
-    integer, intent(in), optional :: iComm 
+    integer, intent(in), optional :: iComm
 
     integer :: iError
 
-    character(len=*), parameter :: NameSub = NameMod//'::world_init'
-    !-----------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'world_init'
+    !--------------------------------------------------------------------------
 
     if(present(iComm))then
        iCommWorld = iComm
@@ -235,51 +235,61 @@ contains
   end subroutine world_init
   !============================================================================
   subroutine world_clean
-    character(len=*),parameter :: NameSub=NameMod//'::world_clean'
     integer :: iError
-    !------------------------------------------------------------------------
+
+    character(len=*), parameter:: NameSub = 'world_clean'
+    !--------------------------------------------------------------------------
     call io_unit_clean
 
   end subroutine world_clean
-  !===========================================================================
+  !============================================================================
   logical function is_proc_world()
+    !--------------------------------------------------------------------------
     is_proc_world = iProcWorld>=0
   end function is_proc_world
-  !===========================================================================
+  !============================================================================
   logical function is_proc0_world()
+    !--------------------------------------------------------------------------
     is_proc0_world = iProcWorld==0
   end function is_proc0_world
-  !===========================================================================
+  !============================================================================
   integer function i_proc_world()
+    !--------------------------------------------------------------------------
     i_proc_world = iProcWorld
   end function i_proc_world
-  !===========================================================================
+  !============================================================================
   integer function i_proc0_world()
+    !--------------------------------------------------------------------------
     i_proc0_world = iProc0World
   end function i_proc0_world
-  !===========================================================================
+  !============================================================================
   integer function n_proc_world()
+    !--------------------------------------------------------------------------
     n_proc_world = nProcWorld
   end function n_proc_world
-  !===========================================================================
+  !============================================================================
   integer function i_comm_world()
+    !--------------------------------------------------------------------------
     i_comm_world = iCommWorld
   end function i_comm_world
-  !===========================================================================
+  !============================================================================
   integer function i_group_world()
+    !--------------------------------------------------------------------------
     i_group_world = iGroupWorld
   end function i_group_world
-  !===========================================================================
+  !============================================================================
   integer function i_proc_stride_world()
+    !--------------------------------------------------------------------------
     i_proc_stride_world=1
   end function i_proc_stride_world
-  !===========================================================================
+  !============================================================================
   integer function i_proc_last_world()
+    !--------------------------------------------------------------------------
     i_proc_last_world=nProcWorld-1
   end function i_proc_last_world
-  !===========================================================================
-  !BOP =======================================================================
-  !IROUTINE: setup_from_file - read LAYOUT.in and register components
+  !============================================================================
+  ! BOP =======================================================================
+  ! IROUTINE: setup_from_file - read LAYOUT.in and register components
   !INTERFACE:
   subroutine setup_from_file
 
@@ -289,7 +299,7 @@ contains
     ! CON\_comp\_info. The format is the following:
     ! \begin{verbatim}
     ! remarks
-    ! 
+    !
     ! Name      First   Last    Stride   nThread
     ! ============================================
     ! #LAYOUT
@@ -302,12 +312,12 @@ contains
     !\end{verbatim}
     ! The layout information starts with the {\bf \#LAYOUT} command
     ! (or the alternative name {\bf \#COMPONENTMAP})
-    ! and ends with an empty line. The first column contains the 
+    ! and ends with an empty line. The first column contains the
     ! two-character component name, the 2nd, 3rd, and 4th columns
     ! are integers containing the ranks of the first and last processors
     ! used by the component, and the stride between the processor ranks.
     ! The optional 4th parameter defines the number of OpenMP threads per MPI
-    ! process for models that can use OpenMP. The Stride and nThread are 
+    ! process for models that can use OpenMP. The Stride and nThread are
     ! typically equal.
     ! If the first (or last) rank is negative, it is evaluated as nProc-VALUE.
     ! If the last rank exceeds the number of processors nProc used by SWMF,
@@ -317,21 +327,19 @@ contains
     ! by the maximum number of threads MaxThread divided by their absolute
     ! values. If the number of threads nThread exceeds MaxThread, it gets
     ! reduced to MaxThread.
-    !EOP
-
-    character(len=*), parameter :: NameSub = NameMod//'::setup_from_file' 
+    ! EOP
 
     ! One line of input
     character (len=100) :: String
 
-    ! String starting and ending comp layout 
+    ! String starting and ending comp layout
     character (len=*), parameter  :: StringStart  = "#LAYOUT"
     character (len=*), parameter  :: StringStart2 = "#COMPONENTMAP"
-    character (len=*), parameter  :: StringEnd    = "#END" 
-    character (len=*), parameter  :: StringEnd2   = " " 
+    character (len=*), parameter  :: StringEnd    = "#END"
+    character (len=*), parameter  :: StringEnd2   = " "
 
     ! Current line number
-    integer :: nLine 
+    integer :: nLine
 
     ! Input fields in the line
     character(len=16) :: Name
@@ -348,9 +356,10 @@ contains
 
     logical :: IsExisting
     integer :: lComp, iComp, iError
-    !-------------------------------------------------------------------------
 
     ! Processor 0 looks for StringStart in NameMapFile
+    character(len=*), parameter:: NameSub = 'setup_from_file'
+    !--------------------------------------------------------------------------
     if(iProcWorld==0)then
        inquire(FILE=NameMapFile, EXIST=IsExisting)
        if(.not.IsExisting) NameMapFile = "PARAM.in"
@@ -377,7 +386,7 @@ contains
        end do
     end if
 
-    RECLOOP: do 
+    RECLOOP: do
        ! Processor zero reads and broadcasts lines
        if(iProcWorld==0) then
           read(UNITTMP_,'(a)',IOSTAT=iError) String
@@ -395,7 +404,7 @@ contains
        if(String == StringEnd .or. String == StringEnd2) then
           if(nComp == 0) call CON_stop(NameSub // &
                'SWMF_ERROR: no components specified in the file='//NameMapFile)
-          exit RECLOOP
+          EXIT RECLOOP
        endif
 
        ! Process line in parallel
@@ -419,7 +428,7 @@ contains
 
        Name = adjustl(Name)
        if(is_valid_comp_name(Name)) then
-          iComp=i_comp_name(Name) 
+          iComp=i_comp_name(Name)
        else
           if(iProcWorld==0) then
 
@@ -454,7 +463,7 @@ contains
 
        iProcRange_IC(ProcZero_,nComp) = min(iProcZero, iProcLast, nProcWorld-1)
        iProcRange_IC(ProcLast_,nComp) = min(iProcLast, nProcWorld-1)
-       ! Negative iProcStride is interpreted as MaxThread divided by its abs 
+       ! Negative iProcStride is interpreted as MaxThread divided by its abs
        ! value
        if(iProcStride < 0) iProcStride = MaxThread/abs(iProcStride)
        iProcRange_IC(ProcStride_,nComp) = max(iProcStride,1)
@@ -508,7 +517,7 @@ contains
   subroutine world_used(IsVerbose)
 
     logical, intent(in), optional:: IsVerbose
-    
+
     ! Create communicator for all PEs used by the active componenats
     ! at the beginning of a session.
     ! OpenMP or future sessions may use the rest.
@@ -516,20 +525,20 @@ contains
 
     integer:: lComp, iError, iGroup
 
-    character(len=*), parameter :: NameSub = NameMod//'::world_used'
+    character(len=*), parameter:: NameSub = 'world_used'
     !--------------------------------------------------------------------------
     if(nProcUsed /= -1)then
        call MPI_group_free(iGroupUsed, iError)
        if(iProcUsed /= MPI_UNDEFINED) call MPI_comm_free(iCommUsed, iError)
     end if
-    
+
     iProc0Used = nProcWorld      ! initial value for the root of used PEs
     iGroupUsed = MPI_GROUP_EMPTY ! initial value for the group of used PEs
     do lComp = 1, nComp
        if(.not. CompInfo_C(lComp) % Use) CYCLE
        iGroup = iGroupUsed
        ! Add new group. Try to make the root the PE with smallest global rank
-       if(iProc0Used < CompInfo_C(lComp)%iMpiParam_I(ProcZero_))then          
+       if(iProc0Used < CompInfo_C(lComp)%iMpiParam_I(ProcZero_))then
           call MPI_group_union(iGroup, CompInfo_C(lComp)%iMpiParam_I(Group_), &
                iGroupUsed, iError)
        else
@@ -541,12 +550,12 @@ contains
     end do
     if(iProc0Used == nProcWorld) &
          call CON_stop(NameSub//': no used components!')
-    
+
     ! Calculate rank and size for active PE group
     call MPI_group_size(iGroupUsed, nProcUsed, iError)
     call MPI_group_rank(iGroupUsed, iProcUsed, iError)
 
-    ! Create communicator of used PEs 
+    ! Create communicator of used PEs
     call MPI_comm_create(iCommWorld, iGroupUsed, iCommUsed, iError)
 
     ! Store MPI info for CON_ group
@@ -559,12 +568,12 @@ contains
 
     if(iProcWorld==0)write(*,*) NameSub,' finished with iProc0Used=', &
          iProc0Used,' nProcUsed=', nProcUsed
-    
+
   end subroutine world_used
   !============================================================================
   integer function n_comp()
-    character(len=*), parameter :: NameSub = NameMod//'::n_comp'
-    !-------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'n_comp'
+    !--------------------------------------------------------------------------
     n_comp =  nComp
     if(nComp==0) &
          write(*,'(a)') NameSub//' SWMF_ERROR: no components defined '
@@ -579,13 +588,13 @@ contains
     logical, intent(in), optional:: DoCheckRegistered
     integer :: lComp
     logical :: DoCheck
-    !-------------------------------------------------------------------------
 
+    !--------------------------------------------------------------------------
     if(iComp == CON_)then
        l_comp_id = CON_
        RETURN
     end if
-    
+
     call check_i_comp(iComp,NameSub)
 
     lComp = lComp_I(iComp)
@@ -613,7 +622,8 @@ contains
     logical, intent(in), optional:: DoCheckRegistered
     integer :: lComp
     logical :: DoCheck
-    !-------------------------------------------------------------------------
+
+    !--------------------------------------------------------------------------
     if(NameComp == 'CON')then
        l_comp_name = CON_
        RETURN
@@ -645,10 +655,9 @@ contains
     ! return named index for list index lComp
     ! Note: i_comp_name is implemented in CON_comp_param
 
-    character(len=*), parameter :: NameSub=NameMod//'::i_comp_id'
-
     integer, intent(in) :: lComp
     integer :: iComp
+    character(len=*), parameter:: NameSub = 'i_comp_id'
     !--------------------------------------------------------------------------
     if(lComp<1.or.lComp>nComp)then
        write(*,'(a,i3,a,i3)')NameSub//' SWMF_ERROR lComp=',lComp,&
@@ -665,22 +674,21 @@ contains
     i_comp_id = iComp
 
   end function i_comp_id
-  !==============================================================
+  !============================================================================
   subroutine get_comp_info_name(NameComp, &
        iProc, nProc, iComm, iGroup, iProcZero, iProcLast, iProcStride, &
        nThread, iUnitOut, Use, Name, NameVersion, Version, CompInfo)
-
-    character(len=*), parameter :: NameSub = NameMod//'::get_comp_info_name'
 
     character(len=*), intent(in) :: NameComp
     integer, optional, intent(out) :: &
          iProc, nProc, iComm, iGroup, iProcZero,  iProcLast, iProcStride, &
          nThread, iUnitOut
-    logical,                     optional, intent(out) :: Use
+    logical,                     optional, intent(out) :: use
     character(len=lNameComp),    optional, intent(out) :: Name
     character(len=lNameVersion), optional, intent(out) :: NameVersion
     real,                        optional, intent(out) :: Version
     type(CompInfoType),          optional, intent(out) :: CompInfo
+    character(len=*), parameter:: NameSub = 'get_comp_info_name'
     !--------------------------------------------------------------------------
     if(present(CompInfo)) CompInfo = CompInfo_C(l_comp(NameComp,NameSub))
 
@@ -689,8 +697,9 @@ contains
          nThread, iUnitOut, Use, Name, NameVersion, Version)
 
   end subroutine get_comp_info_name
-  !BOP =======================================================================
-  !IROUTINE: get_comp_info - get component information
+  !============================================================================
+  ! BOP =======================================================================
+  ! IROUTINE: get_comp_info - get component information
   !INTERFACE:
   subroutine get_comp_info_id(iComp, &
        iProc, nProc, iComm, iGroup, iProcZero, iProcLast, iProcStride, &
@@ -703,7 +712,7 @@ contains
     integer, optional, intent(out) :: &
          iProc, nProc, iComm, iGroup, iProcZero,  iProcLast, iProcStride, &
          nThread, iUnitOut
-    logical,                     optional, intent(out) :: Use
+    logical,                     optional, intent(out) :: use
     character(len=lNameComp),    optional, intent(out) :: Name
     character(len=lNameVersion), optional, intent(out) :: NameVersion
     real,                        optional, intent(out) :: Version
@@ -712,10 +721,10 @@ contains
     !DESCRIPTION:
     ! Obtain any information about the component which is identified
     ! with its ID {\bf iComp}, or name (using {\bf get\_comp\_info\_name}).
-    !EOP
+    ! EOP
 
-    character(len=*), parameter :: NameSub = NameMod//'::get_comp_info_id'
-    !---------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'get_comp_info_id'
+    !--------------------------------------------------------------------------
     if(present(CompInfo)) CompInfo = CompInfo_C(l_comp(iComp,NameSub))
 
     call comp_info_get(CompInfo_C(l_comp(iComp,NameSub)), &
@@ -723,26 +732,27 @@ contains
          nThread, iUnitOut, Use, Name, NameVersion, Version)
 
   end subroutine get_comp_info_id
-  !BOP ========================================================================
-  !IROUTINE: put_comp_info - put component information into registry
-  !INTERFACE: 
+  !============================================================================
+  ! BOP ========================================================================
+  ! IROUTINE: put_comp_info - put component information into registry
+  !INTERFACE:
   subroutine put_comp_info_name(NameComp, iUnitOut, Use, NameVersion, Version)
 
     !INPUT ARGUMENTS:
     character(len=*), intent(in) :: NameComp
     integer,          optional, intent(in) :: iUnitOut    ! for STDOUT
-    logical,          optional, intent(in) :: Use         ! is used
+    logical,          optional, intent(in) :: use         ! is used
     character(len=*), optional, intent(in) :: NameVersion ! version name
     real,             optional, intent(in) :: Version     ! version number
 
     !DESCRIPTION:
     ! Set component information which is not set by {\bf setup}.
-    ! The first argument is either the two-character component name 
-    ! {\bf NameComp} or the integer component ID (using 
+    ! The first argument is either the two-character component name
+    ! {\bf NameComp} or the integer component ID (using
     ! {\bf put\_comp\_info\_id}.
-    !EOP
-    character(len=*), parameter :: NameSub = NameMod//'::put_comp_info_name'
+    ! EOP
 
+    character(len=*), parameter:: NameSub = 'put_comp_info_name'
     !--------------------------------------------------------------------------
     call comp_info_put(CompInfo_C(l_comp(NameComp,NameSub)), &
          iUnitOut, Use, NameVersion, Version)
@@ -751,13 +761,12 @@ contains
   !============================================================================
   subroutine put_comp_info_id(iComp, iUnitOut, Use, NameVersion, Version)
 
-    character(len=*), parameter :: NameSub = NameMod//'::put_comp_info_id'
-
     integer, intent(in) :: iComp
     integer,          optional, intent(in) :: iUnitOut
-    logical,          optional, intent(in) :: Use
+    logical,          optional, intent(in) :: use
     character(len=*), optional, intent(in) :: NameVersion
     real,             optional, intent(in) :: Version
+    character(len=*), parameter:: NameSub = 'put_comp_info_id'
     !--------------------------------------------------------------------------
     call comp_info_put(CompInfo_C(l_comp(iComp,NameSub)), &
          iUnitOut, Use, NameVersion, Version)
@@ -768,9 +777,9 @@ contains
 
     ! Return true if component is used
     character(len=*), intent(in) :: NameComp
-    character(len=*), parameter :: NameSub=NameMod//'::use_comp_name'
     integer :: lComp
-    !-------------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'use_comp_name'
+    !--------------------------------------------------------------------------
     lComp = l_comp(NameComp, NameSub, .false.)
     if(lComp > 0)then
        use_comp_name = CompInfo_C(lComp) % Use
@@ -784,9 +793,9 @@ contains
 
     ! Return true if component is used
     integer, intent(in) :: iComp
-    character(len=*), parameter :: NameSub=NameMod//'::use_comp_id'
     integer :: lComp
-    !-------------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'use_comp_id'
+    !--------------------------------------------------------------------------
     lComp = l_comp(iComp, NameSub, .false.)
     if(lComp > 0)then
        use_comp_id = CompInfo_C(lComp) % Use
@@ -798,9 +807,9 @@ contains
   !============================================================================
   logical function is_proc_name(Name)
     character(len=*), intent(in) :: Name
-    character(len=*), parameter :: NameSub=NameMod//'::is_proc_name'
     integer :: lComp
-    !-----------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'is_proc_name'
+    !--------------------------------------------------------------------------
     lComp = l_comp(Name, NameSub, .false.)
     if(lComp >= CON_)then
        is_proc_name = CompInfo_C(lComp) % iMpiParam_I(Proc_) >= 0
@@ -811,9 +820,9 @@ contains
   !============================================================================
   logical function is_proc_id(iComp)
     integer, intent(in) :: iComp
-    character(len=*), parameter :: NameSub=NameMod//'::is_proc_id'
     integer :: lComp
-    !-----------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'is_proc_id'
+    !--------------------------------------------------------------------------
     lComp = l_comp(iComp,NameSub,.false.)
     if(lComp >= CON_)then
        is_proc_id = CompInfo_C(lComp) % iMpiParam_I(Proc_) >= 0
@@ -822,68 +831,76 @@ contains
     end if
 
   end function is_proc_id
-  !===========================================================================
+  !============================================================================
   logical function is_proc0_name(Name)
     character(len=*), intent(in) :: Name
-    character(len=*), parameter :: NameSub=NameMod//'::is_proc0_name'
-    !-------------------------------------------------------------------------
+
+    character(len=*), parameter:: NameSub = 'is_proc0_name'
+    !--------------------------------------------------------------------------
     is_proc0_name = CompInfo_C(l_comp(Name,NameSub)) % iMpiParam_I(Proc_)==0
   end function is_proc0_name
-  !===========================================================================
+  !============================================================================
   logical function is_proc0_id(iComp)
     integer, intent(in) :: iComp
-    character(len=*), parameter :: NameSub=NameMod//'::is_proc0_id'
-    !-------------------------------------------------------------------------
+
+    character(len=*), parameter:: NameSub = 'is_proc0_id'
+    !--------------------------------------------------------------------------
     is_proc0_id = CompInfo_C(l_comp(iComp,NameSub)) % iMpiParam_I(Proc_)==0
   end function is_proc0_id
-  !===========================================================================
+  !============================================================================
   integer function i_proc_name(Name)
     character(len=*), intent(in) :: Name
-    character(len=*), parameter :: NameSub=NameMod//'::i_proc_name'
-    !-------------------------------------------------------------------------
+
+    character(len=*), parameter:: NameSub = 'i_proc_name'
+    !--------------------------------------------------------------------------
     i_proc_name = CompInfo_C(l_comp(Name,NameSub)) % iMpiParam_I(Proc_)
   end function i_proc_name
-  !===========================================================================
+  !============================================================================
   integer function i_proc_id(iComp)
     integer, intent(in) :: iComp
-    character(len=*), parameter :: NameSub=NameMod//'::i_proc_id'
-    !-------------------------------------------------------------------------
+
+    character(len=*), parameter:: NameSub = 'i_proc_id'
+    !--------------------------------------------------------------------------
     i_proc_id = CompInfo_C(l_comp(iComp,NameSub)) % iMpiParam_I(Proc_)
   end function i_proc_id
-  !===========================================================================
+  !============================================================================
   integer function n_proc_name(Name)
     character(len=*), intent(in) :: Name
-    character(len=*), parameter :: NameSub=NameMod//'::n_proc_name'
-    !-------------------------------------------------------------------------
+
+    character(len=*), parameter:: NameSub = 'n_proc_name'
+    !--------------------------------------------------------------------------
     n_proc_name = CompInfo_C(l_comp(Name,NameSub)) % iMpiParam_I(nProc_)
   end function n_proc_name
-  !===========================================================================
+  !============================================================================
   integer function n_proc_id(iComp)
     integer, intent(in) :: iComp
-    character(len=*), parameter :: NameSub=NameMod//'::n_proc_id'
-    !-------------------------------------------------------------------------
+
+    character(len=*), parameter:: NameSub = 'n_proc_id'
+    !--------------------------------------------------------------------------
     n_proc_id = CompInfo_C(l_comp(iComp,NameSub)) % iMpiParam_I(nProc_)
   end function n_proc_id
-  !===========================================================================
+  !============================================================================
   integer function i_proc0_name(Name)
     character(len=*), intent(in) :: Name
-    character(len=*), parameter :: NameSub=NameMod//'::i_proc0_name'
-    !-------------------------------------------------------------------------
+
+    character(len=*), parameter:: NameSub = 'i_proc0_name'
+    !--------------------------------------------------------------------------
     i_proc0_name = CompInfo_C(l_comp(Name,NameSub)) % iMpiParam_I(ProcZero_)
   end function i_proc0_name
-  !===========================================================================
+  !============================================================================
   integer function i_proc0_id(iComp)
     integer, intent(in) :: iComp
-    character(len=*), parameter :: NameSub=NameMod//'::i_proc0_id'
-    !-------------------------------------------------------------------------
+
+    character(len=*), parameter:: NameSub = 'i_proc0_id'
+    !--------------------------------------------------------------------------
     i_proc0_id = CompInfo_C(l_comp(iComp,NameSub)) % iMpiParam_I(ProcZero_)
   end function i_proc0_id
-  !===========================================================================
+  !============================================================================
   logical function is_thread_name(Name)
     character(len=*), intent(in) :: Name
-    character(len=*), parameter :: NameSub=NameMod//'::is_thread_name'
     integer :: lComp
-    !-----------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'is_thread_name'
+    !--------------------------------------------------------------------------
     lComp = l_comp(Name, NameSub, .false.)
     if(lComp > 0)then
        is_thread_name = CompInfo_C(lComp) % iThread >= 0
@@ -891,12 +908,12 @@ contains
        is_thread_name = .false.
     end if
   end function is_thread_name
-  !===========================================================================
+  !============================================================================
   logical function is_thread_id(iComp)
     integer, intent(in) :: iComp
-    character(len=*), parameter :: NameSub=NameMod//'::is_thread_id'
     integer :: lComp
-    !-----------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'is_thread_id'
+    !--------------------------------------------------------------------------
     lComp = l_comp(iComp, NameSub, .false.)
     if(lComp > 0)then
        is_thread_id = CompInfo_C(lComp) % iThread >= 0
@@ -904,90 +921,103 @@ contains
        is_thread_id = .false.
     end if
   end function is_thread_id
-  !===========================================================================
+  !============================================================================
   integer function i_thread_name(Name)
     character(len=*), intent(in) :: Name
-    character(len=*), parameter :: NameSub=NameMod//'::i_thread_name'
-    !-------------------------------------------------------------------------
+
+    character(len=*), parameter:: NameSub = 'i_thread_name'
+    !--------------------------------------------------------------------------
     i_thread_name =  CompInfo_C(l_comp(Name,NameSub)) % iThread
   end function i_thread_name
-  !===========================================================================
+  !============================================================================
   integer function i_thread_id(iComp)
     integer, intent(in) :: iComp
-    character(len=*), parameter :: NameSub=NameMod//'::i_thread_id'
-    !-------------------------------------------------------------------------
+
+    character(len=*), parameter:: NameSub = 'i_thread_id'
+    !--------------------------------------------------------------------------
     i_thread_id =  CompInfo_C(l_comp(iComp,NameSub)) % iThread
   end function i_thread_id
-  !===========================================================================
+  !============================================================================
   integer function n_thread_name(Name)
     character(len=*), intent(in) :: Name
-    character(len=*), parameter :: NameSub=NameMod//'::n_thread_name'
-    !-------------------------------------------------------------------------
+
+    character(len=*), parameter:: NameSub = 'n_thread_name'
+    !--------------------------------------------------------------------------
     n_thread_name =  CompInfo_C(l_comp(Name,NameSub)) % nThread
   end function n_thread_name
-  !===========================================================================
+  !============================================================================
   integer function n_thread_id(iComp)
     integer, intent(in) :: iComp
-    character(len=*), parameter :: NameSub=NameMod//'::n_thread_id'
-    !-------------------------------------------------------------------------
+
+    character(len=*), parameter:: NameSub = 'n_thread_id'
+    !--------------------------------------------------------------------------
     n_thread_id =  CompInfo_C(l_comp(iComp,NameSub)) % nThread
   end function n_thread_id
-  !===========================================================================
+  !============================================================================
   integer function i_comm_name(Name)
     character(len=*), intent(in) :: Name
-    character(len=*), parameter :: NameSub=NameMod//'::i_comm_name'
-    !-------------------------------------------------------------------------
+
+    character(len=*), parameter:: NameSub = 'i_comm_name'
+    !--------------------------------------------------------------------------
     i_comm_name =  CompInfo_C(l_comp(Name,NameSub)) % iMpiParam_I(Comm_)
   end function i_comm_name
-  !===========================================================================
+  !============================================================================
   integer function i_comm_id(iComp)
     integer, intent(in) :: iComp
-    character(len=*), parameter :: NameSub=NameMod//'::i_comm_id'
-    !-------------------------------------------------------------------------
+
+    character(len=*), parameter:: NameSub = 'i_comm_id'
+    !--------------------------------------------------------------------------
     i_comm_id =  CompInfo_C(l_comp(iComp,NameSub)) % iMpiParam_I(Comm_)
   end function i_comm_id
-  !===========================================================================
+  !============================================================================
   integer function i_group_name(Name)
     character(len=*), intent(in) :: Name
-    character(len=*), parameter :: NameSub=NameMod//'::i_group_name'
-    !-------------------------------------------------------------------------
+
+    character(len=*), parameter:: NameSub = 'i_group_name'
+    !--------------------------------------------------------------------------
     i_group_name =  CompInfo_C(l_comp(Name,NameSub)) % iMpiParam_I(Group_)
   end function i_group_name
-  !===========================================================================
+  !============================================================================
   integer function i_group_id(iComp)
     integer, intent(in) :: iComp
-    character(len=*), parameter :: NameSub=NameMod//'::i_group_id'
-    !-------------------------------------------------------------------------
+
+    character(len=*), parameter:: NameSub = 'i_group_id'
+    !--------------------------------------------------------------------------
     i_group_id =  CompInfo_C(l_comp(iComp,NameSub)) % iMpiParam_I(Group_)
   end function i_group_id
-  !===========================================================================
+  !============================================================================
   integer function i_proc_stride_name(Name)
     character(len=*), intent(in) :: Name
-    character(len=*), parameter :: NameSub=NameMod//'::i_proc_stride_name'
-    !-------------------------------------------------------------------------
+
+    character(len=*), parameter:: NameSub = 'i_proc_stride_name'
+    !--------------------------------------------------------------------------
     i_proc_stride_name =  &
          CompInfo_C(l_comp(Name,NameSub)) % iMpiParam_I(ProcStride_)
   end function i_proc_stride_name
-  !===========================================================================
+  !============================================================================
   integer function i_proc_stride_id(iComp)
     integer, intent(in) :: iComp
-    character(len=*), parameter :: NameSub=NameMod//'::i_proc_stride_id'
-    !-------------------------------------------------------------------------
+
+    character(len=*), parameter:: NameSub = 'i_proc_stride_id'
+    !--------------------------------------------------------------------------
     i_proc_stride_id =  &
          CompInfo_C(l_comp(iComp,NameSub)) % iMpiParam_I(ProcStride_)
   end function i_proc_stride_id
-  !===========================================================================
+  !============================================================================
   integer function i_proc_last_name(Name)
     character(len=*),intent(in)::Name
-    character(len=*),parameter :: NameSub=NameMod//'::i_proc_last_name'
+    character(len=*), parameter:: NameSub = 'i_proc_last_name'
+    !--------------------------------------------------------------------------
     i_proc_last_name = &
          CompInfo_C(l_comp(Name,NameSub)) % iMpiParam_I(ProcLast_)
   end function i_proc_last_name
-  !===========================================================================
+  !============================================================================
   integer function i_proc_last_id(iComp)
     integer,intent(in)::iComp
-    character(len=*),parameter :: NameSub=NameMod//'::i_proc_last_id'
+    character(len=*), parameter:: NameSub = 'i_proc_last_id'
+    !--------------------------------------------------------------------------
     i_proc_last_id=CompInfo_C(l_comp(iComp,NameSub)) % iMpiParam_I(ProcLast_)
   end function i_proc_last_id
+  !============================================================================
 
 end module CON_world

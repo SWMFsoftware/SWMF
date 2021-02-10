@@ -1,10 +1,10 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !^CMP FILE IH
 !^CMP FILE SC
-!BOP
-!MODULE: CON_couple_ih_sc - couple IH and SC both ways
+! BOP
+! MODULE: CON_couple_ih_sc - couple IH and SC both ways
 !INTERFACE:
 module CON_couple_ih_sc
 
@@ -16,7 +16,7 @@ module CON_couple_ih_sc
   !
   ! The IH grid is coupled to the outer ghost cells of the SC grid directly.
   ! Both SC and IH use AMR grids, the buffer is a simple spherical grid.
-  
+
   !USES:
   use CON_coupler
   use CON_transfer_data, ONLY: transfer_real_array, transfer_integer
@@ -36,7 +36,7 @@ module CON_couple_ih_sc
        IH_DoCoupleVar_V => DoCoupleVar_V
 
   implicit none
-  private !except
+  private ! except
   !
   !PUBLIC MEMBER FUNCTIONS:
   public:: couple_ih_sc_init
@@ -47,7 +47,7 @@ module CON_couple_ih_sc
   ! 7/23/03 Sokolov I.V.<igorsok@umich.edu> - prototype for ih-gm
   ! 7/04/04                                 - version for ih-sc
   ! 7/20/04                                 - version for sc-buffer
-  !EOP
+  ! EOP
 
   logical       :: IsInitialized=.false., DoMatchIBC = .true.
 
@@ -57,23 +57,24 @@ module CON_couple_ih_sc
 
   character(len=*), parameter :: NameMod='couple_ih_sc'
 contains
+  !============================================================================
 
-  !===========================================================================
   subroutine couple_ih_sc_init
- 
+
     ! Couple SC and IH components via a buffer grid
     ! The subroutines:
     !                CON_couple_sc_ih_init
     !                CON_couple_sc_ih
 
     logical :: DoTest, DoTestMe
-    character(len=*), parameter :: NameSub='couple_ih_sc_init'
 
     !DESCRIPTION:
     ! This subroutine should be called from all PE-s
     ! Share buffer grid info (set in IH) with SC.
-    !EOP
-    !------------------------------------------------------------------------
+    ! EOP
+
+    character(len=*), parameter:: NameSub = 'couple_ih_sc_init'
+    !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
     if(IsInitialized) RETURN
     IsInitialized = .true.
@@ -85,10 +86,10 @@ contains
     ! Determine which state variables should be coupled,
     ! pass this info to SC and IH
     call set_couple_var_info(SC_,IH_)
-    IH_nVarCouple    = nVarCouple_CC(SC_, IH_) 
+    IH_nVarCouple    = nVarCouple_CC(SC_, IH_)
     IH_DoCoupleVar_V = DoCoupleVar_VCC(:,SC_, IH_)
     IH_iVar_V        = iVar_VCC(:,SC_, IH_)
-    SC_nVarCouple    = nVarCouple_CC(SC_, IH_) 
+    SC_nVarCouple    = nVarCouple_CC(SC_, IH_)
     SC_DoCoupleVar_V = DoCoupleVar_VCC(:,SC_, IH_)
     SC_iVar_V        = iVar_VCC(:,SC_, IH_)
 
@@ -111,12 +112,13 @@ contains
          UseSourceRootOnly = .false.)
 
   end subroutine couple_ih_sc_init
+  !============================================================================
 
-  !BOP =======================================================================
-  !IROUTINE: couple_sc_ih - couple SC component to IH component
+  ! BOP =======================================================================
+  ! IROUTINE: couple_sc_ih - couple SC component to IH component
   !INTERFACE:
   subroutine couple_sc_ih(TimeCoupling)
-    
+
     !INPUT ARGUMENTS:
     real, intent(in) :: TimeCoupling     ! simulation time at coupling
 
@@ -132,8 +134,8 @@ contains
     real, allocatable :: Buffer_VIII(:,:,:,:)
 
     logical :: DoTest, DoTestMe
-    character (len=*), parameter :: NameSub='couple_sc_ih'
-    !-------------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'couple_sc_ih'
+    !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
     if(DoTest)write(*,*)NameSub,' starting, iProc=', i_proc()
 
@@ -159,9 +161,10 @@ contains
     if(DoTest)write(*,*)NameSub,' finished, iProc=',i_proc()
 
   end subroutine couple_sc_ih
+  !============================================================================
 
-  !BOP =======================================================================
-  !IROUTINE: couple_ih_sc - couple IH to SC
+  ! BOP =======================================================================
+  ! IROUTINE: couple_ih_sc - couple IH to SC
   !INTERFACE:
   subroutine couple_ih_sc(tSimulation)
 
@@ -174,14 +177,15 @@ contains
     !    Solar Corona      (SC) target
     !
     ! Send state variable from IH to outer cells in SC.
-    !EOP
+    ! EOP
 
-    character (len=*), parameter :: NameSub='couple_ih_sc'
-    !-------------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'couple_ih_sc'
+    !--------------------------------------------------------------------------
     call CON_stop(NameSub// &
          ' is not yet implemented. Correct #COUPLERTYPE command.')
 
   end subroutine couple_ih_sc
-  
+  !============================================================================
+
 end module CON_couple_ih_sc
 

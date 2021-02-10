@@ -1,11 +1,11 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !^CMP FILE EE
 !^CMP FILE GM
 
-!BOP
-!MODULE: CON_couple_ee_gm - couple EE and GM components
+! BOP
+! MODULE: CON_couple_ee_gm - couple EE and GM components
 !
 !DESCRIPTION:
 ! Couple EE and GM components both ways. Here EE is just an arbitrary BATS-R-US
@@ -36,41 +36,43 @@ module CON_couple_ee_gm
 
   !REVISION HISTORY:
   ! 05/09/2016 G.Toth snf Y. Shou - initial version
-  !EOP
+  ! EOP
 
 contains
+  !============================================================================
 
-  !BOP =======================================================================
-  !IROUTINE: couple_ee_gm_init - initialize EE-GM couplings
+  ! BOP =======================================================================
+  ! IROUTINE: couple_ee_gm_init - initialize EE-GM couplings
   !INTERFACE:
   subroutine couple_ee_gm_init
 
     !DESCRIPTION:
     ! This subroutine should be called from all PE-s
-    !EOP
-    !------------------------------------------------------------------------
+    ! EOP
+    !--------------------------------------------------------------------------
     if(is_proc(GM_) .neqv. is_proc(EE_)) &
          call CON_stop('EE and GM should run on same processors')
 
   end subroutine couple_ee_gm_init
+  !============================================================================
 
-  !=======================================================================
   subroutine couple_ee_gm(tSimulation)
 
     !INPUT ARGUMENT:
     real, intent(in) :: tSimulation
-    !-------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     call GM_use_pointer(EE_, tSimulation)
 
   end subroutine couple_ee_gm
-  !=======================================================================
+  !============================================================================
   subroutine couple_gm_ee(tSimulation)
 
     ! List of variables to pass
     real, intent(in) :: tSimulation
-    !-------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     call EE_use_pointer(GM_, tSimulation)
 
   end subroutine couple_gm_ee
+  !============================================================================
 
 end module CON_couple_ee_gm

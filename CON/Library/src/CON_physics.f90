@@ -1,9 +1,10 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !
-!BOP
+! BOP
 !
-!MODULE: CON_physics - provides methods for physics accessible by components
+! MODULE: CON_physics - provides methods for physics accessible by components
 !INTERFACE:
 module CON_physics
 
@@ -17,7 +18,7 @@ module CON_physics
   implicit none
 
   private ! except
-  
+
   !PUBLIC DATA MEMBERS:
   public :: lNamePlanet      ! length of NamePlanet string
   public :: lTypeBField      ! length of TypeBField string
@@ -36,7 +37,6 @@ module CON_physics
   !REVISION HISTORY:
   ! 14Aug03 - Gabor Toth <gtoth@umich.edu> - initial prototype/prolog/code
   ! 26Mar04 - Gabor Toth removed get_physics, access get_time, get_planet
-  !EOP
-
+  ! EOP
 
 end module CON_physics

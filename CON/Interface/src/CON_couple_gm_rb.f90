@@ -1,14 +1,14 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !^CMP FILE GM
 !^CMP FILE RB
 
-!BOP
-!MODULE: CON_couple_gm_rb - couple GM and RB components
+! BOP
+! MODULE: CON_couple_gm_rb - couple GM and RB components
 !
 !DESCRIPTION:
-! Couple GM and RB components one way for now. 
+! Couple GM and RB components one way for now.
 !
 !INTERFACE:
 module CON_couple_gm_rb
@@ -35,7 +35,7 @@ module CON_couple_gm_rb
   !REVISION HISTORY:
   ! 05/21/2004 O.Volberg - initial version
   !
-  !EOP
+  ! EOP
 
   ! Communicator and logicals to simplify message passing and execution
   logical :: IsInitialized = .false.
@@ -46,16 +46,17 @@ module CON_couple_gm_rb
   ! Number of satellites in GM that will also be traced in RB
   integer, save :: nShareSats
 contains
+  !============================================================================
 
-  !BOP =======================================================================
-  !IROUTINE: couple_gm_rb_init - initialize GM-RB coupling
+  ! BOP =======================================================================
+  ! IROUTINE: couple_gm_rb_init - initialize GM-RB coupling
   !INTERFACE:
   subroutine couple_gm_rb_init
 
     !DESCRIPTION:
     ! Store RB grid size. Transfer number of shared satellites from GM to RB.
-    !EOP
-    !------------------------------------------------------------------------
+    ! EOP
+    !--------------------------------------------------------------------------
     if(IsInitialized) RETURN
     IsInitialized = .true.
 
@@ -69,10 +70,11 @@ contains
     call transfer_integer(GM_, RB_, nShareSats, UseSourceRootOnly=.false.)
 
   end subroutine couple_gm_rb_init
+  !============================================================================
 
-  !BOP =======================================================================
-  !IROUTINE: couple_gm_rb - couple GM to RB component
-  !INTERFACE: couple_gm_rb(tSimulation)
+  ! BOP =======================================================================
+  ! IROUTINE: couple_gm_rb - couple GM to RB component
+  ! INTERFACE: couple_gm_rb(tSimulation)
   subroutine couple_gm_rb(tSimulation)
 
     !INPUT ARGUMENTS:
@@ -85,11 +87,9 @@ contains
     !
     ! Send field line volumes, average density and pressure and
     ! geometrical information.
-    !EOP
+    ! EOP
 
-    !\
     ! Coupling variables
-    !/
 
     ! Number of integrals to pass
     integer, parameter :: nIntegral=6
@@ -104,15 +104,15 @@ contains
     ! Buffer for the variables on the 2D RB grid and line data
     real, allocatable :: Integral_IIV(:,:,:), BufferLine_VI(:,:)
 
-    ! Buffer for satellite locations   
+    ! Buffer for satellite locations
     real, allocatable :: SatPos_DII(:,:,:)
-    
-    ! Buffer for satellite names   
+
+    ! Buffer for satellite names
     character (len=100), allocatable:: NameSat_I(:)
-    
+
     logical :: DoTest, DoTestMe
-    character (len=*), parameter :: NameSub='couple_gm_rb'
-    !-------------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'couple_gm_rb'
+    !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
 
     if(DoTest)write(*,*)NameSub,' starting, iProc=', i_proc()
@@ -156,7 +156,7 @@ contains
 
     call transfer_real_array(GM_, RB_, size(BufferLine_VI), BufferLine_VI)
     call transfer_real_array(GM_, RB_, size(Integral_IIV), Integral_IIV)
-       
+
     if(is_proc(RB_)) call RB_put_from_gm(Integral_IIV,iSize,jSize,nIntegral,&
          BufferLine_VI,nVarLine,nPointLine,NameVar,tSimulation)
 
@@ -165,5 +165,6 @@ contains
     if(DoTest)write(*,*)NameSub,' finished, iProc=', i_proc()
 
   end subroutine couple_gm_rb
+  !============================================================================
 
 end module CON_couple_gm_rb

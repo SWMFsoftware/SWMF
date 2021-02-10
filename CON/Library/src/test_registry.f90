@@ -1,5 +1,5 @@
 !  Copyright (C) 2002 Regents of the University of Michigan,
-!  portions used with permission 
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 program test_registry
 
@@ -11,7 +11,7 @@ program test_registry
   character (len=lNameVersion) :: Name
   real :: Version
   integer :: iError, lComp, iComp, iProc
-  !---------------------------------------------------------------------------
+  !----------------------------------------------------------------------------
   call MPI_init(iError)
 
   call world_init
@@ -69,7 +69,7 @@ program test_registry
              i_proc(), i_thread('GM'), is_proc(CON_), i_proc(GM_)
      call MPI_barrier(i_comm(), iError)
   end do
-  
+
   if(is_proc0())then
      do lComp = 1, n_comp()
         iComp = i_comp(lComp)
@@ -81,7 +81,7 @@ program test_registry
         write(*,'(a,l1)')'use_'//NameComp_I(iComp)//' = ',use_comp(iComp)
      end do
   end if
-  
+
   call world_clean
 
   call MPI_finalize(iError)

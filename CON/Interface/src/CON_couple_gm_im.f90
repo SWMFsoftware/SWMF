@@ -1,14 +1,14 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !^CMP FILE GM
 !^CMP FILE IM
 
-!BOP
-!MODULE: CON_couple_gm_im - couple GM and IM components
+! BOP
+! MODULE: CON_couple_gm_im - couple GM and IM components
 !
 !DESCRIPTION:
-! Couple GM and IM components both ways. 
+! Couple GM and IM components both ways.
 !
 !INTERFACE:
 module CON_couple_gm_im
@@ -42,7 +42,7 @@ module CON_couple_gm_im
   !
   ! 08/27/2003 G.Toth - external subroutines combined into a module
   ! 01/01/2007 D.Welling - added satellite info tranfer
-  !EOP
+  ! EOP
 
   logical :: IsInitialized = .false.
 
@@ -54,30 +54,31 @@ module CON_couple_gm_im
 
   ! Number of coupled density and pressure variables
   integer :: nRhoPCoupled = 0
-  
+
   logical, save :: DoMultiFluidIMCoupling, DoAnisoPressureIMCoupling
 
   ! Number of fluids in GM (useful as multifluid can have more than 2 fluids)
   integer:: nDensityGM = 0
 
 contains
+  !============================================================================
 
-  !BOP =======================================================================
-  !IROUTINE: couple_gm_im_init - initialize GM-IM coupling
+  ! BOP =======================================================================
+  ! IROUTINE: couple_gm_im_init - initialize GM-IM coupling
   !INTERFACE:
   subroutine couple_gm_im_init
     !DESCRIPTION:
     ! Store IM grid size.
-    !EOP
-    
+    ! EOP
+
     use ModProcessVarName,  ONLY: process_var_name
 
     integer :: nSpeedGm, nPGm, nPparGm, nWaveGm, nMaterialGm, nChargeStateAllGm
     integer :: nDensityIm, nSpeedIm, nPIm, nPparIm, nWaveIm, nMaterialIm, &
-         nChargeStateAllIm 
+         nChargeStateAllIm
 
     ! General error code
-    !------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
 
     if(IsInitialized) RETURN
     IsInitialized = .true.
@@ -87,17 +88,17 @@ contains
     ! This works for a regular IM grid only
     iSize = Grid_C(IM_) % nCoord_D(1)
     jSize = Grid_C(IM_) % nCoord_D(2)
-    
+
     call set_couple_var_info(GM_,IM_)
     nRhoPCoupled = nVarBuffer
-    !if(is_proc0(GM_))then
+    ! if(is_proc0(GM_))then
     !   write(*,*)'(GM_)%NameVar    =', Grid_C(GM_)%NameVar
     !   write(*,*)'(IM_)%NameVar    =', Grid_C(IM_)%NameVar
     !   write(*,*)'nVarBuffer       =', nVarBuffer
     !   write(*,*)'iVarSource_V     =', iVarSource_V(1:12)
     !   write(*,*)'iVarTarget_V     =', iVarTarget_V(1:12)
 !   !    call con_stop('')
-    !end if
+    ! end if
 
     ! this will likely be removed when coupling generalization if done
     call process_var_name(Grid_C(GM_)%NameVar, nDensityGm, nSpeedGm, &
@@ -106,17 +107,18 @@ contains
          nPIm, nPparIm, nWaveIm, nMaterialIm, nChargeStateAllIm)
 
     DoMultiFluidIMCoupling = nDensityGm > 1 .and. nDensityIm > 1
-    
-    DoAnisoPressureIMCoupling = nPparGm > 0 .and. nPparIm > 0 
+
+    DoAnisoPressureIMCoupling = nPparGm > 0 .and. nPparIm > 0
 
     ! Set number of satellites shared between GM and IM for tracing.
     if(is_proc(GM_)) call GM_satinit_for_im(nShareSats)
     call transfer_integer(GM_, IM_, nShareSats, UseSourceRootOnly=.false.)
-    
-  end subroutine couple_gm_im_init
 
-  !BOP =======================================================================
-  !IROUTINE: couple_gm_im - couple GM to IM component
+  end subroutine couple_gm_im_init
+  !============================================================================
+
+  ! BOP =======================================================================
+  ! IROUTINE: couple_gm_im - couple GM to IM component
   !INTERFACE:
   subroutine couple_gm_im(tSimulation)
 
@@ -133,14 +135,14 @@ contains
     !
     ! Send field line volumes, average density and pressure and
     ! geometrical information.
-    !EOP
+    ! EOP
 
     ! Which IM model is used?
     character(len=lNameVersion):: NameVersionIm
 
     logical :: DoTest, DoTestMe
-    character(len=*), parameter :: NameSub='couple_gm_im'
-    !-------------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'couple_gm_im'
+    !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
 
     call get_comp_info(IM_,NameVersion=NameVersionIm)
@@ -158,8 +160,8 @@ contains
     if(DoTest)write(*,*)NameSub,' finished, iProc=', i_proc()
 
   contains
-
     !==========================================================================
+
     subroutine couple_rcm
 
       ! Number of variables to pass
@@ -175,7 +177,7 @@ contains
 
       ! Buffer for scalar Kp
       real :: BufferKp
-      
+
       ! Buffer for satellite names
       character(len=100), allocatable:: NameSat_I(:)
 
@@ -191,9 +193,7 @@ contains
          nVarGmIm = 6
       endif
 
-      !\
       ! Get field line integrals from GM to IM
-      !/
       allocate(Buffer_IIV(iSize,jSize,nVarGmIm))
       ! All GM processors participate in calculating the integrals
       if(is_proc(GM_)) &
@@ -207,9 +207,7 @@ contains
            iSize, jSize, nVarGmIm, NameVar)
       deallocate(Buffer_IIV)
 
-      !\
       ! If IM sat tracing is enabled, get sat locations from GM
-      !/
       if (nShareSats > 0) then
          allocate(SatPos_DII(3,2,nShareSats), NameSat_I(nShareSats))
          if(is_proc(GM_)) &
@@ -223,8 +221,8 @@ contains
       end if
 
     end subroutine couple_rcm
-
     !==========================================================================
+
     subroutine couple_ram
 
       ! Some variables do not change during a run, so transfer once only
@@ -282,19 +280,17 @@ contains
       deallocate(BufferLine_VI, Map_DSII)
 
     end subroutine couple_ram
-
     !==========================================================================
+
     subroutine couple_crcm
 
       !DESCRIPTION:
       ! Couple between two components:\\
       !    Global Magnetosphere (GM) source\\
       !    Inner  Magnetosphere (IM) target
-      !EOP
+      ! EOP
 
-      !\
       ! Coupling variables
-      !/
 
       ! Number of varibles at minimum B to pass
       integer  :: nVarBmin
@@ -302,7 +298,7 @@ contains
       ! Number of variables saved into the line data
       integer:: nVarLine
 
-      ! Number of points saved into the line data      
+      ! Number of points saved into the line data
       integer:: nPointLine
 
       ! Names of variables to pass
@@ -313,18 +309,19 @@ contains
 
       ! Buffer for passing the solar wind variables
       real :: BufferSolarWind_V(8)
-      
-      ! Buffer for satellite locations   
+
+      ! Buffer for satellite locations
       real, allocatable :: SatPos_DII(:,:,:)
 
       ! Buffer for scalar Kp
       real :: BufferKp
-      
-      ! Buffer for satellite names   
+
+      ! Buffer for satellite names
       character(len=100), allocatable:: NameSat_I(:)
 
       logical :: DoTest, DoTestMe
-      character(len=*), parameter :: NameSub='couple_gm_im_crcm'
+
+      character(len=*), parameter:: NameSub = 'couple_crcm'
       !------------------------------------------------------------------------
       call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
@@ -334,16 +331,14 @@ contains
       ! x, y, B, densities and pressures at the min B surface
       nVarBmin = nRhoPCoupled + 3
 
-      NameVar = 'x:y:bmin:I_I:S_I:R_I:B_I:rho:p'      
-      
-      !\
+      NameVar = 'x:y:bmin:I_I:S_I:R_I:B_I:rho:p'
+
       ! Get size of field line traces
-      !/
       if(is_proc(GM_)) call GM_get_for_im_trace_crcm( &
            iSize, jSize, nDensityGM, NameVar, nVarLine, nPointLine)
 
       call transfer_integer(GM_, IM_, nVarLine, nPointLine)
-     
+
       ! Now the size is known on GM root and IM so allocate arrays
       if(is_proc0(GM_) .or. is_proc(IM_))then
          allocate(BufferLine_VI(nVarLine, nPointLine), &
@@ -362,7 +357,7 @@ contains
       call transfer_real_array(GM_, IM_, size(BufferLine_VI), BufferLine_VI)
       call transfer_real_array(GM_, IM_, size(BufferSolarWind_V), BufferSolarWind_V)
       call transfer_real(GM_,IM_, BufferKp)
-      
+
       if(is_proc(IM_)) call IM_put_from_gm_crcm(&
            Buffer_IIV, BufferKp, iSize, jSize, nVarBmin, &
            BufferLine_VI, nVarLine, nPointLine, NameVar, &
@@ -375,7 +370,7 @@ contains
          allocate(SatPos_DII(4,2,nShareSats), NameSat_I(nShareSats))
          if(is_proc(GM_)) &
               call GM_get_sat_for_im_crcm(SatPos_DII, NameSat_I, nShareSats)
-         
+
          ! Transfer satellite names from GM to IM
          call transfer_string_array(GM_, IM_, nShareSats, NameSat_I, &
               UseSourceRootOnly = .false.)
@@ -388,11 +383,13 @@ contains
       end if
 
     end subroutine couple_crcm
+    !==========================================================================
 
   end subroutine couple_gm_im
+  !============================================================================
 
-  !BOP =======================================================================
-  !IROUTINE: couple_im_gm - couple IM to GM component
+  ! BOP =======================================================================
+  ! IROUTINE: couple_im_gm - couple IM to GM component
   !INTERFACE:
   subroutine couple_im_gm(tSimulation)
     use CON_world, ONLY: get_comp_info
@@ -407,14 +404,14 @@ contains
     !    Global Magnetosphere (GM) target
     !
     ! Send pressure from IM to GM.
-    !EOP
+    ! EOP
 
     ! Which IM model is used?
     character(len=lNameVersion):: NameVersionIm
 
     logical:: DoTest, DoTestMe
-    character(len=*), parameter :: NameSub='couple_im_gm'
-    !-------------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'couple_im_gm'
+    !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
 
     call get_comp_info(IM_,NameVersion=NameVersionIm)
@@ -431,8 +428,9 @@ contains
     if(DoTest)write(*,*)NameSub,' finished, iProc=', i_proc()
 
   contains
+    !==========================================================================
     subroutine couple_im_gm_default
-    
+
     ! Number of variables to pass
     integer:: nVarImGm
 
@@ -443,8 +441,9 @@ contains
     real, allocatable:: Buffer_IIV(:,:,:)
 
     logical:: DoTest, DoTestMe
-    character(len=*), parameter :: NameSub='couple_im_gm_default'
-    !-------------------------------------------------------------------------
+
+      character(len=*), parameter:: NameSub = 'couple_im_gm_default'
+      !------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
 
     if(DoTest)write(*,*)NameSub,' starting, iProc=',i_proc()
@@ -452,7 +451,7 @@ contains
     if(DoMultiFluidIMCoupling)then
        NameVar='p:rho:Hpp:Opp:Hprho:Oprho'
        nVarImGm=6
-    else if(DoAnisoPressureIMCoupling)then 
+    else if(DoAnisoPressureIMCoupling)then
        NameVar='p:rho:ppar:bmin'
        nVarImGm=4
     else
@@ -470,12 +469,12 @@ contains
 
     if(DoTest)write(*,*)NameSub,': finished iProc=', i_proc()
   end subroutine couple_im_gm_default
+    !==========================================================================
 
-  !=============================================================================
   subroutine couple_im_gm_cimi
     ! Number of variables to pass
     integer:: nVarImGm
-    
+
     ! Names of variables to pass
     character(len=100) :: NameVar
 
@@ -483,17 +482,18 @@ contains
     real, allocatable:: Buffer_IIV(:,:,:)
 
     logical:: DoTest, DoTestMe
-    character(len=*), parameter :: NameSub='couple_im_gm_default'
-    !-------------------------------------------------------------------------
+
+      character(len=*), parameter:: NameSub = 'couple_im_gm_cimi'
+      !------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
 
     if(DoTest)write(*,*)NameSub,' starting, iProc=',i_proc()
 
-    !get number of variable coupled from IM to GM from the grid descriptor
-    !add 1 since we need also the minimum B which we tack onto the end
+    ! get number of variable coupled from IM to GM from the grid descriptor
+    ! add 1 since we need also the minimum B which we tack onto the end
     nVarImGm = Grid_C(IM_)%nVar+1
 
-    !for now pass in the IM namevar although this is not really needed
+    ! for now pass in the IM namevar although this is not really needed
     NameVar = Grid_C(IM_)%NameVar
 
     allocate(Buffer_IIV(iSize,jSize,nVarImGm))
@@ -506,6 +506,8 @@ contains
 
     if(DoTest)write(*,*)NameSub,': finished iProc=', i_proc()
   end subroutine couple_im_gm_cimi
+    !==========================================================================
 end subroutine couple_im_gm
+  !============================================================================
 
 end module CON_couple_gm_im

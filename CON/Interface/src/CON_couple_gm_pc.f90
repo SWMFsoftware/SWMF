@@ -1,14 +1,14 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !^CMP FILE GM
 !^CMP FILE PC
 
-!BOP
-!MODULE: CON_couple_gm_pc - couple GM and PC components
+! BOP
+! MODULE: CON_couple_gm_pc - couple GM and PC components
 !
 !DESCRIPTION:
-! Couple GM and PC components both ways. 
+! Couple GM and PC components both ways.
 !
 !INTERFACE:
 module CON_couple_gm_pc
@@ -35,25 +35,25 @@ module CON_couple_gm_pc
 
   !REVISION HISTORY:
   ! 09/24/2013 G.Toth <gtoth@umich.edu> - initial version
-  !EOP
+  ! EOP
 
   ! Router communicator info
   type(CouplePointsType) :: CouplerGMtoPC,  CouplerPCtoGM
 
 contains
+  !============================================================================
 
-  !BOP =======================================================================
-  !IROUTINE: couple_gm_pc_init - initialize GM-PC couplings
+  ! BOP =======================================================================
+  ! IROUTINE: couple_gm_pc_init - initialize GM-PC couplings
   !INTERFACE:
   subroutine couple_gm_pc_init
 
     use CON_transfer_data, ONLY: &
          transfer_integer, transfer_integer_array, transfer_real_array
 
-    !integer:: nDimPt
+    ! integer:: nDimPt
 
     logical :: DoTest, DoTestMe
-    character(len=*), parameter :: NameSub='couple_gm_pc_init'
 
     ! GM sends PC a number of integers and reals
     integer, allocatable :: iParam_I(:)
@@ -62,8 +62,9 @@ contains
 
     !DESCRIPTION:
     ! This subroutine should be called from all PE-s
-    !EOP
-    !------------------------------------------------------------------------
+    ! EOP
+    character(len=*), parameter:: NameSub = 'couple_gm_pc_init'
+    !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
 
     ! Initialize point couplers
@@ -107,14 +108,13 @@ contains
     deallocate(iParam_I, Param_I)
 
   end subroutine couple_gm_pc_init
+  !============================================================================
 
-  !=======================================================================
   subroutine couple_gm_pc_grid_info()
     use CON_transfer_data, ONLY: &
          transfer_integer, transfer_integer_array
 
     logical :: DoTest, DoTestMe
-    character(len=*), parameter :: NameSub='couple_gm_pc_grid_info'
 
     ! GM sends PC a number of integers and reals
     integer, allocatable :: Int_I(:), AccumulatedSize_I(:)
@@ -122,9 +122,10 @@ contains
 
     !DESCRIPTION:
     ! This subroutine should be called from all PE-s
-    !EOP
-    !------------------------------------------------------------------------
-    
+    ! EOP
+    character(len=*), parameter:: NameSub = 'couple_gm_pc_grid_info'
+    !--------------------------------------------------------------------------
+
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
 
     if(.not.(is_proc(GM_) .or. is_proc(PC_))) RETURN
@@ -136,11 +137,10 @@ contains
     call transfer_integer(GM_, PC_, nPicGrid, UseSourceRootOnly=.false., &
          UseTargetRootOnly=.false.)
 
-    
     if(nInt>0) then
        allocate(Int_I(nInt))
        allocate(AccumulatedSize_I(nPicGrid))
-       
+
        if(is_proc(GM_)) &
             call GM_get_for_pc_grid_info(nInt, nPicGrid, &
             AccumulatedSize_I, Int_I)
@@ -151,17 +151,16 @@ contains
        call transfer_integer_array(GM_, PC_, nPicGrid, AccumulatedSize_I, &
             UseSourceRootOnly=.false., UseTargetRootOnly=.false.)
 
-       
        if(is_proc(PC_)) &
             call PC_put_from_gm_grid_info(nInt, nPicGrid, AccumulatedSize_I, Int_I)
 
        deallocate(Int_I)
        deallocate(AccumulatedSize_I)
     endif
-    
+
   end subroutine couple_gm_pc_grid_info
-    
-  !=======================================================================
+  !============================================================================
+
   subroutine couple_gm_pc(tSimulation)
 
     use CON_transfer_data, ONLY: transfer_real
@@ -175,20 +174,20 @@ contains
     logical :: DoTest, DoTestMe
 
     ! Name of this interface
-    character (len=*), parameter :: NameSub='couple_gm_pc'
-    !-------------------------------------------------------------------------
 
+    character(len=*), parameter:: NameSub = 'couple_gm_pc'
+    !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
     call couple_gm_pc_grid_info
-    
+
     if(DoTest)write(*,*)NameSub,' starting iProc=', i_proc()
 
-    if(IsTightCouple_CC(GM_,PC_)) then 
+    if(IsTightCouple_CC(GM_,PC_)) then
        if(is_proc(GM_)) call GM_get_for_pc_dt(DtSi)
        call transfer_real(GM_,PC_,DtSi)
        if(is_proc(PC_)) call PC_put_from_gm_dt(DtSi)
-    else 
+    else
        if(is_proc(PC_)) call PC_put_from_gm_dt(Couple_CC(GM_,PC_)%Dt)
     endif
 
@@ -198,15 +197,15 @@ contains
     if(DoTest) write(*,*) NameSub,' finished, iProc=', i_proc()
 
   end subroutine couple_gm_pc
-  !=======================================================================
+  !============================================================================
   subroutine couple_pc_gm(tSimulation)
 
     ! List of variables to pass
     real, intent(in) :: tSimulation
 
     logical :: DoTest, DoTestMe
-    character (len=*), parameter :: NameSub='couple_pc_gm'
-    !-------------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'couple_pc_gm'
+    !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
     if(DoTest)write(*,*)NameSub,' starting iProc=',CouplerPCtoGM%iProcWorld
@@ -217,5 +216,6 @@ contains
     if(DoTest) write(*,*) NameSub,' finished, iProc=', i_proc()
 
   end subroutine couple_pc_gm
+  !============================================================================
 
 end module CON_couple_gm_pc

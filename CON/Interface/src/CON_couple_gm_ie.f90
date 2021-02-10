@@ -1,14 +1,14 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !^CMP FILE GM
 !^CMP FILE IE
 
-!BOP
-!MODULE: CON_couple_gm_ie - couple GM and IE components
+! BOP
+! MODULE: CON_couple_gm_ie - couple GM and IE components
 !
 !DESCRIPTION:
-! Couple GM and IE components both ways. 
+! Couple GM and IE components both ways.
 !
 !INTERFACE:
 module CON_couple_gm_ie
@@ -33,11 +33,11 @@ module CON_couple_gm_ie
   public :: couple_ie_gm      ! couple IE to GM
 
   !REVISION HISTORY:
-  ! 07/25/2003 G.Toth <gtoth@umich.edu> - initial version as external 
+  ! 07/25/2003 G.Toth <gtoth@umich.edu> - initial version as external
   !                                       subroutines
   ! 08/27/2003 G.Toth - combined into a module
   ! 12/01/2004 G.Toth - the GM->IE coupling is rewritten for Jr(iSize,jSize)
-  !EOP
+  ! EOP
 
   ! Size of the 2D spherical structured IE grid
   integer, save :: iSize, jSize
@@ -47,21 +47,22 @@ module CON_couple_gm_ie
   character(len=20), allocatable :: NameVarIeGm_I(:)
 
 contains
+  !============================================================================
 
-  !BOP =======================================================================
-  !IROUTINE: couple_gm_ie_init - initialize GM-IE couplings
+  ! BOP =======================================================================
+  ! IROUTINE: couple_gm_ie_init - initialize GM-IE couplings
   !INTERFACE:
   subroutine couple_gm_ie_init
-
 
     !DESCRIPTION:
     ! This subroutine should be called from all PE-s.
     ! Transfer initial information about GM to IE coupling.
-    !EOP
+    ! EOP
 
     logical :: DoTest, DoTestMe
-    character(len=*), parameter :: NameSub='couple_gm_ie_init'
-    !------------------------------------------------------------------------
+
+    character(len=*), parameter:: NameSub = 'couple_gm_ie_init'
+    !--------------------------------------------------------------------------
     if(.not.is_proc(GM_) .and. .not.is_proc(IE_)) RETURN
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
@@ -70,7 +71,7 @@ contains
 
     ! Get number of variables to be passed from GM to IE
     if(is_proc(GM_)) call GM_get_info_for_ie(nVarIeGm)
-    
+
     ! Pass to all IE nodes.
     call transfer_integer(GM_, IE_, nVarIeGm, UseSourceRootOnly=.false.)
 
@@ -90,9 +91,10 @@ contains
     jSize = Grid_C(IE_) % nCoord_D(2)
 
   end subroutine couple_gm_ie_init
+  !============================================================================
 
-  !BOP =======================================================================
-  !IROUTINE: couple_ie_gm - couple IE component to GM component
+  ! BOP =======================================================================
+  ! IROUTINE: couple_ie_gm - couple IE component to GM component
   !INTERFACE:
   subroutine couple_ie_gm(tSimulation)
 
@@ -106,7 +108,7 @@ contains
     !
     ! The IE component sends the electrostatic potential and other
     ! requested variables (Joule heat, conductances ...) to GM.
-    !EOP
+    ! EOP
 
     ! Buffer for the variables on the 2D IE grid
     real, allocatable :: Buffer_IIV(:,:,:)
@@ -114,8 +116,8 @@ contains
     logical :: DoTest, DoTestMe
 
     ! Name of this interface
-    character (len=*), parameter :: NameSub='couple_ie_gm'
-    !-------------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'couple_ie_gm'
+    !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
 
     if(DoTest)write(*,*)NameSub,', starting iProc, iProc0Gm, iProc0Ie=', &
@@ -136,9 +138,10 @@ contains
     if(DoTest)write(*,*)NameSub,' finished, iProc=', i_proc()
 
   end subroutine couple_ie_gm
+  !============================================================================
 
-  !BOP =======================================================================
-  !IROUTINE: couple_gm_ie - couple GM to IE
+  ! BOP =======================================================================
+  ! IROUTINE: couple_gm_ie - couple GM to IE
   !INTERFACE:
   subroutine couple_gm_ie(tSimulation)
 
@@ -150,9 +153,9 @@ contains
     !    Global Magnetosphere       (GM) source\\
     !    Ionosphere Electrodynamics (IE) target
     !
-    ! Send field aligned currents from GM to IE. 
+    ! Send field aligned currents from GM to IE.
     ! Also send some ray tracing information.
-    !EOP
+    ! EOP
 
     ! Number of variables to pass
     integer, parameter :: nVar=6
@@ -161,9 +164,9 @@ contains
     real, dimension(:,:,:), allocatable :: Buffer_IIV
 
     logical :: DoTest, DoTestMe
-    character (len=*), parameter :: NameSub='couple_gm_ie'
-    !-------------------------------------------------------------------------
 
+    character(len=*), parameter:: NameSub = 'couple_gm_ie'
+    !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
 
     if(DoTest)write(*,*)NameSub,' starting, iProc, iProc0Gm, iProc0Ie=', &
@@ -187,5 +190,6 @@ contains
     if(DoTest)write(*,*)NameSub,' finished, iProc=', i_proc()
 
   end subroutine couple_gm_ie
+  !============================================================================
 
 end module CON_couple_gm_ie

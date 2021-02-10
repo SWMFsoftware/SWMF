@@ -1,9 +1,9 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
-!BOP
-!MODULE: CON_coupler - methods for general coupler variables
+! BOP
+! MODULE: CON_coupler - methods for general coupler variables
 !DESCRIPTION:
 ! This class can be used in the couplers and wrappers.
 ! It should contain everything needed for the coupling.
@@ -47,7 +47,7 @@ module CON_coupler
   type(CoordSystemType), target :: Grid_C(MaxComp+3)
 
   ! Name of the output restart directory for the component being coupled
-  public :: NameRestartOutDirComp  
+  public :: NameRestartOutDirComp
   character(len=200):: NameRestartOutDirComp = ''
 
   public :: Couple_CC           ! Frequency of couplings
@@ -67,13 +67,13 @@ module CON_coupler
 
   ! This is the default order based on the propagation of information
   ! from component to component
-  integer :: iCompCoupleOrder_II(2,MaxCouple) = reshape ( (/&
+  integer :: iCompCoupleOrder_II(2,MaxCouple) = reshape ( [&
        EE_, GM_, &
        EE_, SC_, &
        SC_, EE_, &
-       SC_, IH_, & 
+       SC_, IH_, &
        SC_, PT_, &
-       IH_, SC_, & 
+       IH_, SC_, &
        SC_, SP_, & ! The order of these two couplings is mandatory
        IH_, SP_, & ! Do not modify them, please.
        IH_, GM_, &
@@ -103,7 +103,7 @@ module CON_coupler
        OH_, PT_, &
        PT_, OH_, &
        PC_, GM_  &
-       /), (/2, MaxCouple/) )
+       ], [2, MaxCouple] )
 
   ! Should do coupling limit the time step
   logical, public :: DoCoupleOnTime_C(MaxComp) = .true.
@@ -111,9 +111,7 @@ module CON_coupler
   ! Is this a tight coupling?
   logical, public :: IsTightCouple_CC(MaxComp,MaxComp)  = .false.
 
-  !\
   ! Variables related to share/Library/src/ModProcessVarName
-  !/
   integer, public :: iCompSourceCouple, iCompTargetCouple
 
   ! no. of variables to be coupled by any pair of source and target components
@@ -163,7 +161,7 @@ module CON_coupler
        EhotCouple_             = 15
 
   ! vector storing the actual values of variable indices inside a
-  ! coupled component 
+  ! coupled component
   integer, public  :: &
        iVar_V(nVarIndexCouple) = 0, &
        iVar_VCC(nVarIndexCouple, MaxComp, MaxComp) = 0
@@ -171,8 +169,7 @@ module CON_coupler
   ! Maximum number of variables passed between components
   integer, parameter, public :: MaxVarBuffer = 100
 
-  
-  ! Number of variables sent between source and target and 
+  ! Number of variables sent between source and target and
   ! corresponding indexes in the source and target components
   integer, public:: &
        nVarBuffer, &
@@ -188,7 +185,7 @@ module CON_coupler
   !PUBLIC MEMBER FUNCTIONS:
   public :: set_coord_system    ! Sets coordinate information for a component
   public :: gen_to_stretched    ! Transform generalized coordinates to
-  public :: stretched_to_gen    ! stretched ones and vice versa for 
+  public :: stretched_to_gen    ! stretched ones and vice versa for
   !                               non-uniform structured grid
 
   public :: init_coupler        ! Initializes grids and router
@@ -200,42 +197,40 @@ module CON_coupler
   !                               find their indices in each component.
 
   !REVISION HISTORY:
-  ! 07/22/03 Gabor Toth <gtoth@umich.edu> - initial prototype 
+  ! 07/22/03 Gabor Toth <gtoth@umich.edu> - initial prototype
   ! 08/22/03 I.Sokolov  <igorsok@umich.edu> - modifications of
   !              the procedure interfaces for new coupling toolkit
   !              and init_coupler is added.
-  ! 09/02/03 G.Toth - improved Protex description. 
+  ! 09/02/03 G.Toth - improved Protex description.
   !                   Use renaming for couple_comp and set_router
   ! 09/07/03 I.Sokolov - bug fixes in init_coord_system_all and
-  !                 in set_coord_system. Add gen_to_stretched and 
+  !                 in set_coord_system. Add gen_to_stretched and
   !                 streched_to_gen
   ! 08/10/04 I.Sokolov - to avoid an improper use of init_coord_system_all
-  !                      which destroys the Grid_C structure. 
+  !                      which destroys the Grid_C structure.
   ! 01/30/10 G. Toth - added nVar and NameVar to Grid_C
   ! 04/07/11 R. Oran - added subroutine set_couple_var_info for determining
   !                    which variables should be coupled and finding their
   !                    indices in the source and target components.
-  !EOP
+  ! EOP
 
   character(len=*), parameter, private :: NameMod='CON_coupler'
 contains
-  !===========================================================================
+  !============================================================================
   subroutine set_coord_system( &
        GridID_,       &! Grid ID
        TypeCoord,     &! Coordinate system type (MAG,GEO,..)
        UnitX,         &! Unit of length, in SI (meters)
-       TypeGeometry,  &! Geometry type (cartesian, spherical_lnr, etc) 
+       TypeGeometry,  &! Geometry type (cartesian, spherical_lnr, etc)
        Coord1_I,      &! Non-uniform coords in 1st dim (optional)
        Coord2_I,      &! Non-uniform coords in 2nd dim (optional)
        Coord3_I,      &! Non-uniform coords in 3rd dim (optional)
        nVar,          &! number of variables per cell/node
        NameVar,       &! variable names
        iProc0In,      &
-       iCommIn) 
+       iCommIn)
 
     use ModUtilities, ONLY: lower_case
-
-    character(len=*), parameter :: NameSub='set_coord_system'
 
     integer, intent(in) :: GridID_
     character(len=*), intent(in)  :: TypeCoord
@@ -257,7 +252,9 @@ contains
     logical :: IsRoot
     type(CoordSystemType), pointer :: ThisGrid
     logical :: DoInit=.true.
-    !-------------------------------------------------------------!
+
+    character(len=*), parameter:: NameSub = 'set_coord_system'
+    !--------------------------------------------------------------------------
     if(DoInit)call init_coord_system_all
     if(present(iProc0In).and.present(iCommIn))then
        iProc0=iProc0In
@@ -316,7 +313,7 @@ contains
     call MPI_bcast(ThisGrid%nCoord_D, 3, MPI_INTEGER, iProc0, iComm, iError)
 
     ! Allocate and broadcast coordinate arrays
-    if(ThisGrid%nCoord_D(1)>0)then 
+    if(ThisGrid%nCoord_D(1)>0)then
        if(associated(ThisGrid%Coord1_I))deallocate(ThisGrid%Coord1_I)
        allocate(ThisGrid%Coord1_I(ThisGrid%nCoord_D(1)))
        if(IsRoot) ThisGrid%Coord1_I = Coord1_I
@@ -341,9 +338,11 @@ contains
     end if
 
   contains
+    !==========================================================================
 
     subroutine init_coord_system_all
       integer :: iComp
+      !------------------------------------------------------------------------
       DoInit=.false.
       do iComp=1, MaxComp+3
          nullify(&
@@ -358,28 +357,30 @@ contains
          Grid_C(iComp)%UnitX        = 1.0
       end do
     end subroutine init_coord_system_all
+    !==========================================================================
 
   end subroutine set_coord_system
-  !=============================================================!
-  !BOP
-  !IROUTINE: gen_to_stretched - transform coords for structured non-uniform grid 
+  !============================================================================
+  ! BOP
+  ! IROUTINE: gen_to_stretched - transform coords for structured non-uniform grid
   !INTERFACE:
   subroutine gen_to_stretched(XyzGen_D,XyzStretched_D,nDim,GridID_,DoExtrapolate)
     !INPUT ARGUMENTS:
     integer,intent(in)::nDim,GridID_
     real,dimension(nDim),intent(in)::XyzGen_D
 
-    !Note, that the PRESENCE of this parameter means to do extrapolation means 
-    !to do extrapolation, while the VALUE of it, if present, is meaningless
-    logical, OPTIONAL, intent(in):: DoExtrapolate 
+    ! Note, that the PRESENCE of this parameter means to do extrapolation means
+    ! to do extrapolation, while the VALUE of it, if present, is meaningless
+    logical, OPTIONAL, intent(in):: DoExtrapolate
     !OUTPUT ARGUMENTS:
     real,dimension(nDim),intent(out)::XyzStretched_D
     !DESCRIPTION:
     !   Trasforms generalized coordinates (which for the stretched grids are usually
     !   nothing but the grid point index) to streched coordinates
-    !EOP
+    ! EOP
     real:: OneIfExtrapolate = 1.0
-    !------------------------------!
+
+    !--------------------------------------------------------------------------
     if(present(DoExtrapolate))then
        OneIfExtrapolate = 1.0
     else
@@ -394,12 +395,13 @@ contains
     if(associated(Grid_C(GridID_)%Coord3_I).and.nDim>2)&
          call stretch(3,Grid_C(GridID_)%Coord3_I)
   contains
+    !==========================================================================
     subroutine stretch(iDim,Coord_I)
       integer,intent(in)::iDim
       real,dimension(:),intent(in)::Coord_I
       integer::iL,iU,Number
       real::Fraction
-      !--------------!
+      !------------------------------------------------------------------------
 
       iL=lbound(Coord_I,1)
       iU=ubound(Coord_I,1)
@@ -415,33 +417,35 @@ contains
       else
          Number=floor(XyzStretched_D(iDim))
          Fraction=XyzStretched_D(iDim)-real(Number)
-         XyzStretched_D(iDim)=Coord_I(Number)*(cOne-Fraction)+&
+         XyzStretched_D(iDim)=Coord_I(Number)*(1.0-Fraction)+&
               Coord_I(Number+1)*Fraction
       end if
     end subroutine stretch
+    !==========================================================================
   end subroutine gen_to_stretched
-  !=============================================================!
-  !BOP
-  !IROUTINE: stretched_to_gen - transform coords for structured non-uniform grid 
+  !============================================================================
+  ! BOP
+  ! IROUTINE: stretched_to_gen - transform coords for structured non-uniform grid
   !INTERFACE:
   subroutine stretched_to_gen(XyzStretched_D,XyzGen_D,nDim,GridID_,DoExtrapolate)
     !INPUT ARGUMENTS:
     integer,intent(in)::nDim,GridID_
     real,dimension(nDim),intent(in)::XyzStretched_D
 
-    !Note, that the PRESENCE of this parameter means to do extrapolation means 
-    !to do extrapolation, while the VALUE of it, if present, is meaningless
-    logical, OPTIONAL, intent(in):: DoExtrapolate 
+    ! Note, that the PRESENCE of this parameter means to do extrapolation means
+    ! to do extrapolation, while the VALUE of it, if present, is meaningless
+    logical, OPTIONAL, intent(in):: DoExtrapolate
     !OUTPUT ARGUMENTS:
     real,dimension(nDim),intent(out)::XyzGen_D
     !DESCRIPTION:
-    !   Trasforms stretched coordinates  to  generalized coordinates 
+    !   Trasforms stretched coordinates  to  generalized coordinates
     !   (which for the stretched grids are usually
     !   nothing but the grid point index)
-    !EOP
+    ! EOP
 
     real:: OneIfExtrapolate = 1.0
-    !------------------------------!
+
+    !--------------------------------------------------------------------------
     if(present(DoExtrapolate))then
        OneIfExtrapolate = 1.0
     else
@@ -456,10 +460,12 @@ contains
     if(associated(Grid_C(GridID_)%Coord3_I).and.nDim>2)&
          call gen(3,Grid_C(GridID_)%Coord3_I)
   contains
+    !==========================================================================
     subroutine gen(iDim,Coord_I)
       integer,intent(in)::iDim
       real,dimension(:),intent(in)::Coord_I
       integer::iL,iU,Number
+      !------------------------------------------------------------------------
       iL=lbound(Coord_I,1)
       iU=ubound(Coord_I,1)
       if (Coord_I(iL) < Coord_I(iU)) then
@@ -494,12 +500,12 @@ contains
          end if
       end if
     end subroutine gen
+    !==========================================================================
   end subroutine stretched_to_gen
-  !=================================================================
-  !=============================================================!
+  !============================================================================
   ! simplified interfaces for Igor's coupler
-  !BOP
-  !INTERFACE:       
+  ! BOP
+  !INTERFACE:
   subroutine set_grid_descriptor( &
        iComp,        & ! Component ID
        nDim,         & ! Dimensionality of the grid
@@ -515,7 +521,7 @@ contains
        iBlock_A,     & ! Block index for all the blocks (op)
        IsPeriodic_D, & ! Periodicity for all dimesnsions (op)
        nVar,         & ! Number of variables per grid cell
-       NameVar       ) ! Variable names 
+       NameVar       ) ! Variable names
 
     !INPUT ARGUMENTS:
     integer, intent(in) :: iComp, nDim
@@ -533,22 +539,22 @@ contains
     integer, intent(in), optional :: nVar
     character(len=*), intent(in), optional:: NameVar
 
-    !DESCRIPTION: 
+    !DESCRIPTION:
     ! Describe and broadcast non-octree grids
-    !EOP
-    !-----------------------------------------------------------!
+    ! EOP
+
     integer:: GridID
     logical:: DoTest,DoTestMe
-    !-----------------------------------------------------------!
+    !--------------------------------------------------------------------------
     call CON_set_do_test('test_grids',DoTest,DoTestMe)
     GridID=iComp
-    if(done_dd_init(iComp))return
+    if(done_dd_init(iComp))RETURN
     call init_decomposition(&
-         GridID,                             &!Decomposition ID_
+         GridID,                             &! Decomposition ID_
          iComp,                              &! component index
          nDim)                                ! dimensionality
     call set_coord_system(&
-         GridID,                             &!Decomposition ID_
+         GridID,                             &! Decomposition ID_
          TypeCoord,                          &
          nVar=nVar,                          &
          NameVar=NameVar,                    &
@@ -556,7 +562,7 @@ contains
          Coord2_I=Coord2_I,                  &
          Coord3_I=Coord3_I)
     if(is_proc0(iComp))call get_root_decomposition(&
-         GridID,                             &!Decomposition ID_
+         GridID,                             &! Decomposition ID_
          nRootBlock_D ,                      &
          XyzMin_D,                           &
          XyzMax_D,                           &
@@ -566,18 +572,18 @@ contains
          IsPeriodic_D)
     call bcast_decomposition(GridID)
   end subroutine set_grid_descriptor
-  !========================================================================== 
+  !============================================================================
   subroutine set_couple_var_info(iCompSource, iCompTarget)
 
     ! Determine coupling flags and variable indices used for accesing
-    ! the buffer grid data. 
+    ! the buffer grid data.
 
-    ! Handle coupling of any two sets of variables  
-    ! with a minimal no. of assumptions about variable indices. 
-    ! Allows coupling two components with/without: 
-    ! Ppar, Pe, multi/single fluid/specie, waves. 
+    ! Handle coupling of any two sets of variables
+    ! with a minimal no. of assumptions about variable indices.
+    ! Allows coupling two components with/without:
+    ! Ppar, Pe, multi/single fluid/specie, waves.
 
-    ! REVISION HISTORY:    
+    ! REVISION HISTORY:
     ! Feb 2011 - R. Oran - initial version.
 
     use ModProcessVarName,  ONLY: process_var_name, nVarMax
@@ -593,25 +599,25 @@ contains
     integer      :: nSpeedSource, nSpeedTarget, nSpeedCouple
     integer      :: nPSource, nPTarget, nPCouple
     integer      :: nPparSource, nPparTarget, nPparCouple
-    integer      :: nWaveSource, nWaveTarget, nWaveCouple 
+    integer      :: nWaveSource, nWaveTarget, nWaveCouple
     integer      :: nMaterialSource, nMaterialTarget, nMaterialCouple
     integer      :: nChargeStateSource,nChargeStateTarget,nChargeStateCouple
     integer:: lCompSource, lCompTarget
 
     logical      :: DoTest, DoTestMe
-    character(len=*), parameter    :: NameSub =NameMod//'::set_couple_var_info'
-    !------------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'set_couple_var_info'
+    !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
 
     iCompSourceCouple = iCompSource
     iCompTargetCouple = iCompTarget
 
     ! The following coupling flags are set to true if both source and target
-    ! have the relevant state variables, see below. 
-    ! NOTE: If both components have multiple densities, 
+    ! have the relevant state variables, see below.
+    ! NOTE: If both components have multiple densities,
     ! all species/fluids state
     ! variables should be coupled, hence a further check is made to ensure that
-    ! the fluids/species in both components are identical.        
+    ! the fluids/species in both components are identical.
 
     DoCoupleVar_V = .false.
     ! The elements of DoCoupleVar_V will be set to true if:
@@ -620,7 +626,7 @@ contains
     ! ElectronPressure_  :  Both use electron pressure.
     ! Wave_              :  Both use the same # of waves.
     ! MultiFluid_        :  Both use the same neutral fluids
-    ! MultiSpecie_       :  Both use the same species     
+    ! MultiSpecie_       :  Both use the same species
     ! Material_          :  Both use the same # of materials
     ! ChargeState_       :  Both use the same elements' charge states
 
@@ -632,24 +638,22 @@ contains
     nMaterialSource    = 0 ; nMaterialTarget    = 0 ; nMaterialCouple    = 0
     nChargeStateSource = 0 ; nChargeStateTarget = 0 ; nChargeStateCouple = 0
 
-    !\        
     ! process variable names
-    !/                                                  
-    ! Here the external subroutine process_var_names is called, which will cast  
-    ! the variable names in the source and target components into a            
-    ! standardized form.                                         
+    ! Here the external subroutine process_var_names is called, which will cast
+    ! the variable names in the source and target components into a
+    ! standardized form.
     ! Variable names are defined in equation modules  and often different names
     ! are given to the same physical quantity. This is especially relevant to
-    ! multi fluid/specie models.                                              
+    ! multi fluid/specie models.
     ! The subroutine also returns the number of distinct densities and speeds,
     ! pressure (total and parallel), number of waves and material, and
     ! elemental charge states.
-    ! See description inside the subroutine for more details.            
+    ! See description inside the subroutine for more details.
 
     NameVarSource = ' '//Grid_C(iCompSource)%NameVar
     NameVarTarget = ' '//Grid_C(iCompTarget)%NameVar
 
-    ! Separate NameVar(Source/Target) into a string arrays of variable names. 
+    ! Separate NameVar(Source/Target) into a string arrays of variable names.
     call split_string(NameVarSource, nVarMax, NameList_V, nVarSource)
     allocate(NameVarSource_V(nVarSource))
     NameVarSource_V(1:nVarSource) = NameList_V(1:nVarSource)
@@ -659,7 +663,7 @@ contains
     allocate(NameVarTarget_V(nVarTarget))
     NameVarTarget_V(1:nVarTarget) = NameList_V(1:nVarTarget)
 
-    ! process source variable names                
+    ! process source variable names
     if (DoTestMe) then
        write(*,*) ' '
        write(*,*) NameComp_I(iCompSource), ':  variable names for I/O:'
@@ -675,7 +679,7 @@ contains
        write(*,*) trim(NameVarSource)
     end if
 
-    ! process target variable names       
+    ! process target variable names
     if(DoTestMe) then
        write(*,*) ' '
        write(*,*) NameComp_I(iCompTarget), ': variable names for I/O:'
@@ -691,9 +695,7 @@ contains
        write(*,*) trim(NameVarTarget)
     end if
 
-    !\                                                          
-    ! Get info required for coupling, depending on which variables are present 
-    !/                                                 
+    ! Get info required for coupling, depending on which variables are present
     ! Logical array to report whether a variable name in the source is treated
     ! by any of the cases below and thus it can be handeled by the coupler.
     ! For brevity, all elements are initialized to .true.
@@ -708,11 +710,11 @@ contains
        case('Rho', 'P', 'Ew','Eint', 'Hyp', 'My', 'Mz', 'By', 'Bz')
           ! Do nothing.
           ! Rho, P are processed later (based on value of nDensityCouple etc.)
-          ! ew, EInt, hyp : internal variables, not to be coupled.      
-          ! By, Bz, My, Mz already covered by other cases.       
+          ! ew, EInt, hyp : internal variables, not to be coupled.
+          ! By, Bz, My, Mz already covered by other cases.
 
        case('Mx')
-          ! Check that My and Mz immediately follow Mx 
+          ! Check that My and Mz immediately follow Mx
           if ( NameVarSource_V(iVarSource + 1) /= 'My' .and. &
                NameVarSource_V(iVarSource + 2) /= 'Mz') then
              write(*,*) 'Error in ModEquation for ', NameComp_I(iCompSource)
@@ -723,7 +725,7 @@ contains
        case('Bx')
           if(any(NameVarTarget_V=='Bx')) then
              DoCoupleVar_V(Bfield_) = .true.
-             ! Check that By and Bz immediately follow Bx 
+             ! Check that By and Bz immediately follow Bx
              if ( NameVarSource_V(iVarSource + 1) /= 'By' .and. &
                   NameVarSource_V(iVarSource + 2) /= 'Bz') then
                 write(*,*) 'Error in ModEquation for ', NameComp_I(iCompSource)
@@ -743,10 +745,10 @@ contains
                any(NameVarTarget_V=='Ehot')
 
        case('i01')
-          ! Enumerated names for waves                                     
-          ! Coupling components with and without waves is allowed.             
-          ! If waves are present in both source and target, they should have 
-          ! the same number. Otherwise a CON_stop is issued.                
+          ! Enumerated names for waves
+          ! Coupling components with and without waves is allowed.
+          ! If waves are present in both source and target, they should have
+          ! the same number. Otherwise a CON_stop is issued.
           if(nWaveSource == nWaveTarget)then
              nWaveCouple  = nWaveSource
              DoCoupleVar_V(Wave_) = .true.
@@ -761,7 +763,7 @@ contains
 
        case('m01')
           ! Verify that target uses the same # of materials.
-          ! Otherwise stop with error.                                       
+          ! Otherwise stop with error.
           if(nMaterialSource == nMaterialTarget)then
              DoCoupleVar_V(Material_) = .true.
              nMaterialCouple = nMaterialSource
@@ -779,29 +781,29 @@ contains
                NameVarTarget_V(1:nVarTarget)))&
                call CON_stop(NameSub&
                //'charge states do not match:'//NameVarSource_V(iVarSource))
-          ! Order of elements are enforced at configuration     
+          ! Order of elements are enforced at configuration
           ! Verify target has the same number of charge state variables
           if(nChargeStateSource == nChargeStateTarget)then
              DoCoupleVar_V(ChargeState_) = .true.
              nChargeStateCouple = nChargeStateSource
-             
+
           else
              write(*,*) 'SWMF error found by ',NameSub
              write(*,*) &
                   'Cannot couple components with different nChargeState!'
              call CON_stop(NameSub//': change Element list (Config.pl).')
           end if
-          
+
        case default
           ! The only variable names that are left are associated with either:
           !   - a neutral/ionized fluid other than the main (M)HD component.
-          !   - additional waves.                 
+          !   - additional waves.
           !   - additional materials.
           !   - charge states of elements.
           if(nDensitySource == 1 .and. &
                nWaveSource < 1 .and. nMaterialSource < 1 .and. &
                nChargeStateSource < 1) then
-             ! Source variable name is unknown, stop.                        
+             ! Source variable name is unknown, stop.
              write(*,*) 'SWMF error found in ', NameSub
              write(*,*) 'Coupling of variable ', NameVarSource_V(iVarSource)
              write(*,*) ' used by ', NameComp_I(iCompSource), &
@@ -809,14 +811,14 @@ contains
              call CON_stop(NameSub//' check variable names!')
           end if
 
-          ! Report status of this variable as not found.   
+          ! Report status of this variable as not found.
           ! This will be corrected for waves and materials after looping over
-          ! all names is complete.                            
+          ! all names is complete.
           IsFoundVarSource_V(iVarSource) = .false.
        end select
     end do
 
-    ! Correct "found" status for waves and materials  
+    ! Correct "found" status for waves and materials
     if (nWaveSource >= 1) &
          IsFoundVarSource_V(WaveFirstCouple_:WaveLastCouple_) = .true.
     if (nMaterialSource >= 1) &
@@ -825,17 +827,15 @@ contains
          IsFoundVarSource_V(ChargeStateFirstCouple_:ChargeStateLastCouple_) =&
          .true.
 
-    !\                                                    
     ! Check multi fluid/specie variables.
-    !/
     if ( nDensitySource == nDensityTarget .and. &
          nSpeedSource == nSpeedTarget .and. nDensitySource >1) then
 
        ! Verify that the same specie/fluid variables are present in both
-       ! source and target.                               
+       ! source and target.
        SOURCELOOP: do iVarSource = 1,nVarSource
 
-          ! Only check varaiables that were not yet accounted for. 
+          ! Only check varaiables that were not yet accounted for.
           if(IsFoundVarSource_V(iVarSource)) CYCLE
 
           ! Look up source variable name in the target
@@ -847,7 +847,7 @@ contains
           end do
 
           if(.not. IsFoundVarSource_V(iVarSource)) then
-             ! At least one fluids/specie name does not match 
+             ! At least one fluids/specie name does not match
              write(*,*) 'SWMF error found in ', NameSub
              write(*,*) 'Coupled components with unmatching densities/speeds:'
              write(*,*) 'Component ', NameComp_I(iCompSource),' uses '// &
@@ -867,13 +867,13 @@ contains
          nSpeedSource /= nSpeedTarget) then
        if( (nDensitySource == 1 .and. nSpeedSource == 1) .or. &
             (nDensityTarget == 1 .and. nSpeedTarget == 1) ) then
-          ! Coupling multi<-> single fluid is allowed.        
+          ! Coupling multi<-> single fluid is allowed.
           ! In this case the additional fluid variables are not coupled, and
-          ! their boundary conditions should be implemented separately. 
+          ! their boundary conditions should be implemented separately.
           DoCoupleVar_V(MultiFluid_) = .false.
           DoCoupleVar_V(MultiSpecie_)   = .false.
-       elseif(iCompSource /= IM_ .and. iCompTarget /= IM_) then 
-          ! Both components have differing # of multiple densities or speeds 
+       elseif(iCompSource /= IM_ .and. iCompTarget /= IM_) then
+          ! Both components have differing # of multiple densities or speeds
           write(*,*) 'SWMF error found in ', NameSub
           write(*,*) 'Coupled SWMF components use different # of fluids/species!'
           call CON_stop(NameSub//': check ModEquation and recompile!')
@@ -915,7 +915,7 @@ contains
        nVarCouple = nVarCouple + 3
     end if
 
-    if (DoCoupleVar_V(AnisoPressure_)) then      
+    if (DoCoupleVar_V(AnisoPressure_)) then
        nVarCouple = nVarCouple + 1
        iVar_V(PparCouple_) = nVarCouple
     end if
@@ -927,7 +927,7 @@ contains
 
     if (DoCoupleVar_V(Wave_)) then
        iVar_V(WaveFirstCouple_) = nVarCouple + 1
-       iVar_V(WaveLastCouple_)  = nVarCouple + nWaveSource 
+       iVar_V(WaveLastCouple_)  = nVarCouple + nWaveSource
        nVarCouple = iVar_V(WaveLastCouple_)
     end if
 
@@ -949,7 +949,6 @@ contains
        nVarCouple = nVarCouple + 1
        iVar_V(EhotCouple_) = nVarCouple
     end if
-
 
     if (nVarCouple >  nVarSource) then
        write(*,*) 'SWMF Error: # of coupled variables exceeds nVarSource'
@@ -977,7 +976,7 @@ contains
        iVarTarget_VCC = 0
     end if
 
-    ! For the point coupler find variables that occur both in 
+    ! For the point coupler find variables that occur both in
     ! source and target components. Store source and target indexes.
     nVarBuffer = 0
     do iVarSource = 1, nVarSource
@@ -987,7 +986,7 @@ contains
           nVarBuffer = nVarBuffer + 1
           NameVarBuffer = trim(NameVarBuffer)//' '//NameVarSource_V(iVarSource)
           iVarSource_V(nVarBuffer) = iVarSource
-          iVarTarget_V(nVarBuffer) = iVarTarget             
+          iVarTarget_V(nVarBuffer) = iVarTarget
        end do
     end do
     ! Get rid of leading space
@@ -1046,22 +1045,22 @@ contains
     deallocate(NameVarSource_V, NameVarTarget_V, IsFoundVarSource_V)
 
   end subroutine set_couple_var_info
-  !=======================================================================
-  !IROUTINE: init_coupler - initializes coupler between two components
-  subroutine init_coupler(  &    
+  !============================================================================
+  ! IROUTINE: init_coupler - initializes coupler between two components
+  subroutine init_coupler(  &
        iCompSource,         & ! component index for source
-       nGhostPointSource,   & ! number of halo points in Source 
+       nGhostPointSource,   & ! number of halo points in Source
        StandardSource_,     & ! CellCentered_ or Nodes_
        nIndexSource,        & ! number of indexes for source grid
        iCompTarget,         & ! component index for target
-       nGhostPointTarget,   & ! number of halo points in target 
+       nGhostPointTarget,   & ! number of halo points in target
        StandardTarget_,     & ! CellCentered_ or Nodes_
        nIndexTarget,        & ! number of indexes for target grid
-       nMappedPointIndex,   & ! number of indexes for points to send 
-       GridSource,& ! OUT!\
-       GridTarget,& ! OUT!-General coupler variables 
+       nMappedPointIndex,   & ! number of indexes for points to send
+       GridSource,& ! OUT
+       GridTarget,& ! OUT!-General coupler variables
        LocalGridTarget,       & ! OUT! (optional)
-       Router)                ! OUT!/
+       Router)                ! OUT
 
     !INPUT ARGUMENTS:
     integer,intent(in)          :: iCompSource, iCompTarget
@@ -1077,7 +1076,7 @@ contains
     type(GridType), intent(out) :: GridTarget
     type(LocalGridType), optional, intent(out)     :: LocalGridTarget
 
-    !EOP
+    ! EOP
     type(RouterType)::Router
     integer::StandardSourceHere_
     integer::StandardTargetHere_
@@ -1085,10 +1084,11 @@ contains
     integer::nGhostPointTargetHere
     integer::nIndexSourceHere, nIndexTargetHere
 
+    !--------------------------------------------------------------------------
     StandardSourceHere_=CellCentered_
     StandardTargetHere_=CellCentered_
     nGhostPointSourceHere=0
-    nGhostPointTargetHere=0   
+    nGhostPointTargetHere=0
     if(present(nGhostPointSource))&
          nGhostPointSourceHere=nGhostPointSource
     if(present(StandardSource_))&
@@ -1129,13 +1129,13 @@ contains
          call set_local_gd(i_proc(), &
          GridTarget, LocalGridTarget)
   end subroutine init_coupler
-
-  !=============================================================!
+  !============================================================================
 
   subroutine check_couple_symm(iComp1,iComp2,NameCaller)
     integer, intent(in)           :: iComp1,iComp2
     character (len=*), intent(in) :: NameCaller
 
+    !--------------------------------------------------------------------------
     call check_i_comp(iComp1,NameCaller//' iComp1 ')
     call check_i_comp(iComp2,NameCaller//' iComp2 ')
 
@@ -1150,7 +1150,6 @@ contains
     end if
 
   end subroutine check_couple_symm
-
   !============================================================================
 
   subroutine set_router_comm(iComp1, iComp2, iCommRouter, UseMe, iProc, jProc)
@@ -1163,7 +1162,7 @@ contains
     ! Return optional UseMe=.true. if the processor is part of the union
     ! and UseMe=.false. if the processor is not part of the union
     !
-    ! If the optional iProc and jProc arguments are present, 
+    ! If the optional iProc and jProc arguments are present,
     ! they are transformed from the value valid for iCommWorld
     ! to the value valid for iCommRouter.
 
@@ -1174,9 +1173,9 @@ contains
 
     integer:: iGroup1, iGroup2, iGroupUnion, iProcUnion, iProcWorld, iError
 
-    character(len=*), parameter :: NameSub=NameMod//'::set_router_comm'
     logical:: DoTest, DoTestMe
-    !-------------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'set_router_comm'
+    !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
     if(DoTest)write(*,*)NameSub,': starting for iComp1,iComp2,iProc=', &
@@ -1212,5 +1211,6 @@ contains
     if(DoTest)write(*,*)NameSub,': finished, iProc=', i_proc()
 
   end subroutine set_router_comm
+  !============================================================================
 
 end module CON_coupler

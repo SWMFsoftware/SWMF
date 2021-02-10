@@ -1,15 +1,16 @@
-! !  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+! !  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 ! !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !
-!BOP
+! BOP
 !
-!MODULE: CON_methods - Simple Methods for CON and Components
+! MODULE: CON_methods - Simple Methods for CON and Components
 !
 !DESCRIPTION:
-! Simple external subroutines which are used by CON and can be used 
+! Simple external subroutines which are used by CON and can be used
 ! by the science components too. The use of simple external subroutines
 ! as opposed to module procedures makes the access possible from
-! source code writtn in F77 or C/C++. 
+! source code writtn in F77 or C/C++.
 ! For the same reason there are no optional arguments or other advanced
 ! F90 features.
 
@@ -21,10 +22,10 @@
 !  28Aug03 - Added external access functions to the ModIoUnit class
 !            for sake of F77/C codes.
 !  17Mar04 - The self contained methods are moved into ModUtilities
-!EOP
+! EOP
 
-!BOP
-!ROUTINE: CON_set_do_test - set logicals for testing
+! BOP
+! ROUTINE: CON_set_do_test - set logicals for testing
 !INTERFACE:
 subroutine CON_set_do_test(String,DoTest,DoTestMe)
 
@@ -40,15 +41,15 @@ subroutine CON_set_do_test(String,DoTest,DoTestMe)
 
   !DESCRIPTION:
   ! See ModUtilities.
-  !EOP
+  ! EOP
   !----------------------------------------------------------------------------
-  !BOC
+  ! BOC
   call util_set_do_test(String, DoTest, DoTestMe)
 
 end subroutine CON_set_do_test
 
-!BOP =========================================================================
-!ROUTINE: CON_stop - print error message and stop/abort execution
+! BOP =========================================================================
+! ROUTINE: CON_stop - print error message and stop/abort execution
 !INTERFACE:
 subroutine CON_stop(StringError)
 
@@ -64,18 +65,19 @@ subroutine CON_stop(StringError)
   ! It provides an external subroutine interface to ModUtilities::CON\_stop.
   ! Open I/O units are closed and empty output files are deleted before abort.
   ! This will only be done on the aborting processor(s).
-  !EOP
+  ! EOP
+
+  ! BOC
   !----------------------------------------------------------------------------
-  !BOC
   call util_stop(StringError)
-  !EOC
+  ! EOC
 end subroutine CON_stop
 
-!BOP ==========================================================================
-!ROUTINE: CON_io_unit_new - provide an unused unit number
+! BOP ==========================================================================
+! ROUTINE: CON_io_unit_new - provide an unused unit number
 !INTERFACE:
 subroutine CON_io_unit_new(iUnit)
-  !USES
+  ! USES
   use ModIoUnit, ONLY: io_unit_new
   implicit none
   !OUTPUT ARGUMENTS:
@@ -85,14 +87,15 @@ subroutine CON_io_unit_new(iUnit)
   ! The file should be opened right after the unit number was obtained
   ! so that the unit number gets locked. When the file is closed, the
   ! unit number is automatically released.
-  !EOP
-  !BOC
+  ! EOP
+  ! BOC
+  !----------------------------------------------------------------------------
   iUnit = io_unit_new()
-  !EOC
+  ! EOC
 end subroutine CON_io_unit_new
 
-!BOP ==========================================================================
-!ROUTINE: CON_io_unit_tmp - provide a temporary unit number for open and close
+! BOP ==========================================================================
+! ROUTINE: CON_io_unit_tmp - provide a temporary unit number for open and close
 !INTERFACE:
 subroutine CON_io_unit_tmp(iUnit)
   !USES:
@@ -104,9 +107,10 @@ subroutine CON_io_unit_tmp(iUnit)
   ! This external subroutine is an access method for non-F90 source.
   ! The file using a temporary unit number should be closed before
   ! any other file could be opened.
-  !EOP
-  !BOC
+  ! EOP
+  ! BOC
+  !----------------------------------------------------------------------------
   iUnit = UnitTMP_
-  !EOC
+  ! EOC
 end subroutine CON_io_unit_tmp
 

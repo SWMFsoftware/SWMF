@@ -1,14 +1,13 @@
-! !  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+! !  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 ! !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!===========================================================!
 !           SWMF: Space Weather Modeling Framework          |
 !                   University of Michigan                  |
-!============================================================
-!BOP 
+! BOP
 !
-!QUOTE: \chapter{Control Module}
-!QUOTE: \section{CON/Control: Main Executable and Control}
-!MODULE: swmf - the main program for the stand-alone SWMF executable
+! QUOTE: \chapter{Control Module}
+! QUOTE: \section{CON/Control: Main Executable and Control}
+! MODULE: swmf - the main program for the stand-alone SWMF executable
 !INTERFACE:
 program swmf
 
@@ -27,18 +26,18 @@ program swmf
 
   !REVISION HISTORY:
   ! 09/01/05 G.Toth - initial version
-  ! 09/09/05 G.Toth - moved session loop here from CON_main::run 
+  ! 09/09/05 G.Toth - moved session loop here from CON_main::run
   !                   to avoid an ifort 8.070 compiler bug on the Altix
   !
   !DESCRIPTION:
   ! This main program is for the stand alone SWMF.
   ! It uses methods from CON\_main, CON\_session and CON\_io.
-  ! The same methods can also be used from the swmf\_interface, 
+  ! The same methods can also be used from the swmf\_interface,
   ! when the SWMF is run as a library, e.g. by an ESMF application.
   ! The main program does the following steps:
   ! \begin{verbatim}
   ! intialize MPI
-  ! initialize the SWMF 
+  ! initialize the SWMF
   ! loop over sessions
   !    read input parameters for the session
   !    initialize session
@@ -49,22 +48,20 @@ program swmf
   ! \end{verbatim}
   ! \newpage
 
-  !EOP
-  !---------------------------------------------------------------------------
-  !BOC
+  ! EOP
+  !----------------------------------------------------------------------------
+  ! BOC
   call MPI_init(iErrorMpi)
   if(iErrorMpi /= MPI_SUCCESS) stop 'SWMF_ERROR: MPI_init FAILED'
-  !\
+
   ! Initialize SWMF
-  !/
   call initialize
   if(iErrorSwmf /= 0)then
      call MPI_Finalize(iErrorMpi)
      stop
   end if
-  !\
+
   ! Execute sessions. Each session can use different input parameters.
-  !/
   do
      ! read input parameters for one session
      call read_inputs(IsLastSession)
@@ -81,11 +78,10 @@ program swmf
      if(IsLastSession .or. iErrorSwmf /= 0) EXIT
 
   end do
-  !\
+
   ! Finalize SWMF
-  !/
   if(iErrorSwmf == 0) call finalize
 
   call MPI_finalize(iErrorMpi)
-  !EOC
+  ! EOC
 end program swmf

@@ -1,7 +1,8 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!BOP
-!MODULE: ModInitGridStorage - set the number of grids and optimize the memory to store them
+! BOP
+! MODULE: ModInitGridStorage - set the number of grids and optimize the memory to store them
 !INTERFACE:
 module ModInitGridStorage
   !USES:
@@ -9,33 +10,35 @@ module ModInitGridStorage
   use CON_comp_param
   use CON_domain_decomposition, ONLY: DomainPointerType, DomainType
   implicit none
-  !EOP
+  ! EOP
   integer,parameter:: MaxGrid = MaxComp+3
   type(DomainType),private,save,target::&
        EeGrid, GmGrid, IeGrid, IhGrid, ImGrid, OhGrid, PcGrid, PsGrid, &
        PtGrid, PwGrid, RbGrid, ScGrid, SpGrid, UaGrid, CzGrid
 contains
-  !BOP
+  !============================================================================
+  ! BOP
   !REVISION HISTORY:
-  !09SEP03              I.Sokolov<igorsok@umich.edu - initial prototype/code
-  !12SEP03              version for any operating system
-  !16JAN05              G.Toth removed the obsolete GmIe_grid
-  !BOP
-  !IROUTINE: init_grid_storage - initialize a storage for component grids
+  ! 09SEP03              I.Sokolov<igorsok@umich.edu - initial prototype/code
+  ! 12SEP03              version for any operating system
+  ! 16JAN05              G.Toth removed the obsolete GmIe_grid
+  ! BOP
+  ! IROUTINE: init_grid_storage - initialize a storage for component grids
   !INTERFACE:
   subroutine init_grid_storage(Domain_I,GridID_)
     !INPUT ARGUMENTS:
     integer,intent(in)::GridID_
     !INPUT/OUTPUT ARGUMENTS:
     type(DomainPointerType), dimension(MaxGrid), intent(inout) :: Domain_I
-    !DESCRIPTION: 
+    !DESCRIPTION:
     ! information for the global grids is stored at each of the PEs so it is
-    ! important to reduce the memory requirements. This short procedure 
-    ! describes how the memory is allocated for the domain decomposition 
-    ! structure. This solution satisfies the most picky SGI compiler, 
-    ! but requires to add manually an identifier for the domain 
-    ! decomposition while adding a new component to the framework. 
-    !EOP
+    ! important to reduce the memory requirements. This short procedure
+    ! describes how the memory is allocated for the domain decomposition
+    ! structure. This solution satisfies the most picky SGI compiler,
+    ! but requires to add manually an identifier for the domain
+    ! decomposition while adding a new component to the framework.
+    ! EOP
+    !--------------------------------------------------------------------------
     select case(GridID_)
     case(EE_)
        Domain_I(GridID_)%Ptr=>EeGrid
@@ -72,4 +75,5 @@ contains
        call CON_stop('ERRORin ModInitGridStorage: not implemented grid ID')
     end select
   end subroutine init_grid_storage
+  !============================================================================
 end module ModInitGridStorage
