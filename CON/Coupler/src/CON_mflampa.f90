@@ -25,34 +25,34 @@ module CON_mflampa
   ! State vector is a pointer, which is joined to a target array
   ! For stand alone version the target array is allocated here
   !
-  real, allocatable, target:: Target_VIB(:,:,:)
+  real, allocatable, target:: MHData_VIB(:,:,:)
   ! Grid integer parameters:
-  integer :: nParticleMF, nBlockMF
+  integer :: nParticleMax, nBlock
   ! Misc:
   integer:: iError
 contains
   !============================================================================
-  subroutine set_state_pointer(State_VIB, nBlock, nParticle)
-    real, intent(inout), pointer :: State_VIB(:,:,:)
-    integer, intent(in)          :: nBlock, nParticle
+  subroutine set_state_pointer(rPointer_VIB, nBlockIn, nParticleIn)
+    real, intent(inout), pointer :: rPointer_VIB(:,:,:)
+    integer, intent(in)          :: nBlockIn, nParticleIn
     integer :: iParticle
     character(len=*), parameter:: NameSub = 'set_state_pointer'
     !--------------------------------------------------------------------------
     !
     ! Store nBlock and nParticleMax
-    nBlockMF    = nBlock
-    nParticleMF = nParticle
-    allocate(Target_VIB(LagrID_:nMHData, 1:nParticleMF, 1:nBlockMF), &
+    nBlock    = nBlockIn
+    nParticleMax = nParticleIn
+    allocate(MHData_VIB(LagrID_:nMHData, 1:nParticleMax, 1:nBlock), &
          stat=iError)
-    call check_allocate(iError, NameSub//'Target_VIB')
-    State_VIB => Target_VIB
+    call check_allocate(iError, NameSub//'MHData_VIB')
+    rPointer_VIB => MHData_VIB
     !
-    State_VIB = 0.0
+    MHData_VIB = 0.0
     !
     ! reset lagrangian ids
     !
-    do iParticle = 1, nParticleMF
-       State_VIB(LagrID_, iParticle, 1:nBlock) = real(iParticle)
+    do iParticle = 1, nParticleMax
+       MHData_VIB(LagrID_, iParticle, 1:nBlock) = real(iParticle)
     end do
   end subroutine set_state_pointer
   !============================================================================
