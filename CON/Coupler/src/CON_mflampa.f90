@@ -83,5 +83,126 @@ contains
     allocate(iOffset_B(nBlock)); iOffset_B = 0
   end subroutine set_state_pointer
   !============================================================================
+  subroutine get_bounds(iModelIn, rMinIn, rMaxIn, &
+       rBufferLoIn, rBufferUpIn)
+    integer,        intent(in) :: iModelIn
+    real,           intent(in) :: rMinIn, rMaxIn
+    real, optional, intent(in) :: rBufferLoIn, rBufferUpIn
+    ! set domain boundaries
+    rInterfaceMin = rMinIn; rInterfaceMax = rMaxIn
+    ! set buffer boundaries
+    if(present(rBufferLoIn))then
+       rBufferLo = rBufferLoIn
+    else
+       rBufferLo = rMinIn
+    end if
+    if(present(rBufferUpIn))then
+       rBufferUp = rBufferUpIn
+    else
+       rBufferUp = rMaxIn
+    end if
+  end subroutine get_bounds
+  !============================================================================
+  subroutine SP_put_from_mh(nPartial,iPutStart,Put,W,DoAdd,Buff_I,nVar)
+    use CON_coupler, ONLY: &
+         iVar_V, DoCoupleVar_V, &
+         Density_, RhoCouple_, Pressure_, PCouple_, &
+         Momentum_, RhoUxCouple_, RhoUzCouple_, &
+         BField_, BxCouple_, BzCouple_, &
+         Wave_, WaveFirstCouple_, WaveLastCouple_
+    use CON_router, ONLY: IndexPtrType, WeightPtrType
+    use ModConst,   ONLY: cProtonMass 
+    integer,intent(in)::nPartial,iPutStart,nVar
+    type(IndexPtrType),intent(in)::Put
+    type(WeightPtrType),intent(in)::W
+    logical,intent(in)::DoAdd
+    real,dimension(nVar),intent(in)::Buff_I
+    integer:: iRho, iP, iMx, iMz, iBx, iBz, iWave1, iWave2
+    integer:: i, iBlock
+    integer:: iPartial
+    real:: Weight
+    real:: R, Aux
+
+    character(len=100):: StringError
+    character(len=*), parameter:: NameSub = 'SP_put_from_mh'
+    !--------------------------------------------------------------------------
+    ! check consistency of DoCoupleVar_V
+    if(.not. DoCoupleVar_V(Density_) .and. &
+         (DoCoupleVar_V(Pressure_) .or. DoCoupleVar_V(Momentum_)))&
+         call CON_Stop(NameSub//': pressure or momentum is coupled,'&
+         //' but density is not')
+    ! indices of variables in the buffer
+    iRho  = iVar_V(RhoCouple_)
+    iP    = iVar_V(PCouple_)
+    iMx   = iVar_V(RhoUxCouple_)
+    iMz   = iVar_V(RhoUzCouple_)
+    iBx   = iVar_V(BxCouple_)
+    iBz   = iVar_V(BzCouple_)
+    iWave1= iVar_V(WaveFirstCouple_)
+    iWave2= iVar_V(WaveLastCouple_)
+    Aux = 0
+    if(DoAdd)Aux = 1.0
+    do iPartial = 0, nPartial-1
+       ! cell and block indices
+       i      = Put%iCB_II(1, iPutStart + iPartial)
+       iBlock = Put%iCB_II(4, iPutStart + iPartial)
+       ! interpolation weight
+       Weight = W%Weight_I(   iPutStart + iPartial)
+       if(is_in_buffer_xyz(Lower_,MHData_VIB(X_:Z_,i,iBlock)))then
+          R = sqrt(sum(MHData_VIB(X_:Z_,i,iBlock)**2))
+          Aux = 1.0
+          Weight = Weight * (0.50 + 0.50*tanh(2*(2*R - &
+               RBufferLo - RInterfaceMin)/(RBufferLo - RInterfaceMin)))
+       end if
+       if(is_in_buffer_xyz(Upper_,MHData_VIB(X_:Z_,i,iBlock)))then
+          R = sqrt(sum(MHData_VIB(X_:Z_,i,iBlock)**2))
+          Weight = Weight * (0.50 - 0.50*tanh(2*(2*R - &
+               RInterfaceMax - RBufferUp)/(RInterfaceMax - RBufferUp)))
+       end if
+       ! put the data
+       if(DoCoupleVar_V(Density_))&
+            MHData_VIB(Rho_,i,iBlock) = Aux*MHData_VIB(Rho_,i,iBlock) &
+            + Buff_I(iRho)/cProtonMass*Weight
+       if(DoCoupleVar_V(Pressure_))&
+            MHData_VIB(T_,i,iBlock) = Aux*MHData_VIB(T_,i,iBlock) + &
+            Buff_I(iP)*(cProtonMass/Buff_I(iRho))*EnergySi2Io*Weight
+       if(DoCoupleVar_V(Momentum_))&
+            MHData_VIB(Ux_:Uz_,i,iBlock) = Aux*MHData_VIB(Ux_:Uz_,i,iBlock) + &
+            Buff_I(iMx:iMz) / Buff_I(iRho) * Weight
+       if(DoCoupleVar_V(BField_))&
+            MHData_VIB(Bx_:Bz_,i,iBlock) = Aux*MHData_VIB(Bx_:Bz_,i,iBlock) + &
+            Buff_I(iBx:iBz) * Weight
+       if(DoCoupleVar_V(Wave_))&
+            MHData_VIB(Wave1_:Wave2_,i,iBlock) = &
+            Aux*MHData_VIB(Wave1_:Wave2_,i,iBlock) + &
+            Buff_I(iWave1:iWave2)*Weight
+    end do
+  end subroutine SP_put_from_mh
+  !============================================================================
+  function is_in_buffer_r(iBuffer, R) Result(IsInBuffer)
+    integer,intent(in) :: iBuffer
+    real,   intent(in) :: R
+    logical:: IsInBuffer
+    !--------------------------------------------------------------------------
+    select case(iBuffer)
+    case(Lower_)
+       IsInBuffer = R >= rInterfaceMin .and. R < rBufferLo
+    case(Upper_)
+       IsInBuffer = R >= rBufferUp .and. R < rInterfaceMax
+    case default
+       call CON_stop("ERROR: incorrect call of SP_wrapper:is_in_buffer")
+     end select
+  end function is_in_buffer_r
+  !============================================================================
+  function is_in_buffer_xyz(iBuffer, Xyz_D) Result(IsInBuffer)
+    integer,intent(in):: iBuffer
+    real,   intent(in) :: Xyz_D(nDim)
+    logical:: IsInBuffer
+    real:: R
+    !--------------------------------------------------------------------------
+    R = sqrt(sum(Xyz_D**2))
+    IsInBuffer = is_in_buffer_r(iBuffer, R)
+  end function is_in_buffer_xyz
+  !==========================================================================
 end module CON_mflampa
 
