@@ -103,7 +103,7 @@ contains
     end if
   end subroutine get_bounds
   !============================================================================
-  subroutine SP_put_from_mh(nPartial,iPutStart,Put,W,DoAdd,Buff_I,nVar)
+  subroutine MF_put_from_mh(nPartial,iPutStart,Put,W,DoAdd,Buff_I,nVar)
     use CON_coupler, ONLY: &
          iVar_V, DoCoupleVar_V, &
          Density_, RhoCouple_, Pressure_, PCouple_, &
@@ -124,7 +124,7 @@ contains
     real:: R, Aux
 
     character(len=100):: StringError
-    character(len=*), parameter:: NameSub = 'SP_put_from_mh'
+    character(len=*), parameter:: NameSub = 'MF_put_from_mh'
     !--------------------------------------------------------------------------
     ! check consistency of DoCoupleVar_V
     if(.not. DoCoupleVar_V(Density_) .and. &
@@ -177,7 +177,7 @@ contains
             Aux*MHData_VIB(Wave1_:Wave2_,i,iBlock) + &
             Buff_I(iWave1:iWave2)*Weight
     end do
-  end subroutine SP_put_from_mh
+  end subroutine MF_put_from_mh
   !============================================================================
   function is_in_buffer_r(iBuffer, R) Result(IsInBuffer)
     integer,intent(in) :: iBuffer

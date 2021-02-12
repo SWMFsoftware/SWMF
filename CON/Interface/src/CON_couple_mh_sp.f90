@@ -29,11 +29,13 @@ module CON_couple_mh_sp
        SP_check_ready_for_mh    ,&  ! If returns .false., extract the mf lines
        SP_get_bounds_comp       ,&  ! Provides RScMin/Max and/or RIhMin/Max
        SP_put_coupling_param    ,&  ! Set time and interaface bounds
-       SP_put_from_mh           ,&  ! Put MHD info from SC or IH to SP
        SP_n_particle            ,&  ! Number of "points" in a given line in SP
        SP_put_line              ,&  ! Put particle Xyz from SC/IH to SP
        SP_interface_point_coords,&  ! Check if the point is within interface
        SP_adjust_lines              ! Process if needed the updated mf lines
+  use CON_mflampa, ONLY: &
+       MF_put_from_mh               ! Put MHD info from SC or IH to SP
+       !get_bounds                   ! Provides RScMin/Max and/or RIhMin/Max
   implicit none
 
   private ! Except
@@ -310,7 +312,7 @@ contains
     call couple_comp(RouterScSp                            ,&
          nVar                   = nVarBuffer               ,&
          fill_buffer = SC_get_for_sp_and_transform         ,&
-         apply_buffer           = SP_put_from_mh)
+         apply_buffer           = MF_put_from_mh)
     ! By the way get particle coords from the router buffer
     if(is_proc(SC_))then
        nLength = nlength_buffer_source(RouterScSp)
@@ -428,7 +430,7 @@ contains
     call couple_comp(                 RouterIhSp               ,&
          nVar                       = nVarBuffer               ,&
          fill_buffer              = IH_get_for_sp_and_transform,&
-         apply_buffer               = SP_put_from_mh)
+         apply_buffer               = MF_put_from_mh)
     ! By the way get particle coords from the router buffer
     if(is_proc(IH_))then
        nLength = nlength_buffer_source(RouterIhSp)
