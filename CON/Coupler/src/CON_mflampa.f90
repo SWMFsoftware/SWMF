@@ -179,6 +179,32 @@ contains
     end do
   end subroutine MF_put_from_mh
   !============================================================================
+  subroutine MF_interface_point_coords(nDim, Xyz_D, &
+       nIndex, iIndex_I, IsInterfacePoint)
+    ! interface points (request), which needed to be communicated
+    ! to other components to perform field line extraction and
+    ! perform further coupling with SP:
+    ! the framework tries to determine Xyz_D of such points,
+    ! SP changes them to the correct values
+    integer,intent(in)   :: nDim
+    real,   intent(inout):: Xyz_D(nDim)
+    integer,intent(in)   :: nIndex
+    integer,intent(inout):: iIndex_I(nIndex)
+    logical,intent(out)  :: IsInterfacePoint
+    integer:: iParticle, iBlock
+    real:: R2
+    character(len=*), parameter:: NameSub = 'SP_interface_point_coords'
+    !--------------------------------------------------------------------------
+    iParticle = iIndex_I(1); iBlock    = iIndex_I(4)
+    ! Check whether the particle is within interface bounds
+    R2 = sum(MHData_VIB(X_:Z_,iParticle,iBlock)**2)
+    IsInterfacePoint = &
+         R2 >= rInterfaceMin**2 .and. R2 < rInterfaceMax**2
+    ! Fix coordinates to be used in mapping
+    if(IsInterfacePoint)&
+         Xyz_D = MHData_VIB(X_:Z_, iParticle, iBlock)
+  end subroutine MF_interface_point_coords
+  !============================================================================
   function is_in_buffer_r(iBuffer, R) Result(IsInBuffer)
     integer,intent(in) :: iBuffer
     real,   intent(in) :: R
