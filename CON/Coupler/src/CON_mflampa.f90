@@ -4,9 +4,10 @@
 module CON_mflampa
   ! allocate the grid used in this model
   use ModUtilities,      ONLY: check_allocate
+  use ModConst,          ONLY: cBoltzmann
   implicit none
-    ! Number of variables in the state vector and the identifications
-  integer, public, parameter :: nMHData = 13,                 &
+  ! Number of variables in the state vector and the identifications
+  integer, parameter :: Lower_=0, Upper_=1, nDim = 3, nMHData = 13,   &
        LagrID_     = 0, & ! Lagrangian id           ^saved/   ^set to 0
        X_          = 1, & !                         |read in  |in copy_
        Y_          = 2, & ! Cartesian coordinates   |restart  |old_stat
@@ -23,18 +24,35 @@ module CON_mflampa
        Wave2_      =13    ! Alfven wave turbulence            v
   !
   ! State vector is a pointer, which is joined to a target array
-  ! For stand alone version the target array is allocated here
   !
   real, allocatable, target:: MHData_VIB(:,:,:)
+  !
+  ! nParticle_B is a pointer, which is joined to a target array
+  ! For stand alone version the target array is allocated here
+  !
+  integer, allocatable, target:: nParticle_B(:)
+  !
+  integer, allocatable :: iOffset_B(:)
   ! Grid integer parameters:
   integer :: nParticleMax, nBlock
   ! Misc:
   integer:: iError
+  ! coupling parameters:
+  ! domain boundaries
+  real, public :: rInterfaceMin, rInterfaceMax
+  ! buffer boundaries located near lower (Lo) or upper (Up) boudanry of domain
+  real, public :: rBufferLo, rBufferUp
+  !Coefficient to transform energy
+  real         :: EnergySi2Io = 1.0/cBoltzmann
 contains
   !============================================================================
-  subroutine set_state_pointer(rPointer_VIB, nBlockIn, nParticleIn)
-    real, intent(inout), pointer :: rPointer_VIB(:,:,:)
-    integer, intent(in)          :: nBlockIn, nParticleIn
+  subroutine set_state_pointer(rPointer_VIB, nPointer_B, &
+       nBlockIn, nParticleIn, EnergySi2IoIn)
+
+    real,    intent(inout), pointer :: rPointer_VIB(:,:,:)
+    integer, intent(inout), pointer :: nPointer_B(:)
+    integer, intent(in)             :: nBlockIn, nParticleIn
+    real,    optional,   intent(in) :: EnergySi2IoIn
     integer :: iParticle
     character(len=*), parameter:: NameSub = 'set_state_pointer'
     !--------------------------------------------------------------------------
@@ -54,6 +72,15 @@ contains
     do iParticle = 1, nParticleMax
        MHData_VIB(LagrID_, iParticle, 1:nBlock) = real(iParticle)
     end do
+    !
+    allocate(nParticle_B(1:nBlock), &
+         stat=iError)
+    call check_allocate(iError, NameSub//'nParticle_B')
+    nPointer_B => nParticle_B
+    !
+    nParticle_B = 0
+    if(present(EnergySi2IoIn))EnergySi2Io = EnergySi2IoIn
+    allocate(iOffset_B(nBlock)); iOffset_B = 0
   end subroutine set_state_pointer
   !============================================================================
 end module CON_mflampa
