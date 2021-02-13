@@ -29,12 +29,12 @@ module CON_couple_mh_sp
        SP_check_ready_for_mh    ,&  ! If returns .false., extract the mf lines
        SP_get_bounds_comp       ,&  ! Provides RScMin/Max and/or RIhMin/Max
        SP_put_coupling_param    ,&  ! Set time and interaface bounds
-       SP_n_particle            ,&  ! Number of "points" in a given line in SP
-       SP_put_line              ,&  ! Put particle Xyz from SC/IH to SP
-       SP_interface_point_coords,&  ! Check if the point is within interface
        SP_adjust_lines              ! Process if needed the updated mf lines
   use CON_mflampa, ONLY: &
-       MF_put_from_mh               ! Put MHD info from SC or IH to SP
+       MF_n_particle            ,&  ! Number of "points" in a given line in SP
+       MF_put_from_mh           ,&  ! Put MHD info from SC or IH to SP
+       MF_interface_point_coords,&  ! Check if the point is within interface
+       MF_put_line                  ! Put particle Xyz from SC/IH to SP
        !get_bounds                   ! Provides RScMin/Max and/or RIhMin/Max
   implicit none
 
@@ -153,6 +153,9 @@ contains
            Grid = SC_LineGrid, LocalGrid = SC_LocalLineGrid)
       ! Router to send particles is initialized.
       if(.not.DoExtract)RETURN
+      !
+      ! If DoExtract, then
+      !
       if(is_proc(SP_))&
            call SP_put_coupling_param(Lower_, RScMin, RScMax, tNow)
       call SC_synchronize_refinement(RouterScSp%iProc0Source,&
@@ -167,8 +170,8 @@ contains
            GridSource            = SC_Grid                  ,&
            GridTarget            = SP_LocalGrid             ,&
            Router                = RouterScSp               ,&
-           n_interface_point_in_block = SP_n_particle       ,&
-           interface_point_coords= SP_interface_point_coords,&
+           n_interface_point_in_block = MF_n_particle       ,&
+           interface_point_coords= MF_interface_point_coords,&
            mapping               = mapping_sp_to_sc         ,&
            interpolate           = interpolation_amr_gc)
       if(is_proc(SC_))then
@@ -260,8 +263,8 @@ contains
            GridSource                 = IH_Grid                  ,&
            GridTarget                 = SP_LocalGrid             ,&
            Router                     = RouterIHSp               ,&
-           n_interface_point_in_block = SP_n_particle            ,&
-           interface_point_coords     = SP_interface_point_coords,&
+           n_interface_point_in_block = MF_n_particle            ,&
+           interface_point_coords     = MF_interface_point_coords,&
            mapping                    = mapping_sp_to_IH         ,&
            interpolate                = interpolation_amr_gc)
       if(is_proc(IH_))then
@@ -305,8 +308,8 @@ contains
          GridSource             = SC_Grid                  ,&
          GridTarget             = SP_LocalGrid             ,&
          Router                 = RouterScSp               ,&
-         n_interface_point_in_block = SP_n_particle        ,&
-         interface_point_coords = SP_interface_point_coords,&
+         n_interface_point_in_block = MF_n_particle        ,&
+         interface_point_coords = MF_interface_point_coords,&
          mapping                = mapping_sp_to_sc         ,&
          interpolate            = interpolation_amr_gc)
     call couple_comp(RouterScSp                            ,&
@@ -335,7 +338,7 @@ contains
     call couple_comp(                 RouterLineScSp       ,&
          nVar                       = nDim                 ,&
          fill_buffer = SC_get_coord_for_sp_and_transform   ,&
-         apply_buffer               = SP_put_line)
+         apply_buffer               = MF_put_line)
   end subroutine sp_get_lines_from_sc
   !============================================================================
   subroutine mapping_sp_to_sc(nDimIn, XyzIn_D, nDimOut,     &
@@ -423,8 +426,8 @@ contains
          GridSource                 = IH_Grid                  ,&
          GridTarget                 = SP_LocalGrid             ,&
          Router                     = RouterIHSp               ,&
-         n_interface_point_in_block = SP_n_particle            ,&
-         interface_point_coords     = SP_interface_point_coords,&
+         n_interface_point_in_block = MF_n_particle            ,&
+         interface_point_coords     = MF_interface_point_coords,&
          mapping                    = mapping_sp_to_ih         ,&
          interpolate                = interpolation_amr_gc)
     call couple_comp(                 RouterIhSp               ,&
@@ -476,7 +479,7 @@ contains
     call couple_comp(RouterLineIhSp                       ,&
          nVar = 3                                         ,&
          fill_buffer = IH_get_coord_for_sp_and_transform  ,&
-         apply_buffer= SP_put_line)
+         apply_buffer= MF_put_line)
   end subroutine SP_get_lines_from_ih
   !============================================================================
   subroutine mapping_sp_to_ih(nDimIn, XyzIn_D, nDimOut, CoordOut_D, &

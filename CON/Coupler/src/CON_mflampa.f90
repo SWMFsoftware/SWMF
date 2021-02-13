@@ -42,16 +42,20 @@ module CON_mflampa
   real, public :: rInterfaceMin, rInterfaceMax
   ! buffer boundaries located near lower (Lo) or upper (Up) boudanry of domain
   real, public :: rBufferLo, rBufferUp
+  !
+  ! Allowed range of helocentric distances
+  real :: rMin, rMax
   !Coefficient to transform energy
   real         :: EnergySi2Io = 1.0/cBoltzmann
 contains
   !============================================================================
   subroutine set_state_pointer(rPointer_VIB, nPointer_B, &
-       nBlockIn, nParticleIn, EnergySi2IoIn)
+       nBlockIn, nParticleIn, rMinIn, rMaxIn, EnergySi2IoIn)
 
     real,    intent(inout), pointer :: rPointer_VIB(:,:,:)
     integer, intent(inout), pointer :: nPointer_B(:)
     integer, intent(in)             :: nBlockIn, nParticleIn
+    real,    intent(in)             :: rMinIn, rMaxIn
     real,    optional,   intent(in) :: EnergySi2IoIn
     integer :: iParticle
     character(len=*), parameter:: NameSub = 'set_state_pointer'
@@ -79,6 +83,7 @@ contains
     nPointer_B => nParticle_B
     !
     nParticle_B = 0
+    rMin = rMinIn; rMax = rMaxIn
     if(present(EnergySi2IoIn))EnergySi2Io = EnergySi2IoIn
     allocate(iOffset_B(nBlock)); iOffset_B = 0
   end subroutine set_state_pointer
@@ -102,6 +107,12 @@ contains
        rBufferUp = rMaxIn
     end if
   end subroutine get_bounds
+  !============================================================================
+  integer function MF_n_particle(iBlockLocal)
+    integer, intent(in) :: iBlockLocal
+    !--------------------------------------------------------------------------
+    MF_n_particle = nParticle_B(  iBlockLocal)
+  end function MF_n_particle
   !============================================================================
   subroutine MF_put_from_mh(nPartial,iPutStart,Put,W,DoAdd,Buff_I,nVar)
     use CON_coupler, ONLY: &
@@ -204,6 +215,32 @@ contains
     if(IsInterfacePoint)&
          Xyz_D = MHData_VIB(X_:Z_, iParticle, iBlock)
   end subroutine MF_interface_point_coords
+  !============================================================================
+  subroutine MF_put_line(nPartial, iPutStart, Put,&
+       Weight, DoAdd, Coord_D, nVar)
+    use CON_router, ONLY: IndexPtrType, WeightPtrType
+    integer, intent(in) :: nPartial, iPutStart, nVar
+    type(IndexPtrType), intent(in) :: Put
+    type(WeightPtrType),intent(in) :: Weight
+    logical,            intent(in) :: DoAdd
+    real,               intent(in) :: Coord_D(nVar) ! nVar=nDim
+
+    ! indices of the particle
+    integer:: iBlock, iParticle
+    ! Misc
+    real :: R2
+    character(len=*), parameter:: NameSub = 'SP_put_line'
+    !--------------------------------------------------------------------------
+    R2 = sum(Coord_D(1:nDim)**2)
+    ! Sort out particles left the SP domain
+    if(R2<RMin**2.or.R2>=RMax**2)RETURN
+    ! store passed particles
+    iBlock    = Put%iCB_II(4,iPutStart)
+    iParticle = Put%iCB_II(1,iPutStart) + iOffset_B(iBlock)
+    ! put coordinates
+    MHData_VIB(X_:Z_,iParticle, iBlock) = Coord_D(1:nDim)
+    nParticle_B(iBlock) = MAX(nParticle_B(iBlock), iParticle)
+  end subroutine MF_put_line
   !============================================================================
   function is_in_buffer_r(iBuffer, R) Result(IsInBuffer)
     integer,intent(in) :: iBuffer
