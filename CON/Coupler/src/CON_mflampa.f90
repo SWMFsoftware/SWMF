@@ -5,7 +5,21 @@ module CON_mflampa
   ! allocate the grid used in this model
   use ModUtilities,      ONLY: check_allocate
   use ModConst,          ONLY: cBoltzmann
+    use CON_coupler, ONLY: is_proc0, i_comm, i_proc0
   implicit none
+  SAVE
+  PRIVATE ! Except
+  !
+  ! public members
+  !
+  public :: set_state_pointer
+  public :: MF_set_grid
+  public :: get_bounds
+  public :: MF_n_particle             ! return number of points at the MF line
+  public :: MF_put_from_mh            ! put MHD values from MH to SP
+  public :: MF_interface_point_coords ! points rMinInterface < R < rMaxInterface
+  public :: MF_put_line               ! points rMin < R < rMax
+  !
   ! Number of variables in the state vector and the identifications
   integer, parameter :: Lower_=0, Upper_=1, nDim = 3, nMHData = 13,   &
        LagrID_     = 0, & ! Lagrangian id           ^saved/   ^set to 0
@@ -21,20 +35,48 @@ module CON_mflampa
        By_         =10, & ! Background magnetic field         |received
        Bz_         =11, & !                                   |from
        Wave1_      =12, & !                                   |coupler
-       Wave2_      =13    ! Alfven wave turbulence            v
+       Wave2_      =13, & ! Alfven wave turbulence            v
+       R_          =14    ! Heliocentric distance
   !
-  ! State vector is a pointer, which is joined to a target array
+  ! MHD state vector is a pointer to be joined to a target array
   !
   real, allocatable, target:: MHData_VIB(:,:,:)
+  !
+  ! Aux state vector is a pointer to be joined to a target array
+  !
+  real, allocatable, target:: State_VIB(:,:,:)
   !
   ! nParticle_B is a pointer, which is joined to a target array
   ! For stand alone version the target array is allocated here
   !
   integer, allocatable, target:: nParticle_B(:)
   !
-  integer, allocatable :: iOffset_B(:)
+  integer, allocatable, public :: iOffset_B(:)
+  !
   ! Grid integer parameters:
-  integer :: nParticleMax, nBlock
+  !
+  integer :: nParticleMax, nBlock, nVar
+  !
+  ! Coordinate system and geometry
+  !
+  character(len=3), public :: TypeCoordSystem = 'HGR'
+  !
+  ! angular grid at origin surface
+  !
+  integer  :: nLon  = 4
+  integer  :: nLat  = 4
+  integer  :: nNode = 16
+  !
+  ! Proc_ and Block_ number, for a given node:
+  !
+  integer, parameter:: &
+       Proc_  = 1, & ! Processor that has this line/node
+       Block_ = 2    ! Block that has this line/node
+  !
+  ! They is the first index values for
+  ! the following array
+  integer, allocatable, target :: iGridGlobal_IA(:,:)
+  !
   ! Misc:
   integer:: iError
   ! coupling parameters:
@@ -45,31 +87,46 @@ module CON_mflampa
   !
   ! Allowed range of helocentric distances
   real :: rMin, rMax
-  !Coefficient to transform energy
+  public :: rMin
+  ! Coefficient to transform energy
   real         :: EnergySi2Io = 1.0/cBoltzmann
 contains
   !============================================================================
-  subroutine set_state_pointer(rPointer_VIB, nPointer_B, &
-       nBlockIn, nParticleIn, rMinIn, rMaxIn, EnergySi2IoIn)
+  subroutine set_state_pointer(&
+       rPointer_VIB, StateIO_VIB, nPointer_B, &
+       nBlockIn, nParticleIn, nVarIn,         &
+       nLonIn, nLatIn, nPointer_IA,           &
+       rMinIn, rMaxIn, EnergySi2IoIn)
 
     real,    intent(inout), pointer :: rPointer_VIB(:,:,:)
+    real,    intent(inout), pointer :: StateIO_VIB(:,:,:)
     integer, intent(inout), pointer :: nPointer_B(:)
-    integer, intent(in)             :: nBlockIn, nParticleIn
+    integer, intent(in)             :: nBlockIn, nParticleIn, nVarIn
+    integer, intent(in)             :: nLonIn, nLatIn
+    integer, intent(inout), pointer :: nPointer_IA(:,:)
     real,    intent(in)             :: rMinIn, rMaxIn
     real,    optional,   intent(in) :: EnergySi2IoIn
     integer :: iParticle
-    character(len=*), parameter:: NameSub = 'set_state_pointer'
-    !--------------------------------------------------------------------------
+
     !
     ! Store nBlock and nParticleMax
-    nBlock    = nBlockIn
+    character(len=*), parameter:: NameSub = 'set_state_pointer'
+    !--------------------------------------------------------------------------
+    nBlock       = nBlockIn
     nParticleMax = nParticleIn
+    nVar         = nVarIn
     allocate(MHData_VIB(LagrID_:nMHData, 1:nParticleMax, 1:nBlock), &
          stat=iError)
     call check_allocate(iError, NameSub//'MHData_VIB')
     rPointer_VIB => MHData_VIB
     !
     MHData_VIB = 0.0
+    allocate(State_VIB(R_:nVar, 1:nParticleMax, 1:nBlock), &
+         stat=iError)
+    call check_allocate(iError, NameSub//'State_VIB')
+    StateIO_VIB => State_VIB
+    !
+    State_VIB = -1
     !
     ! reset lagrangian ids
     !
@@ -83,10 +140,59 @@ contains
     nPointer_B => nParticle_B
     !
     nParticle_B = 0
+    nLon = nLonIn; nLat = nLatIn; nNode = nLon*nLat
+    
+    allocate(iGridGlobal_IA(Proc_:Block_, nNode), &
+         stat=iError)
+    nPointer_IA => iGridGlobal_IA   
     rMin = rMinIn; rMax = rMaxIn
     if(present(EnergySi2IoIn))EnergySi2Io = EnergySi2IoIn
     allocate(iOffset_B(nBlock)); iOffset_B = 0
   end subroutine set_state_pointer
+  !============================================================================
+  subroutine MF_set_grid(MF_, UnitX, TypeCoordSystem)
+    use CON_coupler, ONLY: set_coord_system,  &
+         init_decomposition, get_root_decomposition, bcast_decomposition
+    integer, parameter:: &
+         Proc_  = 1, & ! Processor that has this line/node
+         Block_ = 2, & ! Block that has this line/node
+         nDim = 3
+    
+    integer, intent(in) :: MF_
+    real,    intent(in) :: UnitX
+    character(len=3), intent(in):: TypeCoordSystem
+    character(len=*), parameter:: NameVarCouple =&
+         'rho p mx my mz bx by bz i01 i02 pe'
+    logical, save:: IsInitialized = .false.
+    !--------------------------------------------------------------------------
+    if(IsInitialized)RETURN
+    IsInitialized = .true.
+    ! Initialize 3D grid with NON-TREE structure
+    call init_decomposition(&
+         GridID_ = MF_,&
+         CompID_ = MF_,&
+         nDim    = nDim)
+    ! Construct decomposition
+
+    if(is_proc0(MF_))&
+         call get_root_decomposition(&
+         GridID_       = MF_,&
+         iRootMapDim_D = [1, nLon, nLat],&
+         CoordMin_D    = [0.50, 0.50, 0.50],&
+         CoordMax_D    = [nParticleMax, nLon, nLat] + 0.50,&
+         nCells_D      = [nParticleMax, 1, 1],&
+         PE_I          = iGridGlobal_IA(Proc_,:),&
+         iBlock_I      = iGridGlobal_IA(Block_,:))
+    call bcast_decomposition(MF_)
+    ! Coordinate system is Heliographic Inertial Coordinate System (HGI)
+    ! with length measured in solar radii
+    call set_coord_system(&
+         GridID_      = MF_, &
+         TypeCoord    = TypeCoordSystem, &
+         TypeGeometry = 'cartesian', &
+         NameVar      = NameVarCouple, &
+         UnitX        = UnitX)
+  end subroutine MF_set_grid
   !============================================================================
   subroutine get_bounds(iModelIn, rMinIn, rMaxIn, &
        rBufferLoIn, rBufferUpIn)
@@ -94,6 +200,7 @@ contains
     real,           intent(in) :: rMinIn, rMaxIn
     real, optional, intent(in) :: rBufferLoIn, rBufferUpIn
     ! set domain boundaries
+    !--------------------------------------------------------------------------
     rInterfaceMin = rMinIn; rInterfaceMax = rMaxIn
     ! set buffer boundaries
     if(present(rBufferLoIn))then
@@ -122,7 +229,7 @@ contains
          BField_, BxCouple_, BzCouple_, &
          Wave_, WaveFirstCouple_, WaveLastCouple_
     use CON_router, ONLY: IndexPtrType, WeightPtrType
-    use ModConst,   ONLY: cProtonMass 
+    use ModConst,   ONLY: cProtonMass
     integer,intent(in)::nPartial,iPutStart,nVar
     type(IndexPtrType),intent(in)::Put
     type(WeightPtrType),intent(in)::W
@@ -135,9 +242,10 @@ contains
     real:: R, Aux
 
     character(len=100):: StringError
+
+    ! check consistency of DoCoupleVar_V
     character(len=*), parameter:: NameSub = 'MF_put_from_mh'
     !--------------------------------------------------------------------------
-    ! check consistency of DoCoupleVar_V
     if(.not. DoCoupleVar_V(Density_) .and. &
          (DoCoupleVar_V(Pressure_) .or. DoCoupleVar_V(Momentum_)))&
          call CON_Stop(NameSub//': pressure or momentum is coupled,'&
@@ -159,14 +267,13 @@ contains
        iBlock = Put%iCB_II(4, iPutStart + iPartial)
        ! interpolation weight
        Weight = W%Weight_I(   iPutStart + iPartial)
-       if(is_in_buffer_xyz(Lower_,MHData_VIB(X_:Z_,i,iBlock)))then
-          R = sqrt(sum(MHData_VIB(X_:Z_,i,iBlock)**2))
+       R = sqrt(sum(MHData_VIB(X_:Z_,i,iBlock)**2))
+       if(R >= rInterfaceMin .and. R < rBufferLo)then
           Aux = 1.0
           Weight = Weight * (0.50 + 0.50*tanh(2*(2*R - &
                RBufferLo - RInterfaceMin)/(RBufferLo - RInterfaceMin)))
        end if
-       if(is_in_buffer_xyz(Upper_,MHData_VIB(X_:Z_,i,iBlock)))then
-          R = sqrt(sum(MHData_VIB(X_:Z_,i,iBlock)**2))
+       if(R >= rBufferUp .and. R < rInterfaceMax)then
           Weight = Weight * (0.50 - 0.50*tanh(2*(2*R - &
                RInterfaceMax - RBufferUp)/(RInterfaceMax - RBufferUp)))
        end if
@@ -204,7 +311,7 @@ contains
     logical,intent(out)  :: IsInterfacePoint
     integer:: iParticle, iBlock
     real:: R2
-    character(len=*), parameter:: NameSub = 'SP_interface_point_coords'
+    character(len=*), parameter:: NameSub = 'MF_interface_point_coords'
     !--------------------------------------------------------------------------
     iParticle = iIndex_I(1); iBlock    = iIndex_I(4)
     ! Check whether the particle is within interface bounds
@@ -229,7 +336,7 @@ contains
     integer:: iBlock, iParticle
     ! Misc
     real :: R2
-    character(len=*), parameter:: NameSub = 'SP_put_line'
+    character(len=*), parameter:: NameSub = 'MF_put_line'
     !--------------------------------------------------------------------------
     R2 = sum(Coord_D(1:nDim)**2)
     ! Sort out particles left the SP domain
@@ -242,30 +349,5 @@ contains
     nParticle_B(iBlock) = MAX(nParticle_B(iBlock), iParticle)
   end subroutine MF_put_line
   !============================================================================
-  function is_in_buffer_r(iBuffer, R) Result(IsInBuffer)
-    integer,intent(in) :: iBuffer
-    real,   intent(in) :: R
-    logical:: IsInBuffer
-    !--------------------------------------------------------------------------
-    select case(iBuffer)
-    case(Lower_)
-       IsInBuffer = R >= rInterfaceMin .and. R < rBufferLo
-    case(Upper_)
-       IsInBuffer = R >= rBufferUp .and. R < rInterfaceMax
-    case default
-       call CON_stop("ERROR: incorrect call of SP_wrapper:is_in_buffer")
-     end select
-  end function is_in_buffer_r
-  !============================================================================
-  function is_in_buffer_xyz(iBuffer, Xyz_D) Result(IsInBuffer)
-    integer,intent(in):: iBuffer
-    real,   intent(in) :: Xyz_D(nDim)
-    logical:: IsInBuffer
-    real:: R
-    !--------------------------------------------------------------------------
-    R = sqrt(sum(Xyz_D**2))
-    IsInBuffer = is_in_buffer_r(iBuffer, R)
-  end function is_in_buffer_xyz
-  !==========================================================================
 end module CON_mflampa
 
