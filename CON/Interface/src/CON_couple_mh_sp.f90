@@ -183,8 +183,16 @@ contains
               iIndex_II  = nint(RouterScSp% BufferSource_II( &
               nDim+1:nDim+nAux,1:nLength))                  ,&
               RSoftBoundary = RScMax*UnitSp2UnitSc)
+         !
+         ! Now in SC are the parts of lines from the inner
+         ! boundary of SC to RScMax + 1 Point above
+         !
       end if
-      call SP_get_lines_from_sc
+      call SP_put_lines_from_sc
+      !
+      ! Now in SP are the parts of lines from RScMin 
+      ! to RScMax + 1 point above
+      !
     end subroutine couple_sc_sp_init                 !^CMP END SC
     !==========================================================================
     subroutine couple_ih_sp_init
@@ -267,6 +275,9 @@ contains
            interface_point_coords     = MF_interface_point_coords,&
            mapping                    = mapping_sp_to_IH         ,&
            interpolate                = interpolation_amr_gc)
+      !
+      ! Now in IH are 1 point above RScMax per each line
+      !
       if(is_proc(IH_))then
          nLength = nlength_buffer_source(RouterIhSp)
          call IH_extract_line(Xyz_DI  = RouterIhSp%               &
@@ -275,8 +286,12 @@ contains
               iIndex_II               = nint(RouterIhSp%          &
               BufferSource_II(nDim+1:nDim+nAux,1:nLength))       ,&
               RSoftBoundary           = RIhMax*UnitSp2UnitIh)
+         !
+         ! Now in IH are the parts of lines from RScMax + 1 point above
+         ! to RIhMax + 1 Point above
+         !
       end if
-      call SP_get_lines_from_ih
+      call SP_put_lines_from_ih
     end subroutine couple_ih_sp_init
     !==========================================================================
   end subroutine couple_mh_sp_init
@@ -297,12 +312,23 @@ contains
          rMaxIn      = RScMax,&
          TimeIn      = DataInputTime,&
          rBufferUpIn = RIhMin)
+    !
+    ! Coordinates for all particles are nullified. Those which are
+    ! not sent (or lost) keep to be zeroed and may be thus found.
+    !
     ScToSp_DD=transform_matrix(tNow,&
          Grid_C(SC_)%TypeCoord, Grid_C(SP_)%TypeCoord)
     call SC_synchronize_refinement(RouterScSp%iProc0Source,&
          RouterScSp%iCommUnion)
-    if(.not.DoInit) call SP_get_lines_from_sc
+    if(.not.DoInit) call SP_put_lines_from_sc
+    !
+    ! The advected particles from SC are taken  
+    !
     if(is_proc(SP_))call SP_adjust_lines(DoInit)
+    !
+    ! Some particles may be lost, after adjustment the line intergity
+    ! is recovered
+    ! 
     ! Set router SC=> SP to  receive MHD data
     call set_router(&
          GridSource             = SC_Grid                  ,&
@@ -316,7 +342,9 @@ contains
          nVar                   = nVarBuffer               ,&
          fill_buffer = SC_get_for_sp_and_transform         ,&
          apply_buffer           = MF_put_from_mh)
-    ! By the way get particle coords from the router buffer
+    !
+    ! The MHD data within the heliocentric distances RScMin<R<RScMax 
+    ! By the way get particle coords from the router buffer to SC
     if(is_proc(SC_))then
        nLength = nlength_buffer_source(RouterScSp)
        call SC_put_particles(Xyz_DI =                       &
@@ -326,7 +354,7 @@ contains
     end if
   end subroutine couple_sc_sp
   !============================================================================
-  subroutine SP_get_lines_from_sc
+  subroutine SP_put_lines_from_sc
     !--------------------------------------------------------------------------
     call construct_router_from_source(                      &
          GridSource                 = SC_LocalLineGrid     ,&
@@ -339,7 +367,7 @@ contains
          nVar                       = nDim                 ,&
          fill_buffer = SC_get_coord_for_sp_and_transform   ,&
          apply_buffer               = MF_put_line)
-  end subroutine sp_get_lines_from_sc
+  end subroutine SP_put_lines_from_sc
   !============================================================================
   subroutine mapping_sp_to_sc(nDimIn, XyzIn_D, nDimOut,     &
        CoordOut_D, IsInterfacePoint)
@@ -402,7 +430,7 @@ contains
     State_V = matmul(ScToSp_DD, State_V)*UnitSc2UnitSp
   end subroutine SC_get_coord_for_sp_and_transform
   !============================================================================
-  !=============================================== !^CMP END SC
+  !!^CMP END SC
   subroutine couple_ih_sp(DataInputTime)
     real,intent(in)::DataInputTime
     !--------------------------------------------------------------------------
@@ -418,9 +446,13 @@ contains
          Grid_C(IH_)%TypeCoord, Grid_C(SP_)%TypeCoord)
     call IH_synchronize_refinement(RouterIhSp%iProc0Source,&
          RouterIhSp%iCommUnion)
-    if(.not.DoInit) call SP_get_lines_from_ih
+    if(.not.DoInit) call SP_put_lines_from_ih
+    !
+    ! Now the full magnetic line is available, including probably
+    ! some points lost in IH
+    ! 
     if(is_proc(SP_))call SP_adjust_lines(DoInit)
-
+    ! In points at RIhMin < R < RIhMax get the MHD data
     ! Set router IH=> SP to  receive MHD data
     call set_router(                                            &
          GridSource                 = IH_Grid                  ,&
@@ -434,7 +466,7 @@ contains
          nVar                       = nVarBuffer               ,&
          fill_buffer              = IH_get_for_sp_and_transform,&
          apply_buffer               = MF_put_from_mh)
-    ! By the way get particle coords from the router buffer
+    ! By the way get coords for particles in IH from the router buffer
     if(is_proc(IH_))then
        nLength = nlength_buffer_source(RouterIhSp)
        if(use_comp(SC_))call sort_out_sc_particles     !^CMP IF SC
@@ -467,7 +499,7 @@ contains
     !==========================================================================
   end subroutine couple_ih_sp
   !============================================================================
-  subroutine SP_get_lines_from_ih
+  subroutine SP_put_lines_from_ih
     !--------------------------------------------------------------------------
     call construct_router_from_source(&
          GridSource                 = IH_LocalLineGrid    ,&
@@ -480,7 +512,7 @@ contains
          nVar = 3                                         ,&
          fill_buffer = IH_get_coord_for_sp_and_transform  ,&
          apply_buffer= MF_put_line)
-  end subroutine SP_get_lines_from_ih
+  end subroutine SP_put_lines_from_ih
   !============================================================================
   subroutine mapping_sp_to_ih(nDimIn, XyzIn_D, nDimOut, CoordOut_D, &
        IsInterfacePoint)
