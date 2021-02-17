@@ -11,6 +11,16 @@ Param/PARAM.in.test.SCIHSP: Input file for testing SC-IH-SP model for SEPs, incl
 #TIMEACCURATE
 T			IsTimeAccurate
 
+#MFLAMPA
+SP
+2
+SC
+1.05
+21
+IH
+19
+220
+
 #INCLUDE
 RESTART.in
 
@@ -342,7 +352,7 @@ F			DoRun
 F			DoTraceShock
 F			UseDiffusion
 
-#GRID
+GRID
 1.05			RMin
 19			RBufferMin
 21			RBufferMax

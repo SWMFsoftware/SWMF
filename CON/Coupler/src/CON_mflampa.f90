@@ -5,16 +5,27 @@ module CON_mflampa
   ! allocate the grid used in this model
   use ModUtilities,      ONLY: check_allocate
   use ModConst,          ONLY: cBoltzmann
-    use CON_coupler, ONLY: is_proc0, i_comm, i_proc0
+  use CON_coupler, ONLY: is_proc0, i_comm, i_proc0, MaxComp
   implicit none
   SAVE
   PRIVATE ! Except
   !
   ! public members
   !
+  integer, public :: MF_ =-1            ! ID of the target model (SP_, PT_)
+  
+  logical, public :: UseMflampa_C(MaxComp) !To switch coupler for PT
+  !
+  ! Boundaries of coupled domains in SC and IH
+  !
+  real, public:: RScMin = 0.0, RScMax = 0.0, RIhMin = 0.0, RIhMax = 0.0
+  
+
+  public :: read_param
   public :: set_state_pointer
   public :: MF_set_grid
   public :: get_bounds
+  public :: adjust_line
   public :: MF_n_particle             ! return number of points at the MF line
   public :: MF_put_from_mh            ! put MHD values from MH to SP
   public :: MF_interface_point_coords ! points rMinInterface < R < rMaxInterface
@@ -90,13 +101,82 @@ module CON_mflampa
   public :: rMin
   ! Coefficient to transform energy
   real         :: EnergySi2Io = 1.0/cBoltzmann
+  character(len=*), parameter:: NameMod = 'CON_mflampa::'
 contains
+  subroutine read_param(iError)
+    use CON_coupler, ONLY: use_comp, i_comp, SP_, PT_, SC_, IH_, is_proc
+    use ModReadParam, ONLY: read_var
+    integer, intent(inout) :: iError
+    integer :: nSource, iSource, iComp
+    character(len=2) :: NameComp = '' 
+    character(len=*), parameter:: NameSub = NameMod//'read_param'
+    !------------------------------
+    call read_var('NameTarget', NameComp)
+    MF_ = i_comp(NameComp)
+    if(.not.use_comp(MF_)) then
+       if(is_proc0()) write(*,*) NameSub//&
+            ' SWMF_ERROR for NameMaster: '// &
+            NameComp//' is OFF or not registered, not MFLAMPA target'
+       iError = 34
+       RETURN
+    end if
+    if(.not.(MF_ == PT_.or.MF_==SP_))then
+       if(is_proc0()) write(*,*) NameSub//&
+            ' SWMF_ERROR for NameMaster: '// &
+            'SP or PT can be MFLAMPA target, but '//NameComp//' cannot'
+       iError = 34
+       RETURN
+    end if
+    UseMflampa_C = .false.; UseMflampa_C(MF_) = .true.
+    call read_var('nSource', nSource)
+    if(nSource/=2)then
+       if(is_proc0()) write(*,*) NameSub//&
+            ' SWMF_ERROR for NameMaster: '// &
+            'there can be only two source components in MFLAMPA'
+       iError = 34
+       RETURN
+    end if
+    do iSource = 1, nSource
+       call read_var('NameSource', NameComp)
+       iComp = i_comp(NameComp)
+       select case(iComp)
+       case(SC_)
+          if(.not.use_comp(SC_)) then
+             if(is_proc0()) write(*,*) NameSub//&
+                  ' SWMF_ERROR for NameMaster: '// &
+                  ' SC  needed in MFLAMPA is OFF or not registered'
+             iError = 34
+             RETURN
+          end if
+          call read_var('RScMin', RScMin)
+          call read_var('RScMax', RScMax)
+       case(IH_)
+          if(.not.use_comp(IH_)) then
+             if(is_proc0()) write(*,*) NameSub//&
+                  ' SWMF_ERROR for NameMaster: '// &
+                  ' IH  needed in MFLAMPA is OFF or not registered'
+             iError = 34
+             RETURN
+          end if
+          call read_var('RIhMin', RIhMin)
+          call read_var('RIhMax', RIhMax)
+       case default
+          if(is_proc0()) write(*,*) NameSub//&
+               ' SWMF_ERROR for NameMaster: '// &
+               'SC or IH are only allowed as MFLAMPA sources'
+          iError = 34
+          RETURN
+       end select
+    end do
+    if(.not.is_proc(MF_))RETURN
+    RMin = RScMin; RMax = RIhMax
+  end subroutine read_param
   !============================================================================
   subroutine set_state_pointer(&
        rPointer_VIB, StateIO_VIB, nPointer_B, &
        nBlockIn, nParticleIn, nVarIn,         &
        nLonIn, nLatIn, nPointer_IA,           &
-       rMinIn, rMaxIn, EnergySi2IoIn)
+       EnergySi2IoIn)
 
     real,    intent(inout), pointer :: rPointer_VIB(:,:,:)
     real,    intent(inout), pointer :: StateIO_VIB(:,:,:)
@@ -104,13 +184,12 @@ contains
     integer, intent(in)             :: nBlockIn, nParticleIn, nVarIn
     integer, intent(in)             :: nLonIn, nLatIn
     integer, intent(inout), pointer :: nPointer_IA(:,:)
-    real,    intent(in)             :: rMinIn, rMaxIn
     real,    optional,   intent(in) :: EnergySi2IoIn
     integer :: iParticle
 
     !
     ! Store nBlock and nParticleMax
-    character(len=*), parameter:: NameSub = 'set_state_pointer'
+    character(len=*), parameter:: NameSub = 'CON_mflampa::set_state_pointer'
     !--------------------------------------------------------------------------
     nBlock       = nBlockIn
     nParticleMax = nParticleIn
@@ -145,12 +224,11 @@ contains
     allocate(iGridGlobal_IA(Proc_:Block_, nNode), &
          stat=iError)
     nPointer_IA => iGridGlobal_IA   
-    rMin = rMinIn; rMax = rMaxIn
     if(present(EnergySi2IoIn))EnergySi2Io = EnergySi2IoIn
     allocate(iOffset_B(nBlock)); iOffset_B = 0
   end subroutine set_state_pointer
   !============================================================================
-  subroutine MF_set_grid(MF_, UnitX, TypeCoordSystem)
+  subroutine MF_set_grid(MFIn_, UnitX, TypeCoordSystem)
     use CON_coupler, ONLY: set_coord_system,  &
          init_decomposition, get_root_decomposition, bcast_decomposition
     integer, parameter:: &
@@ -158,7 +236,7 @@ contains
          Block_ = 2, & ! Block that has this line/node
          nDim = 3
     
-    integer, intent(in) :: MF_
+    integer, intent(in) :: MFIn_
     real,    intent(in) :: UnitX
     character(len=3), intent(in):: TypeCoordSystem
     character(len=*), parameter:: NameVarCouple =&
@@ -167,6 +245,10 @@ contains
     !--------------------------------------------------------------------------
     if(IsInitialized)RETURN
     IsInitialized = .true.
+    !
+    ! Set the target ID
+    !
+    MF_ = MFIn_
     ! Initialize 3D grid with NON-TREE structure
     call init_decomposition(&
          GridID_ = MF_,&
@@ -349,5 +431,138 @@ contains
     nParticle_B(iBlock) = MAX(nParticle_B(iBlock), iParticle)
   end subroutine MF_put_line
   !============================================================================
+  subroutine adjust_line(iBlock, iBegin, DoAdjustLo, DoAdjustUp)
+         integer, intent(in)    :: iBlock
+         integer, intent(out)   :: iBegin
+         logical, intent(inout) :: DoAdjustLo, DoAdjustUp
+         logical:: IsMissing
+
+         real              :: R
+         
+         integer, parameter:: Lo_ = 1, Up_ = 2
+         integer, parameter:: iIncrement_II(2,2) =reshape([1,0,0,-1],[2,2])
+         integer:: iParticle_I(2), iLoop
+         ! once new geometry of lines has been put, account for some particles
+         ! exiting the domain (can happen both at the beginning and the end)
+         integer:: iParticle, iEnd, iOffset ! loop variables
+         character(len=*), parameter:: NameSub = 'adjust_line'  
+         ! Called after the grid points are received from the
+         ! component, nullify offset
+         if(DoAdjustLo)iOffset_B(iBlock) = 0
+         iBegin = 1
+         iEnd   = nParticle_B(  iBlock)
+         iParticle_I(:) = [iBegin, iEnd]
+         if(DoAdjustUp) then
+            iLoop = Up_
+         else
+            iLoop = Lo_
+         end if
+         PARTICLE: do while(iParticle_I(1) < iParticle_I(2))
+            iParticle = iParticle_I(iLoop)
+            R = State_VIB(R_,iParticle,iBlock)
+            ! account for all missing partiles along the line;
+            ! --------------------------------------------------------
+            ! particle import MUST be performed in order from lower to upper
+            ! components (w/respect to radius), e.g. SC, then IH, then OH
+            ! adjustment are made after each import;
+            ! --------------------------------------------------------
+            ! lines are assumed to start in lowest model
+            ! lowest model should NOT have the Lo buffer,
+            ! while the upper most should NOT have Up buffer,
+            ! buffer are REQUIRED between models
+            ! --------------------------------------------------------
+            ! adjust as follows:
+            ! LOWEST model may loose particles at the start of lines
+            ! and (if line ends in the model) in the tail;
+            ! loop over particles Lo-2-Up and mark losses (increase iBegin)
+            ! until particles reach UP buffer;
+            ! if line ends in the model, loop over particles Up-2-Lo
+            ! and mark losses (decrease nParticle_B) until UP buffer is reached;
+            ! after that, if line reenters the model,
+            ! particles within the model may not be lost,
+            !
+            ! MIDDLE models are not allowed to loose particles
+            !
+            ! HIGHEST model may only loose particles in the tail;
+            ! loop Up-2-Lo and mark losses  (decrease nParticle_B)
+            ! until the bottom of Lo buffer is reaced
+            ! --------------------------------------------------------
+            ! whenever a particle is lost in lower models -> ERROR
+            
+            ! when looping Up-2-Lo and particle is in other model ->
+            ! adjustments are no longer allowed
+            if(iLoop == Up_ .and. (&
+                 R <  RInterfaceMin&
+                 .or.&
+                 R >= RInterfaceMax)&
+                 )then
+               DoAdjustLo = .false.
+               DoAdjustUp = .false.
+            end if
+            
+            ! determine whether particle is missing
+            IsMissing = all(MHData_VIB(X_:Z_,iParticle,iBlock)==0.0)
+            if(.not.IsMissing) then
+               iParticle_I = iParticle_I + iIncrement_II(:,iLoop)
+               CYCLE PARTICLE
+            end if
+            
+            ! missing point in the lower part of the domain -> ERROR
+            if(R < RInterfaceMin)&
+                 call CON_stop(NameSub//": particle has been lost")
+            
+            ! missing point in the upper part of the domain -> IGNORE;
+            ! if needed to adjust beginning, then it is done,
+            ! switch left -> right end of range and start adjusting
+            ! tail of the line, if it has reentered current part of the domain
+            if(R >= RInterfaceMax)then
+               if(iLoop == Lo_)&
+                    iLoop = Up_
+               iParticle_I = iParticle_I + iIncrement_II(:,iLoop)
+               if(DoAdjustLo)then
+                  DoAdjustLo = .false.
+                  DoAdjustUp = .true.
+               end if
+               CYCLE PARTICLE
+            end if
+            
+            ! if point used to be in a upper buffer -> IGNORE
+            if(R >= rBufferUp .and. R < rInterfaceMax)then
+               iParticle_I = iParticle_I + iIncrement_II(:,iLoop)
+               CYCLE PARTICLE
+            end if
+            
+            ! if need to adjust lower, but not upper boundary -> ADJUST
+            if(DoAdjustLo .and. .not.DoAdjustUp)then
+               ! push iBegin in front of current particle;
+               ! it will be pushed until it finds a non-missing particle
+               iBegin = iParticle + 1
+               iParticle_I = iParticle_I + iIncrement_II(:,iLoop)
+               CYCLE PARTICLE
+            end if
+            
+            ! if need to adjust upper, but not lower boundary -> ADJUST
+            if(DoAdjustUp .and. .not.DoAdjustLo)then
+               ! push nParticle_B() below current particle;
+               ! it will be pushed until it finds a non-missing particle
+               nParticle_B(iBlock) = iParticle - 1
+               iParticle_I = iParticle_I + iIncrement_II(:,iLoop)
+               CYCLE PARTICLE
+            end if
+            
+            ! remaining case:
+            ! need to adjust both boudnaries -> ADJUST,but keep longest range
+            if(iParticle - iBegin > nParticle_B(iBlock) - iParticle)then
+               nParticle_B(iBlock) = iParticle - 1
+               EXIT PARTICLE
+            else
+               iBegin = iParticle + 1
+            end if
+            iParticle_I = iParticle_I + iIncrement_II(:,iLoop)
+         end do PARTICLE
+         
+         DoAdjustLo = RBufferLo == RInterfaceMin
+         DoAdjustUp = RBufferUp == RInterfaceMax
+       end subroutine adjust_line
 end module CON_mflampa
 

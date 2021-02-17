@@ -27,10 +27,11 @@ module CON_couple_mh_sp
   !^CMP END SC
   use SP_wrapper, ONLY: &
        SP_check_ready_for_mh    ,&  ! If returns .false., extract the mf lines
-       SP_get_bounds_comp       ,&  ! Provides RScMin/Max and/or RIhMin/Max
+       !SP_get_bounds_comp       ,&  ! Provides RScMin/Max and/or RIhMin/Max
        SP_put_coupling_param    ,&  ! Set time and interaface bounds
        SP_adjust_lines              ! Process if needed the updated mf lines
   use CON_mflampa, ONLY: &
+       RScMin, RScMax, RIhMin, RIhMax, &
        MF_n_particle            ,&  ! Number of "points" in a given line in SP
        MF_put_from_mh           ,&  ! Put MHD info from SC or IH to SP
        MF_interface_point_coords,&  ! Check if the point is within interface
@@ -84,9 +85,9 @@ module CON_couple_mh_sp
   ! while IH is Upper
   integer, parameter :: Upper_ = 1
   ! solar corona and lower and upper boundaries
-  real:: RScMin, RScMax             !^CMP END SC
+  !real:: RScMin, RScMax             !^CMP END SC
   ! inner heliosphere lower and upper boundaries
-  real:: RIhMin, RIhMax
+  !real:: RIhMin, RIhMax
   logical ::DoInit=.true.
 contains
   !============================================================================
@@ -122,7 +123,7 @@ contains
     subroutine couple_sc_sp_init             !^CMP IF SC BEGIN
       ! get the value of SC boundaries as set in SP
       !------------------------------------------------------------------------
-      call SP_get_bounds_comp(Lower_, RScMin, RScMax)
+      !call SP_get_bounds_comp(Lower_, RScMin, RScMax)
       ! Check whether SC is ready for coupling with SP;
       call SC_check_ready_for_sp(IsReady)
       if(.not.IsReady) call CON_stop(&
@@ -198,11 +199,11 @@ contains
     subroutine couple_ih_sp_init
       ! get the value of IH boundaries as set in SP
       !------------------------------------------------------------------------
-      if(use_comp(SC_))then  !^CMP IF SC BEGIN
-         call SP_get_bounds_comp(Upper_, RIhMin, RIhMax)
-      else                   !^CMP END SC
-         call SP_get_bounds_comp(Lower_, RIhMin, RIhMax)
-      end if                 !^CMP IF SC
+      !if(use_comp(SC_))then  !^CMP IF SC BEGIN
+      !   call SP_get_bounds_comp(Upper_, RIhMin, RIhMax)
+      !else                   !^CMP END SC
+      !   call SP_get_bounds_comp(Lower_, RIhMin, RIhMax)
+      !end if                 !^CMP IF SC
 
       ! Check whether IH is ready for coupling with SP;
       call IH_check_ready_for_sp(IsReady)
