@@ -1060,6 +1060,46 @@ The default is that all components limit their time steps to match
 the coupling time.
 </command>
 
+<command name="MFLAMPA" multiple="F">
+  <parameter name="NameTarget" type="string"  length="2" input="select">
+    <option name="SP" />
+    <option name="PT" />
+  </parameter>
+  <parameter name="nSource"   type="integer" min="1" max="2"   />
+  <for from="1" to="$nCouple">
+    <parameter name="NameSource" type="string" length="2" input="select">
+      <option name="SC" />
+      <option name="IH" />
+    </parameter> 
+    <if expr="$NameSource =~ /SC/">
+      <parameter name="RScMin"   type="real"    min="0" default="0" />
+      <parameter name="RScMax"   type="real"    min="0" default="0" />
+    </if>
+    <if expr="$NameSource =~ /IH/">
+      <parameter name="RIhMin"   type="real"    min="0" default="0" />
+      <parameter name="RIhMax"   type="real"    min="0" default="0" />
+    </if>
+  </for>
+
+
+#MFLAMPA
+SP			NameTarget
+2
+SC			NameSource
+1.05			RScMin
+21			RScMax
+IH			NameSource
+19.7			RIhMin
+230			RIhMax
+
+The NameSource and NameTarget variables contain the two-character 
+component ID-s for the source and target components coupled via
+MFLAMPA. RScMin and RScMax radii for SC componet and
+RIhMin and RIhMax for IH components bound the domains in SC and IH
+coupled to SP or PT particle-treated components.
+
+</command>
+
 </commandgroup>
 
 <commandgroup name="RESTART CONTROL">
