@@ -13,13 +13,12 @@ module CON_mflampa
   ! public members
   !
   integer, public :: MF_ =-1            ! ID of the target model (SP_, PT_)
-  
-  logical, public :: UseMflampa_C(MaxComp) !To switch coupler for PT
+
+  logical, public :: UseMflampa_C(MaxComp) ! To switch coupler for PT
   !
   ! Boundaries of coupled domains in SC and IH
   !
   real, public:: RScMin = 0.0, RScMax = 0.0, RIhMin = 0.0, RIhMax = 0.0
-  
 
   public :: read_param
   public :: set_state_pointer
@@ -103,14 +102,15 @@ module CON_mflampa
   real         :: EnergySi2Io = 1.0/cBoltzmann
   character(len=*), parameter:: NameMod = 'CON_mflampa::'
 contains
+  !============================================================================
   subroutine read_param(iError)
     use CON_coupler, ONLY: use_comp, i_comp, SP_, PT_, SC_, IH_, is_proc
     use ModReadParam, ONLY: read_var
     integer, intent(inout) :: iError
     integer :: nSource, iSource, iComp
-    character(len=2) :: NameComp = '' 
-    character(len=*), parameter:: NameSub = NameMod//'read_param'
-    !------------------------------
+    character(len=2) :: NameComp = ''
+    character(len=*), parameter:: NameSub = 'read_param'
+    !--------------------------------------------------------------------------
     call read_var('NameTarget', NameComp)
     MF_ = i_comp(NameComp)
     if(.not.use_comp(MF_)) then
@@ -189,7 +189,7 @@ contains
 
     !
     ! Store nBlock and nParticleMax
-    character(len=*), parameter:: NameSub = 'CON_mflampa::set_state_pointer'
+    character(len=*), parameter:: NameSub = 'set_state_pointer'
     !--------------------------------------------------------------------------
     nBlock       = nBlockIn
     nParticleMax = nParticleIn
@@ -220,10 +220,10 @@ contains
     !
     nParticle_B = 0
     nLon = nLonIn; nLat = nLatIn; nNode = nLon*nLat
-    
+
     allocate(iGridGlobal_IA(Proc_:Block_, nNode), &
          stat=iError)
-    nPointer_IA => iGridGlobal_IA   
+    nPointer_IA => iGridGlobal_IA
     if(present(EnergySi2IoIn))EnergySi2Io = EnergySi2IoIn
     allocate(iOffset_B(nBlock)); iOffset_B = 0
   end subroutine set_state_pointer
@@ -235,7 +235,7 @@ contains
          Proc_  = 1, & ! Processor that has this line/node
          Block_ = 2, & ! Block that has this line/node
          nDim = 3
-    
+
     integer, intent(in) :: MFIn_
     real,    intent(in) :: UnitX
     character(len=3), intent(in):: TypeCoordSystem
@@ -326,6 +326,7 @@ contains
     character(len=100):: StringError
 
     ! check consistency of DoCoupleVar_V
+
     character(len=*), parameter:: NameSub = 'MF_put_from_mh'
     !--------------------------------------------------------------------------
     if(.not. DoCoupleVar_V(Density_) .and. &
@@ -438,16 +439,17 @@ contains
          logical:: IsMissing
 
          real              :: R
-         
+
          integer, parameter:: Lo_ = 1, Up_ = 2
          integer, parameter:: iIncrement_II(2,2) =reshape([1,0,0,-1],[2,2])
          integer:: iParticle_I(2), iLoop
          ! once new geometry of lines has been put, account for some particles
          ! exiting the domain (can happen both at the beginning and the end)
          integer:: iParticle, iEnd, iOffset ! loop variables
-         character(len=*), parameter:: NameSub = 'adjust_line'  
          ! Called after the grid points are received from the
          ! component, nullify offset
+    character(len=*), parameter:: NameSub = 'adjust_line'
+    !--------------------------------------------------------------------------
          if(DoAdjustLo)iOffset_B(iBlock) = 0
          iBegin = 1
          iEnd   = nParticle_B(  iBlock)
@@ -488,7 +490,7 @@ contains
             ! until the bottom of Lo buffer is reaced
             ! --------------------------------------------------------
             ! whenever a particle is lost in lower models -> ERROR
-            
+
             ! when looping Up-2-Lo and particle is in other model ->
             ! adjustments are no longer allowed
             if(iLoop == Up_ .and. (&
@@ -499,18 +501,18 @@ contains
                DoAdjustLo = .false.
                DoAdjustUp = .false.
             end if
-            
+
             ! determine whether particle is missing
             IsMissing = all(MHData_VIB(X_:Z_,iParticle,iBlock)==0.0)
             if(.not.IsMissing) then
                iParticle_I = iParticle_I + iIncrement_II(:,iLoop)
                CYCLE PARTICLE
             end if
-            
+
             ! missing point in the lower part of the domain -> ERROR
             if(R < RInterfaceMin)&
                  call CON_stop(NameSub//": particle has been lost")
-            
+
             ! missing point in the upper part of the domain -> IGNORE;
             ! if needed to adjust beginning, then it is done,
             ! switch left -> right end of range and start adjusting
@@ -525,13 +527,13 @@ contains
                end if
                CYCLE PARTICLE
             end if
-            
+
             ! if point used to be in a upper buffer -> IGNORE
             if(R >= rBufferUp .and. R < rInterfaceMax)then
                iParticle_I = iParticle_I + iIncrement_II(:,iLoop)
                CYCLE PARTICLE
             end if
-            
+
             ! if need to adjust lower, but not upper boundary -> ADJUST
             if(DoAdjustLo .and. .not.DoAdjustUp)then
                ! push iBegin in front of current particle;
@@ -540,7 +542,7 @@ contains
                iParticle_I = iParticle_I + iIncrement_II(:,iLoop)
                CYCLE PARTICLE
             end if
-            
+
             ! if need to adjust upper, but not lower boundary -> ADJUST
             if(DoAdjustUp .and. .not.DoAdjustLo)then
                ! push nParticle_B() below current particle;
@@ -549,7 +551,7 @@ contains
                iParticle_I = iParticle_I + iIncrement_II(:,iLoop)
                CYCLE PARTICLE
             end if
-            
+
             ! remaining case:
             ! need to adjust both boudnaries -> ADJUST,but keep longest range
             if(iParticle - iBegin > nParticle_B(iBlock) - iParticle)then
@@ -560,9 +562,10 @@ contains
             end if
             iParticle_I = iParticle_I + iIncrement_II(:,iLoop)
          end do PARTICLE
-         
+
          DoAdjustLo = RBufferLo == RInterfaceMin
          DoAdjustUp = RBufferUp == RInterfaceMax
        end subroutine adjust_line
+  !============================================================================
 end module CON_mflampa
 
