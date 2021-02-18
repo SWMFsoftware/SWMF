@@ -176,8 +176,7 @@ contains
   !============================================================================
   subroutine set_state_pointer(&
        rPointer_VIB, StateIO_VIB, nPointer_B, &
-       nParticleIn, nVarIn,                   &
-       nLonIn, nLatIn, nPointer_IA,           &
+       nParticleIn, nVarIn, nLonIn, nLatIn,   &
        EnergySi2IoIn)
 
     real,    intent(inout), pointer :: rPointer_VIB(:,:,:)
@@ -185,7 +184,6 @@ contains
     integer, intent(inout), pointer :: nPointer_B(:)
     integer, intent(in)             :: nParticleIn, nVarIn
     integer, intent(in)             :: nLonIn, nLatIn
-    integer, intent(inout), pointer :: nPointer_IA(:,:)
     real,    optional,   intent(in) :: EnergySi2IoIn
     integer :: iParticle
 
@@ -225,9 +223,39 @@ contains
 
     allocate(iGridGlobal_IA(Proc_:Block_, nNode), &
          stat=iError)
-    nPointer_IA => iGridGlobal_IA
+    call check_allocate(iError, NameSub//'iGridGlobal_IA')
+    call init_indexes
     if(present(EnergySi2IoIn))EnergySi2Io = EnergySi2IoIn
     allocate(iOffset_B(nBlock)); iOffset_B = 0
+  contains
+    subroutine init_indexes
+      integer:: iLat, iLon, iNode, iBlock, iProcNode
+      
+      character(len=*), parameter:: NameSub = 'init_indexes'
+      !------------------------------------------------------------------------
+      !
+      ! fill grid containers
+      !
+      iBlock = 1; iProcNode = 0
+      do iLat = 1, nLat
+         do iLon = 1, nLon
+            iNode = iLon + nLon * (iLat-1)
+            !
+            ! iProcNode = ceiling(real(iNode*nProc)/nNode) - 1
+            !
+            iGridGlobal_IA(Proc_,   iNode)  = iProcNode
+            iGridGlobal_IA(Block_,  iNode)  = iBlock
+            if(iNode == ((iProcNode+1)*nNode)/nProc)then
+               !
+               ! This was the last node on the iProcNode
+               !
+               iBlock = 1; iProcNode = iProcNode + 1
+            else
+               iBlock = iBlock + 1
+            end if
+         end do
+      end do
+    end subroutine init_indexes
   end subroutine set_state_pointer
   !============================================================================
   subroutine MF_set_grid(MFIn_, UnitX, TypeCoordSystem)
