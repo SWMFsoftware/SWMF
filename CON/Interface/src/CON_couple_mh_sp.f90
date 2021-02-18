@@ -26,11 +26,10 @@ module CON_couple_mh_sp
        SC_get_for_mh, SC_LineDD
   !^CMP END SC
   use SP_wrapper, ONLY: &
-       SP_check_ready_for_mh    ,&  ! If returns .false., extract the mf lines
-       !SP_get_bounds_comp       ,&  ! Provides RScMin/Max and/or RIhMin/Max
+       SP_check_ready_for_mh    ,&  ! If returns .false., extract the mf lines  
        SP_put_coupling_param    ,&  ! Set time and interaface bounds
        SP_adjust_lines              ! Process if needed the updated mf lines
-  use CON_mflampa, ONLY: &
+  use CON_bline, ONLY: &
        RScMin, RScMax, RIhMin, RIhMax, &
        MF_n_particle            ,&  ! Number of "points" in a given line in SP
        MF_put_from_mh           ,&  ! Put MHD info from SC or IH to SP
@@ -47,7 +46,7 @@ module CON_couple_mh_sp
   type(GridType)     , save::SP_Grid           ! Target (Particle coords)
   type(LocalGridType), save::SP_LocalGrid      ! Target (MHD data)
   type(GridType)     , save::IH_Grid           ! Source (MHD data)
-  type(RouterType),save,private::RouterIhSp        ! IH (MHD data) => SP
+  type(RouterType),save,private::RouterIhSp    ! IH (MHD data) => SP
   type(GridType)     , save::IH_LineGrid       ! Misc
   type(LocalGridType), save::IH_LocalLineGrid  ! Source (MHD data)
   type(RouterType),save,private::RouterLineIhSp    ! IH (Particle coords)=>SP
