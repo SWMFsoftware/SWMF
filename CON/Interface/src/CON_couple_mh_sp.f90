@@ -26,7 +26,7 @@ module CON_couple_mh_sp
        SC_get_for_mh, SC_LineDD
   !^CMP END SC
   use SP_wrapper, ONLY: &
-       SP_check_ready_for_mh    ,&  ! If returns .false., extract the mf lines  
+       SP_do_extract_lines      ,&  ! If returns .true., extract the mf lines  
        SP_put_coupling_param    ,&  ! Set time and interaface bounds
        SP_adjust_lines              ! Process if needed the updated mf lines
   use CON_bline, ONLY: &
@@ -93,8 +93,6 @@ contains
   subroutine couple_mh_sp_init
     use CON_physics, ONLY: get_time
     use ModConst
-    ! whether a component is ready for coupling
-    logical :: IsReady
     ! whether need to extract new line (equal to .not.DoRestart in SP
     logical :: DoExtract
     !--------------------------------------------------------------------------
@@ -105,10 +103,7 @@ contains
     call get_time(tSimulationOut=tNow)
 
     ! determine whether SP is ready for coupling with MH
-    call SP_check_ready_for_mh(IsReady)
-    ! if not ready => need to extract new field lines
-    DoExtract = .not.IsReady
-
+    call SP_do_extract_lines(DoExtract)
     if(use_comp(SC_))call couple_sc_sp_init  !^CMP IF SC
     if(use_comp(IH_))call couple_ih_sp_init
 
@@ -120,6 +115,7 @@ contains
   contains
     !==========================================================================
     subroutine couple_sc_sp_init             !^CMP IF SC BEGIN
+      logical :: IsReady
       ! get the value of SC boundaries as set in SP
       !------------------------------------------------------------------------
       !call SP_get_bounds_comp(Lower_, RScMin, RScMax)
@@ -196,14 +192,8 @@ contains
     end subroutine couple_sc_sp_init                 !^CMP END SC
     !==========================================================================
     subroutine couple_ih_sp_init
-      ! get the value of IH boundaries as set in SP
+      logical :: IsReady
       !------------------------------------------------------------------------
-      !if(use_comp(SC_))then  !^CMP IF SC BEGIN
-      !   call SP_get_bounds_comp(Upper_, RIhMin, RIhMax)
-      !else                   !^CMP END SC
-      !   call SP_get_bounds_comp(Lower_, RIhMin, RIhMax)
-      !end if                 !^CMP IF SC
-
       ! Check whether IH is ready for coupling with SP;
       call IH_check_ready_for_sp(IsReady)
       if(.not.IsReady) call CON_stop(&
