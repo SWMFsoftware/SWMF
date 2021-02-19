@@ -18,6 +18,10 @@ Param/PARAM.in.test.SP: Input file for testing SP model for SEPs, uses input fil
 #TIMEACCURATE
 T			IsTimeAccurate
 
+#FIELDLINE
+SP			NameTarget
+0			nSource
+
 #BEGIN_COMP SP ---------------------------------------------------------------
 
 #DORUN
@@ -27,11 +31,6 @@ F			DoRun
 F			DoTraceShock
 F			UseDiffusion
 
-#GRID
-1.05			RMin
-19			RBufferMin
-21			RBufferMax
-220			RMax
 
 
 #READMHDATA
