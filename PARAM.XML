@@ -1060,13 +1060,13 @@ The default is that all components limit their time steps to match
 the coupling time.
 </command>
 
-<command name="MFLAMPA" multiple="F">
+<command name="FIELDLINE" multiple="F">
   <parameter name="NameTarget" type="string"  length="2" input="select">
     <option name="SP" />
     <option name="PT" />
   </parameter>
-  <parameter name="nSource"   type="integer" min="1" max="2"   />
-  <for from="1" to="$nCouple">
+  <parameter name="nSource"   type="integer" min="0" max="2"   />
+  <for from="1" to="$nSource">
     <parameter name="NameSource" type="string" length="2" input="select">
       <option name="SC" />
       <option name="IH" />
@@ -1082,9 +1082,9 @@ the coupling time.
   </for>
 
 
-#MFLAMPA
+#FIELDLINE
 SP			NameTarget
-2
+2                       nSource
 SC			NameSource
 1.05			RScMin
 21			RScMax
