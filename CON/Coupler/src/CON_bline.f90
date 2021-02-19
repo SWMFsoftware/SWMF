@@ -5,33 +5,59 @@ module CON_bline
   ! allocate the grid used in this model
   use ModUtilities,      ONLY: check_allocate
   use ModConst,          ONLY: cBoltzmann
-  use CON_coupler, ONLY: MaxComp, is_proc0
+  use CON_coupler,       ONLY: MaxComp, is_proc0
   implicit none
   SAVE
   PRIVATE ! Except
   !
   ! public members
-  !
-  integer, public :: MF_ =-1                ! ID of the target model (SP_, PT_)
-  integer         :: iProc = -1, nProc = -1 ! As usually, defined only in MF
+  !-----------The following public members are available at all PEs------------
+  integer, public :: BL_ =-1                ! ID of the target model (SP_, PT_)
   logical, public :: UseMflampa_C(MaxComp)  ! To switch coupler for PT
   !
   ! Boundaries of coupled domains in SC and IH
   !
-  real, public:: RScMin = 0.0, RScMax = 0.0, RIhMin = 0.0, RIhMax = 0.0
+  real,    public :: RScMin = 0.0, RScMax = 0.0, RIhMin = 0.0, RIhMax = 0.0
 
   public :: read_param
-  public :: set_state_pointer
-  public :: MF_set_grid
+  public :: BL_set_grid
+  !------------The rest of the module is accessed from BL_ model---------------
+  integer         :: iProc = -1  ! Rank    of PE in communicator of BL_
+  integer         :: nProc = -1  ! Number of PEs in communicator of BL_
+  public :: BL_init
+  public :: BL_get_origin_points
   public :: get_bounds
   public :: adjust_line
-  public :: MF_n_particle             ! return number of points at the MF line
-  public :: MF_put_from_mh            ! put MHD values from MH to SP
-  public :: MF_interface_point_coords ! points rMinInterface < R < rMaxInterface
-  public :: MF_put_line               ! points rMin < R < rMax
+  public :: BL_n_particle             ! return number of points at the MF line
+  public :: BL_put_from_mh            ! put MHD values from MH to SP
+  public :: BL_interface_point_coords ! points rMinInterface<R<rMaxInterface
+  public :: BL_put_line               ! points rMin < R < rMax
   !
+  ! Grid integer parameters:
+  ! Maximum number of vertexes per line
+
+  integer :: nParticleMax
+
+  ! angular grid at origin surface
+
+  integer  :: nLon  = -1
+  integer  :: nLat  = -1
+
+  ! Total number of lines on all preceeding PEs
+
+  integer  :: iNode0 = -1 ! = (iProc*nNode)/nProc
+
+  ! Total number of lines on given PE
+
+  integer  :: nBlock = -1 ! = ((iProc +1)*nNode)/nProc - iNode0
+
+  ! Total number of lines on all PEs
+
+  integer  :: nNode = -1
+
   ! Number of variables in the state vector and the identifications
-  integer, parameter :: Lower_=0, Upper_=1, nDim = 3, nMHData = 13,   &
+
+  integer, public, parameter :: Lower_=0, Upper_=1, nDim = 3, nMHData = 13,   &
        LagrID_     = 0, & ! Lagrangian id           ^saved/   ^set to 0
        X_          = 1, & !                         |read in  |in copy_
        Y_          = 2, & ! Cartesian coordinates   |restart  |old_stat
@@ -49,43 +75,24 @@ module CON_bline
        R_          =14    ! Heliocentric distance
   !
   ! MHD state vector is a pointer to be joined to a target array
-  !
-  real, allocatable, target:: MHData_VIB(:,:,:)
-  !
+  ! MHData_VIB(LagrID_:nMHData, 1:nParticleMax, 1:nBlock)
+
+  real,    allocatable, target :: MHData_VIB(:,:,:)
+
   ! Aux state vector is a pointer to be joined to a target array
-  !
-  real, allocatable, target:: State_VIB(:,:,:)
+  ! State_VIB(R_:nVar, 1:nParticleMax, 1:nBlock)
+  ! nVar may be optionally read in BL_set_grid
+
+  integer  :: nVar = R_
+  real,    allocatable, target :: State_VIB(:,:,:)
   !
   ! nParticle_B is a pointer, which is joined to a target array
   ! For stand alone version the target array is allocated here
-  !
-  integer, allocatable, target:: nParticle_B(:)
+  ! nParticle_B(1:nBlock)
+
+  integer, allocatable, target :: nParticle_B(:)
   !
   integer, allocatable, public :: iOffset_B(:)
-  !
-  ! Grid integer parameters:
-  !
-  integer :: nParticleMax, nBlock, nVar
-  !
-  ! Coordinate system and geometry
-  !
-  character(len=3), public :: TypeCoordSystem = 'HGR'
-  !
-  ! angular grid at origin surface
-  !
-  integer  :: nLon  = 4
-  integer  :: nLat  = 4
-  integer  :: nNode = 16
-  !
-  ! Proc_ and Block_ number, for a given node:
-  !
-  integer, parameter:: &
-       Proc_  = 1, & ! Processor that has this line/node
-       Block_ = 2    ! Block that has this line/node
-  !
-  ! They is the first index values for
-  ! the following array
-  integer, allocatable, target :: iGridGlobal_IA(:,:)
   !
   ! Misc:
   integer:: iError
@@ -113,22 +120,22 @@ contains
     character(len=*), parameter:: NameSub = 'read_param'
     !--------------------------------------------------------------------------
     call read_var('NameTarget', NameComp)
-    MF_ = i_comp(NameComp)
-    if(.not.use_comp(MF_)) then
+    BL_ = i_comp(NameComp)
+    if(.not.use_comp(BL_)) then
        if(is_proc0()) write(*,*) NameSub//&
             ' SWMF_ERROR for NameMaster: '// &
             NameComp//' is OFF or not registered, not MFLAMPA target'
        iError = 34
        RETURN
     end if
-    if(.not.(MF_ == PT_.or.MF_==SP_))then
+    if(.not.(BL_ == PT_.or.BL_==SP_))then
        if(is_proc0()) write(*,*) NameSub//&
             ' SWMF_ERROR for NameMaster: '// &
             'SP or PT can be MFLAMPA target, but '//NameComp//' cannot'
        iError = 34
        RETURN
     end if
-    UseMflampa_C = .false.; UseMflampa_C(MF_) = .true.
+    UseMflampa_C = .false.; UseMflampa_C(BL_) = .true.
     call read_var('nSource', nSource)
     if(nSource/=2)then
        if(is_proc0()) write(*,*) NameSub//&
@@ -169,32 +176,31 @@ contains
           RETURN
        end select
     end do
-    if(.not.is_proc(MF_))RETURN
-    iProc = i_proc(MF_); nProc = n_proc(MF_)
+    if(.not.is_proc(BL_))RETURN
+    iProc = i_proc(BL_); nProc = n_proc(BL_)
     RMin = RScMin; RMax = RIhMax
   end subroutine read_param
   !============================================================================
-  subroutine set_state_pointer(&
-       rPointer_VIB, StateIO_VIB, nPointer_B, &
-       nParticleIn, nVarIn, nLonIn, nLatIn,   &
-       EnergySi2IoIn)
+  subroutine BL_init(nParticleIn, nLonIn, nLatIn, &
+       rPointer_VIB,  nPointer_B,  nVarIn, StateIO_VIB)
 
     real,    intent(inout), pointer :: rPointer_VIB(:,:,:)
     real,    intent(inout), pointer :: StateIO_VIB(:,:,:)
     integer, intent(inout), pointer :: nPointer_B(:)
     integer, intent(in)             :: nParticleIn, nVarIn
     integer, intent(in)             :: nLonIn, nLatIn
-    real,    optional,   intent(in) :: EnergySi2IoIn
+    !
+    ! Loop variable
+
     integer :: iParticle
 
-    !
-    ! Store nBlock and nParticleMax
-    character(len=*), parameter:: NameSub = 'set_state_pointer'
+    character(len=*), parameter:: NameSub = 'BL_init'
     !--------------------------------------------------------------------------
     nParticleMax = nParticleIn
     nVar         = nVarIn
     nLon = nLonIn; nLat = nLatIn; nNode = nLon*nLat
-    nBlock = ((iProc+1)*nNode) / nProc - (iProc*nNode) / nProc
+    iNode0 = (iProc*nNode)/nProc
+    nBlock = ((iProc+1)*nNode) / nProc - iNode0
     allocate(MHData_VIB(LagrID_:nMHData, 1:nParticleMax, 1:nBlock), &
          stat=iError)
     call check_allocate(iError, NameSub//'MHData_VIB')
@@ -220,22 +226,127 @@ contains
     nPointer_B => nParticle_B
     !
     nParticle_B = 0
-
-    allocate(iGridGlobal_IA(Proc_:Block_, nNode), &
-         stat=iError)
-    call check_allocate(iError, NameSub//'iGridGlobal_IA')
-    call init_indexes
-    if(present(EnergySi2IoIn))EnergySi2Io = EnergySi2IoIn
     allocate(iOffset_B(nBlock)); iOffset_B = 0
+  end subroutine BL_init
+  !============================================================================
+  subroutine BL_get_origin_points(ROrigin, LonMin, LonMax, LatMin, LatMax)
+    use ModCoordTransform, ONLY: rlonlat_to_xyz
+    !
+    ! Parameters of the grid of the bline origin points at the origin surface
+    ! at R = ROrigin
+
+    real, intent(in)  :: ROrigin, LonMin, LonMax, LatMin, LatMax
+
+    ! Block (line) number  and corresponing lon-lat indexes
+    integer           :: iLat, iLon, iBlock
+    !
+    ! Sell size on the origin surface, per line
+
+    real              ::  DLon, DLat
+    !--------------------------------------------------------------------------
+    !
+    ! angular grid's step
+    !
+    DLon = (LonMax - LonMin)/nLon
+    !
+    ! angular grid's step
+    !
+    DLat = (LatMax - LatMin)/nLat
+    do iBlock = 1, nBlock
+       call iblock_to_lon_lat(iBlock, iLon, iLat)
+       nParticle_B(iBlock) = 1
+       call rlonlat_to_xyz([ROrigin, LonMin + (iLon - 0.5)*DLon, &
+            LatMin + (iLat - 0.5)*DLat], MHData_VIB(X_:Z_,1,iBlock))
+    end do
   contains
+    !==========================================================================
+    subroutine iblock_to_lon_lat(iBlockIn, iLonOut, iLatOut)
+      ! return angular grid's indexes corresponding to this block
+      integer, intent(in) :: iBlockIn
+      integer, intent(out):: iLonOut
+      integer, intent(out):: iLatOut
+
+      integer :: iNode
+      !------------------------------------------------------------------------
+      !
+      ! Get node number from block number
+      !
+      iNode = iBlockIn + iNode0
+      iLatOut = 1 + (iNode - 1)/nLon
+      iLonOut = iNode - nLon*(iLatOut - 1)
+    end subroutine iblock_to_lon_lat
+    !==========================================================================
+  end subroutine BL_get_origin_points
+  !============================================================================
+  subroutine BL_set_grid(TypeCoordSystem, UnitX, EnergySi2IoIn)
+    use CON_coupler, ONLY: set_coord_system, is_proc, &
+         init_decomposition, get_root_decomposition, bcast_decomposition
+
+    character(len=3), intent(in)    :: TypeCoordSystem
+    real,    intent(in)             :: UnitX
+    real,    optional,   intent(in) :: EnergySi2IoIn
+
+    !
+    ! Proc_ and Block_ number, for a given node:
+    !
+    integer, parameter:: &
+         Proc_  = 1, & ! Processor that has this line/node
+         Block_ = 2    ! Block that has this line/node
+    !
+    ! They is the first index values for
+    ! the following array
+
+    integer, allocatable, target :: iGridGlobal_IA(:,:)
+
+    character(len=*), parameter:: NameVarCouple =&
+         'rho p mx my mz bx by bz i01 i02 pe'
+    logical, save:: IsInitialized = .false.
+    !--------------------------------------------------------------------------
+    if(IsInitialized)RETURN
+    IsInitialized = .true.
+    ! Initialize 3D grid with NON-TREE structure
+    call init_decomposition(&
+         GridID_ = BL_,&
+         CompID_ = BL_,&
+         nDim    = nDim)
+    ! Construct decomposition
+
+    if(is_proc0(BL_))then
+       call init_indexes
+       call get_root_decomposition(&
+            GridID_       = BL_,&
+            iRootMapDim_D = [1, nLon, nLat],&
+            CoordMin_D    = [0.50, 0.50, 0.50],&
+            CoordMax_D    = [nParticleMax, nLon, nLat] + 0.50,&
+            nCells_D      = [nParticleMax, 1, 1],&
+            PE_I          = iGridGlobal_IA(Proc_,:),&
+            iBlock_I      = iGridGlobal_IA(Block_,:))
+       deallocate(iGridGlobal_IA)
+    end if
+    call bcast_decomposition(BL_)
+    ! Coordinate system is Heliographic Inertial Coordinate System (HGI)
+    ! with length measured in solar radii
+    call set_coord_system(&
+         GridID_      = BL_, &
+         TypeCoord    = TypeCoordSystem, &
+         TypeGeometry = 'cartesian', &
+         NameVar      = NameVarCouple, &
+         UnitX        = UnitX)
+    if(.not.is_proc(BL_))RETURN
+    if(present(EnergySi2IoIn))EnergySi2Io = EnergySi2IoIn
+  contains
+    !==========================================================================
     subroutine init_indexes
       integer:: iLat, iLon, iNode, iBlock, iProcNode
-      
-      character(len=*), parameter:: NameSub = 'init_indexes'
-      !------------------------------------------------------------------------
+
       !
       ! fill grid containers
       !
+      character(len=*), parameter:: NameSub = 'init_indexes'
+      !------------------------------------------------------------------------
+      allocate(iGridGlobal_IA(Proc_:Block_, nNode), &
+           stat=iError)
+      call check_allocate(iError, NameSub//'iGridGlobal_IA')
       iBlock = 1; iProcNode = 0
       do iLat = 1, nLat
          do iLon = 1, nLon
@@ -256,55 +367,8 @@ contains
          end do
       end do
     end subroutine init_indexes
-  end subroutine set_state_pointer
-  !============================================================================
-  subroutine MF_set_grid(MFIn_, UnitX, TypeCoordSystem)
-    use CON_coupler, ONLY: set_coord_system,  &
-         init_decomposition, get_root_decomposition, bcast_decomposition
-    integer, parameter:: &
-         Proc_  = 1, & ! Processor that has this line/node
-         Block_ = 2, & ! Block that has this line/node
-         nDim = 3
-
-    integer, intent(in) :: MFIn_
-    real,    intent(in) :: UnitX
-    character(len=3), intent(in):: TypeCoordSystem
-    character(len=*), parameter:: NameVarCouple =&
-         'rho p mx my mz bx by bz i01 i02 pe'
-    logical, save:: IsInitialized = .false.
-    !--------------------------------------------------------------------------
-    if(IsInitialized)RETURN
-    IsInitialized = .true.
-    !
-    ! Set the target ID
-    !
-    MF_ = MFIn_
-    ! Initialize 3D grid with NON-TREE structure
-    call init_decomposition(&
-         GridID_ = MF_,&
-         CompID_ = MF_,&
-         nDim    = nDim)
-    ! Construct decomposition
-
-    if(is_proc0(MF_))&
-         call get_root_decomposition(&
-         GridID_       = MF_,&
-         iRootMapDim_D = [1, nLon, nLat],&
-         CoordMin_D    = [0.50, 0.50, 0.50],&
-         CoordMax_D    = [nParticleMax, nLon, nLat] + 0.50,&
-         nCells_D      = [nParticleMax, 1, 1],&
-         PE_I          = iGridGlobal_IA(Proc_,:),&
-         iBlock_I      = iGridGlobal_IA(Block_,:))
-    call bcast_decomposition(MF_)
-    ! Coordinate system is Heliographic Inertial Coordinate System (HGI)
-    ! with length measured in solar radii
-    call set_coord_system(&
-         GridID_      = MF_, &
-         TypeCoord    = TypeCoordSystem, &
-         TypeGeometry = 'cartesian', &
-         NameVar      = NameVarCouple, &
-         UnitX        = UnitX)
-  end subroutine MF_set_grid
+    !==========================================================================
+  end subroutine BL_set_grid
   !============================================================================
   subroutine get_bounds(iModelIn, rMinIn, rMaxIn, &
        rBufferLoIn, rBufferUpIn)
@@ -327,13 +391,13 @@ contains
     end if
   end subroutine get_bounds
   !============================================================================
-  integer function MF_n_particle(iBlockLocal)
+  integer function BL_n_particle(iBlockLocal)
     integer, intent(in) :: iBlockLocal
     !--------------------------------------------------------------------------
-    MF_n_particle = nParticle_B(  iBlockLocal)
-  end function MF_n_particle
+    BL_n_particle = nParticle_B(  iBlockLocal)
+  end function BL_n_particle
   !============================================================================
-  subroutine MF_put_from_mh(nPartial,iPutStart,Put,W,DoAdd,Buff_I,nVar)
+  subroutine BL_put_from_mh(nPartial,iPutStart,Put,W,DoAdd,Buff_I,nVar)
     use CON_coupler, ONLY: &
          iVar_V, DoCoupleVar_V, &
          Density_, RhoCouple_, Pressure_, PCouple_, &
@@ -357,7 +421,7 @@ contains
 
     ! check consistency of DoCoupleVar_V
 
-    character(len=*), parameter:: NameSub = 'MF_put_from_mh'
+    character(len=*), parameter:: NameSub = 'BL_put_from_mh'
     !--------------------------------------------------------------------------
     if(.not. DoCoupleVar_V(Density_) .and. &
          (DoCoupleVar_V(Pressure_) .or. DoCoupleVar_V(Momentum_)))&
@@ -408,9 +472,9 @@ contains
             Aux*MHData_VIB(Wave1_:Wave2_,i,iBlock) + &
             Buff_I(iWave1:iWave2)*Weight
     end do
-  end subroutine MF_put_from_mh
+  end subroutine BL_put_from_mh
   !============================================================================
-  subroutine MF_interface_point_coords(nDim, Xyz_D, &
+  subroutine BL_interface_point_coords(nDim, Xyz_D, &
        nIndex, iIndex_I, IsInterfacePoint)
     ! interface points (request), which needed to be communicated
     ! to other components to perform field line extraction and
@@ -424,7 +488,7 @@ contains
     logical,intent(out)  :: IsInterfacePoint
     integer:: iParticle, iBlock
     real:: R2
-    character(len=*), parameter:: NameSub = 'MF_interface_point_coords'
+    character(len=*), parameter:: NameSub = 'BL_interface_point_coords'
     !--------------------------------------------------------------------------
     iParticle = iIndex_I(1); iBlock    = iIndex_I(4)
     ! Check whether the particle is within interface bounds
@@ -434,9 +498,9 @@ contains
     ! Fix coordinates to be used in mapping
     if(IsInterfacePoint)&
          Xyz_D = MHData_VIB(X_:Z_, iParticle, iBlock)
-  end subroutine MF_interface_point_coords
+  end subroutine BL_interface_point_coords
   !============================================================================
-  subroutine MF_put_line(nPartial, iPutStart, Put,&
+  subroutine BL_put_line(nPartial, iPutStart, Put,&
        Weight, DoAdd, Coord_D, nVar)
     use CON_router, ONLY: IndexPtrType, WeightPtrType
     integer, intent(in) :: nPartial, iPutStart, nVar
@@ -449,7 +513,7 @@ contains
     integer:: iBlock, iParticle
     ! Misc
     real :: R2
-    character(len=*), parameter:: NameSub = 'MF_put_line'
+    character(len=*), parameter:: NameSub = 'BL_put_line'
     !--------------------------------------------------------------------------
     R2 = sum(Coord_D(1:nDim)**2)
     ! Sort out particles left the SP domain
@@ -460,7 +524,7 @@ contains
     ! put coordinates
     MHData_VIB(X_:Z_,iParticle, iBlock) = Coord_D(1:nDim)
     nParticle_B(iBlock) = MAX(nParticle_B(iBlock), iParticle)
-  end subroutine MF_put_line
+  end subroutine BL_put_line
   !============================================================================
   subroutine adjust_line(iBlock, iBegin, DoAdjustLo, DoAdjustUp)
     integer, intent(in)    :: iBlock
