@@ -136,7 +136,11 @@ contains
        RETURN
     end if
     UseMflampa_C = .false.; UseMflampa_C(BL_) = .true.
+    if(is_proc(BL_))then
+       iProc = i_proc(BL_); nProc = n_proc(BL_)
+    end if
     call read_var('nSource', nSource)
+    if(nSource==0)RETURN ! Uncoupled SP 
     if(nSource/=2)then
        if(is_proc0()) write(*,*) NameSub//&
             ' SWMF_ERROR for NameMaster: '// &
@@ -177,7 +181,6 @@ contains
        end select
     end do
     if(.not.is_proc(BL_))RETURN
-    iProc = i_proc(BL_); nProc = n_proc(BL_)
     RMin = RScMin; RMax = RIhMax
   end subroutine read_param
   !============================================================================

@@ -459,7 +459,7 @@ contains
              call read_var('nNext21', Couple_CC(iComp2,iComp1) % nNext)
              call read_var('tNext21', Couple_CC(iComp2,iComp1) % tNext)
           end if
-       case('#MFLAMPA')
+       case('#FIELDLINE')
           call read_bline(iErrorSWMF)
           if(iErrorSWMF/=0)RETURN
           
