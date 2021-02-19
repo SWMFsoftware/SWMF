@@ -31,10 +31,10 @@ module CON_couple_mh_sp
        SP_adjust_lines              ! Process if needed the updated mf lines
   use CON_bline, ONLY: &
        RScMin, RScMax, RIhMin, RIhMax, &
-       MF_n_particle            ,&  ! Number of "points" in a given line in SP
-       MF_put_from_mh           ,&  ! Put MHD info from SC or IH to SP
-       MF_interface_point_coords,&  ! Check if the point is within interface
-       MF_put_line                  ! Put particle Xyz from SC/IH to SP
+       BL_n_particle            ,&  ! Number of "points" in a given line in SP
+       BL_put_from_mh           ,&  ! Put MHD info from SC or IH to SP
+       BL_interface_point_coords,&  ! Check if the point is within interface
+       BL_put_line                  ! Put particle Xyz from SC/IH to SP
        !get_bounds                   ! Provides RScMin/Max and/or RIhMin/Max
   implicit none
 
@@ -170,8 +170,8 @@ contains
            GridSource            = SC_Grid                  ,&
            GridTarget            = SP_LocalGrid             ,&
            Router                = RouterScSp               ,&
-           n_interface_point_in_block = MF_n_particle       ,&
-           interface_point_coords= MF_interface_point_coords,&
+           n_interface_point_in_block = BL_n_particle       ,&
+           interface_point_coords= BL_interface_point_coords,&
            mapping               = mapping_sp_to_sc         ,&
            interpolate           = interpolation_amr_gc)
       if(is_proc(SC_))then
@@ -271,8 +271,8 @@ contains
            GridSource                 = IH_Grid                  ,&
            GridTarget                 = SP_LocalGrid             ,&
            Router                     = RouterIHSp               ,&
-           n_interface_point_in_block = MF_n_particle            ,&
-           interface_point_coords     = MF_interface_point_coords,&
+           n_interface_point_in_block = BL_n_particle            ,&
+           interface_point_coords     = BL_interface_point_coords,&
            mapping                    = mapping_sp_to_IH         ,&
            interpolate                = interpolation_amr_gc)
       !
@@ -334,14 +334,14 @@ contains
          GridSource             = SC_Grid                  ,&
          GridTarget             = SP_LocalGrid             ,&
          Router                 = RouterScSp               ,&
-         n_interface_point_in_block = MF_n_particle        ,&
-         interface_point_coords = MF_interface_point_coords,&
+         n_interface_point_in_block = BL_n_particle        ,&
+         interface_point_coords = BL_interface_point_coords,&
          mapping                = mapping_sp_to_sc         ,&
          interpolate            = interpolation_amr_gc)
     call couple_comp(RouterScSp                            ,&
          nVar                   = nVarBuffer               ,&
          fill_buffer = SC_get_for_sp_and_transform         ,&
-         apply_buffer           = MF_put_from_mh)
+         apply_buffer           = BL_put_from_mh)
     !
     ! The MHD data within the heliocentric distances RScMin<R<RScMax 
     ! By the way get particle coords from the router buffer to SC
@@ -366,7 +366,7 @@ contains
     call couple_comp(                 RouterLineScSp       ,&
          nVar                       = nDim                 ,&
          fill_buffer = SC_get_coord_for_sp_and_transform   ,&
-         apply_buffer               = MF_put_line)
+         apply_buffer               = BL_put_line)
   end subroutine SP_put_lines_from_sc
   !============================================================================
   subroutine mapping_sp_to_sc(nDimIn, XyzIn_D, nDimOut,     &
@@ -458,14 +458,14 @@ contains
          GridSource                 = IH_Grid                  ,&
          GridTarget                 = SP_LocalGrid             ,&
          Router                     = RouterIHSp               ,&
-         n_interface_point_in_block = MF_n_particle            ,&
-         interface_point_coords     = MF_interface_point_coords,&
+         n_interface_point_in_block = BL_n_particle            ,&
+         interface_point_coords     = BL_interface_point_coords,&
          mapping                    = mapping_sp_to_ih         ,&
          interpolate                = interpolation_amr_gc)
     call couple_comp(                 RouterIhSp               ,&
          nVar                       = nVarBuffer               ,&
          fill_buffer              = IH_get_for_sp_and_transform,&
-         apply_buffer               = MF_put_from_mh)
+         apply_buffer               = BL_put_from_mh)
     ! By the way get coords for particles in IH from the router buffer
     if(is_proc(IH_))then
        nLength = nlength_buffer_source(RouterIhSp)
@@ -511,7 +511,7 @@ contains
     call couple_comp(RouterLineIhSp                       ,&
          nVar = 3                                         ,&
          fill_buffer = IH_get_coord_for_sp_and_transform  ,&
-         apply_buffer= MF_put_line)
+         apply_buffer= BL_put_line)
   end subroutine SP_put_lines_from_ih
   !============================================================================
   subroutine mapping_sp_to_ih(nDimIn, XyzIn_D, nDimOut, CoordOut_D, &
