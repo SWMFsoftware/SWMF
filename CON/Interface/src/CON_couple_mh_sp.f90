@@ -77,16 +77,6 @@ module CON_couple_mh_sp
   character(LEN=*),parameter::NameSub='couple_mh_sp'
   real :: tNow
 
-  integer, parameter :: Lower_ = 0
-  !^CMP IF SC BEGIN
-  ! Short ID of MHD components. If there is only one component,
-  ! it has an identifier Lower_, otherwise, SC has identifier Lower_
-  ! while IH is Upper
-  integer, parameter :: Upper_ = 1
-  ! solar corona and lower and upper boundaries
-  !real:: RScMin, RScMax             !^CMP END SC
-  ! inner heliosphere lower and upper boundaries
-  !real:: RIhMin, RIhMax
   logical ::DoInit=.true.
 contains
   !============================================================================
@@ -116,10 +106,8 @@ contains
     !==========================================================================
     subroutine couple_sc_sp_init             !^CMP IF SC BEGIN
       logical :: IsReady
-      ! get the value of SC boundaries as set in SP
+      integer, parameter :: Lower_=0 
       !------------------------------------------------------------------------
-      !call SP_get_bounds_comp(Lower_, RScMin, RScMax)
-      ! Check whether SC is ready for coupling with SP;
       call SC_check_ready_for_sp(IsReady)
       if(.not.IsReady) call CON_stop(&
            "SC component not ready for "//NameSub//" correct PARAM.in")
@@ -153,7 +141,7 @@ contains
       ! If DoExtract, then
       !
       if(is_proc(SP_))&
-           call SP_put_coupling_param(Lower_, RScMin, RScMax, tNow)
+           call SP_put_coupling_param(SC_, RScMin, RScMax, tNow)
       call SC_synchronize_refinement(RouterScSp%iProc0Source,&
            RouterScSp%iCommUnion)
       ScToSp_DD=transform_matrix(tNow,&
@@ -193,6 +181,7 @@ contains
     !==========================================================================
     subroutine couple_ih_sp_init
       logical :: IsReady
+      integer, parameter:: Upper_ = 1
       !------------------------------------------------------------------------
       ! Check whether IH is ready for coupling with SP;
       call IH_check_ready_for_sp(IsReady)
@@ -238,14 +227,14 @@ contains
       if(is_proc(SP_))then
          if(use_comp(SC_))then             !^CMP IF SC BEGIN
             call SP_put_coupling_param(&
-                 iModelIn    = Upper_, &
+                 iModelIn    = IH_, &
                  rMinIn      = RScMax, &
                  rMaxIn      = RIhMax, &
                  TimeIn      = tNow, &
                  rBufferUpIn = RIhMin)
          else                              !^CMP END SC
             call SP_put_coupling_param(&
-                 iModelIn    = Lower_, &
+                 iModelIn    = IH_, &
                  rMinIn      = RIhMin, &
                  rMaxIn      = RIhMax,&
                  TimeIn      = tNow,&
@@ -297,7 +286,7 @@ contains
 
     tNow=DataInputTime
     if(is_proc(SP_))call SP_put_coupling_param(&
-         iModelIn    = Lower_, &
+         iModelIn    = SC_, &
          rMinIn      = RScMin,&
          rMaxIn      = RScMax,&
          TimeIn      = DataInputTime,&
@@ -400,8 +389,8 @@ contains
     ! get buffer with variables
     call SC_get_for_mh(nPartial,iGetStart,Get,w,State_V,nVar)
     ! indices of variables
-    iVarBx = iVar_V(BxCouple_);   iVarBz = iVar_V(BzCouple_)
-    iVarMx = iVar_V(RhoUxCouple_);iVarMz = iVar_V(RhoUzCouple_)
+    iVarBx = iVar_V(BxCouple_)   ; iVarBz = iVar_V(BzCouple_)
+    iVarMx = iVar_V(RhoUxCouple_); iVarMz = iVar_V(RhoUzCouple_)
     ! perform transformation before returning
     State_V(iVarBx:iVarBz) = matmul(ScToSp_DD,State_V(iVarBx:iVarBz))
     State_V(iVarMx:iVarMz) = matmul(ScToSp_DD,State_V(iVarMx:iVarMz))
@@ -427,7 +416,7 @@ contains
     if(.not.RouterIhSp%IsProc)RETURN
     tNow = DataInputTime
     if(is_proc(SP_))call SP_put_coupling_param(&
-         iModelIn    = Upper_, &
+         iModelIn    = IH_, &
          rMinIn      = RIhMin, &
          rMaxIn      = RIhMax, &
          TimeIn      = DataInputTime, &
