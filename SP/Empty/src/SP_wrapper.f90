@@ -17,25 +17,18 @@ module SP_wrapper
   public:: SP_finalize
 
   ! coupling with MHD components
-  public:: SP_get_line_param
-  public:: SP_put_from_mh
-  public:: SP_put_line
   public:: SP_adjust_lines
-  public:: SP_interface_point_coords
-  public:: SP_get_bounds_comp
   public:: SP_put_coupling_param
-  public:: SP_n_particle
-  public:: SP_copy_old_state
-  public:: SP_check_ready_for_mh
+  public:: SP_do_extract_lines
 
 contains
 
-  subroutine SP_check_ready_for_mh(IsReady)
-    logical, intent(out):: IsReady
-    character(len=*), parameter:: NameSub='SP_check_ready_for_mh'
+  subroutine SP_do_extract_lines(DoExtract)
+    logical, intent(out):: DoExtract
+    character(len=*), parameter:: NameSub='SP_do_extract_lines'
     !---------------------------------------------------------------
     call CON_stop(NameSub//': cannot call the empty version')
-  end subroutine SP_check_ready_for_mh
+  end subroutine SP_do_extract_lines
   !========================================================================  
   subroutine SP_run(TimeSimulation,TimeSimulationLimit)
 
