@@ -17,8 +17,8 @@ module CON_bline
   !
   ! Boundaries of coupled domains in SC and IH
   !
-  real,    public :: RScMin = 0.0, RScMax = 0.0, RIhMin = 0.0, RIhMax = 0.0
-
+  real,    public  :: RScMin = 0.0, RScMax = 0.0, RIhMin = 0.0, RIhMax = 0.0
+  integer, public  :: Lower_=0, Upper_=-1
   public :: read_param
   public :: BL_set_grid
   !------------The rest of the module is accessed from BL_ model---------------
@@ -32,6 +32,7 @@ module CON_bline
   public :: BL_put_from_mh            ! put MHD values from MH to SP
   public :: BL_interface_point_coords ! points rMinInterface<R<rMaxInterface
   public :: BL_put_line               ! points rMin < R < rMax
+  public :: SP_set_line_foot_b
   !
   ! Grid integer parameters:
   ! Maximum number of vertexes per line
@@ -57,7 +58,7 @@ module CON_bline
 
   ! Number of variables in the state vector and the identifications
 
-  integer, public, parameter :: Lower_=0, Upper_=1, nDim = 3, nMHData = 13,   &
+  integer, public, parameter ::  nDim = 3, nMHData = 13,      &
        LagrID_     = 0, & ! Lagrangian id           ^saved/   ^set to 0
        X_          = 1, & !                         |read in  |in copy_
        Y_          = 2, & ! Cartesian coordinates   |restart  |old_stat
@@ -91,6 +92,10 @@ module CON_bline
   ! nParticle_B(1:nBlock)
 
   integer, allocatable, target :: nParticle_B(:)
+
+  integer, parameter :: Length_=4
+  real,    allocatable, target :: FootPoint_VB(:, :)
+
   !
   integer, allocatable, public :: iOffset_B(:)
   !
@@ -140,7 +145,7 @@ contains
        iProc = i_proc(BL_); nProc = n_proc(BL_)
     end if
     call read_var('nSource', nSource)
-    if(nSource==0)RETURN ! Uncoupled SP 
+    if(nSource==0)RETURN ! Uncoupled SP
     if(nSource/=2)then
        if(is_proc0()) write(*,*) NameSub//&
             ' SWMF_ERROR for NameMaster: '// &
@@ -182,16 +187,19 @@ contains
     end do
     if(.not.is_proc(BL_))RETURN
     RMin = RScMin; RMax = RIhMax
+    Lower_ = SC_; Upper_ = IH_
   end subroutine read_param
   !============================================================================
   subroutine BL_init(nParticleIn, nLonIn, nLatIn, &
-       rPointer_VIB,  nPointer_B,  nVarIn, StateIO_VIB)
+       rPointer_VIB,  nPointer_B,  nVarIn, StateIO_VIB, FootPointIn_VB)
 
     real,    intent(inout), pointer :: rPointer_VIB(:,:,:)
     real,    intent(inout), pointer :: StateIO_VIB(:,:,:)
     integer, intent(inout), pointer :: nPointer_B(:)
     integer, intent(in)             :: nParticleIn, nVarIn
     integer, intent(in)             :: nLonIn, nLatIn
+    real,    intent(inout), pointer :: FootPointIn_VB(:,:)
+
     !
     ! Loop variable
 
@@ -229,6 +237,11 @@ contains
     nPointer_B => nParticle_B
     !
     nParticle_B = 0
+    allocate(FootPoint_VB(LagrID_:Length_, nBlock), stat=iError)
+    call check_allocate(iError, NameSub//'FootPoint_VB')
+    FootPointIn_VB=>FootPoint_VB
+    FootPoint_VB = -1
+
     allocate(iOffset_B(nBlock)); iOffset_B = 0
   end subroutine BL_init
   !============================================================================
@@ -345,6 +358,7 @@ contains
       !
       ! fill grid containers
       !
+
       character(len=*), parameter:: NameSub = 'init_indexes'
       !------------------------------------------------------------------------
       allocate(iGridGlobal_IA(Proc_:Block_, nNode), &
@@ -663,6 +677,67 @@ contains
     DoAdjustLo = RBufferLo == RInterfaceMin
     DoAdjustUp = RBufferUp == RInterfaceMax
   end subroutine adjust_line
+  !============================================================================
+  subroutine SP_set_line_foot_b(iBlock)
+    integer, intent(in) :: iBlock
+
+    ! existing particle with lowest index along line
+    real:: Xyz1_D(X_:Z_)
+    ! direction of the field at Xyz1_D and segment vectors between particles
+    real, dimension(X_:Z_):: Dir0_D, Dist1_D, Dist2_D
+    ! dot product Xyz1 and Dir1 and its sign
+    real:: Dot, S
+    ! distances between particles
+    real:: Dist1, Dist2
+    ! variable to compute coords of the footprints
+    real:: Alpha
+    !--------------------------------------------------------------------------
+    ! get the coordinates of lower particle
+    Xyz1_D = MHData_VIB(X_:Z_, 1, iBlock)
+
+    ! generally, field direction isn't known
+    ! approximate it using directions of first 2 segments of the line
+    Dist1_D = MHData_VIB(X_:Z_, 1, iBlock) - &
+         MHData_VIB(X_:Z_, 2, iBlock)
+    Dist1 = sqrt(sum(Dist1_D**2))
+    Dist2_D = MHData_VIB(X_:Z_, 2, iBlock) - &
+         MHData_VIB(X_:Z_, 3, iBlock)
+    Dist2 = sqrt(sum(Dist2_D**2))
+    Dir0_D = ((2*Dist1 + Dist2)*Dist1_D - Dist1*Dist2_D)/(Dist1 + Dist2)
+
+    Dir0_D = Dir0_D/sqrt(sum(Dir0_D**2))
+
+    ! dot product and sign: used in computation below
+    Dot = sum(Dir0_D*Xyz1_D)
+    S   = sign(1.0, Dot)
+
+    ! there are 2 possible failures of the algorithm:
+    ! Failure (1):
+    ! no intersection of smoothly extended line with the sphere R = RMin
+    if(Dot**2 - sum(Xyz1_D**2) + RMin**2 < 0)then
+       ! project first particle for new footpoint
+       FootPoint_VB(X_:Z_,iBlock) = Xyz1_D * RMin / sqrt(sum(Xyz1_D**2))
+    else
+       ! Xyz0, the footprint, is distance Alpha away from Xyz1:
+       ! Xyz0 = Xyz1 + Alpha * Dir0 and R0 = RMin =>
+       Alpha = S * sqrt(Dot**2 - sum(Xyz1_D**2) + RMin**2) - Dot
+       ! Failure (2):
+       ! intersection is too far from the current beginning of the line,
+       ! use distance between 2nd and 3rd particles on the line as measure
+       if(abs(Alpha) > Dist2)then
+          ! project first particle for new footpoint
+          FootPoint_VB(X_:Z_,iBlock) = Xyz1_D * RMin / sqrt(sum(Xyz1_D**2))
+       else
+          ! store newly found footpoint of the line
+          FootPoint_VB(X_:Z_,iBlock) = Xyz1_D + Alpha * Dir0_D
+       end if
+    end if
+
+    ! length is used to decide when need to append new particles:
+    ! use distance between 2nd and 3rd particles on the line
+    FootPoint_VB(Length_,    iBlock) = Dist2
+    FootPoint_VB(LagrID_,    iBlock) = MHData_VIB(LagrID_,1,iBlock) - 1.0
+  end subroutine SP_set_line_foot_b
   !============================================================================
 end module CON_bline
 
