@@ -207,11 +207,7 @@ module CON_coupler
   ! 09/07/03 I.Sokolov - bug fixes in init_coord_system_all and
   !                 in set_coord_system. Add gen_to_stretched and
   !                 streched_to_gen
-<<<<<<< HEAD
   ! 08/10/04 I.Sokolov - to avoid an improper use of init_coord_system_all
-=======
-  ! 08/10/04 I.Sokolov - to avoid an inproper use of init_coord_system_all
->>>>>>> Applied FormatFortran.pl
   !                      which destroys the Grid_C structure.
   ! 01/30/10 G. Toth - added nVar and NameVar to Grid_C
   ! 04/07/11 R. Oran - added subroutine set_couple_var_info for determining
