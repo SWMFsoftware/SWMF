@@ -3,6 +3,9 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module CON_bline
   ! allocate the grid used in this model
+#ifdef OPENACC
+  use ModUtilities, ONLY: norm2
+#endif
   use ModUtilities,      ONLY: check_allocate
   use ModConst,          ONLY: cBoltzmann
   use CON_coupler,       ONLY: MaxComp, is_proc0
@@ -13,7 +16,7 @@ module CON_bline
   ! public members
   !-----------The following public members are available at all PEs------------
   integer, public :: BL_ =-1                ! ID of the target model (SP_, PT_)
-  logical, public :: UseMflampa_C(MaxComp)  ! To switch coupler for PT
+  logical, public :: UseBLine_C(MaxComp)  ! To switch coupler for PT
   !
   ! Boundaries of coupled domains in SC and IH
   !
@@ -26,18 +29,18 @@ module CON_bline
   integer         :: nProc = -1  ! Number of PEs in communicator of BL_
   public :: BL_init
   public :: BL_get_origin_points
-  public :: get_bounds
-  public :: adjust_line
+  public :: BL_get_bounds
+  public :: BL_adjust_lines
   public :: BL_n_particle             ! return number of points at the MF line
   public :: BL_put_from_mh            ! put MHD values from MH to SP
   public :: BL_interface_point_coords ! points rMinInterface<R<rMaxInterface
   public :: BL_put_line               ! points rMin < R < rMax
-  public :: SP_set_line_foot_b
+  public :: BL_set_line_foot_b
   !
   ! Grid integer parameters:
   ! Maximum number of vertexes per line
 
-  integer :: nParticleMax
+  integer :: nVertexMax
 
   ! angular grid at origin surface
 
@@ -46,15 +49,15 @@ module CON_bline
 
   ! Total number of lines on all preceeding PEs
 
-  integer  :: iNode0 = -1 ! = (iProc*nNode)/nProc
+  integer  :: iLineAll0 = -1 ! = (iProc*nLineAll)/nProc
 
   ! Total number of lines on given PE
 
-  integer  :: nBlock = -1 ! = ((iProc +1)*nNode)/nProc - iNode0
+  integer, public  :: nLine = -1 ! = ((iProc +1)*nLineAll)/nProc - iLineAll0
 
   ! Total number of lines on all PEs
 
-  integer  :: nNode = -1
+  integer  :: nLineAll = -1
 
   ! Number of variables in the state vector and the identifications
 
@@ -76,22 +79,22 @@ module CON_bline
        R_          =14    ! Heliocentric distance
   !
   ! MHD state vector is a pointer to be joined to a target array
-  ! MHData_VIB(LagrID_:nMHData, 1:nParticleMax, 1:nBlock)
+  ! MHData_VIB(LagrID_:nMHData, 1:nVertexMax, 1:nLine)
 
   real,    allocatable, target :: MHData_VIB(:,:,:)
 
   ! Aux state vector is a pointer to be joined to a target array
-  ! State_VIB(R_:nVar, 1:nParticleMax, 1:nBlock)
+  ! State_VIB(R_:nVar, 1:nVertexMax, 1:nLine)
   ! nVar may be optionally read in BL_set_grid
 
   integer  :: nVar = R_
   real,    allocatable, target :: State_VIB(:,:,:)
   !
-  ! nParticle_B is a pointer, which is joined to a target array
+  ! nVertex_B is a pointer, which is joined to a target array
   ! For stand alone version the target array is allocated here
-  ! nParticle_B(1:nBlock)
+  ! nVertex_B(1:nLine)
 
-  integer, allocatable, target :: nParticle_B(:)
+  integer, allocatable, target :: nVertex_B(:)
 
   integer, parameter :: Length_=4
   real,    allocatable, target :: FootPoint_VB(:, :)
@@ -103,13 +106,12 @@ module CON_bline
   integer:: iError
   ! coupling parameters:
   ! domain boundaries
-  real, public :: rInterfaceMin, rInterfaceMax
+  real :: rInterfaceMin, rInterfaceMax
   ! buffer boundaries located near lower (Lo) or upper (Up) boudanry of domain
-  real, public :: rBufferLo, rBufferUp
+  real :: rBufferLo, rBufferUp
   !
   ! Allowed range of helocentric distances
   real :: rMin, rMax
-  public :: rMin
   ! Coefficient to transform energy
   real         :: EnergySi2Io = 1.0/cBoltzmann
   character(len=*), parameter:: NameMod = 'CON_mflampa::'
@@ -136,11 +138,11 @@ contains
     if(.not.(BL_ == PT_.or.BL_==SP_))then
        if(is_proc0()) write(*,*) NameSub//&
             ' SWMF_ERROR for NameMaster: '// &
-            'SP or PT can be MFLAMPA target, but '//NameComp//' cannot'
+            'SP or PT can be BLine target, but '//NameComp//' cannot'
        iError = 34
        RETURN
     end if
-    UseMflampa_C = .false.; UseMflampa_C(BL_) = .true.
+    UseBLine_C = .false.; UseBLine_C(BL_) = .true.
     if(is_proc(BL_))then
        iProc = i_proc(BL_); nProc = n_proc(BL_)
     end if
@@ -194,55 +196,65 @@ contains
        rPointer_VIB,  nPointer_B,  nVarIn, StateIO_VIB, FootPointIn_VB)
 
     real,    intent(inout), pointer :: rPointer_VIB(:,:,:)
-    real,    intent(inout), pointer :: StateIO_VIB(:,:,:)
     integer, intent(inout), pointer :: nPointer_B(:)
-    integer, intent(in)             :: nParticleIn, nVarIn
-    integer, intent(in)             :: nLonIn, nLatIn
-    real,    intent(inout), pointer :: FootPointIn_VB(:,:)
+    integer, intent(in)             :: nParticleIn, nLonIn, nLatIn
+    integer, optional, intent(in)   :: nVarIn
+    real,    intent(inout), optional, pointer :: &
+         StateIO_VIB(:,:,:), FootPointIn_VB(:,:)
 
     !
     ! Loop variable
 
-    integer :: iParticle
+    integer :: iVertex
 
     character(len=*), parameter:: NameSub = 'BL_init'
     !--------------------------------------------------------------------------
-    nParticleMax = nParticleIn
-    nVar         = nVarIn
-    nLon = nLonIn; nLat = nLatIn; nNode = nLon*nLat
-    iNode0 = (iProc*nNode)/nProc
-    nBlock = ((iProc+1)*nNode) / nProc - iNode0
-    allocate(MHData_VIB(LagrID_:nMHData, 1:nParticleMax, 1:nBlock), &
+    nVertexMax            = nParticleIn
+    nLon = nLonIn; nLat = nLatIn; nLineAll = nLon*nLat
+    iLineAll0 = (iProc*nLineAll)/nProc
+    nLine = ((iProc+1)*nLineAll) / nProc - iLineAll0
+
+    ! Set MHD array
+    
+    allocate(MHData_VIB(LagrID_:nMHData, 1:nVertexMax, 1:nLine), &
          stat=iError)
     call check_allocate(iError, NameSub//'MHData_VIB')
     rPointer_VIB => MHData_VIB
-    !
     MHData_VIB = 0.0
-    allocate(State_VIB(R_:nVar, 1:nParticleMax, 1:nBlock), &
-         stat=iError)
-    call check_allocate(iError, NameSub//'State_VIB')
-    StateIO_VIB => State_VIB
-    !
-    State_VIB = -1
     !
     ! reset lagrangian ids
     !
-    do iParticle = 1, nParticleMax
-       MHData_VIB(LagrID_, iParticle, 1:nBlock) = real(iParticle)
+    do iVertex = 1, nVertexMax
+       MHData_VIB(LagrID_, iVertex, 1:nLine) = real(iVertex)
     end do
-    !
-    allocate(nParticle_B(1:nBlock), &
+
+    ! Set nVertex_B array
+    
+    allocate(nVertex_B(1:nLine), &
          stat=iError)
-    call check_allocate(iError, NameSub//'nParticle_B')
-    nPointer_B => nParticle_B
-    !
-    nParticle_B = 0
-    allocate(FootPoint_VB(LagrID_:Length_, nBlock), stat=iError)
+    call check_allocate(iError, NameSub//'nVertex_B')
+    nPointer_B => nVertex_B
+    nVertex_B = 0
+
+    ! Set auxiliary State_VIB array
+    
+    if(present(nVarIn))nVar = nVarIn
+    allocate(State_VIB(R_:nVar, 1:nVertexMax, 1:nLine), &
+         stat=iError)
+    call check_allocate(iError, NameSub//'State_VIB')
+    if(present(StateIO_VIB))StateIO_VIB => State_VIB
+    State_VIB = -1
+
+    ! Set FootPoint_VB array
+    
+    allocate(FootPoint_VB(LagrID_:Length_, nLine), stat=iError)
     call check_allocate(iError, NameSub//'FootPoint_VB')
-    FootPointIn_VB=>FootPoint_VB
+    if(present(FootPointIn_VB))FootPointIn_VB => FootPoint_VB
     FootPoint_VB = -1
 
-    allocate(iOffset_B(nBlock)); iOffset_B = 0
+    ! Set iOffset_B array
+
+    allocate(iOffset_B(nLine)); iOffset_B = 0
   end subroutine BL_init
   !============================================================================
   subroutine BL_get_origin_points(ROrigin, LonMin, LonMax, LatMin, LatMax)
@@ -253,8 +265,8 @@ contains
 
     real, intent(in)  :: ROrigin, LonMin, LonMax, LatMin, LatMax
 
-    ! Block (line) number  and corresponing lon-lat indexes
-    integer           :: iLat, iLon, iBlock
+    ! line (line) number  and corresponing lon-lat indexes
+    integer           :: iLat, iLon, iLine
     !
     ! Sell size on the origin surface, per line
 
@@ -268,31 +280,29 @@ contains
     ! angular grid's step
     !
     DLat = (LatMax - LatMin)/nLat
-    do iBlock = 1, nBlock
-       call iblock_to_lon_lat(iBlock, iLon, iLat)
-       nParticle_B(iBlock) = 1
+    do iLine = 1, nLine
+       call BL_iblock_to_lon_lat(iLine, iLon, iLat)
+       nVertex_B(iLine) = 1
        call rlonlat_to_xyz([ROrigin, LonMin + (iLon - 0.5)*DLon, &
-            LatMin + (iLat - 0.5)*DLat], MHData_VIB(X_:Z_,1,iBlock))
+            LatMin + (iLat - 0.5)*DLat], MHData_VIB(X_:Z_,1,iLine))
     end do
-  contains
-    !==========================================================================
-    subroutine iblock_to_lon_lat(iBlockIn, iLonOut, iLatOut)
-      ! return angular grid's indexes corresponding to this block
-      integer, intent(in) :: iBlockIn
-      integer, intent(out):: iLonOut
-      integer, intent(out):: iLatOut
-
-      integer :: iNode
-      !------------------------------------------------------------------------
-      !
-      ! Get node number from block number
-      !
-      iNode = iBlockIn + iNode0
-      iLatOut = 1 + (iNode - 1)/nLon
-      iLonOut = iNode - nLon*(iLatOut - 1)
-    end subroutine iblock_to_lon_lat
-    !==========================================================================
   end subroutine BL_get_origin_points
+  !============================================================================
+  subroutine BL_iblock_to_lon_lat(iBlockIn, iLonOut, iLatOut)
+    ! return angular grid's indexes corresponding to this line
+    integer, intent(in) :: iBlockIn
+    integer, intent(out):: iLonOut
+    integer, intent(out):: iLatOut
+    
+    integer :: iLineAll
+    !--------------------------------------------------------------------------
+    !
+    ! Get node number from line number
+    !
+    iLineAll = iBlockIn + iLineAll0
+    iLatOut = 1 + (iLineAll - 1)/nLon
+    iLonOut = iLineAll - nLon*(iLatOut - 1)
+  end subroutine BL_iblock_to_lon_lat
   !============================================================================
   subroutine BL_set_grid(TypeCoordSystem, UnitX, EnergySi2IoIn)
     use CON_coupler, ONLY: set_coord_system, is_proc, &
@@ -307,7 +317,7 @@ contains
     !
     integer, parameter:: &
          Proc_  = 1, & ! Processor that has this line/node
-         Block_ = 2    ! Block that has this line/node
+         Block_ = 2    ! line that has this line/node
     !
     ! They is the first index values for
     ! the following array
@@ -333,8 +343,8 @@ contains
             GridID_       = BL_,&
             iRootMapDim_D = [1, nLon, nLat],&
             CoordMin_D    = [0.50, 0.50, 0.50],&
-            CoordMax_D    = [nParticleMax, nLon, nLat] + 0.50,&
-            nCells_D      = [nParticleMax, 1, 1],&
+            CoordMax_D    = [nVertexMax, nLon, nLat] + 0.50,&
+            nCells_D      = [nVertexMax, 1, 1],&
             PE_I          = iGridGlobal_IA(Proc_,:),&
             iBlock_I      = iGridGlobal_IA(Block_,:))
        deallocate(iGridGlobal_IA)
@@ -353,7 +363,7 @@ contains
   contains
     !==========================================================================
     subroutine init_indexes
-      integer:: iLat, iLon, iNode, iBlock, iProcNode
+      integer:: iLat, iLon, iLineAll, iLine, iProcNode
 
       !
       ! fill grid containers
@@ -361,25 +371,25 @@ contains
 
       character(len=*), parameter:: NameSub = 'init_indexes'
       !------------------------------------------------------------------------
-      allocate(iGridGlobal_IA(Proc_:Block_, nNode), &
+      allocate(iGridGlobal_IA(Proc_:Block_, nLineAll), &
            stat=iError)
       call check_allocate(iError, NameSub//'iGridGlobal_IA')
-      iBlock = 1; iProcNode = 0
+      iLine = 1; iProcNode = 0
       do iLat = 1, nLat
          do iLon = 1, nLon
-            iNode = iLon + nLon * (iLat-1)
+            iLineAll = iLon + nLon * (iLat-1)
             !
-            ! iProcNode = ceiling(real(iNode*nProc)/nNode) - 1
+            ! iProcNode = ceiling(real(iLineAll*nProc)/nLineAll) - 1
             !
-            iGridGlobal_IA(Proc_,   iNode)  = iProcNode
-            iGridGlobal_IA(Block_,  iNode)  = iBlock
-            if(iNode == ((iProcNode+1)*nNode)/nProc)then
+            iGridGlobal_IA(Proc_,   iLineAll)  = iProcNode
+            iGridGlobal_IA(Block_,  iLineAll)  = iLine
+            if(iLineAll == ((iProcNode+1)*nLineAll)/nProc)then
                !
                ! This was the last node on the iProcNode
                !
-               iBlock = 1; iProcNode = iProcNode + 1
+               iLine = 1; iProcNode = iProcNode + 1
             else
-               iBlock = iBlock + 1
+               iLine = iLine + 1
             end if
          end do
       end do
@@ -387,9 +397,8 @@ contains
     !==========================================================================
   end subroutine BL_set_grid
   !============================================================================
-  subroutine get_bounds(iModelIn, rMinIn, rMaxIn, &
+  subroutine BL_get_bounds(rMinIn, rMaxIn, &
        rBufferLoIn, rBufferUpIn)
-    integer,        intent(in) :: iModelIn
     real,           intent(in) :: rMinIn, rMaxIn
     real, optional, intent(in) :: rBufferLoIn, rBufferUpIn
     ! set domain boundaries
@@ -406,12 +415,12 @@ contains
     else
        rBufferUp = rMaxIn
     end if
-  end subroutine get_bounds
+  end subroutine BL_get_bounds
   !============================================================================
   integer function BL_n_particle(iBlockLocal)
     integer, intent(in) :: iBlockLocal
     !--------------------------------------------------------------------------
-    BL_n_particle = nParticle_B(  iBlockLocal)
+    BL_n_particle = nVertex_B(  iBlockLocal)
   end function BL_n_particle
   !============================================================================
   subroutine BL_put_from_mh(nPartial,iPutStart,Put,W,DoAdd,Buff_I,nVar)
@@ -429,7 +438,7 @@ contains
     logical,intent(in)::DoAdd
     real,dimension(nVar),intent(in)::Buff_I
     integer:: iRho, iP, iMx, iMz, iBx, iBz, iWave1, iWave2
-    integer:: i, iBlock
+    integer:: i, iLine
     integer:: iPartial
     real:: Weight
     real:: R, Aux
@@ -456,12 +465,12 @@ contains
     Aux = 0
     if(DoAdd)Aux = 1.0
     do iPartial = 0, nPartial-1
-       ! cell and block indices
+       ! cell and line indices
        i      = Put%iCB_II(1, iPutStart + iPartial)
-       iBlock = Put%iCB_II(4, iPutStart + iPartial)
+       iLine = Put%iCB_II(4, iPutStart + iPartial)
        ! interpolation weight
        Weight = W%Weight_I(   iPutStart + iPartial)
-       R = sqrt(sum(MHData_VIB(X_:Z_,i,iBlock)**2))
+       R = norm2(MHData_VIB(X_:Z_,i,iLine))
        if(R >= rInterfaceMin .and. R < rBufferLo)then
           Aux = 1.0
           Weight = Weight * (0.50 + 0.50*tanh(2*(2*R - &
@@ -473,20 +482,20 @@ contains
        end if
        ! put the data
        if(DoCoupleVar_V(Density_))&
-            MHData_VIB(Rho_,i,iBlock) = Aux*MHData_VIB(Rho_,i,iBlock) &
+            MHData_VIB(Rho_,i,iLine) = Aux*MHData_VIB(Rho_,i,iLine) &
             + Buff_I(iRho)/cProtonMass*Weight
        if(DoCoupleVar_V(Pressure_))&
-            MHData_VIB(T_,i,iBlock) = Aux*MHData_VIB(T_,i,iBlock) + &
+            MHData_VIB(T_,i,iLine) = Aux*MHData_VIB(T_,i,iLine) + &
             Buff_I(iP)*(cProtonMass/Buff_I(iRho))*EnergySi2Io*Weight
        if(DoCoupleVar_V(Momentum_))&
-            MHData_VIB(Ux_:Uz_,i,iBlock) = Aux*MHData_VIB(Ux_:Uz_,i,iBlock) + &
+            MHData_VIB(Ux_:Uz_,i,iLine) = Aux*MHData_VIB(Ux_:Uz_,i,iLine) + &
             Buff_I(iMx:iMz) / Buff_I(iRho) * Weight
        if(DoCoupleVar_V(BField_))&
-            MHData_VIB(Bx_:Bz_,i,iBlock) = Aux*MHData_VIB(Bx_:Bz_,i,iBlock) + &
+            MHData_VIB(Bx_:Bz_,i,iLine) = Aux*MHData_VIB(Bx_:Bz_,i,iLine) + &
             Buff_I(iBx:iBz) * Weight
        if(DoCoupleVar_V(Wave_))&
-            MHData_VIB(Wave1_:Wave2_,i,iBlock) = &
-            Aux*MHData_VIB(Wave1_:Wave2_,i,iBlock) + &
+            MHData_VIB(Wave1_:Wave2_,i,iLine) = &
+            Aux*MHData_VIB(Wave1_:Wave2_,i,iLine) + &
             Buff_I(iWave1:iWave2)*Weight
     end do
   end subroutine BL_put_from_mh
@@ -503,18 +512,18 @@ contains
     integer,intent(in)   :: nIndex
     integer,intent(inout):: iIndex_I(nIndex)
     logical,intent(out)  :: IsInterfacePoint
-    integer:: iParticle, iBlock
+    integer:: iVertex, iLine
     real:: R2
     character(len=*), parameter:: NameSub = 'BL_interface_point_coords'
     !--------------------------------------------------------------------------
-    iParticle = iIndex_I(1); iBlock    = iIndex_I(4)
+    iVertex = iIndex_I(1); iLine    = iIndex_I(4)
     ! Check whether the particle is within interface bounds
-    R2 = sum(MHData_VIB(X_:Z_,iParticle,iBlock)**2)
+    R2 = sum(MHData_VIB(X_:Z_,iVertex,iLine)**2)
     IsInterfacePoint = &
          R2 >= rInterfaceMin**2 .and. R2 < rInterfaceMax**2
     ! Fix coordinates to be used in mapping
     if(IsInterfacePoint)&
-         Xyz_D = MHData_VIB(X_:Z_, iParticle, iBlock)
+         Xyz_D = MHData_VIB(X_:Z_, iVertex, iLine)
   end subroutine BL_interface_point_coords
   !============================================================================
   subroutine BL_put_line(nPartial, iPutStart, Put,&
@@ -527,26 +536,36 @@ contains
     real,               intent(in) :: Coord_D(nVar) ! nVar=nDim
 
     ! indices of the particle
-    integer:: iBlock, iParticle
+    integer:: iLine, iVertex
     ! Misc
     real :: R2
     character(len=*), parameter:: NameSub = 'BL_put_line'
     !--------------------------------------------------------------------------
+    iLine    = Put%iCB_II(4,iPutStart)
+    iVertex = Put%iCB_II(1,iPutStart) + iOffset_B(iLine)
     R2 = sum(Coord_D(1:nDim)**2)
-    ! Sort out particles left the SP domain
-    if(R2<RMin**2.or.R2>=RMax**2)RETURN
-    ! store passed particles
-    iBlock    = Put%iCB_II(4,iPutStart)
-    iParticle = Put%iCB_II(1,iPutStart) + iOffset_B(iBlock)
-    ! put coordinates
-    MHData_VIB(X_:Z_,iParticle, iBlock) = Coord_D(1:nDim)
-    nParticle_B(iBlock) = MAX(nParticle_B(iBlock), iParticle)
+    if(R2<RMin**2.or.R2>=RMax**2)then
+       ! Sort out particles left the SP domain
+       MHData_VIB(X_:Z_,iVertex, iLine) = 0.0
+    else
+       ! store passed particles
+       ! put coordinates
+       MHData_VIB(X_:Z_,iVertex, iLine) = Coord_D(1:nDim)
+       nVertex_B(iLine) = MAX(nVertex_B(iLine), iVertex)
+    end if
   end subroutine BL_put_line
   !============================================================================
-  subroutine adjust_line(iBlock, iBegin, DoAdjustLo, DoAdjustUp)
-    integer, intent(in)    :: iBlock
-    integer, intent(out)   :: iBegin
-    logical, intent(inout) :: DoAdjustLo, DoAdjustUp
+  ! Called from coupler after the updated grid point lo<cation are
+  ! received from the other component (SC, IH). Determines whether some
+  ! grid points should be added/deleted
+  subroutine BL_adjust_lines(DoInit, Source_)
+    logical, intent(in) :: DoInit
+    integer, intent(in) :: Source_
+    ! once new geometry of lines has been put, account for some particles
+    ! exiting the domain (can happen both at the beginning and the end)
+    integer:: iVertex, iLine, iBegin,  iEnd ! loop variables
+
+    logical:: DoAdjustLo, DoAdjustUp
     logical:: IsMissing
 
     real              :: R
@@ -556,130 +575,218 @@ contains
     integer:: iParticle_I(2), iLoop
     ! once new geometry of lines has been put, account for some particles
     ! exiting the domain (can happen both at the beginning and the end)
-    integer:: iParticle, iEnd, iOffset ! loop variables
+
     ! Called after the grid points are received from the
     ! component, nullify offset
+    character(len=100):: StringError
+
+    character(len=*), parameter:: NameSub = 'BL_adjust_lines'
+    !--------------------------------------------------------------------------
+    DoAdjustLo = Source_ == Lower_
+    DoAdjustUp = Source_ == Upper_
+    line:do iLine = 1, nLine
+       iBegin = 1
+       if(DoInit.and.DoAdjustLo)then
+          do while (all(MHData_VIB(X_:Z_,iBegin,iLine)==0.0))
+             iBegin = iBegin + 1
+          end do
+          if(iBegin == 1)call BL_set_line_foot_b(iLine)
+       end if
+       if(DoAdjustLo)then
+          iOffset_B(iLine) = 0
+       end if
+       iEnd   = nVertex_B(  iLine)
+       iParticle_I(:) = [iBegin, iEnd]
+       if(DoAdjustUp) then
+          iLoop = Up_
+       else
+          iLoop = Lo_
+       end if
+       PARTICLE: do while(iParticle_I(1) < iParticle_I(2))
+          iVertex = iParticle_I(iLoop)
+          R = State_VIB(R_,iVertex,iLine)
+          ! account for all missing partiles along the line;
+          ! --------------------------------------------------------
+          ! particle import MUST be performed in order from lower to upper
+          ! components (w/respect to radius), e.g. SC, then IH, then OH
+          ! adjustment are made after each import;
+          ! --------------------------------------------------------
+          ! lines are assumed to start in lowest model
+          ! lowest model should NOT have the Lo buffer,
+          ! while the upper most should NOT have Up buffer,
+          ! buffer are REQUIRED between models
+          ! --------------------------------------------------------
+          ! adjust as follows:
+          ! LOWEST model may loose particles at the start of lines
+          ! and (if line ends in the model) in the tail;
+          ! loop over particles Lo-2-Up and mark losses (increase iBegin)
+          ! until particles reach UP buffer;
+          ! if line ends in the model, loop over particles Up-2-Lo
+          ! and mark losses (decrease nVertex_B) until UP buffer is reached;
+          ! after that, if line reenters the model,
+          ! particles within the model may not be lost,
+          !
+          ! MIDDLE models are not allowed to loose particles
+          !
+          ! HIGHEST model may only loose particles in the tail;
+          ! loop Up-2-Lo and mark losses  (decrease nVertex_B)
+          ! until the bottom of Lo buffer is reaced
+          ! --------------------------------------------------------
+          ! whenever a particle is lost in lower models -> ERROR
+
+          ! when looping Up-2-Lo and particle is in other model ->
+          ! adjustments are no longer allowed
+          if(iLoop == Up_ .and. (&
+               R <  RInterfaceMin&
+               .or.&
+               R >= RInterfaceMax)&
+               )then
+             DoAdjustLo = .false.
+             DoAdjustUp = .false.
+          end if
+
+          ! determine whether particle is missing
+          IsMissing = all(MHData_VIB(X_:Z_,iVertex,iLine)==0.0)
+          if(.not.IsMissing) then
+             iParticle_I = iParticle_I + iIncrement_II(:,iLoop)
+             CYCLE PARTICLE
+          end if
+
+          ! missing point in the lower part of the domain -> ERROR
+          if(R < RInterfaceMin)then
+             if(Source_==Lower_)write(*,*)'Is Lower Model'
+             if(Source_==Upper_)write(*,*)'Is Upper Model'
+             write(*,*)'iProc in BL=', iProc
+             write(*,*)'RInterface Min, Max=', RInterfaceMin, RInterfaceMax
+             write(*,*)'iVertex, R=', iVertex, R
+             write(*,*)'iBegin, iEnd',  iBegin, iEnd
+             do iVertex = iBegin,iEnd
+                write(*,*)MHData_VIB(X_:Z_,iVertex,iLine)
+             end do
+             call CON_stop(NameSub//": particle has been lost")
+          end if
+          ! missing point in the upper part of the domain -> IGNORE;
+          ! if needed to adjust beginning, then it is done,
+          ! switch left -> right end of range and start adjusting
+          ! tail of the line, if it has reentered current part of the domain
+          if(R >= RInterfaceMax)then
+             if(iLoop == Lo_)&
+                  iLoop = Up_
+             iParticle_I = iParticle_I + iIncrement_II(:,iLoop)
+             if(DoAdjustLo)then
+                DoAdjustLo = .false.
+                DoAdjustUp = .true.
+             end if
+             CYCLE PARTICLE
+          end if
+
+          ! if point used to be in a upper buffer -> IGNORE
+          if(R >= rBufferUp .and. R < rInterfaceMax)then
+             iParticle_I = iParticle_I + iIncrement_II(:,iLoop)
+             CYCLE PARTICLE
+          end if
+
+          ! if need to adjust lower, but not upper boundary -> ADJUST
+          if(DoAdjustLo .and. .not.DoAdjustUp)then
+             ! push iBegin in front of current particle;
+             ! it will be pushed until it finds a non-missing particle
+             iBegin = iVertex + 1
+             iParticle_I = iParticle_I + iIncrement_II(:,iLoop)
+             CYCLE PARTICLE
+          end if
+
+          ! if need to adjust upper, but not lower boundary -> ADJUST
+          if(DoAdjustUp .and. .not.DoAdjustLo)then
+             ! push nVertex_B() below current particle;
+             ! it will be pushed until it finds a non-missing particle
+             nVertex_B(iLine) = iVertex - 1
+             iParticle_I = iParticle_I + iIncrement_II(:,iLoop)
+             CYCLE PARTICLE
+          end if
+
+          ! remaining case:
+          ! need to adjust both boudnaries -> ADJUST,but keep longest range
+          if(iVertex - iBegin > nVertex_B(iLine) - iVertex)then
+             nVertex_B(iLine) = iVertex - 1
+             EXIT PARTICLE
+          else
+             iBegin = iVertex + 1
+          end if
+          iParticle_I = iParticle_I + iIncrement_II(:,iLoop)
+       end do PARTICLE
+
+       DoAdjustLo = Source_ == Lower_
+       DoAdjustUp = Source_ == Upper_
+       if(iBegin/=1)then
+          ! Offset particle arrays
+          iEnd   = nVertex_B(iLine)
+          iOffset_B(iLine) = 1 - iBegin
+          MHData_VIB(LagrID_:Z_, 1:iEnd+iOffset_B(iLine), iLine) = &
+               MHData_VIB(LagrID_:Z_, iBegin:iEnd, iLine)
+          State_VIB(R_         , 1:iEnd+iOffset_B(iLine), iLine) = &
+               State_VIB(R_         , iBegin:iEnd, iLine)
+          nVertex_B(iLine) = nVertex_B(iLine) + iOffset_B(iLine)
+          ! need to recalculate footpoints
+          call BL_set_line_foot_b(iLine)
+       end if
+    end do line
+    ! may need to add particles to the beginning of lines
+    if(DoAdjustLo) call append_particles
+  contains
+    subroutine append_particles
+      ! appends a new particle at the beginning of lines if necessary
+      integer:: iLine
+      real:: DistanceToMin
+      real, parameter:: cTol = 1E-06
+
+      character(len=*), parameter:: NameSub = 'append_particles'
+      !------------------------------------------------------------------------
+      line:do iLine = 1, nLine
+         ! check current value of offset: if not zero, adjustments have just
+         ! been made, no need to append new particles
+         if(iOffset_B(iLine) /= 0 )CYCLE line
+         ! check if the beginning of the line moved far enough from its
+         ! footprint on the solar surface
+         DistanceToMin = norm2(&
+              MHData_VIB(X_:Z_,1,iLine) - FootPoint_VB(X_:Z_,iLine))
+         ! skip the line if it's still close to the Sun
+         if(DistanceToMin*(1.0 + cTol) < FootPoint_VB(Length_, iLine))&
+              CYCLE line
+         ! append a new particle
+         ! check if have enough space
+         if(nVertexMax == nVertex_B( iLine))call CON_Stop(NameSub//&
+              ': not enough memory allocated to append a new particle')
+         ! Particles ID as handled by other components keep unchanged
+         ! while their order numbers in SP are increased by 1. Therefore,
+         iOffset_B(iLine)  = 1
+         MHData_VIB(       LagrID_:Z_,2:nVertex_B(iLine) + 1, iLine)&
+              = MHData_VIB(LagrID_:Z_,1:nVertex_B(iLine),     iLine)
+         State_VIB(       R_        ,2:nVertex_B(iLine) + 1, iLine)&
+              = State_VIB(R_        ,1:nVertex_B(iLine),     iLine)
+         nVertex_B(iLine) = nVertex_B(iLine) + 1
+         ! put the new particle just above the lower boundary
+         MHData_VIB(LagrID_:Z_,  1, iLine) = &
+              FootPoint_VB(LagrID_:Z_, iLine)*(1.0 + cTol)
+         State_VIB(R_,          1, iLine) = &
+              sqrt(sum((MHData_VIB(X_:Z_,  1, iLine))**2))
+         MHData_VIB(LagrID_,1, iLine) = MHData_VIB(LagrID_, 2, iLine) - 1.0
+         FootPoint_VB(LagrID_,iLine) = MHData_VIB(LagrID_, 1, iLine) - 1.0
+      end do line
+    end subroutine append_particles
+    !==========================================================================
+  end subroutine BL_adjust_lines
+  subroutine adjust_line(iLine, iBegin, DoAdjustLo, DoAdjustUp)
+    integer, intent(in)    :: iLine
+    integer, intent(out)   :: iBegin
+    logical, intent(inout) :: DoAdjustLo, DoAdjustUp
+
     character(len=*), parameter:: NameSub = 'adjust_line'
     !--------------------------------------------------------------------------
-    if(DoAdjustLo)iOffset_B(iBlock) = 0
-    iBegin = 1
-    iEnd   = nParticle_B(  iBlock)
-    iParticle_I(:) = [iBegin, iEnd]
-    if(DoAdjustUp) then
-       iLoop = Up_
-    else
-       iLoop = Lo_
-    end if
-    PARTICLE: do while(iParticle_I(1) < iParticle_I(2))
-       iParticle = iParticle_I(iLoop)
-       R = State_VIB(R_,iParticle,iBlock)
-       ! account for all missing partiles along the line;
-       ! --------------------------------------------------------
-       ! particle import MUST be performed in order from lower to upper
-       ! components (w/respect to radius), e.g. SC, then IH, then OH
-       ! adjustment are made after each import;
-       ! --------------------------------------------------------
-       ! lines are assumed to start in lowest model
-       ! lowest model should NOT have the Lo buffer,
-       ! while the upper most should NOT have Up buffer,
-       ! buffer are REQUIRED between models
-       ! --------------------------------------------------------
-       ! adjust as follows:
-       ! LOWEST model may loose particles at the start of lines
-       ! and (if line ends in the model) in the tail;
-       ! loop over particles Lo-2-Up and mark losses (increase iBegin)
-       ! until particles reach UP buffer;
-       ! if line ends in the model, loop over particles Up-2-Lo
-       ! and mark losses (decrease nParticle_B) until UP buffer is reached;
-       ! after that, if line reenters the model,
-       ! particles within the model may not be lost,
-       !
-       ! MIDDLE models are not allowed to loose particles
-       !
-       ! HIGHEST model may only loose particles in the tail;
-       ! loop Up-2-Lo and mark losses  (decrease nParticle_B)
-       ! until the bottom of Lo buffer is reaced
-       ! --------------------------------------------------------
-       ! whenever a particle is lost in lower models -> ERROR
-
-       ! when looping Up-2-Lo and particle is in other model ->
-       ! adjustments are no longer allowed
-       if(iLoop == Up_ .and. (&
-            R <  RInterfaceMin&
-            .or.&
-            R >= RInterfaceMax)&
-            )then
-          DoAdjustLo = .false.
-          DoAdjustUp = .false.
-       end if
-
-       ! determine whether particle is missing
-       IsMissing = all(MHData_VIB(X_:Z_,iParticle,iBlock)==0.0)
-       if(.not.IsMissing) then
-          iParticle_I = iParticle_I + iIncrement_II(:,iLoop)
-          CYCLE PARTICLE
-       end if
-
-       ! missing point in the lower part of the domain -> ERROR
-       if(R < RInterfaceMin)&
-            call CON_stop(NameSub//": particle has been lost")
-
-       ! missing point in the upper part of the domain -> IGNORE;
-       ! if needed to adjust beginning, then it is done,
-       ! switch left -> right end of range and start adjusting
-       ! tail of the line, if it has reentered current part of the domain
-       if(R >= RInterfaceMax)then
-          if(iLoop == Lo_)&
-               iLoop = Up_
-          iParticle_I = iParticle_I + iIncrement_II(:,iLoop)
-          if(DoAdjustLo)then
-             DoAdjustLo = .false.
-             DoAdjustUp = .true.
-          end if
-          CYCLE PARTICLE
-       end if
-
-       ! if point used to be in a upper buffer -> IGNORE
-       if(R >= rBufferUp .and. R < rInterfaceMax)then
-          iParticle_I = iParticle_I + iIncrement_II(:,iLoop)
-          CYCLE PARTICLE
-       end if
-
-       ! if need to adjust lower, but not upper boundary -> ADJUST
-       if(DoAdjustLo .and. .not.DoAdjustUp)then
-          ! push iBegin in front of current particle;
-          ! it will be pushed until it finds a non-missing particle
-          iBegin = iParticle + 1
-          iParticle_I = iParticle_I + iIncrement_II(:,iLoop)
-          CYCLE PARTICLE
-       end if
-
-       ! if need to adjust upper, but not lower boundary -> ADJUST
-       if(DoAdjustUp .and. .not.DoAdjustLo)then
-          ! push nParticle_B() below current particle;
-          ! it will be pushed until it finds a non-missing particle
-          nParticle_B(iBlock) = iParticle - 1
-          iParticle_I = iParticle_I + iIncrement_II(:,iLoop)
-          CYCLE PARTICLE
-       end if
-
-       ! remaining case:
-       ! need to adjust both boudnaries -> ADJUST,but keep longest range
-       if(iParticle - iBegin > nParticle_B(iBlock) - iParticle)then
-          nParticle_B(iBlock) = iParticle - 1
-          EXIT PARTICLE
-       else
-          iBegin = iParticle + 1
-       end if
-       iParticle_I = iParticle_I + iIncrement_II(:,iLoop)
-    end do PARTICLE
-
-    DoAdjustLo = RBufferLo == RInterfaceMin
-    DoAdjustUp = RBufferUp == RInterfaceMax
+    
   end subroutine adjust_line
   !============================================================================
-  subroutine SP_set_line_foot_b(iBlock)
-    integer, intent(in) :: iBlock
+  subroutine BL_set_line_foot_b(iLine)
+    integer, intent(in) :: iLine
 
     ! existing particle with lowest index along line
     real:: Xyz1_D(X_:Z_)
@@ -693,15 +800,15 @@ contains
     real:: Alpha
     !--------------------------------------------------------------------------
     ! get the coordinates of lower particle
-    Xyz1_D = MHData_VIB(X_:Z_, 1, iBlock)
+    Xyz1_D = MHData_VIB(X_:Z_, 1, iLine)
 
     ! generally, field direction isn't known
     ! approximate it using directions of first 2 segments of the line
-    Dist1_D = MHData_VIB(X_:Z_, 1, iBlock) - &
-         MHData_VIB(X_:Z_, 2, iBlock)
+    Dist1_D = MHData_VIB(X_:Z_, 1, iLine) - &
+         MHData_VIB(X_:Z_, 2, iLine)
     Dist1 = sqrt(sum(Dist1_D**2))
-    Dist2_D = MHData_VIB(X_:Z_, 2, iBlock) - &
-         MHData_VIB(X_:Z_, 3, iBlock)
+    Dist2_D = MHData_VIB(X_:Z_, 2, iLine) - &
+         MHData_VIB(X_:Z_, 3, iLine)
     Dist2 = sqrt(sum(Dist2_D**2))
     Dir0_D = ((2*Dist1 + Dist2)*Dist1_D - Dist1*Dist2_D)/(Dist1 + Dist2)
 
@@ -716,7 +823,7 @@ contains
     ! no intersection of smoothly extended line with the sphere R = RMin
     if(Dot**2 - sum(Xyz1_D**2) + RMin**2 < 0)then
        ! project first particle for new footpoint
-       FootPoint_VB(X_:Z_,iBlock) = Xyz1_D * RMin / sqrt(sum(Xyz1_D**2))
+       FootPoint_VB(X_:Z_,iLine) = Xyz1_D * RMin / sqrt(sum(Xyz1_D**2))
     else
        ! Xyz0, the footprint, is distance Alpha away from Xyz1:
        ! Xyz0 = Xyz1 + Alpha * Dir0 and R0 = RMin =>
@@ -726,18 +833,18 @@ contains
        ! use distance between 2nd and 3rd particles on the line as measure
        if(abs(Alpha) > Dist2)then
           ! project first particle for new footpoint
-          FootPoint_VB(X_:Z_,iBlock) = Xyz1_D * RMin / sqrt(sum(Xyz1_D**2))
+          FootPoint_VB(X_:Z_,iLine) = Xyz1_D * RMin / sqrt(sum(Xyz1_D**2))
        else
           ! store newly found footpoint of the line
-          FootPoint_VB(X_:Z_,iBlock) = Xyz1_D + Alpha * Dir0_D
+          FootPoint_VB(X_:Z_,iLine) = Xyz1_D + Alpha * Dir0_D
        end if
     end if
 
     ! length is used to decide when need to append new particles:
     ! use distance between 2nd and 3rd particles on the line
-    FootPoint_VB(Length_,    iBlock) = Dist2
-    FootPoint_VB(LagrID_,    iBlock) = MHData_VIB(LagrID_,1,iBlock) - 1.0
-  end subroutine SP_set_line_foot_b
+    FootPoint_VB(Length_,    iLine) = Dist2
+    FootPoint_VB(LagrID_,    iLine) = MHData_VIB(LagrID_,1,iLine) - 1.0
+  end subroutine BL_set_line_foot_b
   !============================================================================
 end module CON_bline
 
