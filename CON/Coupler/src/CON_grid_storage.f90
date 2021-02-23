@@ -182,10 +182,10 @@ contains
     integer,intent(in),optional::nDimTree
     ! EOP
     !--------------------------------------------------------------------------
-    if(GridID_>MaxGrid.or.GridID_<=0)call CON_stop&
-         ('GridID_ is not allowed to be equal to',GridID_)
+    if(GridID_>MaxGrid.or.GridID_<=0)call CON_stop(&
+         'GridID_ is not allowed to be equal to ')
     if(done_dd_init(GridID_))call CON_stop(&
-         'An attempt to reinitialize the gridID_',GridID_)
+         'An attempt to reinitialize the gridID_')
     call init_grid_storage(Domain_I,GridID_)
     if(present(nDimTree))then
        call init_decomposition_dd(&
@@ -270,15 +270,15 @@ contains
     if(present(PE_I))then
        if(ubound(PE_I,1)/=product(iRootMapDim_D))&
             call CON_stop(&
-            'The dimension of PE_I should be equal to ',&
-            product(iRootMapDim_D))
+            'The dimension of PE_I should be equal to '//&
+            'product(iRootMapDim_D)')
     end if
 
     if(present(iBlock_I))then
        if(ubound(iBlock_I,1)/=product(iRootMapDim_D))&
             call CON_stop(&
-            'The dimension of iBlock_I should be equal to ',&
-            product(iRootMapDim_D))
+            'The dimension of iBlock_I should be equal to '//&
+            'product(iRootMapDim_D)')
     end if
 
     ! Assign the grid parameters                                     !
