@@ -226,5 +226,29 @@ contains
     call CON_stop(NameSub//': PT_ERROR: empty version cannot be used!')
 
   end subroutine PT_get_for_oh
+  !============================================================================
+  subroutine PT_do_extract_lines(DoExtract)
+    logical, intent(out):: DoExtract
 
+    character(len=*), parameter:: NameSub = 'SP_do_extract_lines'
+    !--------------------------------------------------------------------------
+    call CON_stop(NameSub//': cannot call the empty version')
+  end subroutine PT_do_extract_lines
+  !============================================================================
+  subroutine PT_put_coupling_param(Source_, TimeIn)
+    real,           intent(in):: TimeIn
+    integer,        intent(in):: Source_
+    character(len=*), parameter:: NameSub = 'SP_put_coupling_param'
+    !--------------------------------------------------------------------------
+    call CON_stop('SP:'//NameSub//': cannot call the empty version')
+  end subroutine PT_put_coupling_param
+  !============================================================================
+  subroutine PT_adjust_lines(DoInit, Source_)
+    Logical, intent(in):: DoInit
+    integer, intent(in):: Source_
+    character(len=*), parameter:: NameSub = 'SP_adjust_lines'
+    !--------------------------------------------------------------------------
+    call CON_stop('SP:'//NameSub//': cannot call the empty version')
+  end subroutine PT_adjust_lines
+  !============================================================================
 end module PT_wrapper
