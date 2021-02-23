@@ -24,7 +24,7 @@ module CON_couple_all
        nVarBuffer, nVarBuffer_CC, &
        iVarSource_V, iVarSource_VCC, &
        iVarTarget_V, iVarTarget_VCC
-
+  use CON_bline, ONLY: UseBLine_C
   !^CMP IF GM BEGIN
   use CON_couple_ee_gm        !^CMP IF EE
   use CON_couple_ih_gm        !^CMP IF IH
@@ -109,16 +109,23 @@ contains
     !                                                     ^CMP IF IH BEGIN
     if(use_comp(IH_).and.use_comp(SC_))call couple_ih_sc_init  !^CMP IF SC
     if(use_comp(IH_).and.use_comp(OH_))call couple_ih_oh_init  !^CMP IF OH
-    if(use_comp(IH_).and.use_comp(PT_))call couple_ih_pt_init  !^CMP IF PT
     !                                                     ^CMP END IH
     !                                                     ^CMP IF SC BEGIN
     if(use_comp(SC_).and.use_comp(EE_))call couple_ee_sc_init  !^CMP IF EE
-    if(use_comp(SC_).and.use_comp(PT_))call couple_sc_pt_init  !^CMP IF PT
     !                                                     ^CMP END SC
-    if((&                                                 !^CMP IF SP BEGIN
+    if(UseBLine_C(SP_).and.(&                             !^CMP IF SP BEGIN
          use_comp(IH_).or.&                               !^CMP IF IH
          use_comp(SC_).or.&                               !^CMP IF SC
-         .false.).and.use_comp(SP_))call couple_mh_sp_init !^CMP END SP
+         .false.))call couple_mh_sp_init                  !^CMP END SP
+    if(UseBLine_C(PT_).and.(&                             !^CMP IF PT BEGIN
+         use_comp(IH_).or.&                               !^CMP IF IH
+         use_comp(SC_).or.&                               !^CMP IF SC
+         .false.))then
+       call couple_mh_sp_init
+    else
+       if(use_comp(SC_).and.use_comp(PT_))call couple_sc_pt_init !^CMP IF SC
+       if(use_comp(IH_).and.use_comp(PT_))call couple_ih_pt_init !^CMP IF IH
+    end if                                                !^CMP END PT
     !	 				 		       ^CMP IF OH BEGIN
     if(use_comp(OH_).and.use_comp(PT_))call couple_oh_pt_init  !^CMP IF PT
     !					    		       ^CMP END OH
@@ -205,8 +212,12 @@ contains
           call couple_sc_sp(TimeSimulation)   !^CMP IF SP
        case(EE_)                              !^CMP IF EE
           call couple_sc_ee(TimeSimulation)   !^CMP IF EE
-       case(PT_)                              !^CMP IF PT
-          call couple_sc_pt(TimeSimulation)   !^CMP IF PT
+       case(PT_)                              !^CMP IF PT BEGIN
+          if(UseBLine_C(PT_))then
+             call couple_sc_sp(TimeSimulation)
+          else
+             call couple_sc_pt(TimeSimulation)
+          end if                              !^CMP END PT
        case default
           call error
        end select                             !^CMP END SC
@@ -218,8 +229,12 @@ contains
           call couple_ih_sc(TimeSimulation)        !^CMP IF SC
        case(OH_)                                   !^CMP IF OH
           call couple_ih_oh(TimeSimulation)        !^CMP IF OH
-       case(PT_)                                   !^CMP IF PT
-          call couple_ih_pt(TimeSimulation)        !^CMP IF PT
+       case(PT_)                              !^CMP IF PT BEGIN
+          if(UseBLine_C(PT_))then
+             call couple_ih_sp(TimeSimulation)
+          else
+             call couple_ih_pt(TimeSimulation)
+          end if                              !^CMP END PT
        case(SP_)                                   !^CMP IF SP
           call couple_ih_sp(TimeSimulation)        !^CMP IF SP
        case default

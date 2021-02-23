@@ -29,15 +29,19 @@ module CON_couple_mh_sp
        SP_do_extract_lines      ,&  ! If returns .true., extract the mf lines  
        SP_put_coupling_param    ,&  ! Set time and interaface bounds
        SP_adjust_lines              ! Process if needed the updated mf lines
+  use PT_wrapper, ONLY: &
+       PT_do_extract_lines      ,&  ! If returns .true., extract the mf lines  
+       PT_put_coupling_param    ,&  ! Set time and interaface bounds
+       PT_adjust_lines              ! Process if needed the updated mf lines
   use CON_bline, ONLY:  BL_,     &
        RScMin, RScMax,           &  !^CMP IF SC  
        RIhMin, RIhMax,           &
-       BL_get_bounds,            &
+       BL_get_bounds,            &  ! Provides RScMin/Max and/or RIhMin/Max
        BL_n_particle            ,&  ! Number of "points" in a given line in SP
        BL_put_from_mh           ,&  ! Put MHD info from SC or IH to SP
        BL_interface_point_coords,&  ! Check if the point is within interface
        BL_put_line                  ! Put particle Xyz from SC/IH to SP
-       !get_bounds                   ! Provides RScMin/Max and/or RIhMin/Max
+                 
   implicit none
 
   private ! Except
