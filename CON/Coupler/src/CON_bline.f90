@@ -15,8 +15,8 @@ module CON_bline
   !
   ! public members
   !-----------The following public members are available at all PEs------------
-  integer, public :: BL_ =-1                ! ID of the target model (SP_, PT_)
-  logical, public :: UseBLine_C(MaxComp)  ! To switch coupler for PT
+  integer, public :: BL_ =-1                 ! ID of the target model (SP_, PT_)
+  logical, public :: UseBLine_C(MaxComp)=.false. ! To switch coupler for PT
   !
   ! Boundaries of coupled domains in SC and IH
   !
