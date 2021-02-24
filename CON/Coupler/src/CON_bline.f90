@@ -77,6 +77,25 @@ module CON_bline
        Wave1_      =12, & !                                   |coupler
        Wave2_      =13, & ! Alfven wave turbulence            v
        R_          =14    ! Heliocentric distance
+
+  !
+  ! variable names
+  !
+  character(len=10), public, parameter:: NameVar_V(LagrID_:nMHData)&
+        = ['LagrID    ', &
+       'X         ', &
+       'Y         ', &
+       'Z         ', &
+       'Rho       ', &
+       'T         ', &
+       'Ux        ', &
+       'Uy        ', &
+       'Uz        ', &
+       'Bx        ', &
+       'By        ', &
+       'Bz        ', &
+       'Wave1     ', &
+       'Wave2     ']
   !
   ! MHD state vector is a pointer to be joined to a target array
   ! MHData_VIB(LagrID_:nMHData, 1:nVertexMax, 1:nLine)
