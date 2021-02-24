@@ -352,11 +352,7 @@ F			DoRun
 F			DoTraceShock
 F			UseDiffusion
 
-GRID
-1.05			RMin
-19			RBufferMin
-21			RBufferMax
-220			RMax
+
 
 #ORIGIN
 2.5			ROrigin
