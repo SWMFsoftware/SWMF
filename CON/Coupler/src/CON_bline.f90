@@ -10,23 +10,13 @@ module CON_bline
   use ModConst,          ONLY: cBoltzmann
   use CON_coupler,       ONLY: MaxComp, is_proc0
   implicit none
+
   SAVE
+
   PRIVATE ! Except
-  !
-  ! public members
-  !-----------The following public members are available at all PEs------------
-  integer, public :: BL_ =-1                 ! ID of the target model (SP_, PT_)
-  logical, public :: UseBLine_C(MaxComp)=.false. ! To switch coupler for PT
-  !
-  ! Boundaries of coupled domains in SC and IH
-  !
-  real,    public  :: RScMin = 0.0, RScMax = 0.0, RIhMin = 0.0, RIhMax = 0.0
-  integer, public  :: Lower_=0, Upper_=-1
-  public :: read_param
+
+  public :: BL_read_param
   public :: BL_set_grid
-  !------------The rest of the module is accessed from BL_ model---------------
-  integer         :: iProc = -1  ! Rank    of PE in communicator of BL_
-  integer         :: nProc = -1  ! Number of PEs in communicator of BL_
   public :: BL_init
   public :: BL_get_origin_points
   public :: BL_get_bounds
@@ -36,31 +26,23 @@ module CON_bline
   public :: BL_interface_point_coords ! points rMinInterface<R<rMaxInterface
   public :: BL_put_line               ! points rMin < R < rMax
   public :: BL_set_line_foot_b
-  !
-  ! Grid integer parameters:
-  ! Maximum number of vertexes per line
+  
+  ! The following public members are available at all PEs
+  integer, public :: BL_ =-1   ! ID of the target model (SP_, PT_)
+  logical, public :: UseBLine_C(MaxComp)=.false. ! To switch coupler for PT
 
-  integer :: nVertexMax
-
-  ! angular grid at origin surface
-
-  integer  :: nLon  = -1
-  integer  :: nLat  = -1
-
-  ! Total number of lines on all preceeding PEs
-
-  integer  :: iLineAll0 = -1 ! = (iProc*nLineAll)/nProc
+  ! The rest is available on the BL_ processors
+  ! Boundaries of coupled domains in SC and IH
+  real,    public :: RScMin = 0.0, RScMax = 0.0, RIhMin = 0.0, RIhMax = 0.0
+  integer, public :: Lower_=0, Upper_=-1
 
   ! Total number of lines on given PE
-
   integer, public  :: nLine = -1 ! = ((iProc +1)*nLineAll)/nProc - iLineAll0
 
-  ! Total number of lines on all PEs
-
-  integer  :: nLineAll = -1
+  ! Offset of B lines
+  integer, allocatable, public :: iOffset_B(:)
 
   ! Number of variables in the state vector and the identifications
-
   integer, public, parameter ::  nDim = 3, nMHData = 13,      &
        LagrID_     = 0, & ! Lagrangian id           ^saved/   ^set to 0
        X_          = 1, & !                         |read in  |in copy_
@@ -78,9 +60,7 @@ module CON_bline
        Wave2_      =13, & ! Alfven wave turbulence            v
        R_          =14    ! Heliocentric distance
 
-  !
   ! variable names
-  !
   character(len=10), public, parameter:: NameVar_V(LagrID_:nMHData)&
         = ['LagrID    ', &
        'X         ', &
@@ -96,54 +76,69 @@ module CON_bline
        'Bz        ', &
        'Wave1     ', &
        'Wave2     ']
+  
+  ! Local variables
+  integer :: iProc = -1  ! Rank    of PE in communicator of BL_
+  integer :: nProc = -1  ! Number of PEs in communicator of BL_
   !
+  ! Grid integer parameters:
+  ! Maximum number of vertexes per line
+  integer :: nVertexMax
+
+  ! angular grid at origin surface
+  integer  :: nLon  = -1
+  integer  :: nLat  = -1
+
+  ! Total number of lines on all preceeding PEs
+  integer  :: iLineAll0 = -1 ! = (iProc*nLineAll)/nProc
+
+  ! Total number of lines on all PEs
+  integer  :: nLineAll = -1
+
   ! MHD state vector is a pointer to be joined to a target array
   ! MHData_VIB(LagrID_:nMHData, 1:nVertexMax, 1:nLine)
-
-  real,    allocatable, target :: MHData_VIB(:,:,:)
+  real, allocatable, target :: MHData_VIB(:,:,:)
 
   ! Aux state vector is a pointer to be joined to a target array
   ! State_VIB(R_:nVar, 1:nVertexMax, 1:nLine)
   ! nVar may be optionally read in BL_set_grid
-
   integer  :: nVar = R_
-  real,    allocatable, target :: State_VIB(:,:,:)
-  !
+  real, allocatable, target :: State_VIB(:,:,:)
+
   ! nVertex_B is a pointer, which is joined to a target array
   ! For stand alone version the target array is allocated here
   ! nVertex_B(1:nLine)
-
   integer, allocatable, target :: nVertex_B(:)
 
   integer, parameter :: Length_=4
   real,    allocatable, target :: FootPoint_VB(:, :)
 
-  !
-  integer, allocatable, public :: iOffset_B(:)
-  !
-  ! Misc:
   integer:: iError
+
   ! coupling parameters:
   ! domain boundaries
   real :: rInterfaceMin, rInterfaceMax
+
   ! buffer boundaries located near lower (Lo) or upper (Up) boudanry of domain
   real :: rBufferLo, rBufferUp
-  !
+
   ! Allowed range of helocentric distances
   real :: rMin, rMax
+
   ! Coefficient to transform energy
   real         :: EnergySi2Io = 1.0/cBoltzmann
-  character(len=*), parameter:: NameMod = 'CON_mflampa::'
+
 contains
   !============================================================================
-  subroutine read_param(iError)
+  subroutine BL_read_param(iError)
     use CON_coupler, ONLY: use_comp, i_comp, SP_, PT_, SC_, IH_, &
          i_proc, n_proc, is_proc
     use ModReadParam, ONLY: read_var
+
     integer, intent(inout) :: iError
     integer :: nSource, iSource, iComp
     character(len=2) :: NameComp = ''
-    character(len=*), parameter:: NameSub = 'read_param'
+    character(len=*), parameter:: NameSub = 'BL_read_param'
     !--------------------------------------------------------------------------
     call read_var('NameTarget', NameComp)
     BL_ = i_comp(NameComp)
@@ -209,7 +204,8 @@ contains
     if(.not.is_proc(BL_))RETURN
     RMin = RScMin; RMax = RIhMax
     Lower_ = SC_; Upper_ = IH_
-  end subroutine read_param
+    
+  end subroutine BL_read_param
   !============================================================================
   subroutine BL_init(nParticleIn, nLonIn, nLatIn, &
        rPointer_VIB,  nPointer_B,  nVarIn, StateIO_VIB, FootPointIn_VB)

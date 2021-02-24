@@ -92,7 +92,8 @@ contains
          Couple_CC, MaxCouple, nCouple, iCompCoupleOrder_II, &
          DoCoupleOnTime_C, IsTightCouple_CC
     use CON_physics
-    use CON_bline, ONLY: read_bline=>read_param
+    use CON_bline, ONLY: BL_read_param
+
     real :: VersionRead
 
     !OUTPUT ARGUMENTS:
@@ -460,7 +461,7 @@ contains
              call read_var('tNext21', Couple_CC(iComp2,iComp1) % tNext)
           end if
        case('#FIELDLINE')
-          call read_bline(iErrorSWMF)
+          call BL_read_param(iErrorSWMF)
           if(iErrorSWMF/=0)RETURN
           
        case("#COUPLE1TIGHT", "#COUPLE2TIGHT")
