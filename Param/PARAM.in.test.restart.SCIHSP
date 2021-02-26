@@ -348,18 +348,6 @@ F			DoRun
 F			DoTraceShock
 F			UseDiffusion
 
-GRID
-1.05			RMin
-19			RBufferMin
-21			RBufferMax
-220			RMax
-
-#ORIGIN
-2.5			ROrigin
--10			LonMin
-25			LatMin
-10			LonMax
-90			LatMax
 
 #SAVEPLOT
 1			nFileOut
