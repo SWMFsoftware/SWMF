@@ -46,6 +46,7 @@ test_help:
 	@(if [ -d PT/AMPS    ]; then echo "    test14pui1d                (run OH-PT/AMPS test with PUI in 1D)"; fi)
 	@(if [ -d SP/MFLAMPA ]; then echo "    test15                     (run SC-IH-SP/MFLAMPA test)"; fi)
 	@(if [ -d SP/MFLAMPA ]; then echo "    test15_build               (configure SC-IH-SP/MFLAMPA, run test15)"; fi)
+	@(if [ -d PT/AMPS    ]; then echo "    test15_pt                  (run SC-IH-PT/AMPS test)"; fi)
 	@(if [ -d PC/FLEKS   ]; then echo "    test16                     (run GM-PC/FLEKS test: periodic FLEKS)"; fi)
 	@(if [ -d PC/FLEKS   ]; then echo "    test17                     (run GM-PC/FLEKS test: 2D Alfven wave)"; fi)
 	@(if [ -d PC/FLEKS   ]; then echo "    test18                     (run GM-PC/FLEKS test: 3D reconnection)"; fi)
@@ -1434,6 +1435,52 @@ test15_check:
 		output/test15/MH_data.ref.gz \
 		> test15_scihsp.diff)
 	ls -l test15_scihsp.diff
+
+### test15_pt: same as test15, but PT/AMPS model coupled with SC and IH models
+
+test15_pt:
+	rm -f test15_scihpt.diff
+	@echo "test15_pt_compile..." > test15_scihpt.diff
+	${MAKE} test15_pt_compile
+	@echo "test15_pt_rundir..." >> test15_scihpt.diff
+	${MAKE} test15_pt_rundir
+	@echo "test15_pt_run..." >> test15_scihpt.diff
+	${MAKE} test15_pt_run
+	@echo "test15_pt_check..." >> test15_scihpt.diff
+	${MAKE} test15_pt_check
+
+test15_pt_compile:
+	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS,PT/AMPS
+	./Config.pl -o=SC:u=Awsom,e=Awsom,ng=2,g=4,4,4
+	./Config.pl -o=IH:u=Awsom,e=Awsom,ng=2,g=4,4,4
+	./Config.pl -o=PT:spice-path=nospice,spice-kernels=nospice,\
+	application=test/sep_focused_transport-ih-borovikov,amps-test=on
+	${MAKE} SWMF
+	make PIDL
+
+test15_pt_rundir:
+	rm -rf ${TESTDIR}
+	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
+	cp Param/PARAM.in.test.SCIHPT ${TESTDIR}/PARAM.in
+	cp GM/BATSRUS/Param/CORONA/RadCoolCorona.dat ${TESTDIR}/RadCoolCorona.dat
+	cp -r SP/MFLAMPA/data/input/test15/RESTART_t0020.0000s ${TESTDIR}/
+	cd ${TESTDIR}; ./Restart.pl -i RESTART_t0020.0000s
+	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
+
+test15_pt_run:
+	cd ${TESTDIR}; rm -rf RESTART_t0025.0000s
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./Restart.pl
+
+
+test15_pt_check:
+	cat ${TESTDIR}/RESULTS/PT/MH_data_*_*_t00000030_n000010.out \
+	    > ${TESTDIR}/RESULTS/PT/MH_data.outs
+	-(${DIFFNUM} -a=1e-6 -r=1e-6 -b \
+		${TESTDIR}/RESULTS/PT/MH_data.outs \
+		output/test15/MH_data.ref.gz \
+		> test15_scihpt.diff)
+	ls -l test15_scihpt.diff
 
 # test for MFLAMPA inside the SWMF
 
