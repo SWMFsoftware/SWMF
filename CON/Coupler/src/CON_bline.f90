@@ -114,7 +114,6 @@ module CON_bline
   integer, parameter :: Length_=4
   real,    allocatable, target :: FootPoint_VB(:, :)
 
-  integer:: iError
 
   ! coupling parameters:
   ! domain boundaries
@@ -222,7 +221,7 @@ contains
     ! Loop variable
 
     integer :: iVertex
-
+    integer:: iError
     character(len=*), parameter:: NameSub = 'BL_init'
     !--------------------------------------------------------------------------
     nVertexMax            = nParticleIn
@@ -230,11 +229,9 @@ contains
     iLineAll0 = (iProc*nLineAll)/nProc
     nLine = ((iProc+1)*nLineAll) / nProc - iLineAll0
 
-    ! Set MHD array
-    
     allocate(MHData_VIB(LagrID_:nMHData, 1:nVertexMax, 1:nLine), &
          stat=iError)
-    call check_allocate(iError, NameSub//'MHData_VIB')
+    call check_allocate(iError, NameSub//'_MHData_VIB')
     rPointer_VIB => MHData_VIB
     MHData_VIB = 0.0
     !
@@ -248,7 +245,7 @@ contains
     
     allocate(nVertex_B(1:nLine), &
          stat=iError)
-    call check_allocate(iError, NameSub//'nVertex_B')
+    call check_allocate(iError, NameSub//'_nVertex_B')
     nPointer_B => nVertex_B
     nVertex_B = 0
 
@@ -257,14 +254,14 @@ contains
     if(present(nVarIn))nVar = nVarIn
     allocate(State_VIB(R_:nVar, 1:nVertexMax, 1:nLine), &
          stat=iError)
-    call check_allocate(iError, NameSub//'State_VIB')
+    call check_allocate(iError, NameSub//'_State_VIB')
     if(present(StateIO_VIB))StateIO_VIB => State_VIB
     State_VIB = -1
 
     ! Set FootPoint_VB array
     
     allocate(FootPoint_VB(LagrID_:Length_, nLine), stat=iError)
-    call check_allocate(iError, NameSub//'FootPoint_VB')
+    call check_allocate(iError, NameSub//'_FootPoint_VB')
     if(present(FootPointIn_VB))FootPointIn_VB => FootPoint_VB
     FootPoint_VB = -1
 
@@ -384,12 +381,12 @@ contains
       !
       ! fill grid containers
       !
-
+      integer:: iError
       character(len=*), parameter:: NameSub = 'init_indexes'
       !------------------------------------------------------------------------
       allocate(iGridGlobal_IA(Proc_:Block_, nLineAll), &
            stat=iError)
-      call check_allocate(iError, NameSub//'iGridGlobal_IA')
+      call check_allocate(iError, NameSub//'_iGridGlobal_IA')
       iLine = 1; iProcNode = 0
       do iLat = 1, nLat
          do iLon = 1, nLon
