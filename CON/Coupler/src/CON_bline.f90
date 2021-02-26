@@ -21,6 +21,7 @@ module CON_bline
   public :: BL_get_origin_points
   public :: BL_get_bounds
   public :: BL_adjust_lines
+  public :: BL_update_r
   public :: BL_n_particle             ! return number of points at the MF line
   public :: BL_put_from_mh            ! put MHD values from MH to SP
   public :: BL_interface_point_coords ! points rMinInterface<R<rMaxInterface
@@ -790,15 +791,18 @@ contains
     end subroutine append_particles
     !==========================================================================
   end subroutine BL_adjust_lines
-  subroutine adjust_line(iLine, iBegin, DoAdjustLo, DoAdjustUp)
-    integer, intent(in)    :: iLine
-    integer, intent(out)   :: iBegin
-    logical, intent(inout) :: DoAdjustLo, DoAdjustUp
-
-    character(len=*), parameter:: NameSub = 'adjust_line'
+  !============================================================================
+  subroutine BL_update_r
+    ! Loop  variables:
+    integer :: iVertex, iLine
     !--------------------------------------------------------------------------
-    
-  end subroutine adjust_line
+    do iLine = 1, nLine
+       do iVertex = 1, nVertex_B(iLine)
+          State_VIB(R_, iVertex, iLine) = &
+               norm2(MHData_VIB(X_:Z_, iVertex, iLine))
+       end do
+    end do
+  end subroutine BL_update_r
   !============================================================================
   subroutine BL_set_line_foot_b(iLine)
     integer, intent(in) :: iLine
