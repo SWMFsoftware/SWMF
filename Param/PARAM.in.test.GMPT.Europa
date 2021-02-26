@@ -42,10 +42,6 @@ T			DoCheckStop
 #CPUTIMEMAX
 1720000.0		CpuTimeMax
 
-#FIELDLINE
-PT			NameTarget
-0			nSource
-
 #BEGIN_COMP PT ---------------------------------------------------------------
 
 #TEST
