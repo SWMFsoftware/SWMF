@@ -19,7 +19,7 @@ F			DoSaveRestart
 #INCLUDE
 SC/restartIN/restart.H	
 
-#THREADRESTART
+THREADRESTART
 T			DoThreadRestart
 
 #COORDSYSTEM

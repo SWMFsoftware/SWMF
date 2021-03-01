@@ -32,7 +32,7 @@ RESTART.in
 #INCLUDE
 SC/restartIN/restart.H
 
-#THREADRESTART
+THREADRESTART
 T			DoThreadRestart
 
 #PLASMA
