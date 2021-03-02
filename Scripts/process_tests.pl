@@ -11,8 +11,8 @@ my $SiteDir = `pwd`; chop($SiteDir);
 my $MinScore = 600;  # minimum for total score: most tests ran
 my $MinRate  = 0.95; # minimum 95% success rate
 my $merge_stable =   # command to merge master into stable branch
-    'cd SWMF && share/Scripts/gitall "checkout stable && sleep 10 && ' . 
-    'git pull --depth=100 && git merge master && git push"';
+    'cd SWMF && share/Scripts/gitall "checkout stable && sleep 10; ' . 
+    'git pull --depth=100; git merge master && git push"';
 
 # weights for each platform to calculate skill scores
 my %WeightMachine = (
