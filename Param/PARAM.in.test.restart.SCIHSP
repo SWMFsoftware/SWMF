@@ -32,9 +32,6 @@ RESTART.in
 #INCLUDE
 SC/restartIN/restart.H
 
-THREADRESTART
-T			DoThreadRestart
-
 #PLASMA
 1.0			FluidMass [amu]
 1.0			IonCharge [e]

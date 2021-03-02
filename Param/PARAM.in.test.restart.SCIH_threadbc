@@ -19,9 +19,6 @@ F			DoSaveRestart
 #INCLUDE
 SC/restartIN/restart.H	
 
-THREADRESTART
-T			DoThreadRestart
-
 #COORDSYSTEM
 HGR			TypeCoordSystem
 
