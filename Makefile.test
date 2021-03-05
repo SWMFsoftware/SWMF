@@ -1468,10 +1468,8 @@ test15_pt_rundir:
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test15_pt_run:
-	cd ${TESTDIR}; rm -rf RESTART_t0025.0000s
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}; ./Restart.pl
-
+	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
 
 test15_pt_check:
 	cat ${TESTDIR}/RESULTS/PT/MH_data_*_*_t00000030_n000010.out \
