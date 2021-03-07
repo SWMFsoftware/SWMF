@@ -1435,6 +1435,53 @@ test15_check:
 		> test15_scihsp.diff)
 	ls -l test15_scihsp.diff
 
+### test15_long: same as test15, but SC/IH start from scratch
+
+test15_long:
+	rm -f test15_long.diff
+	@echo "test8..." > test15_long.diff
+	${MAKE} test8
+	@echo "test15_compile..." >> test15_long.diff
+	${MAKE} test15_compile
+	@echo "test15_long_rundir..." >> test15_long.diff
+	${MAKE} test15_long_rundir
+	@echo "test15_long_run..." >> test15_long.diff
+	${MAKE} test15_long_run
+	@echo "test15_long_restart..." >> test15_long.diff
+	${MAKE} test15_long_restart
+	@echo "test15_long_check..." >> test15_long.diff
+	${MAKE} test15_long_check
+
+
+test15_long_rundir:
+	cd ${TESTDIR}; mv PARAM.in PARAM.in_restart; rm -f PARAM.in_orig_
+	cp Param/PARAM.in.test.SCIHSP_long ${TESTDIR}/PARAM.in
+	cd ${TESTDIR}; ./Restart.pl -i RESULTS/RESTART
+	cd ${TESTDIR}; mkdir SP/; mkdir SP/IO2; mkdir SP/restartOUT
+	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
+
+test15_long_run:
+	cd ${TESTDIR}; rm -rf RESTART_t0001.7500m/
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./Restart.pl
+
+test15_long_restart:
+	cd ${TESTDIR}; rm -rf RESULTS runlog_restart
+	cd ${TESTDIR}; mv PARAM.in PARAM.in_restart1; rm -f PARAM.in_orig_
+	cd ${TESTDIR}; cp Param/PARAM.in.test.restart.SCIHSP_long PARAM.in
+	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_restart
+	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
+
+test15_long_check:
+	cat ${TESTDIR}/RESULTS/SP/MH_data_*_*_t00000150_n000010.out \
+	    > ${TESTDIR}/RESULTS/SP/MH_data.outs
+	-(${DIFFNUM} -a=1e-6 -r=1e-6 -b \
+		${TESTDIR}/RESULTS/SP/MH_data.outs \
+		output/test15_long/MH_data.ref.gz \
+		> test15_long.diff)
+	ls -l test15_long.diff
+
 ### test15_pt: same as test15, but PT/AMPS model coupled with SC and IH models
 
 test15_pt:
