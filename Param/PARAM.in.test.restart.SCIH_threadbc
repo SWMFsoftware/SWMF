@@ -320,8 +320,6 @@ RAW			StringLog
 1			DnSaveLogfile
 -1.			DtSaveLogfile
 
-#SAVEINITIAL
-T			DoSaveInitial
 
 #SAVEPLOT
 4			nPlotFile
