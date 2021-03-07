@@ -19,10 +19,6 @@ F			IsTimeAccurate
 0			iSecond
 0.0			FracSecond
 
-#SAVERESTART
-T			DoSaveRestart
-50000			DnSaveRestart
--1			DtSaveRestart
 
 
 #BEGIN_COMP SC ---------------------------------------------------------------
@@ -247,6 +243,21 @@ g rbody
 #SAVEINITIAL
 T			DoSaveInitial
 
+#SATELLITE
+3			nSatellite
+MHD			StringSatellite
+-1			DnOutput
+-1.0			DtOutput [sec]
+SC/TRAJECTORY/earth.dat		NameTrajectoryFile
+MHD			StringSatellite
+5000			DnOutput
+3600.0			DtOutput [sec]
+SC/TRAJECTORY/sta.dat		NameTrajectoryFile
+MHD			StringSatellite
+-1			DnOutput
+-1.0			DtOutput [sec]
+SC/TRAJECTORY/stb.dat		NameTrajectoryFile
+
 #END_COMP SC -----------------------------------------------------------------
 
 #COMPONENT
@@ -263,12 +274,6 @@ Begin session: 2
 
 #TIMEACCURATE
 T			IsTimeAccurate
-
-#SAVERESTART
-T			DoSaveRestart
--1			DnSaveRestart
-60			DtSaveRestart
-
 
 #COMPONENT
 IH			NameComp

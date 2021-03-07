@@ -11,8 +11,6 @@ Param/PARAM.in.test.restart.SCIH_threadbc: Time accurate SC-IH run with SC switc
 #TIMEACCURATE
 T			IsTimeAccurate
 
-#SAVERESTART
-F			DoSaveRestart
 
 #BEGIN_COMP SC ---------------------------------------------------------------
 
@@ -54,11 +52,18 @@ T			UseBody
 #BODY
 F			UseBody
 
-#LOOKUPTABLE
-B0			NameTable
-load			NameCommand
-harmonics_bxyz.out		NameFile
-real4			TypeFile
+#HARMONICSFILE
+SC/Param/CR2077_GNG.dat		NameHarmonicsFile
+
+#HARMONICSGRID
+1.0			rMagnetogram
+2.5			rSourceSurface
+F			IsLogRadius
+30			MaxOrder
+30			nR
+90			nLon
+90			nLat
+
 
 #USECURLB0
 T			UseCurlB0
@@ -97,7 +102,7 @@ T			UseRadCooling
 #LOOKUPTABLE
 radcool			NameTable
 load			NameCommand
-RadCoolCorona.dat		NameFile
+SC/Param/RadCoolCorona.dat		NameFile
 ascii			TypeFile
 
 #LOOKUPTABLE
@@ -112,6 +117,15 @@ ascii			TypeFile
 #TIMESTEPPING
 2			nStage
 0.8			CflExpl
+
+#MINIMUMPRESSURE
+1.0E-9			pMinDim
+1.0e-9			PeMinDim
+
+#MINIMUMTEMPERATURE
+5.0e4			TminDim
+5.0e4			TeMinDim
+
 
 #SCHEME
 2			nOrder (1 or 2)
@@ -241,13 +255,6 @@ MHD			StringSatellite
 -1.0			DtOutput [sec]
 SC/TRAJECTORY/stb.dat		NameTrajectoryFile
 
-
-PLOTTHREADS
-T			DoPlotThreads
-10			nGUniform
-T			DoTriangulation
-T			DoTRCorrectio
-
 #END_COMP SC -----------------------------------------------------------------
 
 #BEGIN_COMP IH ---------------------------------------------------------------
@@ -259,25 +266,6 @@ IH/restartIN/restart.H
 1.0			FluidMass [amu]
 1.0			IonCharge [e]
 1.0			ElectronTemperatureRatio
-
-#AMRREGION
-OuterShell		NameRegion
-shell0			StringShape
-18.0			RadiusInner
-21.0			Radius
-
-#AMRCRITERIALEVEL
-3			nRefineCrit
-Level			StringRefine
-4			RefineTo
-4			CoarsenFrom
-Level +OuterShell		StringRefine
-5			RefineTo
-5			CoarsenFrom
-currentsheet		StringRefine
-0.5			CoarsenLimit
-0.5			RefineLimit
-5			MaxLevel
 
 #INNERBOUNDARY
 buffergrid		TypeBcBody
@@ -363,7 +351,7 @@ z=0 VAR idl		StringPlot
 rho ux uy uz ti te bx by bz I01 I02 p sign		NameVars
 g rbody			NamePars
 buf MHD idl		StringPlot
--1  			DnSavePlot
+-1			DnSavePlot
 50.0			DtSavePlot
 			DxSavePlot
 #END_COMP IH -----------------------------------------------------------------
