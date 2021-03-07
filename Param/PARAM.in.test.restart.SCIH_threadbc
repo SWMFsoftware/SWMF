@@ -17,8 +17,6 @@ T			IsTimeAccurate
 #INCLUDE
 SC/restartIN/restart.H	
 
-#COORDSYSTEM
-HGR			TypeCoordSystem
 
 #PLASMA
 1.0			FluidMass [amu]
@@ -45,7 +43,7 @@ F			UseThomasAlg
 
 #BODY
 T			UseBody
-1.00			rBody
+1.0			rBody
 1.5e8			BodyNDim
 1.5e6			BodyTDim
 
@@ -63,7 +61,6 @@ F			IsLogRadius
 30			nR
 90			nLon
 90			nLat
-
 
 #USECURLB0
 T			UseCurlB0
@@ -111,9 +108,6 @@ load			NameCommand
 SC/Param/TR.dat		NameFile
 ascii			TypeFile
 
-#AMR
--1			DnRefine
-
 #TIMESTEPPING
 2			nStage
 0.8			CflExpl
@@ -125,7 +119,6 @@ ascii			TypeFile
 #MINIMUMTEMPERATURE
 5.0e4			TminDim
 5.0e4			TeMinDim
-
 
 #SCHEME
 2			nOrder (1 or 2)
