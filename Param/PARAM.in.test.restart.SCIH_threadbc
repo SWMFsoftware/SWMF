@@ -39,7 +39,7 @@ T			DoConvergenceCheck
 limited			TypeBc
 1.0e-6			Tolerance
 40			MaxIter
-F			UseThomasAlg
+
 
 #BODY
 T			UseBody
