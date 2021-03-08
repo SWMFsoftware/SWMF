@@ -1,0 +1,387 @@
+Begin session: 1
+
+#COMPONENTMAP
+SC  0 -1  1		CompMap
+IH  0 -1  1		CompMap
+SP  0 -1  2		CompMap
+
+#DESCRIPTION
+Param/PARAM.in.test.SCIHSP: Input file for testing SC-IH-SP model for SEPs, includes Threaded-Field-Line		StringDescription
+
+#TIMEACCURATE
+T			IsTimeAccurate
+
+#FIELDLINE
+SP			NameTarget
+2			nSource
+SC			NameSource
+1.15			RScMin
+21			RScMax
+IH			NameSource
+19			RIhMin
+220			RIhMax
+
+#INCLUDE
+RESTART.in
+
+#BEGIN_COMP SC ---------------------------------------------------------------
+
+#INCLUDE
+SC/restartIN/restart.H
+
+#PLASMA
+1.0			FluidMass [amu]
+1.0			IonCharge [e]
+1.0			ElectronTemperatureRatio
+
+#FIELDLINETHREAD
+T			UseFieldLineThreads
+400			nPointThreadMax
+1.0e-3			DsThreadMin
+
+#THREADEDBC
+T			UseAlignedVelocity
+T			DoConvergenceCheck
+second			TypeBc
+1e-6			Tolerance
+20			MaxIter
+
+
+#BODY
+T			UseBody
+1.0			rBody
+1.5e8			BodyNDim
+1.5e6			BodyTDim
+
+#BODY
+F			UseBody
+
+#HARMONICSFILE
+SC/Param/CR2077_GNG.dat		NameHarmonicsFile
+
+#HARMONICSGRID
+1.0			rMagnetogram
+2.5			rSourceSurface
+F			IsLogRadius
+30			MaxOrder
+30			nR
+90			nLon
+90			nLat
+
+#USECURLB0
+T			UseCurlB0
+2.5			rCurrentFreeB0
+
+#USERSWITCH
++init +ic		StringSwitch
+
+#POYNTINGFLUX
+1.1e6			PoyntingFluxPerBSi [J/m^2/s/T]
+
+#CORONALHEATING
+turbulentcascade		TypeCoronalHeating
+T			UseWaveReflection
+1.5e5			LperpTimesSqrtBSi
+0.0			rMinWaveReflection
+F			UseSurfaceWaveRefl
+
+#HEATPARTITIONING
+stochasticheating		TypeHeatPartitioning
+0.34			StochasticExponent
+0.18			StochasticAmplitude
+
+#TEST
+krylov radiative_cooling		StringTest
+
+#SEMIKRYLOV
+GMRES			TypeKrylov
+1.0e-5			ErrorMaxKrylov
+10			MaxMatvecKrylov
+
+#RADIATIVECOOLING
+T			UseRadCooling
+
+#LOOKUPTABLE
+radcool			NameTable
+load			NameCommand
+SC/Param/RadCoolCorona.dat		NameFile
+ascii			TypeFile
+
+#LOOKUPTABLE
+TR			NameTable
+load			NameCommand
+SC/Param/TR.dat		NameFile
+ascii			TypeFile
+
+
+---------------------------------------------------
+#GRIDBLOCKALL
+1200			MaxBlock
+
+#REGION
+test			NameRegion
+box_gen			StringShape
+5.0			xMinBox
+180.0			yMinBox
+0.0			zMinBox
+32.0			xMaxBox
+360.0			yMaxBox
+90.0			zMaxBox
+
+#AMRCRITERIALEVEL
+2			nRefineCrit
+Level			StringRefine
+2			RefineTo
+2			CoarsenFrom
+Level test		StringRefine
+3			RefineTo
+3			CoarsenFrom
+
+
+#DOAMR
+T			DoAmr
+-1			DnAmr
+1			DtAmr
+T			IsStrictAmr
+
+#TIMESTEPPING
+2			nStage
+0.8			CflExpl
+
+#MINIMUMPRESSURE
+1.0E-9			pMinDim
+1.0e-9			PeMinDim
+
+#MINIMUMTEMPERATURE
+5.0e4			TminDim
+5.0e4			TeMinDim
+
+#SCHEME
+2			nOrder (1 or 2)
+Sokolov			TypeFlux (Roe, Rusanov, Linde, Sokolov
+mc3			TypeLimiter
+1.2			LimiterBeta
+
+#LIMITER
+T			UseLogRhoLimiter
+T			UseLogPLimiter
+F			UseRhoRatioLimiter
+
+#NONCONSERVATIVE
+T			UseNonConservative
+
+
+#MESSAGEPASS
+all			TypeMessagePass
+
+#TVDRESCHANGE
+T			UseTvdReschange
+
+#SAVELOGFILE
+T			DoSaveLogfile
+RAW			StringLog
+1			DnSaveLogfile
+-1.			DtSaveLogfile
+
+#COARSEAXIS
+T			UseCoarseAxis
+2			nCoarseLayer
+
+#OUTERBOUNDARY
+fieldlinethreads		TypeBc1   user for spherical and user_outerbcs
+float			TypeBc2
+none			TypeBc3
+none			TypeBc4
+none			TypeBc5
+none			TypeBc6
+
+#SAVEPLOT
+1			nPlotFile
+pnt mhd tec		StringPlot
+10			DnSavePlot
+-1.			DtSavePlot
+
+#PARTICLELINE
+T			UseParticles
+16			nFieldLineMax
+1000			nParticlePerLine
+-1			SpaceStepMin
+-1			SpaceStepMax
+import			InitMode
+radius			OrderMode
+T			UseCorrection
+1.25
+-1
+
+#SAVEINITIAL
+T			DoSaveInitial
+
+
+#END_COMP SC -----------------------------------------------------------------
+
+#BEGIN_COMP IH ---------------------------------------------------------------
+
+#INCLUDE
+IH/restartIN/restart.H
+
+#PLASMA
+1.0			FluidMass [amu]
+1.0			IonCharge [e]
+1.0			ElectronTemperatureRatio
+
+#GRIDBLOCKALL
+6800			MaxBlock
+
+#DOAMR
+F			DoAmr
+
+#INNERBOUNDARY
+buffergrid		TypeBcBody
+
+#BUFFERGRID
+2			nRBuff
+64			nPhiBuff
+32			nThetaBuff
+18.0			rBuffMin
+20.0			rBuffMax
+0.0			PhiBuffMin
+360.			PhiBuffMax
+-90.0			LatBuffMin
+90.0			LatBuffMax
+
+#OUTERBOUNDARY
+float			TypeBc1
+float			TypeBc2
+float			TypeBc3
+float			TypeBc4
+float			TypeBc5
+float			TypeBc6
+
+#RESCHANGE
+T			UseAccurateReschange
+
+#USERSWITCH
++init			StringSwitch
+
+#CORONALHEATING
+turbulentcascade		TypeCoronalHeating
+T			UseWaveReflection
+1.5e5			LperpTimesSqrtBSi
+0.0			rMinWaveReflection
+F			UseSurfaceWaveRefl
+
+#SCHEME
+2			nOrder
+Sokolov			TypeFlux
+mc3			TypeLimiter
+1.2			LimiterBeta
+
+#NONCONSERVATIVE
+T			UseNonConservative
+
+#TIMESTEPPING
+2			nStage
+0.8			CflExpl
+
+#DIVB
+T			UseDivbSource
+T			UseDivbDiffusion
+F			UseProjection
+F			UseConstrainB
+
+#SAVELOGFILE
+T			DoSaveLogfile
+RAW			StringLog
+1			DnSaveLogfile
+-1.			DtSaveLogfile
+
+#SAVEINITIAL
+T			DoSaveInitial
+
+#PARTICLELINE
+T			UseParticles
+16			nFieldLineMax
+1000			nParticlePerLine
+-1			SpaceStepMin
+-1			SpaceStepMax
+import			InitMode
+radius			OrderMode
+F			UseCorrection
+
+#SAVEPLOT
+1			nPlotFile
+pnt mhd tec		StringPlot
+10 			DnSavePlot
+-1.			DtSavePlot
+
+
+#END_COMP IH -----------------------------------------------------------------
+
+#BEGIN_COMP SP ---------------------------------------------------------------
+
+#NSTEP
+0			nStep
+
+#DORUN
+F			DoRun
+
+#TEST
+F			DoTraceShock
+F			UseDiffusion
+
+
+#ORIGIN
+2.5			ROrigin
+-10			LonMin
+25			LatMin
+10			LonMax
+90			LatMax
+
+#SAVEPLOT
+1			nFileOut
+mh1d flux idl		StringPlot
+
+#USEDATETIME
+T			UseDateTime
+
+#END_COMP SP -----------------------------------------------------------------
+
+#COUPLE1
+SC			NameSource
+IH			NameTarget
+-1			DnCouple
+1.0			DtCouple
+
+#COUPLE1
+SC			NameSource
+SP			NameTarget
+-1			DnCouple
+1.0			DtCouple
+
+#COUPLE1
+IH			NameSource
+SP			NameTarget
+-1			DnCouple
+1.0			DtCouple
+
+#STOP
+-1			MaxIter
+102			TimeMax
+
+End session: 1
+#RUN ##########################################################################
+Begin session: 2
+
+#BEGIN_COMP SC ---------------------------------------------------------------
+
+#DOAMR
+F			DoAmr
+
+#END_COMP SC -----------------------------------------------------------------
+
+#STOP
+-1			MaxIter
+105			TimeMax
+
+End session: 2
+#END ##########################################################################
