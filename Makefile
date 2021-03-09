@@ -89,6 +89,8 @@ help:
 	@echo ' '
 	@echo '    tags        (create etags for emacs for easy look up in source code)'
 	@echo ' '
+	@echo '    FORMATF90   (format F90 code properly and report changes)'
+	@echo ' '
 #EOC
 #
 # Check the variables DIR=`pwd` and OS = `uname`
@@ -411,6 +413,14 @@ ETAGS = etags
 
 tags:	ENV_CHECK
 	-$(ETAGS) ./*/*/*/*.[fF]90 ./*/*/*/*.[fF] ./*/*/*/*.for
+
+
+FORMATF90:
+	-@share/Scripts/FormatFortran.pl -l GM/BATSRUS/src/*.f90
+	-@share/Scripts/FormatFortran.pl GM/BATSRUS/srcBATL/*.f90
+	-@share/Scripts/FormatFortran.pl GM/BATSRUS/srcUser/*.f90
+	-@share/Scripts/FormatFortran.pl GM/BATSRUS/srcInterface/*.f90
+	-@share/Scripts/FormatFortran.pl share/Library/src/*.f90
 
 #^CMP IF EE BEGIN
 #
