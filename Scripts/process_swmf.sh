@@ -8,7 +8,7 @@ cd $HOME/Sites
 mkdir -p SWMF_TEST_RESULTS/`date +%Y/%m/%d`
 
 # Remove code from yesterday as well as various logs
-rm -rf SWMF_yesterday code.diff manual.log manual.err
+rm -rf SWMF_yesterday code.diff manual.log manual.err fortran.err
 
 if(-d SWMF)then
     # Move the previous SWMF repository out of the way
@@ -57,3 +57,8 @@ make clean         >>& ~/Sites/manual.log
 cd ~/Sites
 grep -v logo_small.png manual.log | grep -C10 Error > manual.err
 
+# Check Fortran formatting
+cd ~/Sites/SWMF
+make FORMATF90 > ~/Sites/fortran.err
+# return to original code (we could also commit it!)
+gitall checkout .

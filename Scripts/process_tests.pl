@@ -44,6 +44,7 @@ my $htmlfile = "test_swmf.html";
 my $logfile = "test_swmf.log";
 my $indexfile = "index.html";
 my $codefile = "code.diff";
+my $f90errorfile = "fortran.err";
 my $manerrorfile = "manual.err";
 my $paramerrorfile = "param.err";
 my $lastpassfile = "lastpass.txt";
@@ -337,6 +338,14 @@ foreach my $machine (@machines){
     last;
 }
 
+if(-s $f90errorfile){
+    print FILE "
+<h3><A HREF=$f90errorfile TARGET=swmf_f90_error>
+<font color=red>Errors in Fortran formatting.</font></A>
+</h3>
+";
+}
+
 if(-s $manerrorfile){
     print FILE "
 <h3><A HREF=$manerrorfile TARGET=swmf_man_error>
@@ -346,6 +355,7 @@ for more info.
 </h3>
 ";
 }
+
 
 if(-s $codefile){
     print FILE "
