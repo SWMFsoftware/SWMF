@@ -602,18 +602,16 @@ contains
           call read_planet_var(NameCommand)
 
        case("#ROTATEHGR")
-          if(.not.is_first_read())then
-             if(UseStrict)RETURN
-             CYCLE
-          end if
+          ! Can only be read in the first session and only once
+          if(.not.is_first_read() .or. dLongitudeHgrDeg /= 0.0) CYCLE
+
           call read_var('dLongitudeHgr', dLongitudeHgrDeg)
           dLongitudeHgr = dLongitudeHgrDeg * cDegToRad
 
        case("#ROTATEHGI")
-          if(.not.is_first_read())then
-             if(UseStrict)RETURN
-             CYCLE
-          end if
+          ! Can only be read in the first session and only once
+          if(.not.is_first_read() .or. dLongitudeHgiDeg /= 0.0) CYCLE
+
           call read_var('dLongitudeHgi', dLongitudeHgiDeg)
           dLongitudeHgi = dLongitudeHgiDeg * cDegToRad
 
