@@ -417,11 +417,7 @@ tags:	ENV_CHECK
 
 FORMATF90:
 	-@share/Scripts/FormatFortran.pl -l GM/BATSRUS/src/*.f90
-	-@share/Scripts/FormatFortran.pl GM/BATSRUS/srcInterface/*.f90
-	-@share/Scripts/FormatFortran.pl GM/BATSRUS/srcEquation/*.f90
-	-@share/Scripts/FormatFortran.pl GM/BATSRUS/srcUser/*.f90
-	-@share/Scripts/FormatFortran.pl GM/BATSRUS/srcUserExtra/*.f90
-	-@share/Scripts/FormatFortran.pl GM/BATSRUS/srcBATL/*.f90
+	-@share/Scripts/FormatFortran.pl GM/BATSRUS/src[A-Z]*/*.f90
 	-@share/Scripts/FormatFortran.pl share/Library/src/*.f90
 
 #^CMP IF EE BEGIN
