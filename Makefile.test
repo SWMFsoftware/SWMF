@@ -1126,7 +1126,7 @@ test9_check:
 	-(${DIFFNUM} -b -r=1e-4 -a=1e-27 \
                 ${TESTDIR}/RESULTS/run_start/SC/los_sta_euvi_5_n0000005.out \
                 output/test9/SC_los_sta_euvi_5_n0000005.out.gz \
-                >> test09_sc_los.diff)
+                > test09_sc_los.diff)
 	-(${DIFFNUM} -b -r=1e-4 -a=1e-27 \
                 ${TESTDIR}/RESULTS/run_start/SC/los_stb_euvi_6_n0000005.out \
                 output/test9/SC_los_stb_euvi_6_n0000005.out.gz \
