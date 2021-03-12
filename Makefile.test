@@ -16,7 +16,7 @@ test_help:
 	@echo "    test8_rundir               (create run directory for test8)"
 	@echo "    test8_run NP=4             (run test8 with 4 MPI )"
 	@echo "    test8_check                (check test8 results)"
-	@echo "    test8_check BLESS=YES      (bless test8 resutls = update references)"
+	@echo "    test8_check BLESS=YES      (bless test8 results = update references)"
 	@echo "    test8 TESTDIR=run_test08   (run test8 in run_test08 directory)"
 	@echo "    test_share_library         (run share/Library tests)"
 	@echo "    test_util                  (run util/ tests)"
