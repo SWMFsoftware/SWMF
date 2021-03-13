@@ -21,6 +21,9 @@ IH			NameSource
 19			RIhMin
 220			RIhMax
 
+#TEST
+couple_mh_sp		StringTest
+
 #INCLUDE
 RESTART.in
 

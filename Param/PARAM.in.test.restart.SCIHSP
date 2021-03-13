@@ -24,6 +24,9 @@ IH			NameSource
 #SAVERESTART
 F			DoSaveRestart
 
+#TEST
+couple_mh_sp		StringTest
+
 #INCLUDE
 RESTART.in
 
