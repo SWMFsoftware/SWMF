@@ -143,6 +143,7 @@ contains
     call BL_do_extract_lines(DoExtract)
     if(use_comp(SC_))call couple_sc_sp_init  !^CMP IF SC
     if(use_comp(IH_))call couple_ih_sp_init
+    
 
     ! After couple_mh_sp_init
     ! (a) set of low and upper boundaries in the coupler
@@ -325,7 +326,8 @@ contains
     integer:: nLength
     !--------------------------------------------------------------------------
     if(.not.RouterScBl%IsProc)RETURN
-
+    if(DoTest.and.is_proc0(SC_))&
+         write(*,'(a,es12.5)')NameSub//': couple to SC,time=', DataInputTime
     tNow=DataInputTime
     if(is_proc(BL_))then
        call BL_put_coupling_param(&
@@ -459,6 +461,8 @@ contains
     real,intent(in)::DataInputTime
     !--------------------------------------------------------------------------
     if(.not.RouterIhBl%IsProc)RETURN
+    if(DoTest.and.is_proc0(IH_))&
+         write(*,'(a,es12.5)')NameSub//': couple to IH,time=', DataInputTime
     tNow = DataInputTime
     if(is_proc(BL_))then
        call BL_put_coupling_param(&
