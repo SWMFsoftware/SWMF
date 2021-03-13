@@ -22,6 +22,7 @@ module CON_bline
   public :: BL_get_bounds
   public :: BL_adjust_lines
   public :: BL_update_r
+  public :: BL_init_foot_points       ! initialize foot points
   public :: BL_n_particle             ! return number of points at the MF line
   public :: BL_put_from_mh            ! put MHD values from MH to SP
   public :: BL_interface_point_coords ! points rMinInterface<R<rMaxInterface
@@ -568,11 +569,31 @@ contains
     end if
   end subroutine BL_put_line
   !============================================================================
+  subroutine BL_init_foot_points
+    integer:: iOffset, iLine, iBegin,  iEnd ! loop variables
+    character(len=*), parameter:: NameSub = 'BL_init_foot_point'
+    !--------------------------------------------------------------------------
+    do iLine = 1, nLine
+       iBegin = 1
+       do while (all(MHData_VIB(X_:Z_,iBegin,iLine)==0.0))
+          iBegin = iBegin + 1
+       end do
+       if(iBegin /= 1)then
+          ! Offset particle arrays
+          iEnd   = nVertex_B(iLine)
+          iOffset = 1 - iBegin
+          MHData_VIB(LagrID_:Z_, 1:iEnd+iOffset, iLine) = &
+               MHData_VIB(LagrID_:Z_, iBegin:iEnd, iLine)
+          nVertex_B(iLine) = nVertex_B(iLine) + iOffset
+       end if
+       call BL_set_line_foot_b(iLine)
+    end do
+  end subroutine BL_init_foot_points
+  !============================================================================
   ! Called from coupler after the updated grid point lo<cation are
   ! received from the other component (SC, IH). Determines whether some
   ! grid points should be added/deleted
-  subroutine BL_adjust_lines(DoInit, Source_)
-    logical, intent(in) :: DoInit
+  subroutine BL_adjust_lines(Source_)
     integer, intent(in) :: Source_
     ! once new geometry of lines has been put, account for some particles
     ! exiting the domain (can happen both at the beginning and the end)
@@ -599,12 +620,6 @@ contains
     DoAdjustUp = Source_ == Upper_
     line:do iLine = 1, nLine
        iBegin = 1
-       if(DoInit.and.DoAdjustLo)then
-          do while (all(MHData_VIB(X_:Z_,iBegin,iLine)==0.0))
-             iBegin = iBegin + 1
-          end do
-          if(iBegin == 1)call BL_set_line_foot_b(iLine)
-       end if
        if(DoAdjustLo)then
           iOffset_B(iLine) = 0
        end if

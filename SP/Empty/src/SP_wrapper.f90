@@ -87,8 +87,7 @@ contains
     call CON_stop('SP:'//NameSub//': cannot call the empty version')
   end subroutine SP_put_coupling_param
   !============================================================================
-  subroutine SP_adjust_lines(DoInit, Source_)
-    Logical, intent(in):: DoInit
+  subroutine SP_adjust_lines(Source_)
     integer, intent(in):: Source_
     character(len=*), parameter:: NameSub = 'SP_adjust_lines'
     !--------------------------------------------------------------------------

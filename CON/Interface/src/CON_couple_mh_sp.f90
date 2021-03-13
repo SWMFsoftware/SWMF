@@ -36,6 +36,7 @@ module CON_couple_mh_sp
   use CON_bline, ONLY:  BL_,     &
        RScMin, RScMax,           &  !^CMP IF SC  
        RIhMin, RIhMax,           &
+       BL_init_foot_points,      &  ! Initialize footpoint array 
        BL_get_bounds,            &  ! Provides RScMin/Max and/or RIhMin/Max
        BL_n_particle            ,&  ! Number of "points" in a given line in SP
        BL_put_from_mh           ,&  ! Put MHD info from SC or IH to SP
@@ -113,15 +114,14 @@ contains
        end select
      end subroutine BL_put_coupling_param
   !============================================================================
-  subroutine BL_adjust_lines(DoInit, Source_)
-    logical, intent(in) :: DoInit
+  subroutine BL_adjust_lines(Source_)
     integer, intent(in) :: Source_
     !--------------------------------------------------------------------------
     select case(BL_)
     case(SP_)
-       call SP_adjust_lines(DoInit, Source_)
+       call SP_adjust_lines(Source_)
     case(PT_)
-       call PT_adjust_lines(DoInit, Source_)
+       call PT_adjust_lines(Source_)
     case default
        call CON_stop('The target model it BL is not allowed')
     end select
@@ -143,7 +143,7 @@ contains
     call BL_do_extract_lines(DoExtract)
     if(use_comp(SC_))call couple_sc_sp_init  !^CMP IF SC
     if(use_comp(IH_))call couple_ih_sp_init
-    
+    if(DoExtract.and.is_proc(BL_))call BL_init_foot_points
 
     ! After couple_mh_sp_init
     ! (a) set of low and upper boundaries in the coupler
@@ -350,7 +350,7 @@ contains
     !
     ! The advected particles from SC are taken  
     !
-    if(is_proc(BL_))call BL_adjust_lines(DoInit, SC_)
+    if(is_proc(BL_))call BL_adjust_lines(SC_)
     !
     ! Some particles may be lost, after adjustment the line intergity
     ! is recovered
@@ -482,7 +482,7 @@ contains
     ! Now the full magnetic line is available, including probably
     ! some points lost in IH
     ! 
-    if(is_proc(BL_))call BL_adjust_lines(DoInit, IH_)
+    if(is_proc(BL_))call BL_adjust_lines(IH_)
     ! In points at RIhMin < R < RIhMax get the MHD data
     ! Set router IH=> BL to  receive MHD data
     call set_router(                                            &
