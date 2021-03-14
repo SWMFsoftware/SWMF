@@ -186,7 +186,10 @@ all			TypeMessagePass
 T			UseTvdReschange
 
 #SAVELOGFILE
-F			DoSaveLogfile
+T			DoSaveLogfile
+RAW			StringLog
+1			DnSaveLogfile
+-1.			DtSaveLogfile
 
 #COARSEAXIS
 T			UseCoarseAxis
@@ -217,10 +220,6 @@ radius			OrderMode
 T			UseCorrection
 1.25
 -1
-
-#SAVEINITIAL
-T			DoSaveInitial
-
 
 #END_COMP SC -----------------------------------------------------------------
 
@@ -295,11 +294,10 @@ F			UseProjection
 F			UseConstrainB
 
 #SAVELOGFILE
-F			DoSaveLogfile
-
-
-#SAVEINITIAL
-T			DoSaveInitial
+T			DoSaveLogfile
+RAW			StringLog
+1			DnSaveLogfile
+-1.			DtSaveLogfile
 
 #PARTICLELINE
 T			UseParticles

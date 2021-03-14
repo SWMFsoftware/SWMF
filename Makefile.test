@@ -1438,50 +1438,63 @@ test15_check:
 ### test15_long: same as test15, but SC/IH start from scratch
 
 test15_long:
-	rm -f test15_long.diff
-	@echo "test15_compile..." >> test15_long.diff
+	rm -f test15_long*.diff
+	@echo "test15_compile..." >> test15_long_sp.diff
 	${MAKE} test15_compile
-	@echo "test15_long_rundir..." >> test15_long.diff
+	@echo "test15_long_rundir..." >> test15_long_sp.diff
 	${MAKE} test15_long_rundir
-	@echo "test15_long_run..." >> test15_long.diff
+	@echo "test15_long_run..." >> test15_long_sp.diff
 	${MAKE} test15_long_run
-	@echo "test15_long_restart..." >> test15_long.diff
+	@echo "test15_long_restart..." >> test15_long_sp.diff
 	${MAKE} test15_long_restart
-	@echo "test15_long_check..." >> test15_long.diff
+	@echo "test15_long_check..." >> test15_long_sp.diff
 	${MAKE} test15_long_check
 
 
 test15_long_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
-	cp GM/BATSRUS/Param/CORONA/RadCoolCorona.dat \
-	   ${TESTDIR}/RadCoolCorona.dat
 	cp Param/PARAM.in.test.SCIHSP_long ${TESTDIR}/PARAM.in
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test15_long_run:
-	cd ${TESTDIR}; rm -rf RESULTS
+	cd ${TESTDIR}; rm -rf RESTART
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
-	${MAKE} test8_check
+	cd ${TESTDIR}; ./Restart.pl -o -W RESTART
 	
 test15_long_restart:
-	cd ${TESTDIR}; rm -rf RESULTSLONG runlog_restart
-	cd ${TESTDIR}; ./Restart.pl -i RESULTS/RESTART
+	cd ${TESTDIR}; rm -rf RESULTS runlog_restart
+	cd ${TESTDIR}; ./Restart.pl -i RESTART
 	cd ${TESTDIR}; mv PARAM.in PARAM.in_start; rm -f PARAM.in_orig_
 	cd ${TESTDIR}; cp Param/PARAM.in.test.restart.SCIHSP_long PARAM.in
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_restart
-	cd ${TESTDIR}; ./PostProc.pl -M RESULTSLONG
+	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS
 
 test15_long_check:
-	cat ${TESTDIR}/RESULTSLONG/SP/MH_data_*_*_t00000150_n000010.out \
-	    > ${TESTDIR}/RESULTSLONG/SP/MH_data.outs
+	-(${DIFFNUM} -b -r=1e-4 -a=1e-26 \
+		${TESTDIR}/RESULTS/SC/log_n000000.log \
+		output/test15_long/SC_log_n000000.log \
+		> test15_long_sc_thread.diff)
+	-(${DIFFNUM} -b -r=1e-5 -a=1e-26 \
+		${TESTDIR}/RESULTS/SC/rfr_rwi_4_*.outs \
+		output/test8/SC_rfr.ref.gz \
+		>> test15_long_sc_thread.diff)
+	-(${DIFFNUM} -b -r=1e-5 \
+		${TESTDIR}/RESULTS/IH/log_n000000.log \
+		output/test15_long/IH_log_n000000.log \
+		> test15_long_ih.diff)
+	-(${DIFFNUM} -b -r=1e-5 \
+		${TESTDIR}/RESULTS/SC/los_sdo_aia*.out \
+		SC/BATSRUS/data/output/test8/SC_los_sdo_aia.out.gz \
+		> test15_long_sc_los.diff)
+	cat ${TESTDIR}/RESULTS/SP/MH_data_*_*_t00000150_n000010.out \
+	    > ${TESTDIR}/RESULTS/SP/MH_data.outs
 	-(${DIFFNUM} -a=1e-6 -r=1e-6 -b \
-		${TESTDIR}/RESULTSLONG/SP/MH_data.outs \
+		${TESTDIR}/RESULTS/SP/MH_data.outs \
 		output/test15_long/MH_data.ref.gz \
-		> test15_long.diff)
-	ls -l test15_long.diff
+		> test15_long_sp.diff)
+	ls -l test15_long*.diff
 
 ### test15_pt: same as test15, but PT/AMPS model coupled with SC and IH models
 
