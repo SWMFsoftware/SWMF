@@ -6,7 +6,7 @@ IH  0 -1  1		CompMap
 SP  0 -1  2		CompMap
 
 #DESCRIPTION
-Param/PARAM.in.test.restart.SCIHSP: Input file for testing SC-IH-SP model for SEPs, includes Threaded-Field-Line		StringDescription
+Param/PARAM.in.test.SCIHSP: Input file for testing SC-IH-SP model for SEPs, includes Threaded-Field-Line		StringDescription
 
 #TIMEACCURATE
 T			IsTimeAccurate
@@ -21,8 +21,8 @@ IH			NameSource
 19			RIhMin
 220			RIhMax
 
-#SAVERESTART
-F			DoSaveRestart
+#TEST
+couple_mh_sp		StringTest
 
 #INCLUDE
 RESTART.in
@@ -37,6 +37,11 @@ SC/restartIN/restart.H
 1.0			IonCharge [e]
 1.0			ElectronTemperatureRatio
 
+#CHROMOSPHERE
+F			UseChromosphereHeating
+3.125e11		NeChromosphereCgs
+3.2e4			TeChromosphereSi
+
 #FIELDLINETHREAD
 T			UseFieldLineThreads
 400			nPointThreadMax
@@ -48,6 +53,7 @@ T			DoConvergenceCheck
 second			TypeBc
 1e-6			Tolerance
 20			MaxIter
+
 
 #BODY
 T			UseBody
@@ -116,6 +122,36 @@ SC/Param/TR.dat		NameFile
 ascii			TypeFile
 
 
+---------------------------------------------------
+#GRIDBLOCKALL
+1200			MaxBlock
+
+#REGION
+test			NameRegion
+box_gen			StringShape
+5.0			xMinBox
+180.0			yMinBox
+0.0			zMinBox
+32.0			xMaxBox
+360.0			yMaxBox
+90.0			zMaxBox
+
+#AMRCRITERIALEVEL
+2			nRefineCrit
+Level			StringRefine
+2			RefineTo
+2			CoarsenFrom
+Level test		StringRefine
+3			RefineTo
+3			CoarsenFrom
+
+
+#DOAMR
+T			DoAmr
+-1			DnAmr
+1			DtAmr
+T			IsStrictAmr
+
 #TIMESTEPPING
 2			nStage
 0.8			CflExpl
@@ -150,10 +186,7 @@ all			TypeMessagePass
 T			UseTvdReschange
 
 #SAVELOGFILE
-T			DoSaveLogfile
-RAW			StringLog
-1			DnSaveLogfile
--1.			DtSaveLogfile
+F			DoSaveLogfile
 
 #COARSEAXIS
 T			UseCoarseAxis
@@ -200,6 +233,9 @@ IH/restartIN/restart.H
 1.0			FluidMass [amu]
 1.0			IonCharge [e]
 1.0			ElectronTemperatureRatio
+
+#GRIDBLOCKALL
+6800			MaxBlock
 
 #DOAMR
 F			DoAmr
@@ -259,10 +295,8 @@ F			UseProjection
 F			UseConstrainB
 
 #SAVELOGFILE
-T			DoSaveLogfile
-RAW			StringLog
-1			DnSaveLogfile
--1.			DtSaveLogfile
+F			DoSaveLogfile
+
 
 #SAVEINITIAL
 T			DoSaveInitial
@@ -288,8 +322,8 @@ pnt mhd tec		StringPlot
 
 #BEGIN_COMP SP ---------------------------------------------------------------
 
-#INCLUDE
-SP/restartIN/restart.H
+#NSTEP
+0			nStep
 
 #DORUN
 F			DoRun
@@ -299,12 +333,19 @@ F			DoTraceShock
 F			UseDiffusion
 
 
+#ORIGIN
+2.5			ROrigin
+-10			LonMin
+25			LatMin
+10			LonMax
+90			LatMax
+
 #SAVEPLOT
 1			nFileOut
 mh1d flux idl		StringPlot
 
-#SAVEINITIAL
-F			DoSaveInitial
+#USEDATETIME
+T			UseDateTime
 
 #END_COMP SP -----------------------------------------------------------------
 
@@ -328,7 +369,45 @@ SP			NameTarget
 
 #STOP
 -1			MaxIter
-110			TimeMax
+102			TimeMax
 
 End session: 1
-#END ##########################################################################
+#RUN ##########################################################################
+Begin session: 2
+
+#BEGIN_COMP SC ---------------------------------------------------------------
+
+#DOAMR
+F			DoAmr
+
+#END_COMP SC -----------------------------------------------------------------
+
+#STOP
+-1			MaxIter
+105			TimeMax
+
+End session: 2
+#RUN ##########################################################################
+Begin session: 3
+
+#SAVERESTART
+F			DoSaveRestart
+
+#BEGIN_COMP SP
+
+#SAVEINITIAL
+F			DoSaveInitial
+
+#USEDATETIME
+F			UseDateTime
+
+#END_COMP SP -----------------------------------------------------------------
+
+#STOP
+-1			MaxIter
+110			TimeMax
+
+End session: 3
+#END 
+
+
