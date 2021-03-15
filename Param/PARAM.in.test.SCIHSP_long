@@ -562,9 +562,6 @@ ascii			TypeFile
 
 #BEGIN_COMP IH ---------------------------------------------------------------
 
-SAVEINITIAL
-T			DoSaveInitial
-
 #SAVEPLOT
 4			nPlotFile
 x=0 VAR idl		StringPlot
