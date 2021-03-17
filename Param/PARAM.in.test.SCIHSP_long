@@ -149,7 +149,7 @@ uniform			TypeHeatPartitioning
 0.6			QionRatio
 
 #TEST
-krylov radiative_cooling		StringTest
+radiative_cooling		StringTest
 
 #RADIATIVECOOLING
 T			UseRadCooling
@@ -430,7 +430,7 @@ RAW			StringLog
 T			DoSaveInitial
 
 #SAVEPLOT
-4			nPlotFile
+3			nPlotFile
 x=0 VAR idl		StringPlot
 10 			DnSavePlot
 -1.			DtSavePlot
@@ -475,7 +475,7 @@ Begin session:3
 #BEGIN_COMP SC ---------------------------------------------------------------
 
 #TEST
-radiative_cooling write_plot_los		StringTest
+radiative_cooling		StringTest
 
 #USERINPUTBEGIN -----------------------------------
 
