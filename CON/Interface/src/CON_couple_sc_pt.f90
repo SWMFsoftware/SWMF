@@ -4,16 +4,11 @@
 !^CMP FILE SC
 !^CMP FILE PT
 
-! BOP
-! MODULE: CON_couple_sc_pt - couple SC and PT components
 !
-!DESCRIPTION:
 ! Couple SC and PT components: SC -> PT.
 !
-!INTERFACE:
 module CON_couple_sc_pt
 
-  !USES:
   use CON_coupler
 
   use CON_couple_points, ONLY: &
@@ -30,14 +25,11 @@ module CON_couple_sc_pt
 
   private ! except
 
-  !PUBLIC MEMBER FUNCTIONS:
-
   public :: couple_sc_pt_init ! initialize both couplings
   public :: couple_sc_pt      ! couple SC to PT
 
-  !REVISION HISTORY:
+  ! revision history:
   ! 03/16/2015 A.Michael and G.Toth - initial version
-  ! EOP
 
   ! Router communicator info
   type(CouplePointsType) :: CouplerScToPt
@@ -45,15 +37,10 @@ module CON_couple_sc_pt
 contains
   !============================================================================
 
-  ! BOP =======================================================================
-  ! IROUTINE: couple_sc_pt_init - initialize SC-PT couplings
-  !INTERFACE:
   subroutine couple_sc_pt_init
 
-    !DESCRIPTION:
     ! Initialize SC->PT coupler.
     ! This subroutine should be called from all PE-s
-    ! EOP
 
     logical :: DoTest, DoTestMe
 
@@ -77,21 +64,15 @@ contains
   end subroutine couple_sc_pt_init
   !============================================================================
 
-  ! BOP =======================================================================
-  ! IROUTINE: couple_sc_pt - couple SC to PT
-  !INTERFACE:
   subroutine couple_sc_pt(tSimulation)
     use CON_transfer_data, ONLY: transfer_real
-    !INPUT ARGUMENT:
     real, intent(in) :: tSimulation
 
-    !DESCRIPTION:
-    ! Couple between two components:\\
-    !    Solar Corona               (SC) source\\
+    ! Couple between two components:\
+    !    Solar Corona               (SC) source\
     !    Particle Tracker           (PT) target
     !
     ! Send information from SC to PT.
-    ! EOP
 
     logical :: DoTest, DoTestMe
     real:: DtSi ! time step in SI units
@@ -117,3 +98,4 @@ contains
   !============================================================================
 
 end module CON_couple_sc_pt
+!==============================================================================

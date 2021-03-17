@@ -5,7 +5,6 @@
 !               Space Weather Modeling Framework (SWMF)                !
 !    Center for Space Environment Modeling, The University of Michigan !
 !-----------------------------------------------------------------------
-! BOP -------------------------------------------------------------------------
 !
 ! ! MODULE: CON_comp_param - parameters used by the SWMF Registry
 !          and query functions for them
@@ -37,7 +36,6 @@
 ! item[UA] Upper Atmosphere
 ! end{itemize}
 
-!INTERFACE:
 !
 module CON_comp_param
   !
@@ -76,17 +74,15 @@ module CON_comp_param
   character(len=9)   :: NameMapFile = "LAYOUT.in"
 
   !
-  !PUBLIC MEMBER FUNCTIONS:
   !
   public :: is_valid_comp_name ! return true if component name is valid
   public :: i_comp_name        ! return index for component name
 
-  !REVISION HISTORY:
+  ! revision history:
   !
   !  June    2003 - O. Volberg <volov@umich.edu> - initial version
   !  July 12 2003 - G. Toth    <gtoth@umich.edu> - rewrite
   !
-  ! EOP ------------------------------------------------------------------------
 
   character(len=*),parameter,private :: NameMod = 'CON_comp_param'
 
@@ -138,3 +134,4 @@ contains
   !============================================================================
 
 end module CON_comp_param
+!==============================================================================

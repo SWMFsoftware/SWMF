@@ -1,9 +1,6 @@
 !  Copyright (C) 2002 Regents of the University of Michigan,
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-! BOP
-! MODULE: CON_grid_descriptor - for uniform or octree grids
-!INTERFACE:
 module CON_grid_descriptor
   use ModUtilities, ONLY: check_allocate
   use ModKind
@@ -16,14 +13,13 @@ module CON_grid_descriptor
   ! The methods include the grid descriptor allocation, coordinate
   ! computations and the interpolation procedures
 
-  !USES:
   use CON_grid_storage, ONLY: DomainType, DomainPointerType, cAlmostOne,  &
        PE_, GlobalBlock_, coord_block_d, d_coord_block_d, d_coord_cell_d, &
        ndim_grid, is_left_boundary_d, is_right_boundary_d, i_global_block,&
        l_neighbor, i_global_node_a, n_block, BLK_, associate_dd_pointer,  &
        ncell_id, glue_margin, pe_and_blk, search_cell, search_in
 
-  !REVISION HISTORY:
+  ! revision history:
   ! Sokolov I.V.
   ! 6.18.03-7.11.03
   ! igorsok@umich.edu
@@ -215,18 +211,14 @@ module CON_grid_descriptor
 contains
   !============================================================================
   ! ROUTINE: coord_grid_d - the coordintes of the grid point
-  !INTERFACE:
   function coord_grid_d_global(Grid,&
        lGlobalTreeNode,iPoints_D)
-    !INPUT ARGUMENTS:
     type(GridType),intent(in)::Grid
     integer,intent(in)::lGlobalTreeNode
     integer,dimension(Grid%nDim),intent(in)::&
          iPoints_D
-    !OUTPUT ARGUMENTS:
     real,dimension(Grid%nDim)::&
          coord_grid_d_global
-    ! EOP
     !--------------------------------------------------------------------------
     coord_grid_d_global = coord_block_d(Grid%Domain%Ptr,&
          lGlobalTreeNode)+&
@@ -237,14 +229,11 @@ contains
   !============================================================================
   function coord_grid_d_local(LocalGrid,&
        iBlockUsed, iPoints_D)
-    !INPUT ARGUMENTS:
     type(LocalGridType), intent(in) :: LocalGrid
     integer,           intent(in) :: iBlockUsed
     integer,           intent(in) :: iPoints_D(LocalGrid%nDim)
-    !OUTPUT ARGUMENTS:
     real                          :: coord_grid_d_local(LocalGrid%nDim)
     integer :: nDim
-    ! EOP
     !--------------------------------------------------------------------------
     nDim = LocalGrid%nDim
     coord_grid_d_local = LocalGrid%CoordBlock_DB(1:nDim,iBlockUsed) +&
@@ -252,28 +241,19 @@ contains
          (LocalGrid%Displacement_D - 0.50 +real(iPoints_D))
   end function coord_grid_d_local
   !============================================================================
-  ! BOP
-  ! IROUTINE: set_standard_grid_descriptor - cell centered or node grids.
-  !DESCRIPTION:
   ! Allow to set the standard grid descriptor:
   ! iStandard\_=CellCentered\_ or iStandard\_=Nodes\_,
   ! with or without halo points ("ghost points")
-  ! EOP
   !---------------------------------------------------------------!
-  ! BOP
-  !INTERFACE:
   subroutine set_standard_grid_descriptor_id(&
        iGridID,&
        nGhostGridPoints,&
        iStandard,&
        Grid)
-    !INPUT ARGUMENTS:
     integer,intent(in)::iGridID
     integer,intent(in),optional::iStandard
     integer,intent(in),optional::nGhostGridPoints
-    !OUTPUT ARGUMENTS:
     type(GridType),intent(out)::Grid
-    ! EOP
     integer::iError,iMyStandard,nGhostGridPointsMy
     !--------------------------------------------------------------------------
     call associate_dd_pointer(&
@@ -316,21 +296,16 @@ contains
   end subroutine set_standard_grid_descriptor_id
   !============================================================================
   !--------------------------------------------------------!
-  ! BOP
-  !INTERFACE:
   subroutine set_standard_grid_descriptor_dd(&
        Domain,&
        nGhostGridPoints,&
        iStandard,&
        Grid)
-    !INPUT ARGUMENTS:
     type(DomainType),target,intent(in)::&
          Domain
     integer,intent(in),optional::iStandard
     integer,intent(in),optional::nGhostGridPoints
-    !OUTPUT ARGUMENTS:
     type(GridType),intent(out)::Grid
-    ! EOP
     integer::iError,iMyStandard,nGhostGridPointsMy
     !--------------------------------------------------------------------------
     nullify(Grid%Domain%Ptr)
@@ -373,9 +348,6 @@ contains
   !============================================================================
   ! More general grid descriptor                                   !
   !---------------------------------------------------------------!
-  ! BOP
-  ! IROUTINE: set_grid_descriptor - set more general grid
-  !INTERFACE:
   subroutine set_grid_descriptor_id(&
        iGridID,&
        nDim,&
@@ -383,15 +355,12 @@ contains
        iPointMax_D,&
        Displacement_D,&
        Grid)
-    !INPUT ARGUMENTS:
     integer,intent(in)::iGridID
     integer,intent(in)::nDim
     integer,intent(in),dimension(nDim)::iPointMin_D
     integer,intent(in),dimension(nDim)::iPointMax_D
     real,intent(in),dimension(nDim)::Displacement_D
-    !OUTPUT ARGUMENTS:
     type(GridType),intent(out)::Grid
-    ! EOP
     integer::iError,iMyStandard,nGhostGridPointsMy
     !--------------------------------------------------------------------------
     call associate_dd_pointer(&
@@ -413,8 +382,6 @@ contains
   end subroutine set_grid_descriptor_id
   !============================================================================
   !---------------------------------------------------------------!
-  ! BOP
-  !INTERFACE:
   subroutine set_grid_descriptor_dd(&
        Domain,&
        nDim,&
@@ -422,16 +389,13 @@ contains
        iPointMax_D,&
        Displacement_D,&
        Grid)
-    !INPUT ARGUMENTS:
     type(DomainType),target,intent(in)::&
          Domain
     integer,intent(in)::nDim
     integer,intent(in),dimension(nDim)::iPointMin_D
     integer,intent(in),dimension(nDim)::iPointMax_D
     real,intent(in),dimension(nDim)::Displacement_D
-    !OUTPUT ARGUMENTS:
     type(GridType),intent(out)::Grid
-    ! EOP
     integer::iError,iMyStandard,nGhostGridPointsMy
     !--------------------------------------------------------------------------
     call associate_dd_pointer(&
@@ -503,14 +467,9 @@ contains
     end do
   end subroutine set_local_gd
   !============================================================================
-  ! BOP
-  ! IROUTINE: clean_grid_descriptor
-  !INTERFACE:
   subroutine clean_grid_descriptor(Grid)
-    !INPUT ARGUMENTS:
     type(GridType),intent(inout)::&
          Grid
-    ! EOP
     !--------------------------------------------------------------------------
     deallocate(Grid%iPointMin_D)
     deallocate(Grid%iPointMax_D)
@@ -519,10 +478,8 @@ contains
   end subroutine clean_grid_descriptor
   !============================================================================
   subroutine clean_grid_descriptor_l(Grid)
-    !INPUT ARGUMENTS:
     type(LocalGridType),intent(inout)::&
          Grid
-    ! EOP
     !--------------------------------------------------------------------------
     deallocate(Grid%iPointMin_D)
     deallocate(Grid%iPointMax_D)
@@ -710,6 +667,7 @@ contains
     end do
     i8_grid_point_global_g = i8_grid_point_global_g + 1
   end function i8_grid_point_global_g
+!==============================================================================
   integer function i_grid_point_global_l(&
        Grid,&
        iBlockUsed,    &
@@ -732,6 +690,7 @@ contains
     end do
     i_grid_point_global_l = i_grid_point_global_l + 1
   end function i_grid_point_global_l
+!==============================================================================
   integer(Int8_) function i8_grid_point_global_l(&
        Grid,&
        iBlockUsed,    &
@@ -755,12 +714,8 @@ contains
     end do
     i8_grid_point_global_l = i8_grid_point_global_l + 1
   end function i8_grid_point_global_l
-  ! BOP
-  ! IROUTINE: nearest_grid_points - first order interpolation
-  ! EOP
+!==============================================================================
   !======================INTERPOLATION============================!
-  ! BOP
-  !DESCRIPTION:
   ! The general principle of the interpoaltions with the grids
   ! defined by the present grid descriptor is as follows.
   ! Using coordinates of the point at which the interpalated value
@@ -772,25 +727,19 @@ contains
   ! and the interpolation weights are found. If the values of the
   ! cell index for the stenchil points appear to be out of the
   ! block, the correspondent blocks are found
-  ! EOP
-  ! BOP
-  !INTERFACE:
   subroutine nearest_grid_points(nDim,Coord_D,&
        Grid,&
        nIndex,&
        iIndex_II,&
        nImage, Weight_I)
-    !INPUT ARGUMENTS:
     type(GridType):: Grid
     integer,      intent(in):: nDim
     real,      intent(inout):: Coord_D(nDim)
     integer,      intent(in):: nIndex
 
-    !OUTPUT ARGUMENTS:
     integer,     intent(out):: iIndex_II(0:nIndex,2**nDim)
     integer,     intent(out):: nImage
     real,        intent(out):: Weight_I(2**nDim)
-    ! EOP
 
     real,    dimension(nDim)::&
          CoordStored_D, DCoordCells_D,DCoordTolerance_D
@@ -907,16 +856,10 @@ contains
     end do
     Weight_I(1:nImage)= 1.0/real(nImage)
   end subroutine nearest_grid_points
+!==============================================================================
   !=================SECOND ORDER INTERPOLATION====================!
-  ! BOP
-  ! IROUTINE: bilinear_interpolation - second order interpolation
-  ! EOP
-  ! BOP
-  !DESCRIPTION:
   ! This is a bilinear interpolation using the grid points,
   ! described with the grid descriptor.
-  ! EOP
-  !INTERFACE:
   subroutine bilinear_interpolation(&
        nDim,&
        Coord_D,&
@@ -924,7 +867,6 @@ contains
        nIndex,&
        iIndex_II,&
        nImage,Weight_I)
-    !INPUT ARGUMENTS:
     integer,intent(in)      ::nDim
     type(GridType)::Grid
     real,intent(inout)::Coord_D(nDim)
@@ -934,7 +876,6 @@ contains
 
     integer,intent(out)::nImage
     real,dimension(2**nDim),intent(out)::Weight_I
-    ! EOP
     real,dimension(nDim)::&
          CoordResid_D,CoordStored_D
     integer,dimension(nDim)::iPoints_D
@@ -1064,16 +1005,10 @@ contains
        end if
     end do
   end subroutine bilinear_interpolation
-  ! BOP
-  ! IROUTINE: interpolation_amr_gc - continuous 2nd order interpolation on AMR
+!==============================================================================
   ! utilizing ghost cells
-  ! EOP
-  ! BOP
-  !DESCRIPTION:
   ! This is a continuous amr interpolation using the grid points,
   ! described with the grid descriptor. It utilizes ghost cells.
-  ! EOP
-  !INTERFACE:
   subroutine interpolation_amr_gc(&
        nDim,&
        Coord_D,&
@@ -1082,7 +1017,6 @@ contains
        iIndex_II,&
        nImage,Weight_I)
     use ModInterpolateAMR, ONLY: interpolate_amr
-    !INPUT ARGUMENTS:
     integer,   intent(in)   :: nDim
     type(GridType):: Grid
     real,      intent(inout):: Coord_D(nDim)
@@ -1091,7 +1025,6 @@ contains
     integer,   intent(out)  :: iIndex_II(0:nIndex,2**nDim)
     integer,   intent(out)  :: nImage
     real,      intent(out)  :: Weight_I(2**nDim)
-    ! EOP
 
     ! memorize grid descriptor by storing it in modular variable;
     ! it is used by find_amr subroutine passed to shared interpolation routine
@@ -1109,6 +1042,7 @@ contains
          iIndexes_II = iIndex_II,&
          UseGhostCell= .true.)
   end subroutine interpolation_amr_gc
+!==============================================================================
 
   subroutine find_amr(nDim, Coord_D, &
        iProc, iBlock, CoordCorner_D, DCoord_D, IsOut)
@@ -1154,14 +1088,12 @@ contains
     iProc       = GridAMR%Domain%Ptr%iDecomposition_II(PE_, iNode)
     iBlock      = GridAMR%Domain%Ptr%iDecomposition_II(BLK_, iNode)
   end subroutine find_amr
+!==============================================================================
 
   !==============================END==============================!
 end module CON_grid_descriptor
+!==============================================================================
 !\end{verbatim}                     !^CFG UNCOMMENT IF PRINTPS  !
 ! end{document}                     !^CFG UNCOMMENT IF PRINTPS  !
 !=============================LINE 1257===========================!
-! BOP
-! IROUTINE: more methods
-!DESCRIPTION:
 ! More methods are available, see the source file.
-! EOP

@@ -3,12 +3,8 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !^CMP FILE IH
 !^CMP FILE OH
-! BOP
-! MODULE: CON_couple_ih_oh - couple IH and OH both ways
-!INTERFACE:
 module CON_couple_ih_oh
 
-  !DESCRIPTION:
   ! This coupler uses the SWMF parallel coupling toolkit.
   ! The IH grid is coupled to a buffer grid in OH. The buffer grid
   ! uses the same coordinate system as IH, so the transformation is
@@ -17,7 +13,6 @@ module CON_couple_ih_oh
   ! The OH grid is coupled to the outer ghost cells of the IH grid directly.
   ! Both IH and OH use AMR grids, the buffer is a simple spherical grid.
 
-  !USES:
   use CON_coupler
   use CON_transfer_data, ONLY: transfer_real_array, transfer_integer
 
@@ -38,16 +33,14 @@ module CON_couple_ih_oh
   implicit none
   private ! except
 
-  !PUBLIC MEMBER FUNCTIONS:
   public:: couple_ih_oh_init
   public:: couple_ih_oh
   public:: couple_oh_ih
 
-  !REVISION HISTORY:
+  ! revision history:
   ! 7/23/03 Sokolov I.V.<igorsok@umich.edu> - prototype for ih-gm
   ! 7/04/04                                 - version for ih-sc
   ! 7/20/04                                 - version for sc-buffer
-  ! EOP
 
   logical       :: IsInitialized=.false., DoMatchIBC = .true.
 
@@ -68,7 +61,7 @@ contains
     !                CON_couple_ih_oh
     !                CON_couple_oh_ih (not implemented)
 
-    !REVISION HISTORY:
+    ! revision history:
     ! 07/25/2003 G.Toth <gtoth@umich.edu> - initial version as external
     !                                       subroutines
     ! 08/27/2003 G.Toth - combined into a module
@@ -79,10 +72,8 @@ contains
 
     logical :: DoTest, DoTestMe
 
-    !DESCRIPTION:
     ! This subroutine should be called from all PE-s
     ! Share buffer grid info (set in OH) with IH.
-    ! EOP
 
     character(len=*), parameter:: NameSub = 'couple_ih_oh_init'
     !--------------------------------------------------------------------------
@@ -124,15 +115,10 @@ contains
   end subroutine couple_ih_oh_init
   !============================================================================
 
-  ! BOP =======================================================================
-  ! IROUTINE: couple_ih_oh - couple IH component to OH component
-  !INTERFACE:
   subroutine couple_ih_oh(TimeCoupling)
 
-    !INPUT ARGUMENTS:
     real, intent(in) :: TimeCoupling     ! simulation time at coupling
 
-    !DESCRIPTION:
     ! Couple between two components:
     !    Inner Heliosphere (IH)  source
     !    Outer Heliosphere (OH)  target
@@ -173,21 +159,15 @@ contains
   end subroutine couple_ih_oh
   !============================================================================
 
-  ! BOP =======================================================================
-  ! IROUTINE: couple_oh_ih - couple OH to IH
-  !INTERFACE:
   subroutine couple_oh_ih(TimeCoupling)
 
-    !INPUT ARGUMENT:
     real, intent(in) :: TimeCoupling
 
-    !DESCRIPTION:
     ! Couple between two components:
     !    Outer Heliosphere (OH) source
     !    Inner Heliosphere (IH) target
     !
     ! Send state variable from OH to outer cells in IH.
-    ! EOP
 
     ! Buffer for state variable to fill outer cells of IH
 
@@ -215,4 +195,5 @@ contains
   !============================================================================
 
 end module CON_couple_ih_oh
+!==============================================================================
 

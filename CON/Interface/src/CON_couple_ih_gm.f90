@@ -3,11 +3,7 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !^CMP FILE IH
 !^CMP FILE GM
-! BOP
-! MODULE: CON_couple_ih_gm - couple IH to GM one way
-!INTERFACE:
 module CON_couple_ih_gm
-  !DESCRIPTION:
   ! This coupler uses the SWMF coupling toolkit.
   ! Both the IH and GM grids use AMR.
   ! IH is a source, GM is a target.
@@ -22,10 +18,9 @@ module CON_couple_ih_gm
   ! reference with respect to GM:
   !
   ! $$
-  ! {\bf V}_{IH}={\bf A}_{IH,GM}\cdot{\bf V}_{GM},\\
+  ! {\bf V}_{IH}={\bf A}_{IH,GM}\cdot{\bf V}_{GM},\
   ! {\bf V}_{GM}={\bf A}_{GM,IH}\cdot{\bf V}_{IH}
   ! $$
-  !USES:
   use CON_coupler
   use CON_time, ONLY:TimeStart
   use ModConst
@@ -44,18 +39,16 @@ module CON_couple_ih_gm
   private ! except
 
   !
-  !PUBLIC MEMBER FUNCTIONS:
   public:: couple_ih_gm_init
   public:: couple_ih_gm
 
   real, public:: CouplingTimeIhGm
 
-  !REVISION HISTORY:
+  ! revision history:
   ! 7/23/03 Sokolov I.V. <igorsok@umich.edu> - initial prototype
   ! 9/02/03 G.Toth <gtoth@umich.edu> - minor changes
   ! 6/18/05 Sokolov - generalized to arbitrary coordinate systems
   ! 6/22/05 G.Toth  - redo mapping and router to allow for relative motion
-  ! EOP
 
   ! To trace the possible changes in the grids and/or mapping
   integer :: IH_iGridRealization=-2
@@ -103,13 +96,8 @@ contains
 
   end subroutine couple_ih_gm_init
   !============================================================================
-  ! BOP
-  ! IROUTINE: couple_ih_gm - get IH solution in the GM inflow boundary ghost cells
-  !INTERFACE:
   subroutine couple_ih_gm(TimeCoupling)
-    !INPUT ARGUMENTS:
     real,intent(in)::TimeCoupling
-    ! EOP
 
     ! Last coupling time
     real :: TimeCouplingLast = -1.0
@@ -253,4 +241,5 @@ contains
   !============================================================================
 
 end module CON_couple_ih_gm
+!==============================================================================
 

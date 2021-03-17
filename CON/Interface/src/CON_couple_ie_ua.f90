@@ -4,16 +4,11 @@
 !^CMP FILE IE
 !^CMP FILE UA
 
-! BOP
-! MODULE: CON_couple_ie_ua - couple IE and UA components
 !
-!DESCRIPTION:
 ! Couple IE and UA components both ways.
 !
-!INTERFACE:
 module CON_couple_ie_ua
 
-  !USES:
   use CON_coupler
 
   use IE_wrapper, ONLY: IE_get_for_ua, IE_put_from_ua
@@ -22,17 +17,14 @@ module CON_couple_ie_ua
 
   private ! except
 
-  !PUBLIC MEMBER FUNCTIONS:
-
   public :: couple_ie_ua_init ! initialize both couplings
   public :: couple_ie_ua      ! couple IE to UA
   public :: couple_ua_ie      ! couple UA to IE
 
-  !REVISION HISTORY:
+  ! revision history:
   ! 08/25/2003 A.Ridley <ridley@umich.edu> - initial version as external
   !                                          subroutines
   ! 08/27/2003 G.Toth <gtoth@umich.edu>    - combined them into a module
-  ! EOP
 
   ! Communicator and logicals to simplify message passing and execution
   integer, save :: iCommIeUa, iProc0Ua
@@ -44,9 +36,6 @@ module CON_couple_ie_ua
 contains
   !============================================================================
 
-  ! BOP =======================================================================
-  ! IROUTINE: couple_ie_ua_init - initialize IE-UA couplings
-  !INTERFACE:
   subroutine couple_ie_ua_init
 
     use ModNumConst, ONLY:cPi
@@ -54,10 +43,8 @@ contains
     ! General error code
     integer :: iError, i, j
 
-    !DESCRIPTION:
     ! This subroutine should be called from all PE-s so that
     ! a union group can be formed. The IE grid size is also stored.
-    ! EOP
 
     !--------------------------------------------------------------------------
     if(IsInitialized) RETURN
@@ -82,21 +69,15 @@ contains
   end subroutine couple_ie_ua_init
   !============================================================================
 
-  ! BOP =======================================================================
-  ! IROUTINE: couple_ie_ua - couple IE component to UA component
-  !INTERFACE:
   subroutine couple_ie_ua(tSimulation)
 
-    !INPUT ARGUMENTS:
     real, intent(in) :: tSimulation     ! simulation time at coupling
 
-    !DESCRIPTION:
-    ! Couple between two components:\\
-    !    Ionosphere Electrodynamics (IE)  source\\
+    ! Couple between two components:\
+    !    Ionosphere Electrodynamics (IE)  source\
     !    Upper Atmosphere (UA) target
     !
     ! Send electrostatic potential from IE to UA.
-    ! EOP
 
     ! General coupling variables
 
@@ -213,20 +194,14 @@ contains
   end subroutine couple_ie_ua
   !============================================================================
 
-  ! BOP =======================================================================
-  ! IROUTINE: couple_ua_ie - couple UA to IE component
-  !INTERFACE:
   subroutine couple_ua_ie(tSimulation)
 
-    !INPUT ARGUMENTS:
     real, intent(in) :: tSimulation     ! simulation time at coupling
 
-    !DESCRIPTION:
-    ! Couple between two components:\\
-    !    Upper Atmosphere           (UA) source\\
+    ! Couple between two components:\
+    !    Upper Atmosphere           (UA) source\
     !    Ionosphere Electrodynamics (IE) target
     !
-    ! EOP
 
     ! General coupling variables
 
@@ -428,4 +403,5 @@ contains
   !============================================================================
 
 end module CON_couple_ie_ua
+!==============================================================================
 

@@ -2,20 +2,15 @@
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
-! BOP
-! MODULE: CON_couple_pointwise - couple two components in a pointwise manner
 !
-!DESCRIPTION:
 ! Couple two components in a pointwise manner
 !
-!INTERFACE:
 module CON_couple_points
 
   use CON_coupler
 
   implicit none
 
-  !PUBLIC MEMBER FUNCTIONS:
   public :: couple_points_init
   public :: couple_points
   public :: couple_points_finalize
@@ -1450,3 +1445,4 @@ contains
   !============================================================================
 
 end module CON_couple_points
+!==============================================================================

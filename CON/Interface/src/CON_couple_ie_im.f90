@@ -4,17 +4,12 @@
 !^CMP FILE IE
 !^CMP FILE IM
 
-! BOP
-! MODULE: CON_couple_ie_im - couple IE and IM components
 !
-!DESCRIPTION:
-! Couple between two components:\\
-!    Ionosphere Electrodynamics (IE) Source\\
+! Couple between two components:\
+!    Ionosphere Electrodynamics (IE) Source\
 !    Inner Magnetosphere (IM)        Target
-!INTERFACE:
 module CON_couple_ie_im
 
-  !USES:
   use CON_coupler
   use CON_transfer_data, ONLY: transfer_real_array
 
@@ -30,13 +25,11 @@ module CON_couple_ie_im
 
   private ! except
 
-  !PUBLIC MEMBER FUNCTIONS:
-
   public :: couple_ie_im_init ! initialize coupling
   public :: couple_ie_im      ! couple IE to IM
   public :: couple_im_ie      ! couple IE to IM
 
-  !REVISION HISTORY:
+  ! revision history:
   ! 06/26/2003 G.Toth <gtoth@umich.edu> - initial version as external
   !                                       subroutines
   !                  implemented MPI, MCT, and SWMF style couplings
@@ -44,7 +37,6 @@ module CON_couple_ie_im
   ! 08/27/2003 G.Toth - formed a module out of the external subroutine
   ! 09/02/2003 G.Toth - merged with I.Sokolov's version
   ! 09/15/2003 I.Sokolov - non-uniform ionosphere is added
-  ! EOP
 
   character(len=lNameVersion):: NameVersionIm
   logical :: IsInitialized = .false.
@@ -65,16 +57,11 @@ module CON_couple_ie_im
 contains
   !============================================================================
 
-  ! BOP =======================================================================
-  ! IROUTINE: couple_ie_im_init - initialize IE-IM coupling
-  !INTERFACE:
   subroutine couple_ie_im_init
 
-    !DESCRIPTION:
     ! This subroutine should be called from all PE-s so that
     ! a union group can be formed. Since both IE and IM grids are
     ! static, the router is formed here for the whole run.
-    ! EOP
 
     use CON_world, ONLY: get_comp_info
     !--------------------------------------------------------------------------
@@ -131,21 +118,15 @@ contains
 
   end subroutine couple_ie_im_init
   !============================================================================
-  ! BOP =======================================================================
-  ! IROUTINE: couple_im_ie - couple IM to IE component
-  !INTERFACE:
   subroutine couple_im_ie(tSimulation)
 
-    !INPUT ARGUMENTS:
     real, intent(in) :: tSimulation     ! simulation time at coupling
 
-    !DESCRIPTION:
-    ! Couple between two components:\\
-    !    Inner Magnetosphere (IM)        Source\\
+    ! Couple between two components:\
+    !    Inner Magnetosphere (IM)        Source\
     !    Ionosphere Electrodynamics (IE) Target
     !
     ! Send field-align current from IM to IE.
-    ! EOP
 
     integer, parameter :: nVarImIe=3
     character(len=*), parameter:: NameSub = 'couple_im_ie'
@@ -165,21 +146,15 @@ contains
   end subroutine couple_im_ie
   !============================================================================
 
-  ! BOP =======================================================================
-  ! IROUTINE: couple_ie_im - couple IE to IM component
-  !INTERFACE:
   subroutine couple_ie_im(tSimulation)
 
-    !INPUT ARGUMENTS:
     real, intent(in) :: tSimulation     ! simulation time at coupling
 
-    !DESCRIPTION:
-    ! Couple between two components:\\
-    !    Ionosphere Electrodynamics (IE) Source\\
+    ! Couple between two components:\
+    !    Ionosphere Electrodynamics (IE) Source\
     !    Inner Magnetosphere (IM)        Target
     !
     ! Send electrostatic potential from IE to IM.
-    ! EOP
 
     integer, parameter :: nVarIeIm=4
     real :: tSimulationTmp
@@ -341,3 +316,4 @@ contains
   !============================================================================
 
 end module CON_couple_ie_im
+!==============================================================================

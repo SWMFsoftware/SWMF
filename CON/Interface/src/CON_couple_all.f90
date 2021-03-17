@@ -2,19 +2,14 @@
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !
-! BOP
 !
-! MODULE: CON_couple_all - provide access to all the couplers
 !
-!DESCRIPTION:
 ! This module uses all the pairwise couplers. It also provides public
 ! methods for initializing the couplers, or accessing the couplers
 ! based on the two component IDs.
 !
-!INTERFACE:
 module CON_couple_all
 
-  !USES:
   use CON_comp_param
   use CON_world,   ONLY: use_comp, is_proc, i_proc, lComp_I
   use CON_coupler, ONLY: &
@@ -61,12 +56,10 @@ module CON_couple_all
 
   private   ! except
 
-  !PUBLIC MEMBER FUNCTIONS:
-
   public :: couple_all_init ! initialize all couplers
   public :: couple_two_comp ! couple 2 components based on their IDs
 
-  !REVISION HISTORY:
+  ! revision history:
   ! 27Aug03 - G. Toth <gtoth@umich.edu> initial prototype/prolog/code
   ! 14Jan05 - G. Toth commented out _swmf version of GM-IE couplers.
   ! 03Jun08 - R. Oran <oran@umich.edu> added IH-OH coupling
@@ -75,18 +68,12 @@ module CON_couple_all
   ! 18Feb14 - L. Daldorff added GM-PC coupling
   ! 12Mar15 - A. Michael added OH-PT coupling
   ! 15Sep20 - V. Tenishev added IH-PT coupling
-  ! EOP
   character(len=*), parameter :: NameMod='CON_couple_all'
 
 contains
   !============================================================================
 
-  ! BOP -------------------------------------------------------------------
-  ! IROUTINE: couple_all_init - initialize all the couplers
-  !INTERFACE:
   subroutine couple_all_init
-    ! EOP
-    ! BOC
     !                                                     ^CMP IF GM BEGIN
     !--------------------------------------------------------------------------
     if(use_comp(GM_).and.use_comp(IE_))call couple_gm_ie_init  !^CMP IF IE
@@ -129,29 +116,22 @@ contains
     !	 				 		       ^CMP IF OH BEGIN
     if(use_comp(OH_).and.use_comp(PT_))call couple_oh_pt_init  !^CMP IF PT
     !					    		       ^CMP END OH
-    ! EOC
   end subroutine couple_all_init
   !============================================================================
 
-  ! BOP =======================================================================
-  ! IROUTINE: couple_two_comp - call couple_**_** for components given by IDs
-  !INTERFACE:
   subroutine couple_two_comp(iCompSource, iCompTarget, TimeSimulation)
 
-    !INPUT PARAMETERS:
     integer,  intent(in) :: iCompSource, iCompTarget ! component IDs
     real,     intent(in) :: TimeSimulation           ! coupling simulation time
 
-    !DESCRIPTION:
     ! Couple two components given with their IDs. The simulation time
     ! is shared at the time of coupling. Call the appropriate coupling.
     ! Stop with an error for invalid component pairs.
 
-    !REVISION HISTORY:
+    ! revision history:
     ! 27Aug03 - G. Toth <gtoth@umich.edu> initial prototype/prolog/code
     ! 03Jun08 - R. Oran <oran@umich.edu> add IH OH coupling
     ! 22Dec11 - R. Oran   added capability to use global mpi coupler.
-    ! EOP
 
     ! indexes by component list
     integer:: lCompSource, lCompTarget
@@ -353,3 +333,4 @@ contains
   !============================================================================
 
 end module CON_couple_all
+!==============================================================================

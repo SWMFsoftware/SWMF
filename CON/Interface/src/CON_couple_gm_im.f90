@@ -4,16 +4,11 @@
 !^CMP FILE GM
 !^CMP FILE IM
 
-! BOP
-! MODULE: CON_couple_gm_im - couple GM and IM components
 !
-!DESCRIPTION:
 ! Couple GM and IM components both ways.
 !
-!INTERFACE:
 module CON_couple_gm_im
 
-  !USES:
   use CON_coupler
   use CON_transfer_data, ONLY: transfer_integer, transfer_real_array, &
        transfer_real, transfer_string, transfer_string_array
@@ -30,19 +25,16 @@ module CON_couple_gm_im
 
   private ! except
 
-  !PUBLIC MEMBER FUNCTIONS:
-
   public :: couple_gm_im_init ! initialize both couplings
   public :: couple_gm_im      ! couple GM to IM
   public :: couple_im_gm      ! couple IM to GM
 
-  !REVISION HISTORY:
+  ! revision history:
   ! 07/25/2003 G.Toth <gtoth@umich.edu> - initial version
   !            O.Volberg and D.DeZeeuw
   !
   ! 08/27/2003 G.Toth - external subroutines combined into a module
   ! 01/01/2007 D.Welling - added satellite info tranfer
-  ! EOP
 
   logical :: IsInitialized = .false.
 
@@ -63,13 +55,8 @@ module CON_couple_gm_im
 contains
   !============================================================================
 
-  ! BOP =======================================================================
-  ! IROUTINE: couple_gm_im_init - initialize GM-IM coupling
-  !INTERFACE:
   subroutine couple_gm_im_init
-    !DESCRIPTION:
     ! Store IM grid size.
-    ! EOP
 
     use ModProcessVarName,  ONLY: process_var_name
 
@@ -117,25 +104,19 @@ contains
   end subroutine couple_gm_im_init
   !============================================================================
 
-  ! BOP =======================================================================
-  ! IROUTINE: couple_gm_im - couple GM to IM component
-  !INTERFACE:
   subroutine couple_gm_im(tSimulation)
 
     use CON_world, ONLY: get_comp_info
     use CON_comp_param, ONLY: lNameVersion
 
-    !INPUT ARGUMENTS:
     real, intent(in) :: tSimulation     ! simulation time at coupling
 
-    !DESCRIPTION:
-    ! Couple between two components:\\
-    !    Global Magnetosphere (GM) source\\
+    ! Couple between two components:\
+    !    Global Magnetosphere (GM) source\
     !    Inner Magnetosphere  (IM) target
     !
     ! Send field line volumes, average density and pressure and
     ! geometrical information.
-    ! EOP
 
     ! Which IM model is used?
     character(len=lNameVersion):: NameVersionIm
@@ -284,11 +265,9 @@ contains
 
     subroutine couple_crcm
 
-      !DESCRIPTION:
-      ! Couple between two components:\\
-      !    Global Magnetosphere (GM) source\\
+      ! Couple between two components:\
+      !    Global Magnetosphere (GM) source\
       !    Inner  Magnetosphere (IM) target
-      ! EOP
 
       ! Coupling variables
 
@@ -388,23 +367,17 @@ contains
   end subroutine couple_gm_im
   !============================================================================
 
-  ! BOP =======================================================================
-  ! IROUTINE: couple_im_gm - couple IM to GM component
-  !INTERFACE:
   subroutine couple_im_gm(tSimulation)
     use CON_world, ONLY: get_comp_info
     use CON_comp_param, ONLY: lNameVersion
 
-    !INPUT ARGUMENTS:
     real, intent(in) :: tSimulation     ! simulation time at coupling
 
-    !DESCRIPTION:
-    ! Couple between two components:\\
-    !    Inner Magnetosphere  (IM) source\\
+    ! Couple between two components:\
+    !    Inner Magnetosphere  (IM) source\
     !    Global Magnetosphere (GM) target
     !
     ! Send pressure from IM to GM.
-    ! EOP
 
     ! Which IM model is used?
     character(len=lNameVersion):: NameVersionIm
@@ -511,3 +484,4 @@ end subroutine couple_im_gm
   !============================================================================
 
 end module CON_couple_gm_im
+!==============================================================================

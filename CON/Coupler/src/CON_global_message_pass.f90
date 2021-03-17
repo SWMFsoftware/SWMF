@@ -1,16 +1,9 @@
 !  Copyright (C) 2002 Regents of the University of Michigan,
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-! BOP
-! MODULE: CON_global_message_pass - exchange by the data sets via router
-!INTERFACE:
 module CON_global_message_pass
-!USES:
   use CON_router
-! EOP
   implicit none
-! BOP
-!DESCRIPTION:
 !
 ! The toolkit for coupling the different data sets within a
 ! single component code, or within a framework, as it is now (see
@@ -88,14 +81,10 @@ module CON_global_message_pass
 
 ! NOTE: with DoRSend=.true. there is no barrier at all in the
 ! global\_message\_pass procedure.
-! EOP
 
 contains
   !============================================================================
 ! BEGIN
-! BOP
-! IROUTINE: global_message_pass - data exchange between the components!
-!INTERFACE:
     subroutine global_message_pass(&
 ! Router: should be preset. See CON_router for the instructions. !
     !--------------------------------------------------------------------------
@@ -140,7 +129,6 @@ contains
 ! non-clashing PE sets, this procedure is not applied at all and !
 ! it is pointless to have it present                             !
       copy )
-!INPUT ARGUMENTS:
     type(RouterType),intent(in)::Router
     integer,intent(in)::nVar
     interface
@@ -242,7 +230,6 @@ contains
       ! _________________________________________________________-
     end interface
     optional::copy
-! EOP
     integer :: iProc,nProc,iComm,iCommUnion
     integer :: iV,iPE, iError,nError,lBuff,lGet,lPut
     integer :: nPartialGet,nPartialPut
@@ -489,6 +476,7 @@ contains
   !============================================================================
 !==============================END==============================!
 end module CON_global_message_pass
+!==============================================================================
 !\end{verbatim}                     !^CFG UNCOMMENT IF PRINTPS  !
 ! end{document}                     !^CFG UNCOMMENT IF PRINTPS  !
 !=============================LINE 463=========================!

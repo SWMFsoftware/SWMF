@@ -26,23 +26,23 @@ module CON_couple_mh_sp
        SC_get_for_mh, SC_LineDD
   !^CMP END SC
   use SP_wrapper, ONLY: &
-       SP_do_extract_lines      ,&  ! If returns .true., extract the mf lines  
+       SP_do_extract_lines      ,&  ! If returns .true., extract the mf lines
        SP_put_coupling_param    ,&  ! Set time and interaface bounds
        SP_adjust_lines              ! Process if needed the updated mf lines
   use PT_wrapper, ONLY: &
-       PT_do_extract_lines      ,&  ! If returns .true., extract the mf lines  
+       PT_do_extract_lines      ,&  ! If returns .true., extract the mf lines
        PT_put_coupling_param    ,&  ! Set time and interaface bounds
        PT_adjust_lines              ! Process if needed the updated mf lines
   use CON_bline, ONLY:  BL_,     &
-       RScMin, RScMax,           &  !^CMP IF SC  
+       RScMin, RScMax,           &  !^CMP IF SC
        RIhMin, RIhMax,           &
-       BL_init_foot_points,      &  ! Initialize footpoint array 
+       BL_init_foot_points,      &  ! Initialize footpoint array
        BL_get_bounds,            &  ! Provides RScMin/Max and/or RIhMin/Max
        BL_n_particle            ,&  ! Number of "points" in a given line in SP
        BL_put_from_mh           ,&  ! Put MHD info from SC or IH to SP
        BL_interface_point_coords,&  ! Check if the point is within interface
        BL_put_line                  ! Put particle Xyz from SC/IH to SP
-                 
+
   implicit none
 
   private ! Except
@@ -154,7 +154,7 @@ contains
     !==========================================================================
     subroutine couple_sc_sp_init             !^CMP IF SC BEGIN
       logical :: IsReady
-      integer, parameter :: Lower_=0 
+      integer, parameter :: Lower_=0
       !------------------------------------------------------------------------
       call SC_check_ready_for_sp(IsReady)
       if(.not.IsReady) call CON_stop(&
@@ -224,7 +224,7 @@ contains
       end if
       call BL_put_lines_from_sc
       !
-      ! Now in BL are the parts of lines from RScMin 
+      ! Now in BL are the parts of lines from RScMin
       ! to RScMax + 1 point above
       !
     end subroutine couple_sc_sp_init                 !^CMP END SC
@@ -232,8 +232,8 @@ contains
     subroutine couple_ih_sp_init
       logical :: IsReady
       integer, parameter:: Upper_ = 1
-      !------------------------------------------------------------------------
       ! Check whether IH is ready for coupling with BL;
+      !------------------------------------------------------------------------
       call IH_check_ready_for_sp(IsReady)
       if(.not.IsReady) call CON_stop(&
            "IH component not ready for "//NameSub//" correct PARAM.in")
@@ -282,7 +282,7 @@ contains
             call BL_get_bounds(RScMax, RIhMax)
          else                                    !^CMP END SC
             call BL_get_bounds(RIhMin, RIhMax)
-         end if                                  !^CMP IF SC                          
+         end if                                  !^CMP IF SC
       end if
       call IH_synchronize_refinement(RouterIhBl%iProc0Source,&
            RouterIhBl%iCommUnion)
@@ -348,13 +348,13 @@ contains
          RouterScBl%iCommUnion)
     if(.not.DoInit) call BL_put_lines_from_sc
     !
-    ! The advected particles from SC are taken  
+    ! The advected particles from SC are taken
     !
     if(is_proc(BL_))call BL_adjust_lines(SC_)
     !
     ! Some particles may be lost, after adjustment the line intergity
     ! is recovered
-    ! 
+    !
     ! Set router SC=> BL to  receive MHD data
     call set_router(&
          GridSource             = SC_Grid                  ,&
@@ -369,7 +369,7 @@ contains
          fill_buffer = SC_get_for_sp_and_transform         ,&
          apply_buffer           = BL_put_from_mh)
     !
-    ! The MHD data within the heliocentric distances RScMin<R<RScMax 
+    ! The MHD data within the heliocentric distances RScMin<R<RScMax
     ! By the way get particle coords from the router buffer to SC
     if(is_proc(SC_))then
        nLength = nlength_buffer_source(RouterScBl)
@@ -481,7 +481,7 @@ contains
     !
     ! Now the full magnetic line is available, including probably
     ! some points lost in IH
-    ! 
+    !
     if(is_proc(BL_))call BL_adjust_lines(IH_)
     ! In points at RIhMin < R < RIhMax get the MHD data
     ! Set router IH=> BL to  receive MHD data
@@ -617,3 +617,4 @@ contains
   end subroutine IH_get_coord_for_sp_and_transform
   !============================================================================
 end module CON_couple_mh_sp
+!==============================================================================

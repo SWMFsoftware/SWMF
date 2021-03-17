@@ -2,25 +2,18 @@
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !
-! QUOTE: \clearpage
 !
-! BOP -------------------------------------------------------------------
 !
-! QUOTE: \section{CON/Interface: between CON and Components and between Components}
 !
-! MODULE: CON_wrapper - Wrapper for component specific subroutines
 !
-!DESCRIPTION:
 !
 ! Contains general subroutines which call the specific subroutines
 ! in the component wrappers. The components are identified by their
 ! name or the component ID.
 !
-!INTERFACE:
 
 module CON_wrapper
   !
-  !USES:
   !
   use CON_world
   use CON_comp_param
@@ -62,8 +55,6 @@ module CON_wrapper
 
   private   ! except
 
-  !PUBLIC MEMBER FUNCTIONS:
-
   public :: set_param_comp       ! set parameters for registered component
   interface set_param_comp
      module procedure set_param_name, set_param_id
@@ -94,11 +85,10 @@ module CON_wrapper
      module procedure finalize_comp_id
   end interface
 
-  !REVISION HISTORY:
+  ! revision history:
   ! 09Jul03 - Gabor Toth <gtoth@umich.edu> - initial prototype/prolog/code
   ! 20Aug03 - O. Volberg and G. Toth - added new methods to initialize,
   !                                    run session, finalize and save restart.
-  ! EOP ___________________________________________________________________
 
   integer :: nThread, MaxThread
   character(len=*),parameter :: NameMod='CON_wrapper'
@@ -106,25 +96,19 @@ module CON_wrapper
 contains
   !============================================================================
 
-  ! BOP -------------------------------------------------------------------
-  ! IROUTINE: set_param_name - Set parameters for component given by name
   !
-  !INTERFACE:
   subroutine set_param_name(NameComp,TypeAction)
 
-    !INPUT PARAMETERS:
     !
     character(len=*), intent(in)           :: NameComp, TypeAction
 
-    !DESCRIPTION:
     ! This routine calls set\_param\_id with the component ID defined by the
     ! name of the component.
 
-    !REVISION HISTORY:
+    ! revision history:
     ! 21Jul03 - G. Toth <gtoth@umich.edu> - Pass CompInfo for safety
     ! 19Jul03 - G. Toth <gtoth@umich.edu> - simplified and generalized version
     ! 09Jul03 - G. Toth <gtoth@umich.edu> - initial prototype/prolog/code
-    ! EOP ___________________________________________________________________
 
     character(len=*), parameter:: NameSub = 'set_param_name'
     !--------------------------------------------------------------------------
@@ -133,26 +117,20 @@ contains
   end subroutine set_param_name
   !============================================================================
 
-  ! BOP -------------------------------------------------------------------
-  ! IROUTINE: set_param_id - Set parameters for component given by ID
   !
-  !INTERFACE:
   subroutine set_param_id(iComp,TypeAction)
 
-    !INPUT PARAMETERS:
     !
     integer, intent(in)          :: iComp
     character(len=*), intent(in) :: TypeAction
 
-    !DESCRIPTION:
     ! This routine calls $**$\_set\_param for component $**$
     ! defined with the component ID.
 
-    !REVISION HISTORY:
+    ! revision history:
     ! 19Jul03 - G. Toth <gtoth@umich.edu> - simplified and generalized version
     ! 09Jul03 - G. Toth <gtoth@umich.edu> - initial prototype/prolog/code
     ! 03Jun08 - R Oran  <oran@umich.edu>  - add component OH
-    ! EOP ___________________________________________________________________
 
     logical :: DoTest, DoTestMe
     type(CompInfoType) :: CompInfo
@@ -234,26 +212,19 @@ contains
   end subroutine set_param_id
   !============================================================================
 
-  ! BOP -------------------------------------------------------------------
-  ! IROUTINE: get_version_name - call **_get_version for named component
   !
-  !DESCRIPTION:
   ! Obtain ON/OFF status, version name and version number
   ! for component specified by its name!
 
-  !INTERFACE:
   subroutine get_version_name(NameComp,IsOn,NameVersion,Version)
 
-    !INPUT PARAMETERS:
     character (len=*),            intent(in)  :: NameComp
-    !OUTPUT PARAMETERS:
     logical,                      intent(out) :: IsOn
     character (len=lNameVersion), intent(out) :: NameVersion
     real,                         intent(out) :: Version
 
-    !REVISION HISTORY:
+    ! revision history:
     ! 15Jul03 - G. Toth <gtoth@umich.edu> - initial prototype/prolog/code
-    ! EOP ___________________________________________________________________
 
     character(len=*), parameter:: NameSub = 'get_version_name'
     !--------------------------------------------------------------------------
@@ -265,30 +236,23 @@ contains
   end subroutine get_version_name
   !============================================================================
 
-  ! BOP -------------------------------------------------------------------
-  ! IROUTINE: get_version_id - call **_version for component given by ID
   !
-  !DESCRIPTION:
   ! Obtain ON/OFF status, version name and version number
   ! for component specified by its ID!
 
-  !INTERFACE:
   subroutine get_version_id(iComp,IsOn,NameVersion,Version)
 
     use CON_comp_info
 
-    !INPUT PARAMETERS:
     integer,                      intent(in)  :: iComp
-    !OUTPUT PARAMETERS:
     logical,                      intent(out) :: IsOn
     character (len=lNameVersion), intent(out) :: NameVersion
     real,                         intent(out) :: Version
 
-    !REVISION HISTORY:
+    ! revision history:
     ! 21Jul03 - G. Toth <gtoth@umich.edu> - use temporary CompInfo
     ! 15Jul03 - G. Toth <gtoth@umich.edu> - initial prototype/prolog/code
     ! 03Jun08 - R. Oran <oran@umich.edu>  - added component OH
-    ! EOP ___________________________________________________________________
 
     logical :: DoTest, DoTestMe
     type(CompInfoType) :: CompInfo
@@ -340,24 +304,18 @@ contains
   end subroutine get_version_id
   !============================================================================
 
-  ! BOP -------------------------------------------------------------------
-  ! IROUTINE: init_session_comp_id - call **_init_session for component given by ID
-  !INTERFACE:
   subroutine init_session_comp_id(iComp, iSession, TimeSimulation)
 
-    !INPUT PARAMETERS:
     integer,  intent(in) :: iComp            ! component ID
     integer,  intent(in) :: iSession         ! session number (starting from 1)
     real,     intent(in) :: TimeSimulation   ! seconds from start time
 
-    !DESCRIPTION:
     ! Initialize component for the session. Session numbers start from 1.
 
-    !REVISION HISTORY:
+    ! revision history:
     ! 18Aug03 - G. Toth <gtoth@umich.edu> O. Volberg <volov@umich.edu>
     !         - initial prototype/prolog/code
     ! 03Jun   - R. Oran <oran@umich.edu> - added component OH
-    ! EOP ___________________________________________________________________
     logical :: DoTest, DoTestMe
 
     character(len=*), parameter:: NameSub = 'init_session_comp_id'
@@ -419,25 +377,19 @@ contains
   end subroutine init_session_comp_id
   !============================================================================
 
-  ! BOP -------------------------------------------------------------------
-  ! IROUTINE: finalize_comp_id - call **_finalize for component given by ID
   !
-  !INTERFACE:
   subroutine finalize_comp_id(iComp, TimeSimulation)
 
-    !INPUT PARAMETERS:
     integer,  intent(in) :: iComp            ! component ID
     real,     intent(in) :: TimeSimulation   ! seconds from start time
 
-    !DESCRIPTION:
     ! Finalize the component at the end of the run, save plots, restart info,
     ! report errors, etc.
 
-    !REVISION HISTORY:
+    ! revision history:
     ! 18Aug03 - G. Toth <gtoth@umich.edu> O. Volberg <volov@umich.edu>
     !         - initial prototype/prolog/code
     ! 03Jun08 - R. Oran <oran@umich.edu> - added component OH
-    ! EOP ___________________________________________________________________
     logical :: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'finalize_comp_id'
     !--------------------------------------------------------------------------
@@ -498,24 +450,17 @@ contains
   end subroutine finalize_comp_id
   !============================================================================
 
-  ! BOP -------------------------------------------------------------------
-  ! IROUTINE: save_restart_comp_id - call **_save_restart for component given by ID
-
-  !INTERFACE:
   subroutine save_restart_comp_id(iComp, TimeSimulation)
 
-    !INPUT PARAMETERS:
     integer,  intent(in) :: iComp            ! component ID
     real,     intent(in) :: TimeSimulation   ! seconds from start time
 
-    !DESCRIPTION:
     ! Save restart information for the component.
 
-    !REVISION HISTORY:
+    ! revision history:
     ! 18Aug03 - G. Toth <gtoth@umich.edu> O. Volberg <volov@umich.edu>
     !         - initial prototype/prolog/code
     ! 03Jun08 - R. Oran <oran@umich.edu> - added component OH
-    ! EOP ___________________________________________________________________
     logical :: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'save_restart_comp_id'
     !--------------------------------------------------------------------------
@@ -576,28 +521,21 @@ contains
   end subroutine save_restart_comp_id
   !============================================================================
 
-  ! BOP -------------------------------------------------------------------
-  ! IROUTINE: run_comp_id - call **_run for component given by ID
-  !INTERFACE:
   subroutine run_comp_id(iComp, TimeSimulation, TimeSimulationLimit)
 
-    !INPUT PARAMETERS:
     integer,  intent(in) :: iComp               ! component ID
     real,     intent(in) :: TimeSimulationLimit ! simulation time not to be exceeded
 
-    !INPUT/OUTPUT ARGUMENTS:
     real,     intent(inout) :: TimeSimulation   ! current time of component
 
-    !DESCRIPTION:
     ! Do one time step or solve for the component.
     ! The component should update TimeSimulation.
     ! The updated TimeSimulation should not exceed TimeSimulationLimit.
 
-    !REVISION HISTORY:
+    ! revision history:
     ! 18Aug03 - G. Toth <gtoth@umich.edu> O. Volberg <volov@umich.edu>
     !         - initial prototype/prolog/code
     ! 03Jun08 - R. Oran <oran@umich.edu - added component OH
-    ! EOP ___________________________________________________________________
     logical :: DoTest, DoTestMe
 
     character(len=*), parameter:: NameSub = 'run_comp_id'
@@ -662,3 +600,4 @@ contains
   !============================================================================
 
 end module CON_wrapper
+!==============================================================================

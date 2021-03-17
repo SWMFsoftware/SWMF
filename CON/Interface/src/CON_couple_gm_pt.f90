@@ -4,16 +4,11 @@
 !^CMP FILE GM
 !^CMP FILE PT
 
-! BOP
-! MODULE: CON_couple_gm_pt - couple GM and PT components
 !
-!DESCRIPTION:
 ! Couple GM and PT components both ways.
 !
-!INTERFACE:
 module CON_couple_gm_pt
 
-  !USES:
   use CON_coupler, ONLY: GM_, PT_, Grid_C, lNameVar
   use CON_couple_points, ONLY: &
        couple_points_init, couple_points, CouplePointsType
@@ -26,29 +21,21 @@ module CON_couple_gm_pt
 
   private ! except
 
-  !PUBLIC MEMBER FUNCTIONS:
-
   public :: couple_gm_pt_init ! initialize both couplings
   public :: couple_gm_pt      ! couple GM to PT
 
-  !REVISION HISTORY:
+  ! revision history:
   ! 09/24/2013 G.Toth <gtoth@umich.edu> - initial version
-  ! EOP
 
   type(CouplePointsType) :: Coupler
 
 contains
   !============================================================================
 
-  ! BOP =======================================================================
-  ! IROUTINE: couple_gm_pt_init - initialize GM-PT couplings
-  !INTERFACE:
   subroutine couple_gm_pt_init
 
-    !DESCRIPTION:
     ! Initialize GM->PT coupler.
     ! This subroutine should be called from all PE-s
-    ! EOP
 
     logical :: DoTest, DoTestMe
 
@@ -72,21 +59,15 @@ contains
   end subroutine couple_gm_pt_init
   !============================================================================
 
-  ! BOP =======================================================================
-  ! IROUTINE: couple_gm_pt - couple GM to PT
-  !INTERFACE:
   subroutine couple_gm_pt(tSimulation)
 
-    !INPUT ARGUMENT:
     real, intent(in) :: tSimulation
 
-    !DESCRIPTION:
-    ! Couple between two components:\\
-    !    Global Magnetosphere       (GM) source\\
+    ! Couple between two components:\
+    !    Global Magnetosphere       (GM) source\
     !    Particle Tracker           (PT) target
     !
     ! Send information from GM to PT.
-    ! EOP
 
     logical :: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'couple_gm_pt'
@@ -104,3 +85,4 @@ contains
   !============================================================================
 
 end module CON_couple_gm_pt
+!==============================================================================

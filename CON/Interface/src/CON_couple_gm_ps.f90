@@ -1,13 +1,14 @@
-! BOP
-! MODULE: CON_couple_gm_ps - couple GM and PS components
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
+!  For more information, see http://csem.engin.umich.edu/tools/swmf
+!^CMP FILE GM
+!^CMP FILE PS
+
 !
-!DESCRIPTION:
 ! Couple GM and PS components both ways.
 !
-!INTERFACE:
 module CON_couple_gm_ps
 
-  !USES:
   use CON_coupler
   use CON_transfer_data, ONLY: transfer_real_array
 
@@ -18,15 +19,12 @@ module CON_couple_gm_ps
 
   private ! except
 
-  !PUBLIC MEMBER FUNCTIONS:
-
   public :: couple_gm_ps_init ! initialize both couplings
   public :: couple_gm_ps      ! couple GM to PS
   public :: couple_ps_gm      ! couple PS to GM
 
-  !REVISION HISTORY:
+  ! revision history:
   ! 11/17/2018 D.Welling <dwelling@uta.edu> - initial version
-  ! EOP
 
   logical :: IsInitialized = .false.
 
@@ -42,13 +40,9 @@ module CON_couple_gm_ps
 contains
   !============================================================================
 
-  ! BOP =======================================================================
-  ! IROUTINE: couple_gm_ps_init - initialize GM-PS coupling
-  !INTERFACE:
   subroutine couple_gm_ps_init
     !DESCRIPTOIN:
     ! Store PS grid size, determine number of GM fluids.
-    ! EOP
     use ModProcessVarName,  ONLY: process_var_name
 
     integer :: nSpeedGm, nPGm, nPparGm, nWaveGm, nMaterialGm, nChargeStateAllGm
@@ -69,29 +63,23 @@ contains
          nPGm, nPparGm, nWaveGm, nMaterialGm, nChargeStateAllGm)
 
     DoMultiFluidPSCoupling = nDensityGm > 1
-    ! write(*,*)'!!!!DEBUG: DoMultiFluidPSCoupling = ', DoMultiFluidPSCoupling
+    ! write(*,*)'!!!! DEBUG: DoMultiFluidPSCoupling = ', DoMultiFluidPSCoupling
 
   end subroutine couple_gm_ps_init
   !============================================================================
 
-  ! BOP =======================================================================
-  ! IROUTINE: couple_gm_ps - couple GM to PS component
-  !INTERFACE:
   subroutine couple_gm_ps(tSimulation)
 
     use CON_world, ONLY: get_comp_info
     use CON_comp_param, ONLY: lNameVersion
 
-    !INPUT ARGUMENTS:
     real, intent(in) :: tSimulation     ! simulation time at coupling
 
-    !DESCRIPTION:
-    ! Couple between two components:\\
-    !    Global Magnetosphere (GM) source\\
+    ! Couple between two components:\
+    !    Global Magnetosphere (GM) source\
     !      (PS) target
     !
     ! Send field line volumes & field magnitudes to PS from GM.
-    ! EOP
 
     character(len=*), parameter:: NameSub = 'couple_gm_ps'
     !--------------------------------------------------------------------------
@@ -101,21 +89,15 @@ contains
   end subroutine couple_gm_ps
   !============================================================================
 
-  ! BOP =======================================================================
-  ! IROUTINE: couple_ps_gm - couple PS to GM component
-  !INTERFACE:
   subroutine couple_ps_gm(tSimulation)
 
-    !INPUT ARGUMENTS:
     real, intent(in) :: tSimulation     ! simulation time at coupling
 
-    !DESCRIPTION:
-    ! Couple between two components:\\
-    !    Plasmasphere  (PS) source  \\
+    ! Couple between two components:\
+    !    Plasmasphere  (PS) source  \
     !    Global Magnetosphere (GM) target
     !
     ! Send pressure from PS to GM.
-    ! EOP
 
     ! Number of variables to pass
     integer:: nVarPsGm
@@ -155,3 +137,4 @@ contains
   !============================================================================
 
 end module CON_couple_gm_ps
+!==============================================================================

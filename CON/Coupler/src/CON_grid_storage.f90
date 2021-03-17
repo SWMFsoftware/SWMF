@@ -6,11 +6,8 @@ module CON_grid_storage
   use ModInitGridStorage, ONLY:init_grid_storage, MaxGrid
   implicit none
 
-  ! BOP
-  !DESCRIPTION:
   ! The resulted domain decompositions should be properly
   ! registered and should obtain the unique GridID\_
-  ! EOP
   type(DomainPointerType),dimension(MaxGrid),&
        private::&
        Domain_I
@@ -18,14 +15,11 @@ module CON_grid_storage
 
   ! Introduced to bypass the HALEM compiler restrictions
   integer,dimension(MaxGrid)::nDim_C=0
-  ! BOP
-  !DESCRIPTION:
   ! INTERFACES
   ! Each of the module procedures differ with the FIRST dummy
   ! parameter, which is either GridID\_, or DomainType
   ! structure. The procedures differ with suffix id or dd from the
   ! generic name
-  ! EOP
 
   interface init_decomposition
      module procedure init_decomposition_id
@@ -141,15 +135,9 @@ module CON_grid_storage
   end interface
 contains
   !============================================================================
-  ! BOP
-  ! IROUTINE: done_dd_init - if the decomposition is initialized
-  !INTERFACE:
   logical function done_dd_init(GridID_)
-    !INPUT ARGUMENTS:
     integer,intent(in)::GridID_
-    !DESCRIPTION:
     ! Returns .true. if the domain decomposition is initialaized
-    ! EOP
     !--------------------------------------------------------------------------
     done_dd_init=.false.
     if(GridID_>0.and.GridID_<=MaxGrid)&
@@ -157,17 +145,11 @@ contains
   end function done_dd_init
   !============================================================================
   !---------------------------------------------------------------!
-  ! BOP
-  ! IROUTINE: init_decomposition - initialize domain decomposition
-  !DESCRIPTION:
   ! Initialization for the decomposition.
   ! Note that if the decomposition is a tree decomposition and
   ! another order of children is accepted in the component,
   ! different from that assumed to be standard one
   ! the array iShift\_DI should be reassigned in set\_root.
-  ! EOP
-  ! BOP
-  !INTERFACE:
   subroutine init_decomposition_id(&
        GridID_,&
        CompID_,&
@@ -175,12 +157,10 @@ contains
        IsTreeDecomposition,&
        nDimTree)
 
-    !INPUT ARGUMENTS:
     integer,intent(in)::GridID_
     integer,intent(in)::CompID_,nDim
     logical,intent(in),optional::IsTreeDecomposition
     integer,intent(in),optional::nDimTree
-    ! EOP
     !--------------------------------------------------------------------------
     if(GridID_>MaxGrid.or.GridID_<=0)call CON_stop(&
          'GridID_ is not allowed to be equal to ')
@@ -212,9 +192,6 @@ contains
   !============================================================================
   !---------------------------------------------------------------!
   !==========================WITH INTERFACE=======================!
-  ! BOP
-  ! IROUTINE: get_root_decomposition - get the domain decomposition
-  !DESCRIPTION:
   !\begin{verbatim}
   ! To get a decomposition domain, even the tree one, the root     !
   ! decomposition should be first constructed                      !
@@ -222,9 +199,6 @@ contains
   ! PE here are the ranks in the LOCAL communicator for the        !
   ! component
   !\end{verbatim}
-  ! EOP
-  ! BOP
-  ! INTERFACE:                                                    !
   subroutine get_root_decomposition_id(&
        GridID_,&!     ! ID for Decomposition to be constructed
        iRootMapDim_D,&! As in DomainType
@@ -240,7 +214,6 @@ contains
        iDirPlusGlue,& ! As in DomainType
        iDirCycle)     ! As in DomainType)
 
-    !INPUT ARGUMENTS:
     integer,intent(in)::GridID_
     !--------------------------------------------------------------------------
     integer,dimension(:),&
@@ -263,7 +236,6 @@ contains
     integer, optional, intent(in) ::  iDirMinusGlue
     integer, optional, intent(in) ::  iDirPlusGlue
     integer, optional, intent(in) ::  iDirCycle
-    ! EOP
     integer::lBlock,MaxBlock
     !---------------------------------------------------------------!
     ! Check the dimension of PE_I and iBlock_I                       !
@@ -367,21 +339,15 @@ contains
   end subroutine get_root_decomposition_id
   !============================================================================
   !---------------------------------------------------------------!
-  ! BOP
-  !INTERFACE:
   subroutine bcast_decomposition_id(&
        GridID_)
 
-    !INPUT ARGUMENTS:
     integer,intent(in)::GridID_
-    ! EOP
     !--------------------------------------------------------------------------
     call bcast_decomposition_dd(Domain_I(GridID_)%Ptr)
   end subroutine bcast_decomposition_id
   !============================================================================
   !---------------------------------------------------------------!
-  ! IROUTINE: bcast_indexes - send the indexes of the decomposition
-  !DESCRIPTION:
   ! Broadcasts only Decomposition\_II. This is a part of the
   ! synchronize\_refinement procedure, but it can be used separately
   ! too. If any of the optional parameters is not present, the
@@ -391,11 +357,9 @@ contains
   ! communicator iCommUnion TO all PEs of this communicator.
   ! Recalculate local PE ranks to their values in the global
   ! communicator while broadcasting.
-  !INTERFACE:
   subroutine bcast_indexes_id(&
        GridID_,iProcUnion,iCommUnion)
 
-    !INPUT ARGUMENTS:
     integer,intent(in)::GridID_
     integer,intent(in),optional::iProcUnion,iCommUnion
 
@@ -410,9 +374,6 @@ contains
   end subroutine bcast_indexes_id
   !============================================================================
   !---------------------------------------------------------------!
-  ! BOP
-  ! IROUTINE: synchronize_refinement - update decomposition after AMR
-  !DESCRIPTION:
   !\begin{verbatim}
   !           SYNCHRONIZE LOCAL AND GLOBAL GRID
   !           NOTE: IF GridID\_ is used for global grid, then
@@ -429,19 +390,14 @@ contains
   ! Recalculate local PE ranks (of the local grid) to their values
   ! in the global communicator (i\_comm()).
   !\end{verbatim}
-  ! EOP
-  ! BOP
-  !INTERFACE:
   subroutine synchronize_refinement_id(&
        GridID_,LocalDomain,iProcUnion,iCommUnion)
 
-    !INPUT ARGUMENTS:
     integer,intent(in)::GridID_
     !--------------------------------------------------------------------------
     type(DomainType),&   ! Local Grid with which the
          intent(in)::LocalDomain          ! global one is synchronized
     integer,intent(in),optional::iProcUnion,iCommUnion
-    ! EOP
     if(present(iProcUnion).and.present(iCommUnion))then
        call synchronize_refinement_dd(&
             Domain_I(GridID_)%Ptr,LocalDomain,iProcUnion,iCommUnion)
@@ -451,114 +407,79 @@ contains
     end if
   end subroutine synchronize_refinement_id
   !============================================================================
-  ! BOP
-  !INTERFACE:
   function is_left_boundary_id(&
        GridID_,lGlobalTreeNumber)
-    !INPUT ARGUMENTS:
     integer,intent(in)::lGlobalTreeNumber
     integer,intent(in)::GridID_
-    !OUTPUT ARGUMENTS:
     logical,dimension(nDim_C(GridID_))::&
          is_left_boundary_id
-    ! EOP
     !--------------------------------------------------------------------------
     is_left_boundary_id=is_left_boundary_dd(&
          Domain_I(GridID_)%Ptr,lGlobalTreeNumber)
   end function is_left_boundary_id
   !============================================================================
-  ! BOP
-  !INTERFACE:
   function is_right_boundary_id(&
        GridID_,lGlobalTreeNumber)
-    !INPUT ARGUMENTS:
     integer,intent(in)::GridID_,lGlobalTreeNumber
     logical,dimension(nDim_C(GridID_))::&
          is_right_boundary_id
-    ! EOP
     !--------------------------------------------------------------------------
     is_right_boundary_id=&
          is_right_boundary_dd(&
          Domain_I(GridID_)%Ptr,lGlobalTreeNumber)
   end function is_right_boundary_id
   !============================================================================
-  ! BOP
-  !INTERFACE:
   integer function l_neighbor_id(&
        GridID_,lGlobalTreeNumber,iCells_D)
-    !INPUT ARGUMENTS:
     integer,intent(in)::GridID_,lGlobalTreeNumber
     !--------------------------------------------------------------------------
     integer,dimension(nDim_C(GridID_)),&
          intent(in)::iCells_D
-    ! EOP
     l_neighbor_id=l_neighbor_dd(&
          Domain_I(GridID_)%Ptr,lGlobalTreeNumber,iCells_D)
   end function l_neighbor_id
   !============================================================================
-  ! BOP
-  !INTERFACE:
   subroutine glue_margin_id(GridID_,Coord_D)
-    !INPUT ARGUMENTS:
     integer,intent(in)::GridID_
     !--------------------------------------------------------------------------
     real,dimension(nDim_C(GridID_)),&
          intent(inout)::Coord_D
     !-----------
-    ! EOP
     call glue_margin_dd(Domain_I(GridID_)%Ptr,Coord_D)
   end subroutine glue_margin_id
   !============================================================================
-  ! BOP
-  !INTERFACE:
   subroutine search_in_id(GridID_,Coord_D,lGlobalTreeNumber)
-    !INPUT ARGUMENTS:
     integer,intent(in)::GridID_
     !--------------------------------------------------------------------------
     real,dimension(nDim_C(GridID_)),&
          intent(inout)::Coord_D
-    !OUTPUT ARGUMENTS:
     integer,intent(out)::lGlobalTreeNumber
-    ! EOP
     call search_in_dd(Domain_I(GridID_)%Ptr,Coord_D,lGlobalTreeNumber)
   end subroutine search_in_id
   !============================================================================
-  ! BOP
-  !INTERFACE:
   subroutine search_cell_id(&
        GridID_,lGlobalTreeNumber,Coord_D,iCells_D)
-    !INPUT ARGUMENTS:
     integer,intent(in)::GridID_,lGlobalTreeNumber
     !--------------------------------------------------------------------------
     real,dimension(nDim_C(GridID_)),&
          intent(inout)::Coord_D
-    !OUTPUT ARGUMENTS:
     integer,dimension(nDim_C(GridID_)),&
          intent(out)::iCells_D
-    ! EOP
     call search_cell_dd(Domain_I(GridID_)%Ptr,&
          lGlobalTreeNumber,Coord_D,iCells_D)
   end subroutine search_cell_id
   !============================================================================
-  ! BOP
-  !INTERFACE:
   subroutine pe_and_blk_id(&
        GridID_,lGlobalTreeNumber,iPEOut,iBlockOut)
-    !INPUT ARGUMENTS:
     integer,intent(in)::GridID_,lGlobalTreeNumber
-    !OUTPUT ARGUMENTS:
     integer,intent(out)::iPEOut,iBlockOut
-    ! EOP
     !--------------------------------------------------------------------------
     call pe_and_blk_dd(Domain_I(GridID_)%Ptr,&
          lGlobalTreeNumber,iPEOut,iBlockOut)
   end subroutine pe_and_blk_id
   !============================================================================
-  !INTERFACE:
   integer function n_block_id(GridID_,iPE)
-    !INPUT ARGUMENTS:
     integer,intent(in)::GridID_,iPE
-    ! EOP
     !--------------------------------------------------------------------------
     n_block_id=n_block_dd(Domain_I(GridID_)%Ptr,iPE)
   end function n_block_id
@@ -586,97 +507,65 @@ contains
          GlobalBlock_,iGlobalTreeNode)
   end function iglobal_block_id
   !============================================================================
-  ! BOP
-  !INTERFACE:
   integer function compid_id(GridID_)
-    !INPUT ARGUMENTS:
     integer,intent(in)::GridID_
-    ! EOP
     !--------------------------------------------------------------------------
     compid_id=compid_dd(Domain_I(GridID_)%Ptr)
   end function compid_id
   !============================================================================
-  ! BOP
-  ! IROUTINE: access to decomposition elements: ndim
-  !INTERFACE:
   integer function ndim_id(GridID_)
-    !INPUT ARGUMENTS:
     integer,intent(in)::GridID_
-    ! EOP
     !--------------------------------------------------------------------------
     ndim_id = Domain_I(GridID_)%Ptr%nDim
   end function ndim_id
   !============================================================================
-  !INTERFACE:
   function ncell_id(GridID_)
-    !INPUT ARGUMENTS:
     integer,intent(in)::GridID_
-    !OUTPUT ARGUMENTS:
     integer,dimension(nDim_C(GridID_))::ncell_id
-    ! EOP
     !--------------------------------------------------------------------------
     ncell_id=Domain_I(GridID_)%Ptr%nCells_D
   end function ncell_id
   !============================================================================
-  !INTERFACE:
   function coord_min_d(GridID_)
-    !INPUT ARGUMENTS:
     integer,intent(in)::GridID_
     real,dimension(nDim_C(GridID_)):: coord_min_d
-    ! EOP
     !--------------------------------------------------------------------------
     coord_min_d = Domain_I(GridID_)%Ptr%CoordMin_D
   end function coord_min_d
   !============================================================================
   function coord_max_d(GridID_)
-    !INPUT ARGUMENTS:
     integer,intent(in)::GridID_
     real,dimension(nDim_C(GridID_)):: coord_max_d
-    ! EOP
     !--------------------------------------------------------------------------
     coord_max_d = Domain_I(GridID_)%Ptr%CoordMax_D
   end function coord_max_d
   !============================================================================
   function coord_block_id(GridID_,lGlobalTreeNumber)
-    !INPUT ARGUMENTS:
     integer,intent(in)::GridID_,lGlobalTreeNumber
-    !OUTPUT ARGUMENTS:
     real,dimension(nDim_C(GridID_)):: coord_block_id
-    ! EOP
     !--------------------------------------------------------------------------
     coord_block_id=coord_block_dd(&
          Domain_I(GridID_)%Ptr,lGlobalTreeNumber)
   end function coord_block_id
   !============================================================================
-  !INTERFACE:
   function d_coord_block_id(GridID_,lGlobalTreeNumber)
-    !INPUT ARGUMENTS:
     integer,intent(in)::GridID_,lGlobalTreeNumber
-    !OUTPUT ARGUMENTS:
     real,dimension(nDim_C(GridID_)):: d_coord_block_id
-    ! EOP
     !--------------------------------------------------------------------------
     d_coord_block_id=d_coord_block_dd(&
          Domain_I(GridID_)%Ptr,lGlobalTreeNumber)
   end function d_coord_block_id
   !============================================================================
-  !INTERFACE:
   function d_coord_cell_id(GridID_,lGlobalTreeNumber)
-    !INPUT ARGUMENTS:
     integer,intent(in)::GridID_,lGlobalTreeNumber
-    !OUTPUT ARGUMENTS:
     real,dimension(nDim_C(GridID_)):: d_coord_cell_id
-    ! EOP
     !--------------------------------------------------------------------------
     d_coord_cell_id=d_coord_cell_dd(&
          Domain_I(GridID_)%Ptr,lGlobalTreeNumber)
   end function d_coord_cell_id
   !============================================================================
-  !INTERFACE:
   integer function irealization_id(GridID_)
-    !INPUT ARGUMENTS:
     integer,intent(in)::GridID_
-    ! EOP
     !--------------------------------------------------------------------------
     irealization_id = Domain_I(GridID_)%Ptr%iRealization
   end function irealization_id
@@ -691,4 +580,5 @@ contains
   !============================================================================
   !---------------------------------------------------------------!
 end module CON_grid_storage
+!==============================================================================
 

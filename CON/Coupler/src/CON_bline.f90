@@ -28,7 +28,7 @@ module CON_bline
   public :: BL_interface_point_coords ! points rMinInterface<R<rMaxInterface
   public :: BL_put_line               ! points rMin < R < rMax
   public :: BL_set_line_foot_b
-  
+
   ! The following public members are available at all PEs
   integer, public :: BL_ =-1   ! ID of the target model (SP_, PT_)
   logical, public :: UseBLine_C(MaxComp)=.false. ! To switch coupler for PT
@@ -78,7 +78,7 @@ module CON_bline
        'Bz        ', &
        'Wave1     ', &
        'Wave2     ']
-  
+
   ! Local variables
   integer :: iProc = -1  ! Rank    of PE in communicator of BL_
   integer :: nProc = -1  ! Number of PEs in communicator of BL_
@@ -114,7 +114,6 @@ module CON_bline
 
   integer, parameter :: Length_=4
   real,    allocatable, target :: FootPoint_VB(:, :)
-
 
   ! coupling parameters:
   ! domain boundaries
@@ -205,7 +204,7 @@ contains
     if(.not.is_proc(BL_))RETURN
     RMin = RScMin; RMax = RIhMax
     Lower_ = SC_; Upper_ = IH_
-    
+
   end subroutine BL_read_param
   !============================================================================
   subroutine BL_init(nParticleIn, nLonIn, nLatIn, &
@@ -243,7 +242,7 @@ contains
     end do
 
     ! Set nVertex_B array
-    
+
     allocate(nVertex_B(1:nLine), &
          stat=iError)
     call check_allocate(iError, NameSub//'_nVertex_B')
@@ -251,7 +250,7 @@ contains
     nVertex_B = 0
 
     ! Set auxiliary State_VIB array
-    
+
     if(present(nVarIn))nVar = nVarIn
     allocate(State_VIB(R_:nVar, 1:nVertexMax, 1:nLine), &
          stat=iError)
@@ -260,7 +259,7 @@ contains
     State_VIB = -1
 
     ! Set FootPoint_VB array
-    
+
     allocate(FootPoint_VB(LagrID_:Length_, nLine), stat=iError)
     call check_allocate(iError, NameSub//'_FootPoint_VB')
     if(present(FootPointIn_VB))FootPointIn_VB => FootPoint_VB
@@ -307,7 +306,7 @@ contains
     integer, intent(in) :: iBlockIn
     integer, intent(out):: iLonOut
     integer, intent(out):: iLatOut
-    
+
     integer :: iLineAll
     !--------------------------------------------------------------------------
     !
@@ -571,7 +570,7 @@ contains
   !============================================================================
   subroutine BL_init_foot_points
     integer:: iOffset, iLine, iBegin,  iEnd ! loop variables
-    character(len=*), parameter:: NameSub = 'BL_init_foot_point'
+    character(len=*), parameter:: NameSub = 'BL_init_foot_points'
     !--------------------------------------------------------------------------
     do iLine = 1, nLine
        iBegin = 1
@@ -761,6 +760,7 @@ contains
     ! may need to add particles to the beginning of lines
     if(DoAdjustLo) call append_particles
   contains
+    !==========================================================================
     subroutine append_particles
       ! appends a new particle at the beginning of lines if necessary
       integer:: iLine
@@ -878,4 +878,5 @@ contains
   end subroutine BL_set_line_foot_b
   !============================================================================
 end module CON_bline
+!==============================================================================
 

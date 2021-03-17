@@ -2,17 +2,12 @@
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
-! BOP
-! MODULE: CON_coupler - methods for general coupler variables
-!DESCRIPTION:
 ! This class can be used in the couplers and wrappers.
 ! It should contain everything needed for the coupling.
 ! Provides simplified methods to access Igor Sokolov's
 ! general coupler library.
-!INTERFACE:
 module CON_coupler
 
-  !USES:
   use CON_comp_param
   use CON_world
   use CON_global_message_pass, &
@@ -183,7 +178,6 @@ module CON_coupler
   integer, public, allocatable:: &
        nVarBuffer_CC(:,:), iVarSource_VCC(:,:,:), iVarTarget_VCC(:,:,:)
 
-  !PUBLIC MEMBER FUNCTIONS:
   public :: set_coord_system    ! Sets coordinate information for a component
   public :: gen_to_stretched    ! Transform generalized coordinates to
   public :: stretched_to_gen    ! stretched ones and vice versa for
@@ -197,7 +191,7 @@ module CON_coupler
   public :: set_couple_var_info ! Determine which variables to couple and
   !                               find their indices in each component.
 
-  !REVISION HISTORY:
+  ! revision history:
   ! 07/22/03 Gabor Toth <gtoth@umich.edu> - initial prototype
   ! 08/22/03 I.Sokolov  <igorsok@umich.edu> - modifications of
   !              the procedure interfaces for new coupling toolkit
@@ -213,7 +207,6 @@ module CON_coupler
   ! 04/07/11 R. Oran - added subroutine set_couple_var_info for determining
   !                    which variables should be coupled and finding their
   !                    indices in the source and target components.
-  ! EOP
 
   character(len=*), parameter, private :: NameMod='CON_coupler'
 contains
@@ -362,23 +355,16 @@ contains
 
   end subroutine set_coord_system
   !============================================================================
-  ! BOP
-  ! IROUTINE: gen_to_stretched - transform coords for structured non-uniform grid
-  !INTERFACE:
   subroutine gen_to_stretched(XyzGen_D,XyzStretched_D,nDim,GridID_,DoExtrapolate)
-    !INPUT ARGUMENTS:
     integer,intent(in)::nDim,GridID_
     real,dimension(nDim),intent(in)::XyzGen_D
 
     ! Note, that the PRESENCE of this parameter means to do extrapolation means
     ! to do extrapolation, while the VALUE of it, if present, is meaningless
     logical, OPTIONAL, intent(in):: DoExtrapolate
-    !OUTPUT ARGUMENTS:
     real,dimension(nDim),intent(out)::XyzStretched_D
-    !DESCRIPTION:
     !   Trasforms generalized coordinates (which for the stretched grids are usually
     !   nothing but the grid point index) to streched coordinates
-    ! EOP
     real:: OneIfExtrapolate = 1.0
 
     !--------------------------------------------------------------------------
@@ -425,24 +411,17 @@ contains
     !==========================================================================
   end subroutine gen_to_stretched
   !============================================================================
-  ! BOP
-  ! IROUTINE: stretched_to_gen - transform coords for structured non-uniform grid
-  !INTERFACE:
   subroutine stretched_to_gen(XyzStretched_D,XyzGen_D,nDim,GridID_,DoExtrapolate)
-    !INPUT ARGUMENTS:
     integer,intent(in)::nDim,GridID_
     real,dimension(nDim),intent(in)::XyzStretched_D
 
     ! Note, that the PRESENCE of this parameter means to do extrapolation means
     ! to do extrapolation, while the VALUE of it, if present, is meaningless
     logical, OPTIONAL, intent(in):: DoExtrapolate
-    !OUTPUT ARGUMENTS:
     real,dimension(nDim),intent(out)::XyzGen_D
-    !DESCRIPTION:
     !   Trasforms stretched coordinates  to  generalized coordinates
     !   (which for the stretched grids are usually
     !   nothing but the grid point index)
-    ! EOP
 
     real:: OneIfExtrapolate = 1.0
 
@@ -505,8 +484,6 @@ contains
   end subroutine stretched_to_gen
   !============================================================================
   ! simplified interfaces for Igor's coupler
-  ! BOP
-  !INTERFACE:
   subroutine set_grid_descriptor( &
        iComp,        & ! Component ID
        nDim,         & ! Dimensionality of the grid
@@ -524,7 +501,6 @@ contains
        nVar,         & ! Number of variables per grid cell
        NameVar       ) ! Variable names
 
-    !INPUT ARGUMENTS:
     integer, intent(in) :: iComp, nDim
     integer, intent(in) :: nRootBlock_D(nDim), nCell_D(nDim)
     real,    intent(in) :: XyzMin_D(nDim), XyzMax_D(nDim)
@@ -540,9 +516,7 @@ contains
     integer, intent(in), optional :: nVar
     character(len=*), intent(in), optional:: NameVar
 
-    !DESCRIPTION:
     ! Describe and broadcast non-octree grids
-    ! EOP
 
     integer:: GridID
     logical:: DoTest,DoTestMe
@@ -584,7 +558,7 @@ contains
     ! Allows coupling two components with/without:
     ! Ppar, Pe, multi/single fluid/specie, waves.
 
-    ! REVISION HISTORY:
+    ! revision history:
     ! Feb 2011 - R. Oran - initial version.
 
     use ModProcessVarName,  ONLY: process_var_name, nVarMax
@@ -1047,7 +1021,6 @@ contains
 
   end subroutine set_couple_var_info
   !============================================================================
-  ! IROUTINE: init_coupler - initializes coupler between two components
   subroutine init_coupler(  &
        iCompSource,         & ! component index for source
        nGhostPointSource,   & ! number of halo points in Source
@@ -1063,7 +1036,6 @@ contains
        LocalGridTarget,       & ! OUT! (optional)
        Router)                ! OUT
 
-    !INPUT ARGUMENTS:
     integer,intent(in)          :: iCompSource, iCompTarget
     integer,intent(in),optional :: nIndexSource, nIndexTarget
     integer,intent(in),optional :: &
@@ -1072,12 +1044,10 @@ contains
          nGhostPointSource, nGhostPointTarget
     integer,intent(in),optional :: nMappedPointIndex
 
-    !OUTPUT ARGUMENTS:
     type(GridType), intent(out) :: GridSource
     type(GridType), intent(out) :: GridTarget
     type(LocalGridType), optional, intent(out)     :: LocalGridTarget
 
-    ! EOP
     type(RouterType)::Router
     integer::StandardSourceHere_
     integer::StandardTargetHere_
@@ -1215,3 +1185,4 @@ contains
   !============================================================================
 
 end module CON_coupler
+!==============================================================================

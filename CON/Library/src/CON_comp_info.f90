@@ -5,11 +5,8 @@
 !               Space Weather Modeling Framework (SWMF)                !
 !    Center for Space Environment Modeling, The University of Michigan !
 !-----------------------------------------------------------------------
-! BOP -------------------------------------------------------------------------
 !
-! MODULE: CON_comp_info - Component information creation and handling
 !
-!DESCRIPTION:
 ! This module provides a public derived type {\bf CompInfoType}
 ! to store component information such as name, version name and number,
 ! whether the component is used, the unit number for (redirected) STDOUT,
@@ -27,11 +24,9 @@
 !
 ! The data can be released with the {\bf clean} subroutine.
 
-!INTERFACE:
 !
 module CON_comp_info
   !
-  !USES:
   !
   use CON_comp_param
   use ModMpi
@@ -57,20 +52,18 @@ module CON_comp_info
   end type CompInfoType
 
   !
-  !PUBLIC MEMBER FUNCTIONS:
   public :: init   ! constructor creates layout information from PE range
   public :: clean  ! destructor
   public :: get    ! get component information
   public :: put    ! put component information not set by init
 
   !
-  !REVISION HISTORY:
+  ! revision history:
   !
   !  June 2003 - O. Volberg <volov@umich.edu> - initial version
   !  July 2003 - G. Toth <gtoth@umich.edu>    - major rewrite
   !  Aug  2003 - G. Toth <gtoth@umich.edu>    - improved description
   !
-  ! EOP ------------------------------------------------------------------------
 
   character(len=*),parameter :: NameMod='CON_comp_info'
 
@@ -266,3 +259,4 @@ contains
   !============================================================================
 
 end module CON_comp_info
+!==============================================================================

@@ -4,20 +4,15 @@
 !^CMP FILE EE
 !^CMP FILE GM
 
-! BOP
-! MODULE: CON_couple_ee_gm - couple EE and GM components
 !
-!DESCRIPTION:
 ! Couple EE and GM components both ways. Here EE is just an arbitrary BATS-R-US
 ! model that runs on the same grid as the GM model.
 ! The goal is to solve different sets of equations with differnt time steps
 ! and pass the State_VGB pointers back-and-force so that various source terms
 ! can be calculated.
 !
-!INTERFACE:
 module CON_couple_ee_gm
 
-  !USES:
   use CON_coupler
 
   use EE_wrapper, ONLY: EE_use_pointer
@@ -28,27 +23,19 @@ module CON_couple_ee_gm
 
   private ! except
 
-  !PUBLIC MEMBER FUNCTIONS:
-
   public :: couple_ee_gm_init ! initialize both couplings
   public :: couple_ee_gm      ! couple EE to GM
   public :: couple_gm_ee      ! couple GM to EE
 
-  !REVISION HISTORY:
+  ! revision history:
   ! 05/09/2016 G.Toth snf Y. Shou - initial version
-  ! EOP
 
 contains
   !============================================================================
 
-  ! BOP =======================================================================
-  ! IROUTINE: couple_ee_gm_init - initialize EE-GM couplings
-  !INTERFACE:
   subroutine couple_ee_gm_init
 
-    !DESCRIPTION:
     ! This subroutine should be called from all PE-s
-    ! EOP
     !--------------------------------------------------------------------------
     if(is_proc(GM_) .neqv. is_proc(EE_)) &
          call CON_stop('EE and GM should run on same processors')
@@ -58,7 +45,6 @@ contains
 
   subroutine couple_ee_gm(tSimulation)
 
-    !INPUT ARGUMENT:
     real, intent(in) :: tSimulation
     !--------------------------------------------------------------------------
     call GM_use_pointer(EE_, tSimulation)
@@ -76,3 +62,4 @@ contains
   !============================================================================
 
 end module CON_couple_ee_gm
+!==============================================================================

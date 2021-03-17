@@ -1,15 +1,10 @@
 !  Copyright (C) 2002 Regents of the University of Michigan,
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-! BOP
-! MODULE: CON_router - set the connection between the grids of different models
-!INTERFACE:
 module CON_router
-  !USES:
   use CON_grid_storage
   use CON_grid_descriptor
   use ModMPI, ONLY: MPI_UNDEFINED
-  !DESCRIPTION:
 ! This file presents the class of routers between the grids, each!
 ! of them can be either the uniformly spaced or Octree or Quadric!
 ! adaptive block grid                   .                      !
@@ -17,17 +12,14 @@ module CON_router
 ! The methods include: allocation, initialization, cleaner and !
 ! two different constructors.                                  !
 !
-!REVISION HISTORY:
+! revision history:
 ! Sokolov I.V.                                                !
 ! 7.20.03-7.21.03                                             !
 ! igorsok@umich.edu                                           !
 ! phone(734)647-4705                                          !
-! EOP
   implicit none
   SAVE
   logical,parameter:: UseUnionComm=.true.
-! BOP
-!DESCRIPTION:
 !==========================DERIVED TYPES========================!
 !\begin{verbatim}
   type DoAddPtrType
@@ -117,11 +109,8 @@ module CON_router
      integer :: nVar, iCoordStart, iCoordEnd, iAuxStart, iAuxEnd
 !\end{verbatim}
   end type RouterType
-! EOP
   ! aux integer arrays to put data in BufferS_II in the correct order
   integer, allocatable :: iAux_P(:), iProc_I(:), iOrder_I(:)
-! BOP
-!PUBLIC MEMBER FUNCTIONS:
   private::allocate_get_arrays
   private::allocate_put_arrays
   private::allocate_buffer_target
@@ -129,13 +118,8 @@ module CON_router
   private::check_router_allocation
   private::iAux_P
   private::check_size
-! EOP
 contains
   !============================================================================
-! BOP
-! BOP
-! IROUTINE: init_router - initialize the type
-!INTERFACE:
   subroutine init_router(&
        GridSource,&
        GridTarget,&
@@ -143,7 +127,6 @@ contains
        nIndexSource,&
        nIndexTarget,&
        nMappedPointIndex)
-    !INPUT ARGUMENTS:
     type(GridType),intent(in)::&
          GridSource,&
          GridTarget
@@ -151,7 +134,6 @@ contains
     integer,intent(in),optional::nIndexSource
     integer,intent(in),optional::nIndexTarget
     integer,intent(in),optional::nMappedPointIndex
-    ! EOP
     integer::iPE,iError
     integer::nProc
     integer::iProc0Source,iProc0Target,iProcUnion
@@ -471,9 +453,6 @@ contains
     end if
   end subroutine check_router_allocation
   !============================================================================
-! BOP
-  ! IROUTINE: set_router - work for a case of mapping FROM TARGET
-  !INTERFACE:
   subroutine set_router(&
        ! the Grid for the Source component
     !--------------------------------------------------------------------------
@@ -510,7 +489,6 @@ contains
     type(GridType),intent(in)   :: GridSource
     type(LocalGridType),       intent(in)   :: GridTarget
     type(RouterType),        intent(inout):: Router
-    !INPUT ARGUMENTS:
     interface
        logical function is_interface_block(iBlockLocal)
          implicit none
@@ -585,7 +563,6 @@ contains
     optional:: mapping
     optional:: interpolate
     optional:: extra_data
-    ! EOP
     integer::iProc
 
     character(LEN=*),parameter::NameSub='Router'
@@ -674,7 +651,6 @@ contains
     type(GridType),intent(in)   :: GridSource
     type(LocalGridType),       intent(in)   :: GridTarget
     type(RouterType),        intent(inout):: Router
-    !INPUT ARGUMENTS:
     interface
        logical function is_interface_block(iBlockLocal)
          implicit none
@@ -750,7 +726,6 @@ contains
     optional:: interpolate
     optional:: extra_data
     !----------------------------------------------------------------------!
-    ! EOP
 
     ! The presence of optional parameters
     logical :: UseMappingFunction, DoCheckBlock, DoCheckBlockSize, &
@@ -1399,7 +1374,6 @@ contains
     type(LocalGridType),        intent(in) :: GridSource
     type(GridType), intent(in) :: GridTarget
     type(RouterType),      intent(inout) :: Router
-    !INPUT ARGUMENTS:
     interface
        logical function is_interface_block(iBlockLocal)
          implicit none
@@ -1542,7 +1516,6 @@ contains
     type(LocalGridType),        intent(in) :: GridSource
     type(GridType), intent(in) :: GridTarget
     type(RouterType),      intent(inout) :: Router
-    !INPUT ARGUMENTS:
     interface
        logical function is_interface_block(iBlockLocal)
          implicit none
@@ -1608,7 +1581,6 @@ contains
     optional:: interpolate
     !-------------------------------------------------------------------------!
     !----------------------------------------------------------------------!
-    ! EOP
 
     ! The presence of optional parameters
     logical :: UseMappingFunction, DoCheckBlock, DoCheckBlockSize, &
@@ -1941,7 +1913,7 @@ contains
     integer:: iProc, nProc
     integer:: iProcFrom, iProcTo
     character(len=*), parameter:: NameSub = 'synchronize_router_source_to_target'
-    !-------------------------------------------------------------------------!
+    !--------------------------------------------------------------------------
 
     ! For given PE the index in the communicator is:
     iProc = Router % iProc
@@ -2189,7 +2161,7 @@ contains
     integer:: iError
     logical:: IsPresent_I(7)
     character(len=*), parameter:: NameSub = 'check_size'
-    !-----------------------------------------------------------------------!
+    !--------------------------------------------------------------------------
     IsPresent_I = [&
          present(  Buffer_I), present( Buffer_II), &
          present( PBuffer_I), present(PBuffer_II), &
@@ -2292,4 +2264,5 @@ contains
 
   !====================END========================================!
 end module CON_router
+!==============================================================================
 

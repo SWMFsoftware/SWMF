@@ -4,16 +4,11 @@
 !^CMP FILE IE
 !^CMP FILE PW
 
-! BOP
-! MODULE: CON_couple_ie_pw - couple IE and PW components
 !
-!DESCRIPTION:
 ! Couple IE and PW components both ways.
 !
-!INTERFACE:
 module CON_couple_ie_pw
 
-  !USES:
   use CON_coupler
   use CON_transfer_data, ONLY: transfer_real_array
 
@@ -24,14 +19,11 @@ module CON_couple_ie_pw
 
   private ! except
 
-  !PUBLIC MEMBER FUNCTIONS:
-
   public :: couple_ie_pw_init ! initialize coupling
   public :: couple_ie_pw      ! couple IE to PW
 
-  !REVISION HISTORY:
+  ! revision history:
   ! 11/17/2006 A.Glocer and G.Toth - initial version
-  ! EOP
 
   ! Communicator and logicals to simplify message passing and execution
   logical :: IsInitialized = .false.
@@ -42,15 +34,10 @@ module CON_couple_ie_pw
 contains
   !============================================================================
 
-  ! BOP =======================================================================
-  ! IROUTINE: couple_ie_pw_init - initialize IE-PW couplings
-  !INTERFACE:
   subroutine couple_ie_pw_init
 
-    !DESCRIPTION:
     ! This subroutine should be called from all PE-s so that
     ! a union group can be formed. The IE grid size is also stored.
-    ! EOP
 
     !--------------------------------------------------------------------------
     if(IsInitialized) RETURN
@@ -63,22 +50,16 @@ contains
   end subroutine couple_ie_pw_init
   !============================================================================
 
-  ! BOP =======================================================================
-  ! IROUTINE: couple_ie_pw - couple IE component to PW component
-  !INTERFACE:
   subroutine couple_ie_pw(tSimulation)
 
-    !INPUT ARGUMENTS:
     real, intent(in) :: tSimulation     ! simulation time at coupling
 
-    !DESCRIPTION:
-    ! Couple between two components:\\
-    !    Ionosphere Electrodynamics (IE)  source\\
+    ! Couple between two components:\
+    !    Ionosphere Electrodynamics (IE)  source\
     !    Polar Wind (PW) target
     !
     ! Send electrostatic potential, field aligned current,
     ! average energy and electron flux from IE to PW.
-    ! EOP
 
     ! "block" index for IE model (south = 2)
     integer, parameter :: North_ = 1
@@ -118,4 +99,5 @@ contains
   !============================================================================
 
 end module CON_couple_ie_pw
+!==============================================================================
 

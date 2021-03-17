@@ -2,23 +2,16 @@
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !
-! QUOTE: \clearpage
 !
-! BOP
 !
-! QUOTE: \section{CON/Library: Shared by CON and Components}
 !
-! MODULE: CON_time - time related variables of CON
 !
-!DESCRIPTION:
 ! This module contains the time related variables of SWMF such
 ! as current and maximum time step and simulation time, or maximum
 ! CPU time allowed, etc.
 
-!INTERFACE:
 module CON_time
 
-  !USES:
   use ModKind, ONLY: Real8_
   use ModFreq                 !!, ONLY: FreqType
   use ModTimeConvert          !!, ONLY: time_int_to_real, TimeType
@@ -28,7 +21,6 @@ module CON_time
 
   save
 
-  !PUBLIC MEMBER FUNCTIONS:
   public :: init_time        ! Initialize start time
   public :: get_time         ! Access time related variables
 
@@ -91,7 +83,7 @@ module CON_time
   ! Name of component checking for the kill file
   character(len=2):: NameCompCheckKill = '!!'
 
-  !REVISION HISTORY:
+  ! revision history:
   ! 01Aug03 Aaron Ridley and G. Toth - initial implementation
   ! 22Aug03 G. Toth - added TypeFreq and is_time_to function
   ! 25Aug03 G. Toth - added adjust_freq subroutine
@@ -100,20 +92,14 @@ module CON_time
   ! 25May04 G. Toth - added DnRun_C for steady state runs and
   !                   removed TimeCurrent variable
   ! 22Jun15 G. Toth - added NameCompCheckKill variable
-  ! EOP
 
   character(len=*), parameter, private :: NameMod='CON_time'
 
 contains
   !============================================================================
 
-  ! BOP ========================================================================
-  ! IROUTINE: init_time - initialize start time
-  !INTERFACE:
   subroutine init_time
-    ! EOP
 
-    ! BOC
     character(len=*), parameter:: NameSub = 'init_time'
     !--------------------------------------------------------------------------
     TimeStart % iYear   = 2000
@@ -135,19 +121,14 @@ contains
     TimeEnd % FracSecond = 0.0
 
     call time_int_to_real(TimeEnd)
-    ! EOC
 
   end subroutine init_time
   !============================================================================
 
-  ! BOP ========================================================================
-  ! IROUTINE: get_time - get time related parameters
-  !INTERFACE:
   subroutine get_time(&
        DoTimeAccurateOut, tSimulationOut, TimeStartOut, TimeCurrentOut, &
        TimeEndOut, tStartOut, tCurrentOut, nStepOut)
 
-    !OUTPUT ARGUMENTS:
     logical,          optional, intent(out) :: DoTimeAccurateOut
     real,             optional, intent(out) :: tSimulationOut
     type(TimeType),   optional, intent(out) :: TimeStartOut
@@ -156,7 +137,6 @@ contains
     real(Real8_),     optional, intent(out) :: tStartOut
     real(Real8_),     optional, intent(out) :: tCurrentOut
     integer,          optional, intent(out) :: nStepOut
-    ! EOP
     !--------------------------------------------------------------------------
 
     if(present(DoTimeAccurateOut)) DoTimeAccurateOut = DoTimeAccurate
@@ -173,15 +153,11 @@ contains
 
   end subroutine get_time
   !============================================================================
-  ! BOP ========================================================================
-  ! IROUTINE: save_end_time - save TimeEnd instead of TimeStart and tSimulation
-  !INTERFACE:
   subroutine save_end_time
 
     ! Set TimeStart to TimeEnd and set simulation time to zero
     ! Also set nStep to zero. These will be saved into RESTART.out
 
-    ! EOP
     !--------------------------------------------------------------------------
 
     TimeStart = TimeEnd
@@ -192,3 +168,4 @@ contains
   !============================================================================
 
 end module CON_time
+!==============================================================================

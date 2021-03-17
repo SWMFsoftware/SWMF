@@ -4,17 +4,12 @@
 !^CMP FILE IE
 !^CMP FILE PS
 
-! BOP
-! MODULE: CON_couple_ie_ps - couple IE and PS components
 !
-!DESCRIPTION:
-! Couple between two components:\\
-!    Ionosphere Electrodynamics (IE) Source\\
+! Couple between two components:\
+!    Ionosphere Electrodynamics (IE) Source\
 !    Plasmasphere (PS)        Target
-!INTERFACE:
 module CON_couple_ie_ps
 
-  !USES:
   use CON_coupler
 
   use IE_wrapper, ONLY: IE_get_for_ps
@@ -24,15 +19,12 @@ module CON_couple_ie_ps
 
   private ! except
 
-  !PUBLIC MEMBER FUNCTIONS:
-
   public :: couple_ie_ps_init ! initialize coupling
   public :: couple_ie_ps      ! couple IE to PS
   public :: couple_ps_ie      ! couple PS to IE
 
-  !REVISION HISTORY:
+  ! revision history:
   ! 01/31/2012 A.Dodger <adodger@umich.edu> - Updated to allow IE-PS coupling
-  ! EOP
 
   character(len=lNameVersion):: NameVersionPs
   logical :: IsInitialized = .false.
@@ -49,16 +41,11 @@ module CON_couple_ie_ps
 contains
   !============================================================================
 
-  ! BOP =======================================================================
-  ! IROUTINE: couple_ie_ps_init - initialize IE-PS coupling
-  !INTERFACE:
   subroutine couple_ie_ps_init
 
-    !DESCRIPTION:
     ! This subroutine should be called from all PE-s so that
     ! a union group can be formed. Since both IE and PS grids are
     ! static, the router is formed here for the whole run.
-    ! EOP
 
     use CON_world, ONLY: get_comp_info
     !--------------------------------------------------------------------------
@@ -76,21 +63,15 @@ contains
 
   end subroutine couple_ie_ps_init
   !============================================================================
-  ! BOP =======================================================================
-  ! IROUTINE: couple_ps_ie - couple PS to IE component
-  !INTERFACE:
   subroutine couple_ps_ie(tSimulation)
 
-    !INPUT ARGUMENTS:
     real, intent(in) :: tSimulation     ! simulation time at coupling
 
-    !DESCRIPTION:
-    ! Couple between two components:\\
-    !    Plasmasphere (PS)        Source\\
+    ! Couple between two components:\
+    !    Plasmasphere (PS)        Source\
     !    Ionosphere Electrodynamics (IE) Target
     !
     ! Send field-align current from PS to IE.
-    ! EOP
 
     integer, parameter :: nVarPsIe=3
     real :: tSimulationTmp
@@ -103,21 +84,15 @@ contains
   end subroutine couple_ps_ie
   !============================================================================
 
-  ! BOP =======================================================================
-  ! IROUTINE: couple_ie_ps - couple IE to PS component
-  !INTERFACE:
   subroutine couple_ie_ps(tSimulation)
 
-    !INPUT ARGUMENTS:
     real, intent(in) :: tSimulation     ! simulation time at coupling
 
-    !DESCRIPTION:
-    ! Couple between two components:\\
-    !    Ionosphere Electrodynamics (IE) Source\\
+    ! Couple between two components:\
+    !    Ionosphere Electrodynamics (IE) Source\
     !    Plasmasphere (PS)        Target
     !
     ! Send electrostatic potential from IE to PS.
-    ! EOP
 
     integer, parameter :: nVarIePs=4
     real :: tSimulationTmp
@@ -195,3 +170,4 @@ contains
   !============================================================================
 
 end module CON_couple_ie_ps
+!==============================================================================

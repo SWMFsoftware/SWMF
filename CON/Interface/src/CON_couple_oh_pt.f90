@@ -4,16 +4,11 @@
 !^CMP FILE OH
 !^CMP FILE PT
 
-! BOP
-! MODULE: CON_couple_oh_pt - couple OH and PT components
 !
-!DESCRIPTION:
 ! Couple OH and PT components both ways.
 !
-!INTERFACE:
 module CON_couple_oh_pt
 
-  !USES:
   use CON_coupler
 
   use CON_couple_points, ONLY: &
@@ -30,15 +25,12 @@ module CON_couple_oh_pt
 
   private ! except
 
-  !PUBLIC MEMBER FUNCTIONS:
-
   public :: couple_oh_pt_init ! initialize both couplings
   public :: couple_oh_pt      ! couple OH to PT
   public :: couple_pt_oh      ! couple PT to OH
 
-  !REVISION HISTORY:
+  ! revision history:
   ! 03/16/2015 A.Michael and G.Toth - initial version
-  ! EOP
 
   ! Router communicator info
   type(CouplePointsType) :: CouplerOhToPt, CouplerPtToOh
@@ -46,15 +38,10 @@ module CON_couple_oh_pt
 contains
   !============================================================================
 
-  ! BOP =======================================================================
-  ! IROUTINE: couple_oh_pt_init - initialize OH-PT couplings
-  !INTERFACE:
   subroutine couple_oh_pt_init
 
-    !DESCRIPTION:
     ! Initialize OH->PT coupler.
     ! This subroutine should be called from all PE-s
-    ! EOP
 
     logical :: DoTest, DoTestMe
 
@@ -93,21 +80,15 @@ contains
   end subroutine couple_oh_pt_init
   !============================================================================
 
-  ! BOP =======================================================================
-  ! IROUTINE: couple_oh_pt - couple OH to PT
-  !INTERFACE:
   subroutine couple_oh_pt(tSimulation)
     use CON_transfer_data, ONLY: transfer_real
-    !INPUT ARGUMENT:
     real, intent(in) :: tSimulation
 
-    !DESCRIPTION:
-    ! Couple between two components:\\
-    !    Ourer Heliosphere          (OH) source\\
+    ! Couple between two components:\
+    !    Ourer Heliosphere          (OH) source\
     !    Particle Tracker           (PT) target
     !
     ! Send information from OH to PT.
-    ! EOP
 
     logical :: DoTest, DoTestMe
     real:: DtSi ! time step in SI units
@@ -157,3 +138,4 @@ contains
   !============================================================================
 
 end module CON_couple_oh_pt
+!==============================================================================

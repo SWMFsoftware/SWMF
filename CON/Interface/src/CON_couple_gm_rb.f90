@@ -4,16 +4,11 @@
 !^CMP FILE GM
 !^CMP FILE RB
 
-! BOP
-! MODULE: CON_couple_gm_rb - couple GM and RB components
 !
-!DESCRIPTION:
 ! Couple GM and RB components one way for now.
 !
-!INTERFACE:
 module CON_couple_gm_rb
 
-  !USES:
   use CON_coupler
   use CON_transfer_data, ONLY: &
        transfer_integer, transfer_real_array, transfer_string_array
@@ -27,15 +22,12 @@ module CON_couple_gm_rb
 
   private ! except
 
-  !PUBLIC MEMBER FUNCTIONS:
-
   public :: couple_gm_rb_init ! initialize both couplings
   public :: couple_gm_rb      ! couple GM to RB
 
-  !REVISION HISTORY:
+  ! revision history:
   ! 05/21/2004 O.Volberg - initial version
   !
-  ! EOP
 
   ! Communicator and logicals to simplify message passing and execution
   logical :: IsInitialized = .false.
@@ -48,14 +40,9 @@ module CON_couple_gm_rb
 contains
   !============================================================================
 
-  ! BOP =======================================================================
-  ! IROUTINE: couple_gm_rb_init - initialize GM-RB coupling
-  !INTERFACE:
   subroutine couple_gm_rb_init
 
-    !DESCRIPTION:
     ! Store RB grid size. Transfer number of shared satellites from GM to RB.
-    ! EOP
     !--------------------------------------------------------------------------
     if(IsInitialized) RETURN
     IsInitialized = .true.
@@ -72,22 +59,16 @@ contains
   end subroutine couple_gm_rb_init
   !============================================================================
 
-  ! BOP =======================================================================
-  ! IROUTINE: couple_gm_rb - couple GM to RB component
-  ! INTERFACE: couple_gm_rb(tSimulation)
   subroutine couple_gm_rb(tSimulation)
 
-    !INPUT ARGUMENTS:
     real, intent(in) :: tSimulation     ! simulation time at coupling
 
-    !DESCRIPTION:
-    ! Couple between two components:\\
-    !    Global Magnetosphere (GM) source\\
+    ! Couple between two components:\
+    !    Global Magnetosphere (GM) source\
     !    Radiation Belt       (RB) target
     !
     ! Send field line volumes, average density and pressure and
     ! geometrical information.
-    ! EOP
 
     ! Coupling variables
 
@@ -168,3 +149,4 @@ contains
   !============================================================================
 
 end module CON_couple_gm_rb
+!==============================================================================

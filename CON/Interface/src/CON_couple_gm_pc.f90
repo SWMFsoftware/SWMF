@@ -4,16 +4,11 @@
 !^CMP FILE GM
 !^CMP FILE PC
 
-! BOP
-! MODULE: CON_couple_gm_pc - couple GM and PC components
 !
-!DESCRIPTION:
 ! Couple GM and PC components both ways.
 !
-!INTERFACE:
 module CON_couple_gm_pc
 
-  !USES:
   use CON_coupler
 
   use CON_couple_points
@@ -26,16 +21,13 @@ module CON_couple_gm_pc
 
   private ! except
 
-  !PUBLIC MEMBER FUNCTIONS:
-
   public :: couple_gm_pc_init ! initialize both couplings
   public :: couple_gm_pc      ! couple GM to PC
   public :: couple_pc_gm      ! couple PC to GM
   public :: couple_gm_pc_grid_info ! send grid information from GM to PC
 
-  !REVISION HISTORY:
+  ! revision history:
   ! 09/24/2013 G.Toth <gtoth@umich.edu> - initial version
-  ! EOP
 
   ! Router communicator info
   type(CouplePointsType) :: CouplerGMtoPC,  CouplerPCtoGM
@@ -43,9 +35,6 @@ module CON_couple_gm_pc
 contains
   !============================================================================
 
-  ! BOP =======================================================================
-  ! IROUTINE: couple_gm_pc_init - initialize GM-PC couplings
-  !INTERFACE:
   subroutine couple_gm_pc_init
 
     use CON_transfer_data, ONLY: &
@@ -60,9 +49,7 @@ contains
     real, allocatable :: Param_I(:)
     integer :: nParamInt, nParamReal
 
-    !DESCRIPTION:
     ! This subroutine should be called from all PE-s
-    ! EOP
     character(len=*), parameter:: NameSub = 'couple_gm_pc_init'
     !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
@@ -120,9 +107,7 @@ contains
     integer, allocatable :: Int_I(:), AccumulatedSize_I(:)
     integer :: nInt, nPicGrid
 
-    !DESCRIPTION:
     ! This subroutine should be called from all PE-s
-    ! EOP
     character(len=*), parameter:: NameSub = 'couple_gm_pc_grid_info'
     !--------------------------------------------------------------------------
 
@@ -165,7 +150,6 @@ contains
 
     use CON_transfer_data, ONLY: transfer_real
 
-    !INPUT ARGUMENT:
     real, intent(in) :: tSimulation
 
     ! BATSRUS time step in SI units. Keeps changing.
@@ -219,3 +203,4 @@ contains
   !============================================================================
 
 end module CON_couple_gm_pc
+!==============================================================================

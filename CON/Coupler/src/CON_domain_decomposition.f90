@@ -2,17 +2,11 @@
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !
-! QUOTE: \clearpage
 !
-! BOP
 !
-! QUOTE: \section{CON/Coupler: the SWMF Parallel Coupling Toolkit}
 !
-! MODULE: CON_domain_decomposition - for uniform or octree grids
-!INTERFACE:
 module CON_domain_decomposition
 
-  !DESCRIPTION:
   ! The toolkit for coupling the different data sets within a
   ! single component code, or within a framework as it is now (see
   ! the date below) consists of:
@@ -49,16 +43,14 @@ module CON_domain_decomposition
   ! rank in the global communicator etc. NOTE: CON\_stop is the
   ! interface procedure.
 
-  !USES:
   use ModUtilities, ONLY: check_allocate
   use CON_world
   use ModNumConst
   use ModMpi
   use ModKind, ONLY: nByteReal
 
-  !REVISION HISTORY:
+  ! revision history:
   ! 6/18/03-7/11/03 Sokolov I.V. <igorsok@umich.edu> phone(734)647-4705
-  ! EOP
 
   implicit none
   SAVE
@@ -71,8 +63,6 @@ module CON_domain_decomposition
        PE_          =3,&
        GlobalBlock_ =4,&
        None_        =-777
-  ! BOP
-  !DESCRIPTION:
   !\begin{verbatim}
   !=====================DERIVED TYPE==============================
   type DomainType
@@ -85,7 +75,7 @@ module CON_domain_decomposition
      ! This type describes the general decomposition for rectangular
      ! box domain.
      ! Below ":=" means "according to definition".
-     ! Describe the property of the !domain first.
+     ! Describe the property of the ! domain first.
      !=============================DOMAIN============================
      ! genaralized coordinates := the coordinates with respect to
      !    which the domain decomposition chunks are uniform.
@@ -182,7 +172,6 @@ module CON_domain_decomposition
      !---------------------------------------------------------------
      !
      !------Root  node of tree ----------             ...
-     !                                                /
      !   RootNumber,MyNumberAsAChild=0--ChildAdresses()
      !                                                \ (1:nChildren)
      !                                                 ...
@@ -358,7 +347,6 @@ module CON_domain_decomposition
      !\end{verbatim}
 
   end type DomainType
-  ! EOP
   !================DERIVED TYPE===================================
   type DomainPointerType
      type(DomainType),pointer::Ptr
@@ -375,8 +363,6 @@ module CON_domain_decomposition
   private:: is_used_block_dd
 contains
   !============================================================================
-  ! BOP
-  !INTERFACE:
   subroutine init_decomposition_dd(&
        Domain,&
        CompID_,&            ! As in DomainType
@@ -384,14 +370,12 @@ contains
        IsTreeDecomposition,&! As in DomainType
        nDimTree,IsLocal)
 
-    !INPUT ARGUMENTS:
     type(DomainType),intent(inout)::&
          Domain
     integer,intent(in)::CompID_,nDim
     logical,intent(in),optional::IsTreeDecomposition
     integer,intent(in),optional::nDimTree
     logical,intent(in),optional::IsLocal
-    ! EOP
     integer::iError,iDim,iChildFirst,iChildLast
 
     !--------------------------------------------------------------------------
@@ -588,9 +572,6 @@ contains
   end subroutine check_octree_allocation
   !============================================================================
   !==========================WITH INTERFACE=======================!
-  ! BOP
-  ! IROUTINE: get_root_decomposition - get the domain decomposition
-  !DESCRIPTION:
   !\begin{verbatim}
   ! To get a decomposition domain, even the tree one, the root     !
   ! decomposition should be first constructed                      !
@@ -598,10 +579,7 @@ contains
   ! PE here are the ranks in the LOCAL communicator for the        !
   ! component
   !\end{verbatim}
-  ! EOP
 
-  ! BOP
-  !INTERFACE:
   subroutine get_root_decomposition_dd(&
        Domain,&! Decomposition to be constructed
        iRootMapDim_D,&! As in DomainType
@@ -616,7 +594,6 @@ contains
        iDirMinusGlue,&! As in DomainType
        iDirPlusGlue,& ! As in DomainType
        iDirCycle)     ! As in DomainType
-    !INPUT ARGUMENTS:
     type(DomainType),intent(inout)::&
          Domain
     !--------------------------------------------------------------------------
@@ -642,7 +619,6 @@ contains
     integer, intent(in), optional :: iDirCycle
     !-------
     integer::lBlock,MaxBlock
-    ! EOP
     !---------------------------------------------------------------!
     ! Check the dimension of PE_I and iBlock_I                       !
     if(present(PE_I))then
@@ -693,11 +669,8 @@ contains
             Domain%iShift_DI=iShift_DI
     end if
 
-    ! BOP
-    !DESCRIPTION:
     ! If neither PE\_I nor iBlock\_I is present, the root
     ! decomposition blocks are balanced for an optimal load
-    ! EOP
     if((.not.present(PE_I)).and.(.not.present(iBlock_I)))then
        MaxBlock=(Domain%nTreeNodes-1)/&
             n_proc(Domain%CompID_)+1
@@ -710,11 +683,8 @@ contains
        call set_iglobal_and_bp_dd(Domain)
        RETURN
     end if
-    ! BOP
-    !DESCRIPTION:
     ! If the PE\_I is not given, it is assumed that all the blocks
     ! are at the root PE
-    ! EOP
     if(present(PE_I))then
        Domain%iDecomposition_II&
             (PE_,1:Domain%nTreeNodes)=PE_I
@@ -722,8 +692,6 @@ contains
        Domain%iDecomposition_II&
             (PE_,1:Domain%nTreeNodes)=0
     end if
-    ! BOP
-    !DESCRIPTION:
     !\begin{verbatim}
     ! If the iBlock_I is not given, they are assumed to be enumerated
     ! like in the following loop:
@@ -737,7 +705,6 @@ contains
     !          end do
     !      end do
     !\end{verbatim}
-    ! EOP
     if(present(iBlock_I))then
        Domain%iDecomposition_II&
             (BLK_,1:Domain%nTreeNodes)=iBlock_I
@@ -863,21 +830,13 @@ contains
   !============================================================================
 
   !===========================WITH INTERFACE======================!
-  ! BOP
-  ! IROUTINE: bcast_decomposition - send decomposition to all PEs
-  !DESCRIPTION:
   ! Broadcasts a given grid descriptor from the root PE
   ! via the global communicator iComm
-  ! EOP
 
-  ! BOP
-  !INTERFACE:
   subroutine bcast_decomposition_dd(Domain)
 
-    !INPUT ARGUMENTS:
     type (DomainType),intent(inout)::&
          Domain
-    ! EOP
     integer::iComm
     integer::iProc0
     integer::iError
@@ -937,8 +896,6 @@ contains
   !============================================================================
   !---------------------------------------------------------------!
   !
-  ! IROUTINE: bcast_indexes - send the indexes of the decomposition
-  !DESCRIPTION:
   ! Broadcasts only Decomposition\_II. This is a part of the
   ! synchronize\_refinement procedure, but it can be used separately
   ! too. If any of the optional parameters is not present, the
@@ -949,10 +906,8 @@ contains
   ! Recalculate local PE ranks to their values in the global
   ! communicator while broadcasting.
 
-  !INTERFACE:
   subroutine bcast_indexes_dd(&
        Domain,iProcUnion,iCommUnion)
-    !INPUT ARGUMENTS:
     type (DomainType),intent(inout)::&
          Domain
     integer,optional,intent(in)::iProcUnion,iCommUnion
@@ -1081,9 +1036,6 @@ contains
   end subroutine complete
   !============================================================================
 
-  ! BOP
-  ! IROUTINE: synchronize_refinement - update decomposition after AMR
-  !DESCRIPTION:
   !\begin{verbatim}
   !           SYNCHRONIZE LOCAL AND GLOBAL GRID
   !           NOTE: IF GridID\_ is used for global grid, then
@@ -1100,20 +1052,15 @@ contains
   ! Recalculate local PE ranks (of the local grid) to their values
   ! in the global communicator (i\_comm()).
   !\end{verbatim}
-  ! EOP
 
-  ! BOP
-  !INTERFACE:
   subroutine synchronize_refinement_dd(&
        GlobalDomain,LocalDomain,iProcUnion,iCommUnion)
 
-    !INPUT ARGUMENTS:
     type(DomainType),intent(inout)::GlobalDomain
     !--------------------------------------------------------------------------
     type(DomainType),&
          intent(in)::LocalDomain
     integer,intent(in),optional::iProcUnion,iCommUnion
-    ! EOP
     integer::iProc0,iComm,LocalIRealization,iError
     logical::IsSynchronized
     if(present(iProcUnion).and.present(iCommUnion))then
@@ -1147,7 +1094,6 @@ contains
     end if
   end subroutine synchronize_refinement_dd
   !============================================================================
-  ! BOP
   !\begin{verbatim}
   !
   !                 METODS
@@ -1159,29 +1105,17 @@ contains
   !================CONNECTIVITY LIST==============================
   !
   !\end{verbatim}
-  ! EOP
-  ! BOP
-  ! IROUTINE: is_left_boundary_d - if block boundary is domain boundary
-  ! EOP
-  ! BOP
-  !DESCRIPTION:
   ! Returns the nDim vector, whose iDim's component is true, if
   ! along the iDim's direction there is a domain Boundary to the
   ! Left from the block with the number lGlobalTreeNumber
-  ! EOP
 
-  ! BOP
-  !INTERFACE:
   function is_left_boundary_dd(&
        Domain,lGlobalTreeNumber)
-    !INPUT ARGUMENTS:
     integer,intent(in)::lGlobalTreeNumber
     type(DomainType),intent(in)::&
          Domain
-    !OUTPUT ARGUMENTS:
     logical,dimension(Domain%nDim)::&
          is_left_boundary_dd
-    ! EOP
     !--------------------------------------------------------------------------
     is_left_boundary_dd=.not.(Domain%IsPeriodic_D)&
          .and.Domain%CoordBlock_DI(&
@@ -1191,26 +1125,17 @@ contains
          Domain%CoordMin_D
   end function is_left_boundary_dd
   !============================================================================
-  !BOP:
-  ! IROUTINE: is_right_boundary_d - if block boundary is domain boundary
-  !DESCRIPTION:
   ! Returns the nDim vector, whose iDim's component is true, if
   ! along the iDim's direction there is a Tree Boundary to the
   ! Right from the block with the number lGlobalTreeNumber
-  ! EOP
-  ! BOP
 
-  ! BOP
-  !INTERFACE:
   function is_right_boundary_dd(&
        Domain,lGlobalTreeNumber)
-    !INPUT ARGUMENTS:
     integer,intent(in)::lGlobalTreeNumber
     type(DomainType),intent(in)::&
          Domain
     logical,dimension(Domain%nDim)::&
          is_right_boundary_dd
-    ! EOP
     !--------------------------------------------------------------------------
     is_right_boundary_dd=.not.&
          (Domain%IsPeriodic_D).and.&
@@ -1220,27 +1145,19 @@ contains
          Domain%CoordMax_D
   end function is_right_boundary_dd
   !============================================================================
-  ! BOP
-  ! IROUTINE: l_neighbor - returns the number of neighboring block
-  !DESCRIPTION:
   ! Tree neighbor
   ! returns the number of octree node, to which the center of the
   !"ghost cell" belongs, which is marked with iCells\_D cell index
   ! vector.
-  ! EOP
 
-  ! BOP
-  !INTERFACE:
   integer function l_neighbor_dd(&
        Domain,lGlobalTreeNumber,iCells_D)
-    !INPUT ARGUMENTS:
     integer,intent(in)::lGlobalTreeNumber
     type(DomainType),intent(inout)::&
          Domain
     !--------------------------------------------------------------------------
     integer,dimension(Domain%nDim),&
          intent(in)::iCells_D
-    ! EOP
     real,dimension(Domain%nDim)::Coord_D
     if(any(is_left_boundary_dd( Domain,&
          lGlobalTreeNumber).and.iCells_D<1).or.&
@@ -1259,11 +1176,8 @@ contains
     end if
   end function l_neighbor_dd
   !============================================================================
-  ! BOP
-  !INTERFACE:
   subroutine glue_margin_dd(&
        Domain,Coord_D)
-    !INPUT ARGUMENTS:
     type(DomainType),intent(in)::&
          Domain
     !--------------------------------------------------------------------------
@@ -1312,9 +1226,6 @@ contains
     end do
   end subroutine glue_margin_dd
   !============================================================================
-  ! BOP
-  ! IROUTINE: search_in - find which block involves the given point
-  !DESCRIPTION:
   !\begin{verbatim}
   !=====================SEARCH====================================
   ! The searching tools start from here which allow to find the
@@ -1329,21 +1240,15 @@ contains
   ! The values of Coord_D are allowed to be outside of the domain,
   ! the nearest block is found in this case.
   !\end{verbatim}
-  ! EOP
 
-  ! BOP
-  !INTERFACE:
   subroutine search_in_dd(&
        Domain,Coord_D,lGlobalTreeNumber)
-    !INPUT ARGUMENTS:
     type(DomainType),intent(inout)::&
          Domain
     !--------------------------------------------------------------------------
     real,dimension(Domain%nDim),&
          intent(inout)::Coord_D
-    !OUTPUT ARGUMENTS:
     integer,intent(out)::lGlobalTreeNumber
-    ! EOP
     real,dimension(Domain%nDim)::&
          CoordTrunc_D,Discr_D
     integer,dimension(Domain%nDim)::&
@@ -1446,9 +1351,6 @@ contains
     Domain%lSearch=lFound
   end subroutine search_in_dd
   !============================================================================
-  ! BOP
-  ! IROUTINE: search_cell - find cell which includes a given point
-  !DESCRIPTION:
   ! In searching the cell the original values of the generalized
   ! coordinates must be defined with respect to the left corner and
   ! a global tree node number should be known
@@ -1467,24 +1369,18 @@ contains
   ! covered by grid, in this case the values of the cell
   ! can be less than unity or greater that nCells\_D. This use is
   ! not restricted, because the cell to find may be the ghostcell.
-  ! EOP
   !---------------------------------------------------------------
 
-  ! BOP
-  !INTERFACE:
   subroutine search_cell_dd(&
        Domain,lGlobalTreeNumber,Coord_D,iCells_D)
-    !INPUT ARGUMENTS:
     type(DomainType),intent(in)::&
          Domain
     !--------------------------------------------------------------------------
     real,dimension(Domain%nDim),&
          intent(inout)::Coord_D
     integer,intent(in)::lGlobalTreeNumber
-    !OUTPUT ARGUMENTS:
     integer,dimension(Domain%nDim),&
          intent(out)::iCells_D
-    ! EOP
     real,dimension(Domain%nDim)::DCoordCells_D
     DCoordCells_D=Domain%DCoordCell_DI(&
          :,lGlobalTreeNumber)
@@ -1493,17 +1389,13 @@ contains
     iCells_D=iCells_D+1
   end subroutine search_cell_dd
   !============================================================================
-  !BOP:
-  !INTERFACE:
   subroutine pe_and_blk_dd(&
        Domain,lGlobalTreeNumber,iPEOut,iBlockOut)
-    !INPUT ARGUMENTS:
     type(DomainType),intent(in)::&
          Domain
     integer,intent(in)::lGlobalTreeNumber
     ! OUTPUT ARGUMENTS
     integer,intent(out)::iPEOut,iBlockOut
-    ! EOP
     !--------------------------------------------------------------------------
     iPEOut=Domain%iDecomposition_II(&
          PE_,lGlobalTreeNumber)
@@ -1511,17 +1403,11 @@ contains
          BLK_,lGlobalTreeNumber)
   end subroutine pe_and_blk_dd
   !============================================================================
-  ! BOP
-  ! IROUTINE: n_block,n_block_total - number of blocks at given PE and total
 
-  ! BOP
-  !INTERFACE:
   integer function n_block_dd(&
        Domain,iPE)
-    !INPUT ARGUMENTS:
     type(DomainType),intent(in)::&
          Domain
-    ! EOP
     integer,intent(in)::iPE
     !--------------------------------------------------------------------------
     n_block_dd=count(&
@@ -1558,121 +1444,77 @@ contains
   end function iglobal_block_dd
   !============================================================================
   !---------------------------------------------------------------!
-  ! BOP
-  ! IROUTINE: access to decomposition elements: compid (component ID)
-  !DESCRIPTION:
   !\begin{verbatim}
   !             Access to the elements of the structures          !
   !\end{verbatim}
-  ! EOP
 
-  ! BOP
-  !INTERFACE:
   integer function compid_dd(Domain)
     ! INPUT ARGUMENTS
     type(DomainType),intent(in)::&
-         ! EOP
     !--------------------------------------------------------------------------
     Domain
     compid_dd=Domain%CompID_
   end function compid_dd
   !============================================================================
-  ! BOP
-  !INTERFACE:
   integer function ndim_dd(Domain)
-    !INPUT ARGUMENTS:
     type(DomainType),intent(in)::&
          Domain
-    ! EOP
     !--------------------------------------------------------------------------
     nDim_dd=Domain%nDim
   end function ndim_dd
   !============================================================================
-  ! BOP
-  ! IROUTINE: coord_block_d - the coordinates of the block left corner
 
-  ! BOP
-  !INTERFACE:
   function coord_block_dd(&
        Domain,lGlobalTreeNumber)
-    !INPUT ARGUMENTS:
     type(DomainType),intent(in)::&
          Domain
     integer,intent(in)::lGlobalTreeNumber
-    !OUTPUT ARGUMENTS:
     real,dimension(Domain%nDim)::coord_block_dd
-    ! EOP
     !--------------------------------------------------------------------------
     coord_block_dd=Domain%CoordBlock_DI(&
          :,lGlobalTreeNumber)
   end function coord_block_dd
   !============================================================================
-  ! BOP
-  ! IROUTINE: d_coord_block_d - block sizes
 
-  ! BOP
-  !INTERFACE:
   function d_coord_block_dd(&
        Domain,lGlobalTreeNumber)
-    !INPUT ARGUMENTS:
     type(DomainType),intent(in)::&
          Domain
     integer,intent(in)::lGlobalTreeNumber
-    !OUTPUT ARGUMENTS:
     real,dimension(Domain%nDim)::d_coord_block_dd
-    ! EOP
     !--------------------------------------------------------------------------
     d_coord_block_dd=Domain%DCoordBlock_DI(&
          :,lGlobalTreeNumber)
   end function d_coord_block_dd
   !============================================================================
-  ! BOP
-  ! IROUTINE: d_coord_cell_d - cell sizes
 
-  ! BOP
-  !INTERFACE:
   function d_coord_cell_dd(&
        Domain,lGlobalTreeNumber)
-    !INPUT ARGUMENTS:
     type(DomainType),intent(in)::&
          Domain
     integer,intent(in)::lGlobalTreeNumber
-    !OUTPUT ARGUMENTS:
     real,dimension(Domain%nDim)::d_coord_cell_dd
-    ! EOP
     !--------------------------------------------------------------------------
     d_coord_cell_dd=Domain%DCoordCell_DI(&
          :,lGlobalTreeNumber)
   end function d_coord_cell_dd
   !============================================================================
-  ! BOP
-  ! IROUTINE: is_used_block - if it is data block or intermediate tree node
 
-  ! BOP
-  !INTERFACE:
   logical function is_used_block_dd(&
        Domain,lGlobalTreeNumber)
-    !INPUT ARGUMENTS:
     type(DomainType),intent(in)::&
          Domain
     integer,intent(in)::lGlobalTreeNumber
-    ! EOP
     !--------------------------------------------------------------------------
     is_used_block_dd=&
          Domain%iDecomposition_II(&
          FirstChild_,lGlobalTreeNumber)==None_
   end function is_used_block_dd
   !============================================================================
-  ! BOP
-  ! IROUTINE: i_realization - determine if the AMR decomposition is new
 
-  ! BOP
-  !INTERFACE:
   integer function irealization_dd(Domain)
-    !INPUT ARGUMENTS:
     type(DomainType),intent(in)::&
          Domain
-    ! EOP
     !--------------------------------------------------------------------------
     irealization_dd=Domain%iRealization
   end function irealization_dd
@@ -1689,4 +1531,5 @@ contains
   !============================================================================
   !==============================END==============================!
 end module CON_domain_decomposition
+!==============================================================================
 

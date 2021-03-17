@@ -1,14 +1,9 @@
-! BOP
-! MODULE: CON_couple_all - mimic real coupling of physics components
 !
-!DESCRIPTION:
 ! This module mimics the coupling between real physics components.
 ! It uses some MPI communication to synchronize the components.
 !
-!INTERFACE:
 module CON_couple_all
 
-  !USES:
   use CON_comp_param
   use CON_world, ONLY: use_comp, is_proc, i_proc, is_proc0, i_proc0, i_comm, &
        get_comp_info
@@ -21,14 +16,11 @@ module CON_couple_all
 
   private   ! except
 
-  !PUBLIC MEMBER FUNCTIONS:
-
   public :: couple_all_init ! initialize all couplers
   public :: couple_two_comp     ! couple 2 components based on their IDs
 
-  !REVISION HISTORY:
+  ! revision history:
   ! 27Aug03 - G. Toth <gtoth@umich.edu> initial prototype/prolog/code
-  ! EOP
 
   character(len=*), parameter :: NameMod='CON_couple_all'
 
@@ -37,35 +29,23 @@ module CON_couple_all
 contains
   !============================================================================
 
-  ! BOP -------------------------------------------------------------------
-  ! IROUTINE: couple_all_init - initialize all the couplers
-  !INTERFACE:
   subroutine couple_all_init
-    ! EOP
-    ! BOC
     !--------------------------------------------------------------------------
     write(*,*)'couple_all_init was called'
-    ! EOC
   end subroutine couple_all_init
   !============================================================================
 
-  ! BOP =======================================================================
-  ! IROUTINE: couple_two_comp - call couple_**_** for components given by IDs
-  !INTERFACE:
   subroutine couple_two_comp(iCompSource, iCompTarget, TimeSimulation)
 
-    !INPUT PARAMETERS:
     integer,  intent(in) :: iCompSource, iCompTarget ! component IDs
     real,     intent(in) :: TimeSimulation           ! coupling simulation time
 
-    !DESCRIPTION:
     ! Couple two components given with their IDs. The simulation time
     ! is shared at the time of coupling. Call the appropriate coupling.
     ! Stop with an error for invalid component pairs.
 
-    !REVISION HISTORY:
+    ! revision history:
     ! 27Aug03 - G. Toth <gtoth@umich.edu> initial prototype/prolog/code
-    ! EOP
 
     integer :: iUnitOut
     logical :: DoTest,DoTestMe
@@ -132,3 +112,4 @@ contains
   !============================================================================
 
 end module CON_couple_all
+!==============================================================================

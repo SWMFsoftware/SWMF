@@ -4,18 +4,13 @@
 !^CMP FILE EE
 !^CMP FILE SC
 
-! BOP
-! MODULE: CON_couple_ee_sc - couple EE and SC components
 !
-!DESCRIPTION:
 ! Couple EE and SC components both ways.
 ! EE overwrites SC in the whole EE domain. Extra SC variables are solved for in SC.
 ! SC provides boundary conditions for EE where possible.
 !
-!INTERFACE:
 module CON_couple_ee_sc
 
-  !USES:
   use CON_coupler
 
   use CON_couple_points
@@ -28,15 +23,12 @@ module CON_couple_ee_sc
 
   private ! except
 
-  !PUBLIC MEMBER FUNCTIONS:
-
   public :: couple_ee_sc_init ! initialize both couplings
   public :: couple_ee_sc      ! couple EE to SC
   public :: couple_sc_ee      ! couple SC to EE
 
-  !REVISION HISTORY:
+  ! revision history:
   ! 09/24/2013 G.Toth <gtoth@umich.edu> - initial version
-  ! EOP
 
   ! Router communicator info
   type(CouplePointsType) :: CouplerEEtoSC,  CouplerSCtoEE
@@ -44,16 +36,11 @@ module CON_couple_ee_sc
 contains
   !============================================================================
 
-  ! BOP =======================================================================
-  ! IROUTINE: couple_ee_sc_init - initialize EE-SC couplings
-  !INTERFACE:
   subroutine couple_ee_sc_init
 
     logical :: DoTest, DoTestMe
 
-    !DESCRIPTION:
     ! This subroutine should be called from all PE-s
-    ! EOP
 
     character(len=*), parameter:: NameSub = 'couple_ee_sc_init'
     !--------------------------------------------------------------------------
@@ -86,7 +73,6 @@ contains
 
   subroutine couple_ee_sc(tSimulation)
 
-    !INPUT ARGUMENT:
     real, intent(in) :: tSimulation
 
     logical :: DoTest, DoTestMe
@@ -127,3 +113,4 @@ contains
   !============================================================================
 
 end module CON_couple_ee_sc
+!==============================================================================

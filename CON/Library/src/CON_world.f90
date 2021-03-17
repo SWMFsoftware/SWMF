@@ -6,11 +6,8 @@
 !    Center for Space Environment Modeling, The University of Michigan !
 !-----------------------------------------------------------------------
 !
-! BOP -------------------------------------------------------------------------
 !
-! MODULE: CON_world - component registration and handling component info
 !
-!DESCRIPTION:
 ! CON\_world reads, stores and provides information about all the
 ! registered components. Components are registered by being listed
 ! in the LAYOUT.in file which is read by the {\bf setup} subroutine.
@@ -54,11 +51,9 @@
 ! {\bf put\_comp\_info} subroutines provide access to any subset of
 ! the available information with a single call.
 
-!INTERFACE:
 !
 module  CON_world
   !
-  !USES:
   !
   use ModMpi
   use ModIoUnit, ONLY : UNITTMP_, io_unit_clean
@@ -74,7 +69,6 @@ module  CON_world
 
   private ! except
 
-  !PUBLIC MEMBER FUNCTIONS:
   public :: MaxComp         ! max number of components from CON_comp_param
   public :: world_init      ! constructor initializes registry for components
   public :: world_setup     ! set registry values (reads from LAYOUT.in)
@@ -107,7 +101,8 @@ module  CON_world
   integer, parameter, public:: &
        CON_ = 0           ! Index of MPI group of PEs used by active components
 
-  !LOCAL VARIABLES:
+  ! local variables
+
   integer :: iProcWorld   = -1 ! global PE rank
   integer :: nProcWorld   =  0 ! global number of PEs
   integer :: iCommWorld   = -1 ! global communicator
@@ -185,7 +180,7 @@ module  CON_world
        i_group_name, i_group_id, i_group_world
   end interface
 
-  !REVISION HISTORY:
+  ! revision history:
   !
   !  June 2003 - O. Volberg <volov@umich.edu> - initial version
   !  this code was inspired by Multi Program-Comp Handshaking (MPH) Utility
@@ -196,7 +191,6 @@ module  CON_world
   !
   !  July 12 2003 - G. Toth <gtoth@umich.edu> - simplify and add useful methods
   !  2019 - H. Zhou and G. Toth added thread related methods
-  ! EOP ------------------------------------------------------------------------
 
   character(len=*),parameter :: NameMod='CON_world'
 
@@ -288,12 +282,8 @@ contains
     i_proc_last_world=nProcWorld-1
   end function i_proc_last_world
   !============================================================================
-  ! BOP =======================================================================
-  ! IROUTINE: setup_from_file - read LAYOUT.in and register components
-  !INTERFACE:
   subroutine setup_from_file
 
-    !DESCRIPTION:
     ! Reads LAYOUT.in or PARAM.in and registers the listed components. The MPI
     ! parameters are initialized using the {\bf init} subroutine from
     ! CON\_comp\_info. The format is the following:
@@ -327,7 +317,6 @@ contains
     ! by the maximum number of threads MaxThread divided by their absolute
     ! values. If the number of threads nThread exceeds MaxThread, it gets
     ! reduced to MaxThread.
-    ! EOP
 
     ! One line of input
     character (len=100) :: String
@@ -698,17 +687,12 @@ contains
 
   end subroutine get_comp_info_name
   !============================================================================
-  ! BOP =======================================================================
-  ! IROUTINE: get_comp_info - get component information
-  !INTERFACE:
   subroutine get_comp_info_id(iComp, &
        iProc, nProc, iComm, iGroup, iProcZero, iProcLast, iProcStride, &
        nThread, iUnitOut, Use, Name, NameVersion, Version, CompInfo)
 
-    !INPUT ARGUMENTS:
     integer, intent(in) :: iComp
 
-    !OUTPUT ARGUMENTS:
     integer, optional, intent(out) :: &
          iProc, nProc, iComm, iGroup, iProcZero,  iProcLast, iProcStride, &
          nThread, iUnitOut
@@ -718,10 +702,8 @@ contains
     real,                        optional, intent(out) :: Version
     type(CompInfoType),          optional, intent(out) :: CompInfo
 
-    !DESCRIPTION:
     ! Obtain any information about the component which is identified
     ! with its ID {\bf iComp}, or name (using {\bf get\_comp\_info\_name}).
-    ! EOP
 
     character(len=*), parameter:: NameSub = 'get_comp_info_id'
     !--------------------------------------------------------------------------
@@ -733,24 +715,18 @@ contains
 
   end subroutine get_comp_info_id
   !============================================================================
-  ! BOP ========================================================================
-  ! IROUTINE: put_comp_info - put component information into registry
-  !INTERFACE:
   subroutine put_comp_info_name(NameComp, iUnitOut, Use, NameVersion, Version)
 
-    !INPUT ARGUMENTS:
     character(len=*), intent(in) :: NameComp
     integer,          optional, intent(in) :: iUnitOut    ! for STDOUT
     logical,          optional, intent(in) :: use         ! is used
     character(len=*), optional, intent(in) :: NameVersion ! version name
     real,             optional, intent(in) :: Version     ! version number
 
-    !DESCRIPTION:
     ! Set component information which is not set by {\bf setup}.
     ! The first argument is either the two-character component name
     ! {\bf NameComp} or the integer component ID (using
     ! {\bf put\_comp\_info\_id}.
-    ! EOP
 
     character(len=*), parameter:: NameSub = 'put_comp_info_name'
     !--------------------------------------------------------------------------
@@ -1021,3 +997,4 @@ contains
   !============================================================================
 
 end module CON_world
+!==============================================================================

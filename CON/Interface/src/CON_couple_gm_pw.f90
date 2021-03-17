@@ -4,18 +4,13 @@
 !^CMP FILE IE
 !^CMP FILE PW
 
-! BOP
-! MODULE: CON_couple_gm_pw - couple PW and GM components
 !
-!DESCRIPTION:
 ! Couple PW and GM components both ways.
 ! Note that PW -> GM has to be done before GM -> PW
 ! so the PW
 !
-!INTERFACE:
 module CON_couple_gm_pw
 
-  !USES:
   use CON_coupler
   use CON_transfer_data, ONLY: transfer_real_array
 
@@ -26,15 +21,12 @@ module CON_couple_gm_pw
 
   private ! except
 
-  !PUBLIC MEMBER FUNCTIONS:
-
   public :: couple_gm_pw_init ! initialize coupling
   public :: couple_gm_pw      ! couple GM to PW
   public :: couple_pw_gm      ! couple PW to GM
 
-  !REVISION HISTORY:
+  ! revision history:
   ! 01/18/2007 A.Glocer and G.Toth - initial version
-  ! EOP
 
   ! Communicator and logicals to simplify message passing and execution
   logical :: IsInitialized = .false.
@@ -45,15 +37,10 @@ module CON_couple_gm_pw
 contains
   !============================================================================
 
-  ! BOP =======================================================================
-  ! IROUTINE: couple_gm_pw_init - initialize PW-GM couplings
-  !INTERFACE:
   subroutine couple_gm_pw_init
 
-    !DESCRIPTION:
     ! This subroutine should be called from all PE-s so that
     ! a union group can be formed. The PW grid size is also stored.
-    ! EOP
 
     !--------------------------------------------------------------------------
     if(IsInitialized) RETURN
@@ -64,21 +51,15 @@ contains
   end subroutine couple_gm_pw_init
   !============================================================================
 
-  ! BOP =======================================================================
-  ! IROUTINE: couple_pw_gm - couple PW component to GM component
-  !INTERFACE:
   subroutine couple_pw_gm(tSimulation)
 
-    !INPUT ARGUMENTS:
     real, intent(in) :: tSimulation     ! simulation time at coupling
 
-    !DESCRIPTION:
-    ! Couple between two components:\\
-    !    Polar Wind (PW)  source\\
+    ! Couple between two components:\
+    !    Polar Wind (PW)  source\
     !    Global Magnetosphere (GM) target
     !
     ! Send electrostatic potential and field aligned current from PW to IE.
-    ! EOP
 
     ! Variables to pass
     integer, parameter :: nVar = 8
@@ -115,16 +96,13 @@ contains
 
   subroutine couple_gm_pw(tSimulation)
 
-    !INPUT ARGUMENTS:
     real, intent(in) :: tSimulation     ! simulation time at coupling
 
-    !DESCRIPTION:
-    ! Couple between two components:\\
-    !    Global Magnetosphere (GM) source \\
+    ! Couple between two components:\
+    !    Global Magnetosphere (GM) source \
     !    Polar Wind (PW)  target
     !
     ! Send pressure from GM to PW
-    ! EOP
 
     ! Name of variables
     character (len=*), parameter:: NameVar_D(2) = ['CoLat    ','Longitude']
@@ -162,4 +140,5 @@ contains
   !============================================================================
 
 end module CON_couple_gm_pw
+!==============================================================================
 

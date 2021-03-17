@@ -4,16 +4,11 @@
 !^CMP FILE GM
 !^CMP FILE IE
 
-! BOP
-! MODULE: CON_couple_gm_ie - couple GM and IE components
 !
-!DESCRIPTION:
 ! Couple GM and IE components both ways.
 !
-!INTERFACE:
 module CON_couple_gm_ie
 
-  !USES:
   use CON_coupler
 
   use GM_wrapper, ONLY: GM_get_info_for_ie, GM_get_for_ie, GM_put_from_ie
@@ -26,18 +21,15 @@ module CON_couple_gm_ie
 
   private ! except
 
-  !PUBLIC MEMBER FUNCTIONS:
-
   public :: couple_gm_ie_init ! initialize both couplings
   public :: couple_gm_ie      ! couple GM to IE
   public :: couple_ie_gm      ! couple IE to GM
 
-  !REVISION HISTORY:
+  ! revision history:
   ! 07/25/2003 G.Toth <gtoth@umich.edu> - initial version as external
   !                                       subroutines
   ! 08/27/2003 G.Toth - combined into a module
   ! 12/01/2004 G.Toth - the GM->IE coupling is rewritten for Jr(iSize,jSize)
-  ! EOP
 
   ! Size of the 2D spherical structured IE grid
   integer, save :: iSize, jSize
@@ -49,15 +41,10 @@ module CON_couple_gm_ie
 contains
   !============================================================================
 
-  ! BOP =======================================================================
-  ! IROUTINE: couple_gm_ie_init - initialize GM-IE couplings
-  !INTERFACE:
   subroutine couple_gm_ie_init
 
-    !DESCRIPTION:
     ! This subroutine should be called from all PE-s.
     ! Transfer initial information about GM to IE coupling.
-    ! EOP
 
     logical :: DoTest, DoTestMe
 
@@ -93,22 +80,16 @@ contains
   end subroutine couple_gm_ie_init
   !============================================================================
 
-  ! BOP =======================================================================
-  ! IROUTINE: couple_ie_gm - couple IE component to GM component
-  !INTERFACE:
   subroutine couple_ie_gm(tSimulation)
 
-    !INPUT ARGUMENTS:
     real, intent(in) :: tSimulation     ! simulation time at coupling
 
-    !DESCRIPTION:
-    ! Couple between two components:\\
-    !    Inner Magnetosphere (IE)  source\\
+    ! Couple between two components:\
+    !    Inner Magnetosphere (IE)  source\
     !    Global Magnetosphere (GM) target
     !
     ! The IE component sends the electrostatic potential and other
     ! requested variables (Joule heat, conductances ...) to GM.
-    ! EOP
 
     ! Buffer for the variables on the 2D IE grid
     real, allocatable :: Buffer_IIV(:,:,:)
@@ -140,22 +121,16 @@ contains
   end subroutine couple_ie_gm
   !============================================================================
 
-  ! BOP =======================================================================
-  ! IROUTINE: couple_gm_ie - couple GM to IE
-  !INTERFACE:
   subroutine couple_gm_ie(tSimulation)
 
-    !INPUT ARGUMENT:
     real, intent(in) :: tSimulation
 
-    !DESCRIPTION:
-    ! Couple between two components:\\
-    !    Global Magnetosphere       (GM) source\\
+    ! Couple between two components:\
+    !    Global Magnetosphere       (GM) source\
     !    Ionosphere Electrodynamics (IE) target
     !
     ! Send field aligned currents from GM to IE.
     ! Also send some ray tracing information.
-    ! EOP
 
     ! Number of variables to pass
     integer, parameter :: nVar=6
@@ -193,3 +168,4 @@ contains
   !============================================================================
 
 end module CON_couple_gm_ie
+!==============================================================================
