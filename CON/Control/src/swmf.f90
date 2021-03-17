@@ -3,15 +3,9 @@
 ! !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !           SWMF: Space Weather Modeling Framework          |
 !                   University of Michigan                  |
-! BOP
 !
-! QUOTE: \chapter{Control Module}
-! QUOTE: \section{CON/Control: Main Executable and Control}
-! MODULE: swmf - the main program for the stand-alone SWMF executable
-!INTERFACE:
 program swmf
 
-  !USES:
   use CON_main,      ONLY: initialize, finalize
   use CON_session,   ONLY: init_session, do_session
   use CON_io,        ONLY: read_inputs
@@ -20,16 +14,16 @@ program swmf
 
   implicit none
 
-  !LOCAL VARIABLES:
+  ! local variables
+
   integer :: iErrorMpi     ! MPI error code
   logical :: IsLastSession ! true if last session
 
-  !REVISION HISTORY:
+  ! revision history:
   ! 09/01/05 G.Toth - initial version
   ! 09/09/05 G.Toth - moved session loop here from CON_main::run
   !                   to avoid an ifort 8.070 compiler bug on the Altix
   !
-  !DESCRIPTION:
   ! This main program is for the stand alone SWMF.
   ! It uses methods from CON\_main, CON\_session and CON\_io.
   ! The same methods can also be used from the swmf\_interface,
@@ -48,9 +42,7 @@ program swmf
   ! \end{verbatim}
   ! \newpage
 
-  ! EOP
   !----------------------------------------------------------------------------
-  ! BOC
   call MPI_init(iErrorMpi)
   if(iErrorMpi /= MPI_SUCCESS) stop 'SWMF_ERROR: MPI_init FAILED'
 
@@ -83,5 +75,5 @@ program swmf
   if(iErrorSwmf == 0) call finalize
 
   call MPI_finalize(iErrorMpi)
-  ! EOC
 end program swmf
+!==============================================================================

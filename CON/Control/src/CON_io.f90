@@ -2,16 +2,11 @@
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !
-! BOP
 !
-! MODULE: CON_io - Input and output methods for CON
 !
-!DESCRIPTION:
 ! Input and output methods used by CON
-!INTERFACE:
 module CON_io
 
-  !USES:
   use ModIoUnit, ONLY: StdOut_, UnitTmp_, io_unit_new
   use CON_world
   use CON_comp_param
@@ -30,11 +25,10 @@ module CON_io
 
   private ! except
 
-  !PUBLIC MEMBER FUNCTIONS:
   public :: read_inputs  ! read, broadcast and distribute parameters
   public :: save_restart ! save restart information
 
-  !REVISION HISTORY:
+  ! revision history:
   ! 07/22/03 Gabor Toth <gtoth@umich.edu> - initial prototype based on
   !                                         BATSRUS -r v7_5_0_FRAMEWORK
   ! 07/31/03 Aaron Ridley and G.Toth - added commands to read physical params
@@ -43,7 +37,6 @@ module CON_io
   ! 05/20/04 G.Toth - added #CYCLE command
   ! 09/01/05 G.Toth - replaced call CON_stop with call world_clean and RETURN
   !                   check first read condition for each command separately.
-  ! EOP
 
   character (len=*), parameter :: NameMod='CON_io'
 
@@ -82,12 +75,8 @@ module CON_io
 contains
   !============================================================================
 
-  ! BOP =======================================================================
-  ! IROUTINE: read_inputs - read, broadcast and distribute parameters
-  !INTERFACE:
   subroutine read_inputs(IsLastRead)
 
-    !USES:
     use CON_coupler, ONLY: &
          Couple_CC, MaxCouple, nCouple, iCompCoupleOrder_II, &
          DoCoupleOnTime_C, IsTightCouple_CC
@@ -96,10 +85,8 @@ contains
 
     real :: VersionRead
 
-    !OUTPUT ARGUMENTS:
     logical, intent(out) :: IsLastRead ! True if last session was read
 
-    !DESCRIPTION:
     ! Reads the parameters for control, and passes parameters
     ! between
     ! \begin{verbatim}
@@ -116,7 +103,6 @@ contains
     ! The ordering of the commands is more or less arbitrary
     ! with the exception of \#PLANET (\#MOON, \#COMET) that must preceed
     ! commands that idealize or overwrite the real parameters of the planet.
-    ! EOP
 
     ! True if first session will be read
     logical :: IsFirstRead = .true.
@@ -463,7 +449,7 @@ contains
        case('#FIELDLINE')
           call BL_read_param(iErrorSWMF)
           if(iErrorSWMF/=0)RETURN
-          
+
        case("#COUPLE1TIGHT", "#COUPLE2TIGHT")
           call read_var('NameMaster', NameComp1)
           iComp1 = i_comp(NameComp1)
@@ -791,11 +777,7 @@ contains
   end subroutine read_inputs
   !============================================================================
 
-  ! BOP ========================================================================
-  ! IROUTINE: set_stdout - redirect standard output of components
-  !INTERFACE:
   subroutine set_stdout
-    !DESCRIPTION:
     ! If UseStdout is true tell the components to use STDOUT with
     ! a prefix string.
     ! If UseStdout is false, open an output file for each component and
@@ -803,7 +785,6 @@ contains
     ! Tell each component to write STDOUT into the file, which has
     ! a unique unit number.
     ! Empty files will be deleted if the run ends in a normal fashion.
-    ! EOP
 
     integer :: lComp, iComp, iUnitOut
     character (len=lNameFile) :: NameFile
@@ -847,16 +828,12 @@ contains
   end subroutine set_stdout
   !============================================================================
 
-  ! BOP =======================================================================
-  ! IROUTINE: save_restart - save restart information for SWMF
-  !INTERFACE:
   subroutine save_restart
 
     use CON_coupler, ONLY: NameRestartOutDirComp
     use CON_time, ONLY: get_time, TimeType
     use ModUtilities, ONLY: write_string_tabs_name, cTab
 
-    !DESCRIPTION:
     ! Save restart information for all components.
     ! Then save restart information for CON, such as code version,
     ! precision, name of planet, problem description,
@@ -866,7 +843,6 @@ contains
     ! with the \#INCLUDE file command.
     ! Set the name of the restart directory based on the DATE-TIME if required.
     ! Set NameRestartOutDirComp for the components too.
-    ! EOP
 
     integer :: lComp, iComp, iError
     integer :: i
@@ -965,3 +941,4 @@ contains
   !============================================================================
 
 end module CON_io
+!==============================================================================

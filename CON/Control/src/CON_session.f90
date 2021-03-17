@@ -2,13 +2,9 @@
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !
-! BOP
 !
-! MODULE: CON_session - run the framework with a set of parameters
-!INTERFACE:
 module CON_session
 
-  !USES:
   use CON_comp_param, ONLY: MaxComp, NameComp_I
   use CON_world, ONLY: i_comm, is_proc, is_proc0, i_proc, &
        i_comp, n_comp, use_comp, is_thread, world_used, CON_
@@ -41,7 +37,7 @@ module CON_session
   public :: init_session ! initialize SWMF with a fixed set of parameters
   public :: do_session   ! advance    SWMF with a fixed set of parameters
 
-  !REVISION HISTORY:
+  ! revision history:
   ! 08/26/03 G.Toth - initial version
   ! 05/20/04 G.Toth - general steady state session model
   ! 08/11/04 G.Toth - removed 'old' and 'parallel' session models
@@ -50,7 +46,6 @@ module CON_session
   !                   (to avoid ifort compiler bug)
   !                   moved some code from CON_main into do_session.
   ! 01/20/06 G.Toth - added optional tCoupleExtra_C parameter to do_session
-  ! EOP
 
   character (len=*), parameter :: NameMod = 'CON_session'
 
@@ -66,18 +61,13 @@ module CON_session
 contains
   !============================================================================
 
-  ! BOP ======================================================================
-  ! IROUTINE: init_session - initialize run with a fixed set of input parameters
-  !INTERFACE:
   subroutine init_session
 
-    !DESCRIPTION:
     ! Initialize possibly overlapping components for the current session.
     ! First figure out which components belong to this PE.
     ! Then couple the components in an appropriate order for the first time.
     ! The order is determined by the iCompCoupleOrder\_II array.
     ! Do timings as needed.
-    ! EOP
 
     logical:: UseCore
 
@@ -95,7 +85,6 @@ contains
     if(is_proc0().and.lVerbose>=0)&
          write(*,*)'----- Starting Session ',iSession,' ------'
 
-    ! BOC
     nComp = n_comp()
 
     ! Initialize components for this session.
@@ -145,7 +134,6 @@ contains
             Couple_CC(iCompSource, iCompTarget) % DoThis) &
             call couple_two_comp(iCompSource, iCompTarget, tSimulation)
     end do
-    ! EOC
 
     if(iSession==1)then
        call timing_stop('SETUP')
@@ -160,18 +148,12 @@ contains
   end subroutine init_session
   !============================================================================
 
-  ! BOP ======================================================================
-  ! IROUTINE: do_session - time loop with a fixed set of input parameters
-  !INTERFACE:
   subroutine do_session(IsLastSession, tCoupleExtra_C)
 
-    !INPUT/OUTPUT ARGUMENTS:
     logical, intent(inout) :: IsLastSession ! set it to true if run should stop
 
-    !OPTIONAL INPUT ARGUMENTS:
     real, optional, intent(in) :: tCoupleExtra_C(MaxComp) ! external coupling
 
-    !DESCRIPTION:
     ! This subroutine executes one session.
     ! This is general time looping routine allows overlap in
     ! the layout of the components but allows concurrent execution
@@ -182,14 +164,13 @@ contains
     ! should run. Coupling occurs when all the involved components reached or
     ! exceeded the next coupling, save restart or check for stop time.
 
-    !LOCAL VARIABLES:
+    ! local variables
+
     real :: tSimulation_C(MaxComp)=-1.0 ! Current time for the component
     real :: tSimulationWait_C(MaxComp)  ! After this time do not progress
     real :: tSimulationLimit_C(MaxComp) ! Time not to be passed by component
 
     real :: tSimulationCouple, tSimulationLimit
-
-    ! EOP
 
     ! Indexes for tight coupling
     integer:: iCompMaster, iCompSlave
@@ -216,8 +197,6 @@ contains
        if(present(tCoupleExtra_C)) &
             write(*,*)NameSub,'tCoupleExtra_C=',tCoupleExtra_C(1:nComp)
     end if
-
-    ! BOC
 
     ! If no component uses this PE and init_session did not stop
     ! then set tSimulation to the final time and simply return
@@ -562,28 +541,21 @@ contains
        call timing_reset_all
     end if
 
-    ! EOC
-
     if(DoTestMe)write(*,*)NameSub,' finished'
 
   end subroutine do_session
   !============================================================================
 
-  ! BOP =======================================================================
-  ! IROUTINE: do_stop_now - return true if stop file exists or cpu time is over
-  !INTERFACE:
   function do_stop_now() result(DoStopNow)
 
     !RETURN VALUE:
     logical :: DoStopNow
 
-    !DESCRIPTION:
     ! Check if SWMF.STOP file is present in the run directory.
     ! Also check if cpu time limit is exceeded.
     ! If any of these conditions hold return true, otherwise false
     ! on all PE-s. This subroutine contains an MPI\_bcast, so frequent
     ! checks may affect parallel performance.
-    ! EOP
 
     !--------------------------------------------------------------------------
     DoStopNow=.false.
@@ -606,15 +578,10 @@ contains
   end function do_stop_now
   !============================================================================
 
-  ! BOP =======================================================================
-  ! IROUTINE: show_progress - show how far the simulation progressed
-  !INTERFACE:
   subroutine show_progress
-    !DESCRIPTION:
     ! Print information about time and time step at the periodicity
     ! given by DnShowProgressShort and DnShowProgressLong which can
     ! be set with the \#PROGRESS command in the input parameter file.
-    ! EOP
 
     use CON_time, ONLY: get_time, TimeType
 
@@ -648,3 +615,4 @@ contains
   !============================================================================
 
 end module CON_session
+!==============================================================================

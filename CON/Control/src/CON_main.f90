@@ -3,12 +3,8 @@
 ! !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !           SWMF: Space Weather Modeling Framework          |
 !                   University of Michigan                  |
-! BOP
-! MODULE: CON_main - the main methods to drive the SWMF
-!INTERFACE:
 module CON_main
 
-  !USES:
   use CON_world
   use CON_comp_param
   use CON_wrapper
@@ -26,11 +22,10 @@ module CON_main
 
   private ! except
 
-  !PUBLIC MEMBER FUNCTIONS:
   public :: initialize         ! initialize SWMF
   public :: finalize           ! finalize   SWMF
 
-  !REVISION HISTORY:
+  ! revision history:
   !
   ! This module is a result of a continuous transformation from the main
   ! program of BATSRUS (developed at the University of Michigan)
@@ -44,7 +39,6 @@ module CON_main
   ! swmf\_interface.f90. This module contains the subroutines
   ! initialize anf finalize.
   !
-  ! EOP
 
   character (len=*), parameter :: NameSub = 'CON_main'
 
@@ -55,14 +49,9 @@ module CON_main
 
 contains
   !============================================================================
-  ! BOP =======================================================================
-  ! IROUTINE: initialize - initialize the SWMF
-  !INTERFACE:
   subroutine initialize(iComm)
-    !INPUT ARGUMENTS:
     integer, intent(in), optional :: iComm ! the MPI communicator for the SWMF
 
-    !DESCRIPTION:
     ! The optional argument MPI communicator argument is present only
     ! when the SWMF is not running in stand alone mode.
     ! This subroutine executes the following major steps shown in
@@ -85,7 +74,6 @@ contains
     ! deals with timing, deleting the SWMF.STOP and SWMF.SUCCESS files
     ! at the beginning of the run, and initializing the planet information.
     ! There is also some verbose information printed.
-    ! EOP
     !--------------------------------------------------------------------------
 
     ! Initialize control component (MPI)
@@ -155,11 +143,7 @@ contains
   end subroutine initialize
   !============================================================================
 
-  ! BOP =======================================================================
-  ! IROUTINE: finalize - finalize the SWMF run
-  !INTERFACE:
   subroutine finalize
-    !DESCRIPTION:
     ! This subroutine executes the following major steps shown in
     ! pseudo F90 code
     ! begin{itemize}
@@ -177,8 +161,6 @@ contains
 
     use ModConst, ONLY: &
          cSecondPerYear, cSecondPerDay, cSecondPerHour, cSecondPerMinute
-
-    ! EOP ---------------------------------------------------------------------
 
     !--------------------------------------------------------------------------
     if(is_proc0())then
@@ -239,22 +221,16 @@ contains
   end subroutine finalize
   !============================================================================
 
-  ! BOP ========================================================================
-  ! IROUTINE: show_all_comp - show version and layout information
-  !INTERFACE:
   subroutine show_all_comp
 
-    !USES:
     use CON_variables,  ONLY: VersionSwmf
     use CON_comp_param, ONLY: lNameVersion
 
-    !DESCRIPTION:
     ! Show the version information and layout for all registered components.
     ! Show the version information for all working but unregistered components.
     !
-    !REVISION HISTORY:
+    ! revision history:
     ! 08/2003 G.Toth <gtoth@umich.edu> - initial version and impovements
-    ! EOP
 
     integer, parameter :: lWidth = 77
 
@@ -310,20 +286,15 @@ contains
   end subroutine show_all_comp
   !============================================================================
 
-  ! BOP ========================================================================
-  ! IROUTINE: check_overlap_comp - check if components with the same source code overlap
-  !INTERFACE:
   subroutine check_overlap_comp
-    !DESCRIPTION:
     ! One may use the same source code for two non-overlapping components.
     ! For example GM and IH may use the same MHD source code. This is indicated
     ! by their NameVersion being the same. When the version names are the same
     ! no overlap is allowed. This suboutine stops with an appropriate error
     ! message if such an overlap occurs.
     !
-    !REVISION HISTORY:
+    ! revision history:
     ! 09/10/03 - G.Toth <gtoth@umich.edu> - initial version and prolog
-    ! EOP
 
     integer :: lComp, iComp, lComp2, iComp2, iProc, iProcMin, iError
     character (LEN=lNameVersion) :: NameVersion, NameVersion2
@@ -370,4 +341,5 @@ contains
   !============================================================================
 
 end module CON_main
+!==============================================================================
 
