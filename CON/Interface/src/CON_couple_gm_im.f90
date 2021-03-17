@@ -111,8 +111,8 @@ contains
 
     real, intent(in) :: tSimulation     ! simulation time at coupling
 
-    ! Couple between two components:\
-    !    Global Magnetosphere (GM) source\
+    ! Couple between two components:
+    !    Global Magnetosphere (GM) source
     !    Inner Magnetosphere  (IM) target
     !
     ! Send field line volumes, average density and pressure and
@@ -265,8 +265,8 @@ contains
 
     subroutine couple_crcm
 
-      ! Couple between two components:\
-      !    Global Magnetosphere (GM) source\
+      ! Couple between two components:
+      !    Global Magnetosphere (GM) source
       !    Inner  Magnetosphere (IM) target
 
       ! Coupling variables
@@ -373,8 +373,8 @@ contains
 
     real, intent(in) :: tSimulation     ! simulation time at coupling
 
-    ! Couple between two components:\
-    !    Inner Magnetosphere  (IM) source\
+    ! Couple between two components:
+    !    Inner Magnetosphere  (IM) source
     !    Global Magnetosphere (GM) target
     !
     ! Send pressure from IM to GM.

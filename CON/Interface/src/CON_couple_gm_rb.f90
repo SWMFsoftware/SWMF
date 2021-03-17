@@ -63,8 +63,8 @@ contains
 
     real, intent(in) :: tSimulation     ! simulation time at coupling
 
-    ! Couple between two components:\
-    !    Global Magnetosphere (GM) source\
+    ! Couple between two components:
+    !    Global Magnetosphere (GM) source
     !    Radiation Belt       (RB) target
     !
     ! Send field line volumes, average density and pressure and

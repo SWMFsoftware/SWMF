@@ -5,8 +5,8 @@
 !^CMP FILE PS
 
 !
-! Couple between two components:\
-!    Ionosphere Electrodynamics (IE) Source\
+! Couple between two components:
+!    Ionosphere Electrodynamics (IE) Source
 !    Plasmasphere (PS)        Target
 module CON_couple_ie_ps
 
@@ -67,8 +67,8 @@ contains
 
     real, intent(in) :: tSimulation     ! simulation time at coupling
 
-    ! Couple between two components:\
-    !    Plasmasphere (PS)        Source\
+    ! Couple between two components:
+    !    Plasmasphere (PS)        Source
     !    Ionosphere Electrodynamics (IE) Target
     !
     ! Send field-align current from PS to IE.
@@ -88,8 +88,8 @@ contains
 
     real, intent(in) :: tSimulation     ! simulation time at coupling
 
-    ! Couple between two components:\
-    !    Ionosphere Electrodynamics (IE) Source\
+    ! Couple between two components:
+    !    Ionosphere Electrodynamics (IE) Source
     !    Plasmasphere (PS)        Target
     !
     ! Send electrostatic potential from IE to PS.

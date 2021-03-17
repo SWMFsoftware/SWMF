@@ -63,8 +63,8 @@ contains
 
     real, intent(in) :: tSimulation
 
-    ! Couple between two components:\
-    !    Global Magnetosphere       (GM) source\
+    ! Couple between two components:
+    !    Global Magnetosphere       (GM) source
     !    Particle Tracker           (PT) target
     !
     ! Send information from GM to PT.

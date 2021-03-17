@@ -68,8 +68,8 @@ contains
     use CON_transfer_data, ONLY: transfer_real
     real, intent(in) :: tSimulation
 
-    ! Couple between two components:\
-    !    Solar Corona               (SC) source\
+    ! Couple between two components:
+    !    Solar Corona               (SC) source
     !    Particle Tracker           (PT) target
     !
     ! Send information from SC to PT.

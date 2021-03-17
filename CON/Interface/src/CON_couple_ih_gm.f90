@@ -18,7 +18,7 @@ module CON_couple_ih_gm
   ! reference with respect to GM:
   !
   ! $$
-  ! {\bf V}_{IH}={\bf A}_{IH,GM}\cdot{\bf V}_{GM},\
+  ! {\bf V}_{IH}={\bf A}_{IH,GM}\cdot{\bf V}_{GM},
   ! {\bf V}_{GM}={\bf A}_{GM,IH}\cdot{\bf V}_{IH}
   ! $$
   use CON_coupler

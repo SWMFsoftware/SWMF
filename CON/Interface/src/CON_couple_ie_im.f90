@@ -5,8 +5,8 @@
 !^CMP FILE IM
 
 !
-! Couple between two components:\
-!    Ionosphere Electrodynamics (IE) Source\
+! Couple between two components:
+!    Ionosphere Electrodynamics (IE) Source
 !    Inner Magnetosphere (IM)        Target
 module CON_couple_ie_im
 
@@ -122,8 +122,8 @@ contains
 
     real, intent(in) :: tSimulation     ! simulation time at coupling
 
-    ! Couple between two components:\
-    !    Inner Magnetosphere (IM)        Source\
+    ! Couple between two components:
+    !    Inner Magnetosphere (IM)        Source
     !    Ionosphere Electrodynamics (IE) Target
     !
     ! Send field-align current from IM to IE.
@@ -150,8 +150,8 @@ contains
 
     real, intent(in) :: tSimulation     ! simulation time at coupling
 
-    ! Couple between two components:\
-    !    Ionosphere Electrodynamics (IE) Source\
+    ! Couple between two components:
+    !    Ionosphere Electrodynamics (IE) Source
     !    Inner Magnetosphere (IM)        Target
     !
     ! Send electrostatic potential from IE to IM.

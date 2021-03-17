@@ -55,8 +55,8 @@ contains
 
     real, intent(in) :: tSimulation     ! simulation time at coupling
 
-    ! Couple between two components:\
-    !    Ionosphere Electrodynamics (IE)  source\
+    ! Couple between two components:
+    !    Ionosphere Electrodynamics (IE)  source
     !    Radiation Belt (RB) target
     !
     ! Send electrostatic potential from IE to RB.

@@ -84,8 +84,8 @@ contains
 
     real, intent(in) :: tSimulation     ! simulation time at coupling
 
-    ! Couple between two components:\
-    !    Inner Magnetosphere (IE)  source\
+    ! Couple between two components:
+    !    Inner Magnetosphere (IE)  source
     !    Global Magnetosphere (GM) target
     !
     ! The IE component sends the electrostatic potential and other
@@ -125,8 +125,8 @@ contains
 
     real, intent(in) :: tSimulation
 
-    ! Couple between two components:\
-    !    Global Magnetosphere       (GM) source\
+    ! Couple between two components:
+    !    Global Magnetosphere       (GM) source
     !    Ionosphere Electrodynamics (IE) target
     !
     ! Send field aligned currents from GM to IE.

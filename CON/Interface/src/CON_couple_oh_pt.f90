@@ -84,8 +84,8 @@ contains
     use CON_transfer_data, ONLY: transfer_real
     real, intent(in) :: tSimulation
 
-    ! Couple between two components:\
-    !    Ourer Heliosphere          (OH) source\
+    ! Couple between two components:
+    !    Ourer Heliosphere          (OH) source
     !    Particle Tracker           (PT) target
     !
     ! Send information from OH to PT.

@@ -55,8 +55,8 @@ contains
 
     real, intent(in) :: tSimulation     ! simulation time at coupling
 
-    ! Couple between two components:\
-    !    Polar Wind (PW)  source\
+    ! Couple between two components:
+    !    Polar Wind (PW)  source
     !    Global Magnetosphere (GM) target
     !
     ! Send electrostatic potential and field aligned current from PW to IE.
@@ -98,8 +98,8 @@ contains
 
     real, intent(in) :: tSimulation     ! simulation time at coupling
 
-    ! Couple between two components:\
-    !    Global Magnetosphere (GM) source \
+    ! Couple between two components:
+    !    Global Magnetosphere (GM) source 
     !    Polar Wind (PW)  target
     !
     ! Send pressure from GM to PW

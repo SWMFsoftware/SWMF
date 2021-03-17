@@ -54,8 +54,8 @@ contains
 
     real, intent(in) :: tSimulation     ! simulation time at coupling
 
-    ! Couple between two components:\
-    !    Ionosphere Electrodynamics (IE)  source\
+    ! Couple between two components:
+    !    Ionosphere Electrodynamics (IE)  source
     !    Polar Wind (PW) target
     !
     ! Send electrostatic potential, field aligned current,
