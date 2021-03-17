@@ -99,7 +99,7 @@ stochasticheating		TypeHeatPartitioning
 0.18			StochasticAmplitude
 
 #TEST
-krylov radiative_cooling		StringTest
+radiative_cooling		StringTest
 
 #SEMIKRYLOV
 GMRES			TypeKrylov
