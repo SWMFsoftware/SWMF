@@ -84,7 +84,7 @@ contains
     !   write(*,*)'nVarBuffer       =', nVarBuffer
     !   write(*,*)'iVarSource_V     =', iVarSource_V(1:12)
     !   write(*,*)'iVarTarget_V     =', iVarTarget_V(1:12)
-!   !    call con_stop('')
+    !   !    call con_stop('')
     ! end if
 
     ! this will likely be removed when coupling generalization if done
@@ -404,83 +404,83 @@ contains
     !==========================================================================
     subroutine couple_im_gm_default
 
-    ! Number of variables to pass
-    integer:: nVarImGm
+      ! Number of variables to pass
+      integer:: nVarImGm
 
-    ! Names of variables to pass
-    character(len=100) :: NameVar
+      ! Names of variables to pass
+      character(len=100) :: NameVar
 
-    ! Buffer for the variables on the 2D IM grid
-    real, allocatable:: Buffer_IIV(:,:,:)
+      ! Buffer for the variables on the 2D IM grid
+      real, allocatable:: Buffer_IIV(:,:,:)
 
-    logical:: DoTest, DoTestMe
+      logical:: DoTest, DoTestMe
 
       character(len=*), parameter:: NameSub = 'couple_im_gm_default'
       !------------------------------------------------------------------------
-    call CON_set_do_test(NameSub,DoTest,DoTestMe)
+      call CON_set_do_test(NameSub,DoTest,DoTestMe)
 
-    if(DoTest)write(*,*)NameSub,' starting, iProc=',i_proc()
+      if(DoTest)write(*,*)NameSub,' starting, iProc=',i_proc()
 
-    if(DoMultiFluidIMCoupling)then
-       NameVar='p:rho:Hpp:Opp:Hprho:Oprho'
-       nVarImGm=6
-    else if(DoAnisoPressureIMCoupling)then
-       NameVar='p:rho:ppar:bmin'
-       nVarImGm=4
-    else
-       NameVar='p:rho'
-       nVarImGm=2
-    end if
+      if(DoMultiFluidIMCoupling)then
+         NameVar='p:rho:Hpp:Opp:Hprho:Oprho'
+         nVarImGm=6
+      else if(DoAnisoPressureIMCoupling)then
+         NameVar='p:rho:ppar:bmin'
+         nVarImGm=4
+      else
+         NameVar='p:rho'
+         nVarImGm=2
+      end if
 
-    allocate(Buffer_IIV(iSize,jSize,nVarImGm))
-    if(is_proc(IM_)) &
-         call IM_get_for_gm(Buffer_IIV, iSize, jSize, nVarImGm, NameVar)
-    call transfer_real_array(IM_, GM_, size(Buffer_IIV), Buffer_IIV)
-    if(is_proc(GM_)) &
-         call GM_put_from_im(Buffer_IIV, iSize, jSize, nVarImGm, NameVar)
-    deallocate(Buffer_IIV)
+      allocate(Buffer_IIV(iSize,jSize,nVarImGm))
+      if(is_proc(IM_)) &
+           call IM_get_for_gm(Buffer_IIV, iSize, jSize, nVarImGm, NameVar)
+      call transfer_real_array(IM_, GM_, size(Buffer_IIV), Buffer_IIV)
+      if(is_proc(GM_)) &
+           call GM_put_from_im(Buffer_IIV, iSize, jSize, nVarImGm, NameVar)
+      deallocate(Buffer_IIV)
 
-    if(DoTest)write(*,*)NameSub,': finished iProc=', i_proc()
-  end subroutine couple_im_gm_default
+      if(DoTest)write(*,*)NameSub,': finished iProc=', i_proc()
+    end subroutine couple_im_gm_default
     !==========================================================================
 
-  subroutine couple_im_gm_cimi
-    ! Number of variables to pass
-    integer:: nVarImGm
+    subroutine couple_im_gm_cimi
+      ! Number of variables to pass
+      integer:: nVarImGm
 
-    ! Names of variables to pass
-    character(len=100) :: NameVar
+      ! Names of variables to pass
+      character(len=100) :: NameVar
 
-    ! Buffer for the variables on the 2D IM grid
-    real, allocatable:: Buffer_IIV(:,:,:)
+      ! Buffer for the variables on the 2D IM grid
+      real, allocatable:: Buffer_IIV(:,:,:)
 
-    logical:: DoTest, DoTestMe
+      logical:: DoTest, DoTestMe
 
       character(len=*), parameter:: NameSub = 'couple_im_gm_cimi'
       !------------------------------------------------------------------------
-    call CON_set_do_test(NameSub,DoTest,DoTestMe)
+      call CON_set_do_test(NameSub,DoTest,DoTestMe)
 
-    if(DoTest)write(*,*)NameSub,' starting, iProc=',i_proc()
+      if(DoTest)write(*,*)NameSub,' starting, iProc=',i_proc()
 
-    ! get number of variable coupled from IM to GM from the grid descriptor
-    ! add 1 since we need also the minimum B which we tack onto the end
-    nVarImGm = Grid_C(IM_)%nVar+1
+      ! get number of variable coupled from IM to GM from the grid descriptor
+      ! add 1 since we need also the minimum B which we tack onto the end
+      nVarImGm = Grid_C(IM_)%nVar+1
 
-    ! for now pass in the IM namevar although this is not really needed
-    NameVar = Grid_C(IM_)%NameVar
+      ! for now pass in the IM namevar although this is not really needed
+      NameVar = Grid_C(IM_)%NameVar
 
-    allocate(Buffer_IIV(iSize,jSize,nVarImGm))
-    if(is_proc0(IM_)) &
-         call IM_get_for_gm(Buffer_IIV, iSize, jSize, nVarImGm, NameVar)
-    call transfer_real_array(IM_, GM_, size(Buffer_IIV), Buffer_IIV)
-    if(is_proc(GM_)) &
-         call GM_put_from_im_cimi(Buffer_IIV, iSize, jSize, nVarImGm, NameVar)
-    deallocate(Buffer_IIV)
+      allocate(Buffer_IIV(iSize,jSize,nVarImGm))
+      if(is_proc0(IM_)) &
+           call IM_get_for_gm(Buffer_IIV, iSize, jSize, nVarImGm, NameVar)
+      call transfer_real_array(IM_, GM_, size(Buffer_IIV), Buffer_IIV)
+      if(is_proc(GM_)) &
+           call GM_put_from_im_cimi(Buffer_IIV, iSize, jSize, nVarImGm, NameVar)
+      deallocate(Buffer_IIV)
 
-    if(DoTest)write(*,*)NameSub,': finished iProc=', i_proc()
-  end subroutine couple_im_gm_cimi
+      if(DoTest)write(*,*)NameSub,': finished iProc=', i_proc()
+    end subroutine couple_im_gm_cimi
     !==========================================================================
-end subroutine couple_im_gm
+  end subroutine couple_im_gm
   !============================================================================
 
 end module CON_couple_gm_im

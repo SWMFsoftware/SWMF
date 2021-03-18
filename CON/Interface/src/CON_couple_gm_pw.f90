@@ -99,7 +99,7 @@ contains
     real, intent(in) :: tSimulation     ! simulation time at coupling
 
     ! Couple between two components:
-    !    Global Magnetosphere (GM) source 
+    !    Global Magnetosphere (GM) source
     !    Polar Wind (PW)  target
     !
     ! Send pressure from GM to PW

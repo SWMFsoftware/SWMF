@@ -5,6 +5,7 @@ module CON_grid_descriptor
   use ModUtilities, ONLY: check_allocate
   use ModKind
   use ModNumConst, ONLY: cTiny
+
   ! This file presents the class of the grid descriptors which
   ! includes both the uniformly spaced grids (uniformly
   ! spaced with respect to some generalized coordinates) and Octree
@@ -24,9 +25,11 @@ module CON_grid_descriptor
   ! 6.18.03-7.11.03
   ! igorsok@umich.edu
   ! phone(734)647-4705
+
   implicit none
+
   PRIVATE ! Except
-  !=====================DERIVED TYPE==============================
+
   public :: GridType
   type GridType
 
@@ -173,7 +176,8 @@ module CON_grid_descriptor
   ! local storage for a grid descriptor passed to interpolation_amr_gc;
   ! it is shared by interpolate_amr_gc and find_amr
   type(GridType) :: GridAMR
-  !===========================Local Grid Descriptor===================!
+
+  ! Local Grid Descriptor
   ! The local Grid describes in a compact way the parts of grid allocated
   ! at a given PE
 
@@ -182,6 +186,7 @@ module CON_grid_descriptor
   ! PE_ = 3, BLK_=2, GlobalBlock_ =4
   public :: BLK_, GlobalBlock_
   integer, parameter, public:: GlobalTreeNode_ = 1, GridPointFirst_ = 3
+
   type LocalGridType
 
      ! These four members are just copied from the global Grid
@@ -208,11 +213,13 @@ module CON_grid_descriptor
   public :: nearest_grid_points     ! First order interpolation
   public :: bilinear_interpolation ! For uniform or node-based grid
   public :: interpolation_amr_gc   ! Employs ghostcells
+
 contains
   !============================================================================
-  ! ROUTINE: coord_grid_d - the coordintes of the grid point
-  function coord_grid_d_global(Grid,&
-       lGlobalTreeNode,iPoints_D)
+  function coord_grid_d_global(Grid, lGlobalTreeNode, iPoints_D)
+
+    ! the coordintes of the grid point
+
     type(GridType),intent(in)::Grid
     integer,intent(in)::lGlobalTreeNode
     integer,dimension(Grid%nDim),intent(in)::&
@@ -227,8 +234,8 @@ contains
          (Grid%Displacement_D - 0.50+real(iPoints_D))
   end function coord_grid_d_global
   !============================================================================
-  function coord_grid_d_local(LocalGrid,&
-       iBlockUsed, iPoints_D)
+  function coord_grid_d_local(LocalGrid, iBlockUsed, iPoints_D)
+
     type(LocalGridType), intent(in) :: LocalGrid
     integer,           intent(in) :: iBlockUsed
     integer,           intent(in) :: iPoints_D(LocalGrid%nDim)
@@ -241,15 +248,13 @@ contains
          (LocalGrid%Displacement_D - 0.50 +real(iPoints_D))
   end function coord_grid_d_local
   !============================================================================
-  ! Allow to set the standard grid descriptor:
-  ! iStandard\_=CellCentered\_ or iStandard\_=Nodes\_,
-  ! with or without halo points ("ghost points")
-  !---------------------------------------------------------------!
   subroutine set_standard_grid_descriptor_id(&
-       iGridID,&
-       nGhostGridPoints,&
-       iStandard,&
-       Grid)
+       iGridID, nGhostGridPoints, iStandard, Grid)
+
+    ! Allow to set the standard grid descriptor:
+    ! iStandard\_=CellCentered\_ or iStandard\_=Nodes\_,
+    ! with or without halo points ("ghost points")
+
     integer,intent(in)::iGridID
     integer,intent(in),optional::iStandard
     integer,intent(in),optional::nGhostGridPoints
@@ -295,7 +300,6 @@ contains
     end select
   end subroutine set_standard_grid_descriptor_id
   !============================================================================
-  !--------------------------------------------------------!
   subroutine set_standard_grid_descriptor_dd(&
        Domain,&
        nGhostGridPoints,&
@@ -346,15 +350,10 @@ contains
     end select
   end subroutine set_standard_grid_descriptor_dd
   !============================================================================
-  ! More general grid descriptor                                   !
-  !---------------------------------------------------------------!
   subroutine set_grid_descriptor_id(&
-       iGridID,&
-       nDim,&
-       iPointMin_D,&
-       iPointMax_D,&
-       Displacement_D,&
-       Grid)
+       iGridID, nDim, iPointMin_D, iPointMax_D, Displacement_D, Grid)
+    ! More general grid descriptor
+
     integer,intent(in)::iGridID
     integer,intent(in)::nDim
     integer,intent(in),dimension(nDim)::iPointMin_D
@@ -381,7 +380,6 @@ contains
     Grid%iPointMax_D=iPointMax_D
   end subroutine set_grid_descriptor_id
   !============================================================================
-  !---------------------------------------------------------------!
   subroutine set_grid_descriptor_dd(&
        Domain,&
        nDim,&
@@ -420,6 +418,7 @@ contains
 
     ! PE rank (in a local group for a local model, or in a
     ! global group for a global model)
+
     integer,                 intent(in) :: iProc
     type(GridType),intent(in) :: Grid
     type(LocalGridType),       intent(out):: LocalGrid
@@ -468,8 +467,7 @@ contains
   end subroutine set_local_gd
   !============================================================================
   subroutine clean_grid_descriptor(Grid)
-    type(GridType),intent(inout)::&
-         Grid
+    type(GridType),intent(inout):: Grid
     !--------------------------------------------------------------------------
     deallocate(Grid%iPointMin_D)
     deallocate(Grid%iPointMax_D)
@@ -489,30 +487,34 @@ contains
     deallocate(Grid%DCoord_DB)
   end subroutine clean_grid_descriptor_l
   !============================================================================
-  ! Number of cells per block
   integer function n_grid_points_per_block(Grid)
+
+    ! Number of cells per block
     type(GridType)::Grid
     !--------------------------------------------------------------------------
     n_grid_points_per_block = product(&
          Grid%iPointMax_D + 1 -Grid%iPointMin_D)
+
   end function n_grid_points_per_block
   !============================================================================
-  !          ENUMERATION                                          !
-  ! All the points of the grid of the type considered here can be  !
-  ! easily enumerated, but with the simplest way to do this there  !
-  ! is some amounts of unused global cell numbers, for             !
-  ! TreeDecompositions. The following procedures are used the      !
-  ! CON_router and will be used then for coupling via the MCT, to  !
-  ! construct the global segmentation map                          !
-  ! The following procedure transforms the global grid point number!
-  ! to the iCB index                                              !
-  ! To use this procedure, the grid descriptor should be           !
-  ! constructed  first                                             !
   subroutine global_i_grid_point_to_icb4(&
        Grid,&
        iPointGlobal,&
        lGlobalTreeNode,&
        iPoint_D)
+
+    !          ENUMERATION
+    ! All the points of the grid of the type considered here can be
+    ! easily enumerated, but with the simplest way to do this there
+    ! is some amounts of unused global cell numbers, for
+    ! TreeDecompositions. The following procedures are used the
+    ! CON_router and will be used then for coupling via the MCT, to
+    ! construct the global segmentation map
+    ! The following procedure transforms the global grid point number
+    ! to the iCB index
+    ! To use this procedure, the grid descriptor should be
+    ! constructed  first
+
     type(GridType),intent(in)::Grid
     integer,intent(in)::iPointGlobal
     integer,intent(out):: lGlobalTreeNode
@@ -533,17 +535,15 @@ contains
   end subroutine global_i_grid_point_to_icb4
   !============================================================================
   subroutine global_i_grid_point_to_icb8(&
-       Grid,&
-       iPointGlobal,&
-       lGlobalTreeNode,&
-       iPoint_D)
+       Grid, iPointGlobal, lGlobalTreeNode, iPoint_D)
+
     type(GridType),intent(in)::Grid
     integer(Int8_),intent(in)::iPointGlobal
-    integer,intent(out):: lGlobalTreeNode
-    integer,dimension(Grid%nDim),intent(out)::&
-         iPoint_D
-    integer(Int8_),dimension(Grid%nDim)::nGridPoints_D
-    integer::iDim, iMisc1
+    integer, intent(out):: lGlobalTreeNode
+    integer, intent(out):: iPoint_D(Grid%nDim)
+
+    integer(Int8_):: nGridPoints_D(Grid%nDim)
+    integer       :: iDim, iMisc1
     integer(Int8_):: i8Misc
     !--------------------------------------------------------------------------
     nGridPoints_D = 1_Int8_ + Grid%iPointMax_D -&
@@ -555,18 +555,16 @@ contains
        i8Misc = (i8Misc-iMisc1)/nGridPoints_D(iDim)
     end do
     lGlobalTreeNode = i_global_node_a(Grid%Domain%Ptr,int(i8Misc)+1)
+
   end subroutine global_i_grid_point_to_icb8
   !============================================================================
   subroutine global_i_grid_point_to_icb4_l(&
-       Grid, &
-       iPointLocal,&
-       iBlockUsed,     &
-       iPoint_D)
+       Grid, iPointLocal, iBlockUsed, iPoint_D)
+
     type(LocalGridType),    intent(in) :: Grid
     integer,              intent(in) :: iPointLocal
     integer,             intent(out) :: iBlockUsed
-    integer,             intent(out) :: &
-         iPoint_D(Grid%nDim)
+    integer,             intent(out) :: iPoint_D(Grid%nDim)
 
     ! Local variables
 
@@ -619,16 +617,14 @@ contains
     iBlockUsed = loc(1)
   end subroutine global_i_grid_point_to_icb8_l
   !============================================================================
-  ! The inverse procedures                                         !
 
-  integer function i_grid_point_global_g(&
-       Grid,&
-       lGlobalTreeNode,&
-       iPoint_D)
+  integer function i_grid_point_global_g(Grid, lGlobalTreeNode, iPoint_D)
+
+    ! The inverse procedures
     type(GridType), intent(in) :: Grid
-    integer,                  intent(in) :: lGlobalTreeNode
-    integer,                  intent(in) :: &
-         iPoint_D(Grid%nDim)
+    integer,        intent(in) :: lGlobalTreeNode
+    integer,        intent(in) :: iPoint_D(Grid%nDim)
+
     integer :: nGridPoints_D(Grid%nDim)
     integer :: iDim, iMisc, iMisc1
     !--------------------------------------------------------------------------
@@ -643,18 +639,19 @@ contains
             Grid%iPointMin_D(iDim)
     end do
     i_grid_point_global_g = i_grid_point_global_g + 1
+
   end function i_grid_point_global_g
   !============================================================================
-  integer(Int8_) function i8_grid_point_global_g(&
-       Grid,&
-       lGlobalTreeNode,&
-       iPoint_D)
+  function i8_grid_point_global_g(Grid, lGlobalTreeNode, iPoint_D)
+
+    integer(Int8_):: i8_grid_point_global_g
     type(GridType), intent(in) :: Grid
-    integer,                  intent(in) :: lGlobalTreeNode
-    integer,                  intent(in) :: &
-         iPoint_D(Grid%nDim)
+    integer, intent(in) :: lGlobalTreeNode
+    integer, intent(in) :: iPoint_D(Grid%nDim)
+
     integer :: nGridPoints_D(Grid%nDim)
     integer :: iDim, iMisc, iMisc1
+    !--------------------------------------------------------------------------
     nGridPoints_D(1:Grid%nDim) = 1 + &
          Grid%iPointMax_D - &
          Grid%iPointMin_D
@@ -667,18 +664,16 @@ contains
     end do
     i8_grid_point_global_g = i8_grid_point_global_g + 1
   end function i8_grid_point_global_g
-!==============================================================================
-  integer function i_grid_point_global_l(&
-       Grid,&
-       iBlockUsed,    &
-       iPoint_D)
+  !============================================================================
+  integer function i_grid_point_global_l(Grid, iBlockUsed, iPoint_D)
+
     type(LocalGridType), intent(in) :: Grid
-    integer,           intent(in) :: iBlockUsed
-    integer,           intent(in) :: &
-         iPoint_D(Grid%nDim)
+    integer,             intent(in) :: iBlockUsed
+    integer,             intent(in) :: iPoint_D(Grid%nDim)
+
     integer :: nGridPoints_D(Grid%nDim)
     integer :: iDim, iMisc, iMisc1
-  !----------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     nGridPoints_D(1:Grid%nDim) = 1 +  &
          Grid%iPointMax_D -       &
          Grid%iPointMin_D
@@ -689,19 +684,19 @@ contains
             Grid%iPointMin_D(iDim)
     end do
     i_grid_point_global_l = i_grid_point_global_l + 1
+
   end function i_grid_point_global_l
-!==============================================================================
-  integer(Int8_) function i8_grid_point_global_l(&
-       Grid,&
-       iBlockUsed,    &
-       iPoint_D)
+  !============================================================================
+  function i8_grid_point_global_l(Grid, iBlockUsed, iPoint_D)
+
+    integer(Int8_):: i8_grid_point_global_l
     type(LocalGridType), intent(in) :: Grid
     integer,           intent(in) :: iBlockUsed
-    integer,           intent(in) :: &
-         iPoint_D(Grid%nDim)
+    integer,           intent(in) :: iPoint_D(Grid%nDim)
+
     integer :: nGridPoints_D(Grid%nDim)
     integer :: iDim, iMisc, iMisc1
-    !----------------
+    !--------------------------------------------------------------------------
     nGridPoints_D(1:Grid%nDim) = 1 + &
          Grid%iPointMax_D - &
          Grid%iPointMin_D
@@ -714,24 +709,22 @@ contains
     end do
     i8_grid_point_global_l = i8_grid_point_global_l + 1
   end function i8_grid_point_global_l
-!==============================================================================
-  !======================INTERPOLATION============================!
-  ! The general principle of the interpoaltions with the grids
-  ! defined by the present grid descriptor is as follows.
-  ! Using coordinates of the point at which the interpalated value
-  ! should be found, first of all, the block is found this point
-  ! belongs to. Then, among the grid points belonging to the grid
-  ! fragment with the found value of the block index, the nearest
-  ! point is found. For the second order of interpolation, the
-  ! cubic stenchil is constructed involving the nearest point too
-  ! and the interpolation weights are found. If the values of the
-  ! cell index for the stenchil points appear to be out of the
-  ! block, the correspondent blocks are found
-  subroutine nearest_grid_points(nDim,Coord_D,&
-       Grid,&
-       nIndex,&
-       iIndex_II,&
-       nImage, Weight_I)
+  !============================================================================
+  subroutine nearest_grid_points( &
+       nDim,Coord_D, Grid, nIndex, iIndex_II, nImage, Weight_I)
+
+    ! The general principle of the interpoaltions with the grids
+    ! defined by the present grid descriptor is as follows.
+    ! Using coordinates of the point at which the interpalated value
+    ! should be found, first of all, the block is found this point
+    ! belongs to. Then, among the grid points belonging to the grid
+    ! fragment with the found value of the block index, the nearest
+    ! point is found. For the second order of interpolation, the
+    ! cubic stenchil is constructed involving the nearest point too
+    ! and the interpolation weights are found. If the values of the
+    ! cell index for the stenchil points appear to be out of the
+    ! block, the correspondent blocks are found
+
     type(GridType):: Grid
     integer,      intent(in):: nDim
     real,      intent(inout):: Coord_D(nDim)
@@ -749,7 +742,7 @@ contains
     real                    :: Coord_DI(nDim,2**nDim)
     real,          parameter:: Tolerance = 0.001
     integer::lGlobalTreeNode,iDim,iImages
-  !------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
 
     ! Initialize arrays
     iIndex_II=0;Weight_I= 0.0
@@ -856,41 +849,32 @@ contains
     end do
     Weight_I(1:nImage)= 1.0/real(nImage)
   end subroutine nearest_grid_points
-!==============================================================================
-  !=================SECOND ORDER INTERPOLATION====================!
-  ! This is a bilinear interpolation using the grid points,
-  ! described with the grid descriptor.
+  !============================================================================
   subroutine bilinear_interpolation(&
-       nDim,&
-       Coord_D,&
-       Grid,&
-       nIndex,&
-       iIndex_II,&
-       nImage,Weight_I)
-    integer,intent(in)      ::nDim
-    type(GridType)::Grid
-    real,intent(inout)::Coord_D(nDim)
-    integer,intent(in)::nIndex
-    ! OUTPUT ARGUMENTS
-    integer, intent(out) :: iIndex_II(0:nIndex,2**nDim)
+       nDim, Coord_D, Grid, nIndex, iIndex_II, nImage, Weight_I)
 
-    integer,intent(out)::nImage
+    ! SECOND ORDER INTERPOLATION
+    ! This is a bilinear interpolation using the grid points,
+    ! described with the grid descriptor.
+
+    integer, intent(in)   :: nDim
+    type(GridType)        :: Grid
+    real,    intent(inout):: Coord_D(nDim)
+    integer, intent(in)   :: nIndex
+    integer, intent(out)  :: iIndex_II(0:nIndex,2**nDim)
+    integer, intent(out)  :: nImage
+
     real,dimension(2**nDim),intent(out)::Weight_I
-    real,dimension(nDim)::&
-         CoordResid_D,CoordStored_D
-    integer,dimension(nDim)::iPoints_D
-    real,dimension(nDim):: CoordMisc_D
+    real,dimension(nDim):: CoordResid_D, CoordStored_D
+    integer, dimension(nDim)::iPoints_D
+    real, dimension(nDim):: CoordMisc_D
     integer,dimension(2**nDim)::lNode_I
     integer::lGlobalTreeNode,iDim,iImages,iNewStart,nImageNew
-    real::WeightLeft
-    logical,dimension(nDim,2**nDim)::&
-         IsUp_DI,IsDown_DI
-    real,dimension(nDim,0:2**nDim)::&
-         DCoord_DI
-    logical,dimension(nDim)::&
-         IsDomainBoundaryUp_D,IsDomainBoundaryDown_D
-
-  !------------------------------------------------------------------------------
+    real:: WeightLeft
+    logical, dimension(nDim,2**nDim):: IsUp_DI, IsDown_DI
+    real, dimension(nDim,0:2**nDim):: DCoord_DI
+    logical,dimension(nDim):: IsDomainBoundaryUp_D, IsDomainBoundaryDown_D
+    !--------------------------------------------------------------------------
     iIndex_II=0
     Weight_I= 0.0
     CoordStored_D=Coord_D
@@ -1005,18 +989,16 @@ contains
        end if
     end do
   end subroutine bilinear_interpolation
-!==============================================================================
-  ! utilizing ghost cells
-  ! This is a continuous amr interpolation using the grid points,
-  ! described with the grid descriptor. It utilizes ghost cells.
+  !============================================================================
   subroutine interpolation_amr_gc(&
-       nDim,&
-       Coord_D,&
-       Grid,&
-       nIndex,&
-       iIndex_II,&
-       nImage,Weight_I)
+       nDim, Coord_D, Grid, nIndex, iIndex_II, nImage, Weight_I)
+
+    ! utilizing ghost cells
+    ! This is a continuous amr interpolation using the grid points,
+    ! described with the grid descriptor. It utilizes ghost cells.
+
     use ModInterpolateAMR, ONLY: interpolate_amr
+
     integer,   intent(in)   :: nDim
     type(GridType):: Grid
     real,      intent(inout):: Coord_D(nDim)
@@ -1028,7 +1010,7 @@ contains
 
     ! memorize grid descriptor by storing it in modular variable;
     ! it is used by find_amr subroutine passed to shared interpolation routine
-  !------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     GridAMR = Grid
     ! call shared interpolation subroutine
     call interpolate_amr(&
@@ -1042,11 +1024,13 @@ contains
          iIndexes_II = iIndex_II,&
          UseGhostCell= .true.)
   end subroutine interpolation_amr_gc
-!==============================================================================
+  !============================================================================
 
   subroutine find_amr(nDim, Coord_D, &
        iProc, iBlock, CoordCorner_D, DCoord_D, IsOut)
+
     use ModNumConst
+
     integer, intent(in)   :: nDim
     real,    intent(inout):: Coord_D(nDim)
     integer, intent(out)  :: iProc, iBlock
@@ -1055,7 +1039,7 @@ contains
 
     integer:: iNode
     logical:: IsPeriodic_D(nDim)
-  !------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     ! check if point's inside the domain
     IsPeriodic_D = GridAMR%Domain%Ptr%IsPeriodic_D
     IsOut = &
@@ -1088,12 +1072,7 @@ contains
     iProc       = GridAMR%Domain%Ptr%iDecomposition_II(PE_, iNode)
     iBlock      = GridAMR%Domain%Ptr%iDecomposition_II(BLK_, iNode)
   end subroutine find_amr
-!==============================================================================
+  !============================================================================
 
-  !==============================END==============================!
 end module CON_grid_descriptor
 !==============================================================================
-!\end{verbatim}                     !^CFG UNCOMMENT IF PRINTPS  !
-! end{document}                     !^CFG UNCOMMENT IF PRINTPS  !
-!=============================LINE 1257===========================!
-! More methods are available, see the source file.

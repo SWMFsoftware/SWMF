@@ -94,7 +94,7 @@ contains
     real, intent(in) :: tSimulation     ! simulation time at coupling
 
     ! Couple between two components:
-    !    Plasmasphere  (PS) source  
+    !    Plasmasphere  (PS) source
     !    Global Magnetosphere (GM) target
     !
     ! Send pressure from PS to GM.
