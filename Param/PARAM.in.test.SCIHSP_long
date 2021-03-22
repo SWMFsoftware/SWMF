@@ -301,6 +301,9 @@ IH			NameTarget
 -1			DnCouple
 1.0			DtCouple
 
+#TEST
+couple_sc_ih		StringTest
+
 #STOP
 -1			MaxIter
 50			TimeMax
@@ -430,29 +433,29 @@ RAW			StringLog
 T			DoSaveInitial
 
 #SAVEPLOT
-3			nPlotFile
+4			nPlotFile
 x=0 VAR idl		StringPlot
 10 			DnSavePlot
 -1.			DtSavePlot
 -1.0			DxSavePlot
-rho ux uy uz ti te bx by bz I01 I02 p sign		NameVars
+rho ux uy uz ti te bx by bz I01 I02 p		NameVars
 g rbody			NamePars
 y=0 VAR idl		StringPlot
 10			DnSavePlot
 -1.			DtSavePlot
 -1.0			DxSavePlot
-rho ux uy uz ti te bx by bz I01 I02 p sign		NameVars
+rho ux uy uz ti te bx by bz I01 I02 p		NameVars
 g rbody			NamePars
 z=0 VAR idl		StringPlot
 10 			DnSavePlot
 -1.			DtSavePlot
 -1.0			DxSavePlot
-rho ux uy uz ti te bx by bz I01 I02 p sign		NameVars
+rho ux uy uz ti te bx by bz I01 I02 p		NameVars
 g rbody			NamePars
 buf MHD idl		StringPlot
 -1			DnSavePlot
 50.0			DtSavePlot
-			DxSavePlot
+
 
 #PARTICLELINE
 T			UseParticles
@@ -463,8 +466,6 @@ T			UseParticles
 import			InitMode
 radius			OrderMode
 F			UseCorrection
-
-
 
 #END_COMP IH -----------------------------------------------------------------
 
@@ -519,27 +520,27 @@ los ins idl_ascii		StringPlot
 -1			DnSavePlot
 100.0			DtSavePlot
 sta:euvi stb:euvi sdo:aia		StringsInstrument
-shl VAR idl_ascii		StringPlot
-10			DnSavePlot
--1			DtSavePlot
+shl VAR idl_ascii 		StringPlot
+-1			DnSavePlot
+50.0			DtSavePlot
 HGR			TypeCoordPlot
 1.03			rMin
-1.03			rMax
+1.15			rMax
+0.12			dR
 2.0			LonMin
 358.0			LonMax
 4.0			dLon
 -88.0			LatMin
 88.0			LatMax
 4.0			dLat
-{HD} te ti		NameVars
+Rho Bx By Bz I01 I02 Pe P te ti		NameVars
 {default}		NamePars
-			ObsPosZ
+
 #LOOKUPTABLE		OffsetAngle
 AiaXrt			NameTable
 load			NameCommand
 SC/Param/los_tbl.dat		NameFile
 ascii			TypeFile
-			MuLimbDarkening
 #LOOKUPTABLE		nPix
 euv			NameTable
 load			NameCommand
@@ -568,24 +569,24 @@ x=0 VAR idl		StringPlot
 10 			DnSavePlot
 -1.			DtSavePlot
 -1.0			DxSavePlot
-rho ux uy uz ti te bx by bz I01 I02 p sign		NameVars
+rho ux uy uz ti te bx by bz I01 I02 p		NameVars
 g rbody			NamePars
 y=0 VAR idl		StringPlot
 10			DnSavePlot
 -1.			DtSavePlot
 -1.0			DxSavePlot
-rho ux uy uz ti te bx by bz I01 I02 p sign		NameVars
+rho ux uy uz ti te bx by bz I01 I02 p		NameVars
 g rbody			NamePars
 z=0 VAR idl		StringPlot
 10 			DnSavePlot
 -1.			DtSavePlot
 -1.0			DxSavePlot
-rho ux uy uz ti te bx by bz I01 I02 p sign		NameVars
+rho ux uy uz ti te bx by bz I01 I02 p		NameVars
 g rbody			NamePars
 buf MHD idl		StringPlot
 -1  			DnSavePlot
 50.0			DtSavePlot
-			DxSavePlot
+
 #END_COMP IH -----------------------------------------------------------------
 
 #STOP
