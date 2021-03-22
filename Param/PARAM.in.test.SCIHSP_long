@@ -323,7 +323,7 @@ HGR			TypeCoordSystem
 
 #BODY
 T			UseBody
-18.			rBody
+19.0			rBody
 3.0E+8			BodyNDim
 3.5E+6			BodyTDim
 
