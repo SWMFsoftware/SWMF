@@ -1472,14 +1472,14 @@ test15_long_restart:
 	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS
 
 test15_long_check:
-	-(${DIFFNUM} -b -r=1e-4 -a=1e-26 \
+	-(${DIFFNUM} -b -r=1e-5 -a=1e-26 \
 		${TESTDIR}/RESULTS/SC/log_n000000.log \
 		output/test15_long/SC_log_n000000.log \
-		> test15_long_sc_thread.diff)
+		> test15_long_sc.diff)
 	-(${DIFFNUM} -b -r=1e-5 -a=1e-26 \
 		${TESTDIR}/RESULTS/SC/rfr_rwi_4_*.outs \
 		output/test8/SC_rfr.ref.gz \
-		>> test15_long_sc_thread.diff)
+		> test15_long_sc_rfr.diff)
 	-(${DIFFNUM} -b -r=1e-5 \
 		${TESTDIR}/RESULTS/IH/log_n000000.log \
 		output/test15_long/IH_log_n000000.log \
@@ -1499,14 +1499,14 @@ test15_long_check:
 ### test15_single: same as test15_long, but with no restart
 
 test15_single:
-	rm -f test15_single.diff
-	@echo "test15_single_compile..." >> test15_single.diff
+	rm -f test15_long*.diff
+	@echo "test15_compile..." >> test15_long_sp.diff
 	${MAKE} test15_compile
-	@echo "test15_single_rundir..." >> test15_single.diff
+	@echo "test15_single_rundir..." >> test15_long_sp.diff
 	${MAKE} test15_single_rundir
-	@echo "test15_single_run..." >> test15_single.diff
+	@echo "test15_single_run..." >> test15_long_sp.diff
 	${MAKE} test15_single_run
-	@echo "test15_long_check..." >> test15_single.diff
+	@echo "test15_long_check..." >> test15_long_sp.diff
 	${MAKE} test15_long_check
 
 test15_single_rundir:
