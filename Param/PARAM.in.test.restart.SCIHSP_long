@@ -16,9 +16,9 @@ SP			NameTarget
 2			nSource
 SC			NameSource
 1.15			RScMin
-21			RScMax
+21.55			RScMax
 IH			NameSource
-19			RIhMin
+20			RIhMin
 220			RIhMax
 
 #TEST
