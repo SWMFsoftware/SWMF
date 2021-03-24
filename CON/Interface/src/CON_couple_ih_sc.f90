@@ -113,7 +113,6 @@ contains
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
     if(DoTest.and.is_proc0(IH_))&
          write(*,'(a,es12.5)')NameSub//': starting, Time=', TimeCoupling
-    call set_couple_var_info(SC_,IH_)
     ! Transfer buffer grid from SC to IH to be used for inner boundary
     allocate(Buffer_VIII(nVarCouple,iSize,0:jSize+1,0:kSize+1))
     if(is_proc(SC_)) call SC_get_for_global_buffer(iSize, jSize, kSize, &
