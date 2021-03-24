@@ -17,18 +17,12 @@ module CON_couple_ih_sc
   use CON_transfer_data, ONLY: transfer_real_array, transfer_integer
 
   use SC_wrapper, ONLY:                  &
-       SC_get_for_global_buffer,         &
-       SC_nVarCouple    => nVarCouple,   &
-       SC_iVar_V        => iVar_V,       &
-       SC_DoCoupleVar_V => DoCoupleVar_V
+       SC_get_for_global_buffer
 
   use IH_wrapper, ONLY:                  &
        IH_match_ibc,                     &
        IH_set_buffer_grid_get_info,      &
-       IH_save_global_buffer,            &
-       IH_nVarCouple    => nVarCouple,   &
-       IH_iVar_V        => iVar_V,       &
-       IH_DoCoupleVar_V => DoCoupleVar_V
+       IH_save_global_buffer
 
   implicit none
   private ! except
@@ -77,12 +71,6 @@ contains
     ! Determine which state variables should be coupled,
     ! pass this info to SC and IH
     call set_couple_var_info(SC_,IH_)
-    IH_nVarCouple    = nVarCouple_CC(SC_, IH_)
-    IH_DoCoupleVar_V = DoCoupleVar_VCC(:,SC_, IH_)
-    IH_iVar_V        = iVar_VCC(:,SC_, IH_)
-    SC_nVarCouple    = nVarCouple_CC(SC_, IH_)
-    SC_DoCoupleVar_V = DoCoupleVar_VCC(:,SC_, IH_)
-    SC_iVar_V        = iVar_VCC(:,SC_, IH_)
 
     ! Set buffer grid location and size in IH, and retrieve them for coupler
     if(is_proc(IH_)) then
@@ -125,7 +113,7 @@ contains
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
     if(DoTest.and.is_proc0(IH_))&
          write(*,'(a,es12.5)')NameSub//': starting, Time=', TimeCoupling
-
+    call set_couple_var_info(SC_,IH_)
     ! Transfer buffer grid from SC to IH to be used for inner boundary
     allocate(Buffer_VIII(nVarCouple,iSize,0:jSize+1,0:kSize+1))
     if(is_proc(SC_)) call SC_get_for_global_buffer(iSize, jSize, kSize, &
