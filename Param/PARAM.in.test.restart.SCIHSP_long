@@ -342,7 +342,7 @@ F			UseDiffusion
 
 #SAVEPLOT
 1			nFileOut
-mh1d flux idl		StringPlot
+mh1d R idl		StringPlot
 
 #SAVEINITIAL
 T			DoSaveInitial
