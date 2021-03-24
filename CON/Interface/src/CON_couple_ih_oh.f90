@@ -17,18 +17,12 @@ module CON_couple_ih_oh
   use CON_transfer_data, ONLY: transfer_real_array, transfer_integer
 
   use IH_wrapper, ONLY: &
-       IH_get_for_global_buffer, &
-       IH_nVarCouple    => nVarCouple, &
-       IH_iVar_V        => iVar_V, &
-       IH_DoCoupleVar_V => DoCoupleVar_V
+       IH_get_for_global_buffer
 
   use OH_wrapper, ONLY: &
        OH_match_ibc, &
        OH_set_buffer_grid_get_info, &
-       OH_save_global_buffer, &
-       OH_nVarCouple    => nVarCouple, &
-       OH_iVar_V        => iVar_V, &
-       OH_DoCoupleVar_V => DoCoupleVar_V
+       OH_save_global_buffer
 
   implicit none
   private ! except
@@ -88,12 +82,7 @@ contains
     ! Determine which state variables should be coupled,
     ! pass this info to IH and OH
     call set_couple_var_info(IH_, OH_)
-    OH_nVarCouple    = nVarCouple_CC(IH_, OH_)
-    OH_DoCoupleVar_V = DoCoupleVar_VCC(:,IH_, OH_)
-    OH_iVar_V        = iVar_VCC(:,IH_, OH_)
-    IH_nVarCouple    = nVarCouple_CC(IH_, OH_)
-    IH_DoCoupleVar_V = DoCoupleVar_VCC(:,IH_, OH_)
-    IH_iVar_V        = iVar_VCC(:,IH_, OH_)
+
 
     ! Set buffer grid location and size in OH, and retrieve them for coupler
     if(is_proc(OH_))then

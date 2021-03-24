@@ -5,12 +5,9 @@
 module IH_wrapper
 
   ! Wrapper for IH_BATSRUS Inner Heliosphere (IH) component
-
+  use CON_coupler,             ONLY: IH_
   use IH_domain_decomposition, ONLY: IH_LineDD=>MH_LineDecomposition
-
-  use IH_ModBuffer
-
-  use IH_ModBatsrusMethods, ONLY: &
+  use IH_ModBatsrusMethods,    ONLY: &
        BATS_init_session, BATS_setup, BATS_advance, BATS_save_files, &
        BATS_finalize
 
@@ -28,9 +25,6 @@ module IH_wrapper
   ! Global buffer coupling
   public:: IH_get_for_global_buffer
   public:: IH_xyz_to_coord, IH_coord_to_xyz
-
-  ! spherical buffer coupling from IH_ModBuffer (why?)
-  public:: nVarCouple, iVar_V, DoCoupleVar_V
 
   ! Coupling toolkit
   public:: IH_synchronize_refinement
@@ -673,6 +667,10 @@ contains
 
     use IH_ModMain, ONLY: BufferState_VG
     use IH_ModMessagePass, ONLY: DoExtraMessagePass
+    ! spherical buffer coupling
+    use IH_ModBuffer, ONLY: nVarCouple, iVar_V, DoCoupleVar_V
+    use CON_coupler,  ONLY: nVarCoupleOrig=>nVarCouple, iVarOrig_V=>iVar_V, &
+         DoCoupleVarOrig_V=>DoCoupleVar_V
 
     integer,intent(in) :: nVar, nR, nPhi, nTheta
     real,intent(in)    :: BufferIn_VG(nVar,nR,0:nPhi+1,0:nTheta+1)
@@ -681,6 +679,10 @@ contains
     !-------------------------------------------------------------
     if(.not. allocated(BufferState_VG))&
          allocate(BufferState_VG(nVar, nR, 0:nPhi+1, 0:nTheta+1))
+    nVarCouple    = nVarCoupleOrig
+    iVar_V        = iVarOrig_V
+    DoCoupleVar_V = DoCoupleVarOrig_V
+    
     BufferState_VG = BufferIn_VG
 
     ! Make sure that ghost cells get filled after 
@@ -806,7 +808,8 @@ contains
          WaveLastCouple_, Bfield_, Wave_, EhotCouple_, &
          AnisoPressure_, ElectronPressure_,&
          CollisionlessHeatFlux_, ChargeStateFirstCouple_, &
-         ChargeStateLastCouple_, ChargeState_
+         ChargeStateLastCouple_, ChargeState_, iVarOrig_V=>iVar_V, &
+         DoCoupleVarOrig_V=>DoCoupleVar_V, nVarCoupleOrig=>nVarCouple
     use ModCoordTransform, ONLY: sph_to_xyz
     use ModInterpolate,    ONLY: trilinear
     use IH_BATL_lib,       ONLY: iProc, &
@@ -821,7 +824,8 @@ contains
 
     ! OUTPUT ARGUMENTS
     ! State variables to be fiiled in all buffer grid points
-    real,dimension(nVarCouple,nR,0:nPhi+1,0:nTheta+1),intent(out):: Buffer_VG
+    real,dimension(nVarCoupleOrig, nR, 0:nPhi+1 ,0:nTheta+1), intent(out):: &
+         Buffer_VG
 
     ! variables for defining the buffer grid
 
@@ -834,7 +838,7 @@ contains
     real :: StateInPoint_V(nVar)
 
     ! Store interpolated state variables needed for coupling
-    real :: Buffer_V(nVarCouple), B0_D(3)
+    real :: Buffer_V(nVarCoupleOrig), B0_D(3)
 
     ! Buffer grid cell center coordinates
     real :: CoordBuffer_D(3), XyzBuffer_D(3)
@@ -878,19 +882,19 @@ contains
     Buffer_VG = 0.0
 
     ! get variable indices in buffer
-    iRhoCouple              = iVar_V(RhoCouple_)
-    iRhoUxCouple            = iVar_V(RhoUxCouple_)
-    iRhoUzCouple            = iVar_V(RhoUzCouple_)
-    iPCouple                = iVar_V(PCouple_)
-    iPeCouple               = iVar_V(PeCouple_)
-    iPparCouple             = iVar_V(PparCouple_)
-    iBxCouple               = iVar_V(BxCouple_)
-    iBzCouple               = iVar_V(BzCouple_)
-    iWaveFirstCouple        = iVar_V(WaveFirstCouple_)
-    iWaveLastCouple         = iVar_V(WaveLastCouple_)
-    iEhotCouple             = iVar_V(EhotCouple_)
-    iChargeStateFirstCouple = iVar_V(ChargeStateFirstCouple_)
-    iChargeStateLastCouple  = iVar_V(ChargeStateLastCouple_)
+    iRhoCouple              = iVarOrig_V(RhoCouple_)
+    iRhoUxCouple            = iVarOrig_V(RhoUxCouple_)
+    iRhoUzCouple            = iVarOrig_V(RhoUzCouple_)
+    iPCouple                = iVarOrig_V(PCouple_)
+    iPeCouple               = iVarOrig_V(PeCouple_)
+    iPparCouple             = iVarOrig_V(PparCouple_)
+    iBxCouple               = iVarOrig_V(BxCouple_)
+    iBzCouple               = iVarOrig_V(BzCouple_)
+    iWaveFirstCouple        = iVarOrig_V(WaveFirstCouple_)
+    iWaveLastCouple         = iVarOrig_V(WaveLastCouple_)
+    iEhotCouple             = iVarOrig_V(EhotCouple_)
+    iChargeStateFirstCouple = iVarOrig_V(ChargeStateFirstCouple_)
+    iChargeStateLastCouple  = iVarOrig_V(ChargeStateLastCouple_)
 
     ! Calculate buffer grid spacing
     nCell_D  = (/nR, nPhi, nTheta/)
@@ -940,7 +944,7 @@ contains
           ! to the buffer grid point
           StateInPoint_V = &
                trilinear(State_VG, nVar, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
-               BufferNorm_D) !, DoExtrapolate = .TRUE.)
+               BufferNorm_D) 
 
        else
 
@@ -948,107 +952,55 @@ contains
           StateInPoint_V = &
                trilinear(State_VGB(:,:,:,:,iBlock), &
                nVar, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
-               BufferNorm_D) !, DoExtrapolate = .TRUE.)
+               BufferNorm_D) 
        end if
 
        ! Fill in the coupled state variables
+       ! Convert to SI units
 
-       Buffer_V(iRhoCouple)= StateInPoint_V(rho_)
+       Buffer_V(iRhoCouple)= StateInPoint_V(rho_)*No2Si_V(UnitRho_)
        Buffer_V(iRhoUxCouple:iRhoUzCouple) = &
-            StateInPoint_V(rhoUx_:rhoUz_)
-
-       if(DoCoupleVar_V(Bfield_)) then
+            StateInPoint_V(rhoUx_:rhoUz_)*No2Si_V(UnitRhoU_)
+      
+       if(DoCoupleVarOrig_V(Bfield_)) then
           if(UseB0)then
              B0_D = &
                   trilinear(B0_DGB(:,:,:,:,iBlock), &
                   3, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
                   BufferNorm_D, DoExtrapolate = .TRUE.)
              Buffer_V(iBxCouple:iBzCouple) = &
-                  StateInPoint_V(Bx_:Bz_) + B0_D
+                  (StateInPoint_V(Bx_:Bz_) + B0_D)*No2Si_V(UnitB_)
           else
              Buffer_V(iBxCouple:iBzCouple) = &
-                  StateInPoint_V(Bx_:Bz_)
+                  StateInPoint_V(Bx_:Bz_)*No2Si_V(UnitB_)
           end if
        end if
 
-       if(DoCoupleVar_V(Wave_)) &
+       Buffer_V(iPCouple)  = StateInPoint_V(p_)*No2Si_V(UnitP_)
+       
+       if(DoCoupleVarOrig_V(Wave_)) &
             Buffer_V(iWaveFirstCouple:iWaveLastCouple) = &
-            StateInPoint_V(WaveFirst_:WaveLast_)
-
-       if(DoCoupleVar_V(ChargeState_)) &
-            Buffer_V(iChargeStateFirstCouple:iChargeStateLastCouple) = &
-            StateInPoint_V(ChargeStateFirst_:ChargeStateLast_)
-
-       Buffer_V(iPCouple)  = StateInPoint_V(p_) 
-
-       if(DoCoupleVar_V(ElectronPressure_))then
-          Buffer_V(iPeCouple) = StateInPoint_V(Pe_)
-       else if(UseElectronPressure)then
-          Buffer_V(iPCouple) = Buffer_V(iPCouple) + StateInPoint_V(Pe_)
-       end if
-
-       if(DoCoupleVar_V(AnisoPressure_)) Buffer_V(iPparCouple) = &
-            StateInPoint_V(Ppar_)
-
-       if(DoCoupleVar_V(CollisionlessHeatFlux_)) Buffer_V(iEhotCouple) = &
-            StateInPoint_V(Ehot_)
-
-       ! Convert to SI units
-       Buffer_V(iRhoCouple) = &
-            Buffer_V(iRhoCouple) * No2Si_V(UnitRho_)
-       Buffer_V(iRhoUxCouple:iRhoUzCouple)= &
-            Buffer_V(iRhoUxCouple:iRhoUzCouple) *No2Si_V(UnitRhoU_)
-       Buffer_V(iPCouple) = Buffer_V(iPCouple) * No2Si_V(UnitP_)
-
-       if(DoCoupleVar_V(Bfield_)) Buffer_V(iBxCouple:iBzCouple) = &
-            Buffer_V(iBxCouple:iBzCouple)*No2Si_V(UnitB_)
-
-       if(DoCoupleVar_V(Wave_)) &
-            Buffer_V(iWaveFirstCouple:iWaveLastCouple) = &
-            Buffer_V(iWaveFirstCouple:iWaveLastCouple) &
+            StateInPoint_V(WaveFirst_:WaveLast_)&
             * No2Si_V(UnitEnergyDens_)
 
-       if(DoCoupleVar_V(ChargeState_)) &
+       if(DoCoupleVarOrig_V(ChargeState_)) &
             Buffer_V(iChargeStateFirstCouple:iChargeStateLastCouple) = &
-            Buffer_V(iChargeStateFirstCouple:iChargeStateLastCouple) &
+            StateInPoint_V(ChargeStateFirst_:ChargeStateLast_)&
             * No2Si_V(UnitRho_)
        
-       if(DoCoupleVar_V(ElectronPressure_)) Buffer_V(iPeCouple) = &
-            Buffer_V(iPeCouple)*No2Si_V(UnitP_)
 
-       if(DoCoupleVar_V(AnisoPressure_))Buffer_V(iPparCouple) = &
-            Buffer_V(iPparCouple)*No2Si_V(UnitP_)
+       if(DoCoupleVarOrig_V(ElectronPressure_))then
+          Buffer_V(iPeCouple) = StateInPoint_V(Pe_)*No2Si_V(UnitP_)
+       else if(UseElectronPressure)then
+          Buffer_V(iPCouple) = Buffer_V(iPCouple) + StateInPoint_V(Pe_)&
+               *No2Si_V(UnitP_)
+       end if
 
-       if(DoCoupleVar_V(CollisionlessHeatFlux_))Buffer_V(iEhotCouple) = &
-            Buffer_V(iEhotCouple)*No2Si_V(UnitEnergyDens_)
+       if(DoCoupleVarOrig_V(AnisoPressure_)) Buffer_V(iPparCouple) = &
+            StateInPoint_V(Ppar_)*No2Si_V(UnitP_)
 
-       ! ------------------------------------------------------
-       !! Perform vector transformations if necessary
-       !!        The followinf can be usefull if the source in an inertial
-       !!        frame and the target is in a rotating frame.
-       !!        WARNING: If you uncomment these lines make sure to disable
-       !!                 any transformations done when buffer is read by target (e.g. IH_ModBuffer)
-       !! START:
-       !
-       !if (Grid_C(iCompSource)%TypeCoord /=  &
-       !     Grid_C(iCompTarget)%TypeCoord) then
-       !   !Transform velocity
-       !   ! NOTE: This transformation is only valid for a single fluid
-       !   Buffer_V(iRhoUxCouple:iRhoUzCouple)=Buffer_V(iRhoCouple)*&
-       !        transform_velocity(TimeCoupling,&
-       !        Buffer_V(iRhoUxCouple:iRhoUzCouple)/Buffer_V(iRhoCouple),&
-       !        No2Si_V(UnitX_)*XyzBuffer_D,&
-       !        Grid_C(iCompSource)%TypeCoord,&
-       !        Grid_C(iCompTarget)%TypeCoord)
-       !
-       !   ! Transform magnetic field
-       !   SourceToTarget_DD = transform_matrix(TimeCoupling, &
-       !        Grid_C(iCompSource)%TypeCoord, Grid_C(iCompTarget)%TypeCoord)
-
-       !   Buffer_V(iBxCouple:iBzCouple) = &
-       !        matmul(SourceToTarget_DD,Buffer_V(iBxCouple:iBzCouple))
-       !end if
-       !! END vector transformation
+       if(DoCoupleVarOrig_V(CollisionlessHeatFlux_)) Buffer_V(iEhotCouple) = &
+            StateInPoint_V(Ehot_)*No2Si_V(UnitEnergyDens_)
 
        ! DONE - fill the buffer grid
        Buffer_VG(:,iR, iPhi,iTheta) = Buffer_V
