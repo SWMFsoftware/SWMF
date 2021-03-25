@@ -10,7 +10,6 @@ include ../Makefile.conf
 
 OBJECTS = \
 	ModGridDescriptor.o\
-	ModBuffer.o\
 	IH_wrapper.o 
 SEARCHDIR = -I${SHAREDIR} -I${COUPLERDIR} -I${LIBRARYDIR} -I${MAGNETOGRAMDIR} \
 	-I${DEMTDIR} -I${EMPIRICALEEDIR} -I../src -I../srcBATL

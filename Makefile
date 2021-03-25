@@ -473,7 +473,7 @@ IH/BATSRUS/src/Makefile:
 	cd GM/BATSRUS/src; cp *.f90 *.h Makefile* ../../../IH/BATSRUS/src
 	cd GM/BATSRUS/srcBATL; cp BATL*.f90 Makefile* ../../../IH/BATSRUS/srcBATL
 	cd GM/BATSRUS/srcInterface/; \
-		cp ModGridDescriptor.f90 ModBuffer.f90 \
+		cp ModGridDescriptor.f90 \
 		../../../IH/BATSRUS/srcInterface
 	cp GM/BATSRUS/srcUser/*.f90 IH/BATSRUS/srcUser/
 	if [ -d GM/BATSRUS/srcUserExtra ]; then \
@@ -516,7 +516,7 @@ OH/BATSRUS/src/Makefile:
 	cd GM/BATSRUS/src; cp *.f90 *.h Makefile* ../../../OH/BATSRUS/src
 	cd GM/BATSRUS/srcBATL; cp *.f90 Makefile* ../../../OH/BATSRUS/srcBATL
 	cd GM/BATSRUS/srcInterface/; \
-		cp ModGridDescriptor.f90 ModBuffer.f90 \
+		cp ModGridDescriptor.f90 \
 		../../../OH/BATSRUS/srcInterface/
 	cp GM/BATSRUS/srcUser/*.f90 OH/BATSRUS/srcUser/
 	if [ -d GM/BATSRUS/srcUserExtra ]; then \
@@ -574,7 +574,7 @@ SC/BATSRUS/src/Makefile:
 		cp Makefile.def Makefile.conf PARAM.XML Config.pl \
 			../../SC/BATSRUS/
 	cd GM/BATSRUS/srcInterface/; \
-		cp ModGridDescriptor.f90 ModBuffer.f90 \
+		cp ModGridDescriptor.f90 \
 		../../../SC/BATSRUS/srcInterface
 	cp -f IH/BATSRUS/srcInterface/IH_wrapper.f90 \
 		SC/BATSRUS/srcInterface/SC_wrapper.f90

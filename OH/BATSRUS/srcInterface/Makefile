@@ -8,7 +8,6 @@ include ../../../Makefile.conf
 
 OBJECTS = \
 	ModGridDescriptor.o\
-        ModBuffer.o\
 	OH_wrapper.o
 
 SEARCHDIR = -I${SHAREDIR} -I${COUPLERDIR} -I${LIBRARYDIR} -I${MAGNETOGRAMDIR} \
