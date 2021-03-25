@@ -6,7 +6,6 @@ include ../../../Makefile.conf
 -include Makefile.DEPEND
 
 OBJECTS = \
-	ModBuffer.o\
 	ModGridDescriptor.o\
 	SC_wrapper.o
 
