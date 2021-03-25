@@ -800,7 +800,6 @@ contains
          Rho_, RhoUx_, RhoUz_, Bx_, Bz_, P_, Pe_, &
          Ppar_, WaveFirst_, WaveLast_, Ehot_, nVar, &
          ChargeStateFirst_, ChargeStateLast_
-    use IH_ModBuffer, ONLY:iVar_V, DoCoupleVar_V, nVarCouple
     use CON_coupler,       ONLY: &
          RhoCouple_, RhoUxCouple_,&
          RhoUzCouple_, PCouple_, BxCouple_, BzCouple_,  &
@@ -808,8 +807,8 @@ contains
          WaveLastCouple_, Bfield_, Wave_, EhotCouple_, &
          AnisoPressure_, ElectronPressure_,&
          CollisionlessHeatFlux_, ChargeStateFirstCouple_, &
-         ChargeStateLastCouple_, ChargeState_, iVarOrig_V=>iVar_V, &
-         DoCoupleVarOrig_V=>DoCoupleVar_V, nVarCoupleOrig=>nVarCouple
+         ChargeStateLastCouple_, ChargeState_, iVar_V, &
+         DoCoupleVar_V, nVarCouple
     use ModCoordTransform, ONLY: sph_to_xyz
     use ModInterpolate,    ONLY: trilinear
     use IH_BATL_lib,       ONLY: iProc, &
@@ -824,7 +823,7 @@ contains
 
     ! OUTPUT ARGUMENTS
     ! State variables to be fiiled in all buffer grid points
-    real,dimension(nVarCoupleOrig, nR, 0:nPhi+1 ,0:nTheta+1), intent(out):: &
+    real,dimension(nVarCouple, nR, 0:nPhi+1 ,0:nTheta+1), intent(out):: &
          Buffer_VG
 
     ! variables for defining the buffer grid
@@ -838,7 +837,7 @@ contains
     real :: StateInPoint_V(nVar)
 
     ! Store interpolated state variables needed for coupling
-    real :: Buffer_V(nVarCoupleOrig), B0_D(3)
+    real :: Buffer_V(nVarCouple), B0_D(3)
 
     ! Buffer grid cell center coordinates
     real :: CoordBuffer_D(3), XyzBuffer_D(3)
@@ -866,35 +865,28 @@ contains
 
     integer   :: iPhiNew, iBlock, iPe, iR, iPhi, iTheta
     real      :: r, theta, phi
-
-    ! Variables for testing 
-    integer :: i, j ,k
-    real    :: State_VG(nVar,-1:nI+2,-1:nJ+2,-1:nK+2), Btot_D(3)
-    logical :: DoTest, DoTestMe
-    character (len=*), parameter :: StringTest='IH_impose_par_flow_buffer'
-
+    logical   :: DoTest, DoTestMe
+    
     character (len=*), parameter :: NameSub='IH_get_for_buffer_grid'
     !--------------------------------------------------------------------------
-    call CON_set_do_test(StringTest,DoTest,DoTestMe)
-    if (DoTest .and. iProc == 0) write(*,*) &
-         NameSub, ' in test mode: Imposing parallel flow inside buffer grid.'
-
+    call CON_set_do_test(NameSub,DoTest,DoTestMe)
+   
     Buffer_VG = 0.0
 
     ! get variable indices in buffer
-    iRhoCouple              = iVarOrig_V(RhoCouple_)
-    iRhoUxCouple            = iVarOrig_V(RhoUxCouple_)
-    iRhoUzCouple            = iVarOrig_V(RhoUzCouple_)
-    iPCouple                = iVarOrig_V(PCouple_)
-    iPeCouple               = iVarOrig_V(PeCouple_)
-    iPparCouple             = iVarOrig_V(PparCouple_)
-    iBxCouple               = iVarOrig_V(BxCouple_)
-    iBzCouple               = iVarOrig_V(BzCouple_)
-    iWaveFirstCouple        = iVarOrig_V(WaveFirstCouple_)
-    iWaveLastCouple         = iVarOrig_V(WaveLastCouple_)
-    iEhotCouple             = iVarOrig_V(EhotCouple_)
-    iChargeStateFirstCouple = iVarOrig_V(ChargeStateFirstCouple_)
-    iChargeStateLastCouple  = iVarOrig_V(ChargeStateLastCouple_)
+    iRhoCouple              = iVar_V(RhoCouple_)
+    iRhoUxCouple            = iVar_V(RhoUxCouple_)
+    iRhoUzCouple            = iVar_V(RhoUzCouple_)
+    iPCouple                = iVar_V(PCouple_)
+    iPeCouple               = iVar_V(PeCouple_)
+    iPparCouple             = iVar_V(PparCouple_)
+    iBxCouple               = iVar_V(BxCouple_)
+    iBzCouple               = iVar_V(BzCouple_)
+    iWaveFirstCouple        = iVar_V(WaveFirstCouple_)
+    iWaveLastCouple         = iVar_V(WaveLastCouple_)
+    iEhotCouple             = iVar_V(EhotCouple_)
+    iChargeStateFirstCouple = iVar_V(ChargeStateFirstCouple_)
+    iChargeStateLastCouple  = iVar_V(ChargeStateLastCouple_)
 
     ! Calculate buffer grid spacing
     nCell_D  = (/nR, nPhi, nTheta/)
@@ -905,7 +897,7 @@ contains
     dSph_D(BuffR_) = (SphMax_D(BuffR_) - SphMin_D(BuffR_))/(nCell_D(BuffR_)-1)
 
     ! Loop over buffer grid points
-    do iR = 1, nR ; do iPhi = 1, nPhi ; do iTheta = 1, nTheta
+    do iTheta = 1, nTheta ; do iPhi = 1, nPhi ; do iR = 1, nR  
 
        ! Find the coordinates of the current buffer grid point, 
        r     =  SphMin_D(BuffR_)     + (iR - 1)*dSph_D(BuffR_)
@@ -927,33 +919,12 @@ contains
        ! Buffer grid point position normalized by the grid spacing
        BufferNorm_D = (CoordBuffer_D - CoordMin_DB(:,iBlock)) &
             / CellSize_DB(:,iBlock) + 0.5
-
-       if(DoTest) then
-          ! Impose U||B prior to interpolation
-          do i=-1,nI+2 ; do j=-1,nJ+2 ; do k=-1, nK+2
-             State_VG(:,i,j,k) = State_VGB(:,i,j,k,iBlock)
-             Btot_D = State_VGB(Bx_:Bz_,i,j,k,iBlock) + B0_DGB(:,i,j,k,iBlock)
-
-             State_VG(RhoUx_:RhoUz_,i,j,k) = Btot_D*                 &
-                  sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)*Btot_D)/ & 
-                  (sum(Btot_D**2)+1e-40)
-
-          end do; end do; end do
-
-          ! Interpolate from the modified state in the block 
-          ! to the buffer grid point
-          StateInPoint_V = &
-               trilinear(State_VG, nVar, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
-               BufferNorm_D) 
-
-       else
-
-          ! Interpolate from the true solution block to the buffer grid point
-          StateInPoint_V = &
-               trilinear(State_VGB(:,:,:,:,iBlock), &
-               nVar, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
-               BufferNorm_D) 
-       end if
+       
+       ! Interpolate from the true solution block to the buffer grid point
+       StateInPoint_V = &
+            trilinear(State_VGB(:,:,:,:,iBlock), &
+            nVar, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
+            BufferNorm_D) 
 
        ! Fill in the coupled state variables
        ! Convert to SI units
@@ -962,7 +933,7 @@ contains
        Buffer_V(iRhoUxCouple:iRhoUzCouple) = &
             StateInPoint_V(rhoUx_:rhoUz_)*No2Si_V(UnitRhoU_)
       
-       if(DoCoupleVarOrig_V(Bfield_)) then
+       if(DoCoupleVar_V(Bfield_)) then
           if(UseB0)then
              B0_D = &
                   trilinear(B0_DGB(:,:,:,:,iBlock), &
@@ -978,28 +949,28 @@ contains
 
        Buffer_V(iPCouple)  = StateInPoint_V(p_)*No2Si_V(UnitP_)
        
-       if(DoCoupleVarOrig_V(Wave_)) &
+       if(DoCoupleVar_V(Wave_)) &
             Buffer_V(iWaveFirstCouple:iWaveLastCouple) = &
             StateInPoint_V(WaveFirst_:WaveLast_)&
             * No2Si_V(UnitEnergyDens_)
 
-       if(DoCoupleVarOrig_V(ChargeState_)) &
+       if(DoCoupleVar_V(ChargeState_)) &
             Buffer_V(iChargeStateFirstCouple:iChargeStateLastCouple) = &
             StateInPoint_V(ChargeStateFirst_:ChargeStateLast_)&
             * No2Si_V(UnitRho_)
        
 
-       if(DoCoupleVarOrig_V(ElectronPressure_))then
+       if(DoCoupleVar_V(ElectronPressure_))then
           Buffer_V(iPeCouple) = StateInPoint_V(Pe_)*No2Si_V(UnitP_)
        else if(UseElectronPressure)then
           Buffer_V(iPCouple) = Buffer_V(iPCouple) + StateInPoint_V(Pe_)&
                *No2Si_V(UnitP_)
        end if
 
-       if(DoCoupleVarOrig_V(AnisoPressure_)) Buffer_V(iPparCouple) = &
+       if(DoCoupleVar_V(AnisoPressure_)) Buffer_V(iPparCouple) = &
             StateInPoint_V(Ppar_)*No2Si_V(UnitP_)
 
-       if(DoCoupleVarOrig_V(CollisionlessHeatFlux_)) Buffer_V(iEhotCouple) = &
+       if(DoCoupleVar_V(CollisionlessHeatFlux_)) Buffer_V(iEhotCouple) = &
             StateInPoint_V(Ehot_)*No2Si_V(UnitEnergyDens_)
 
        ! DONE - fill the buffer grid
