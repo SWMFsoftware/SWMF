@@ -7,7 +7,6 @@ include ../../../Makefile.conf
 
 OBJECTS = \
 	EE_wrapper.o \
-	ModBuffer.o \
 	ModGridDescriptor.o
 
 SEARCHDIR = -I${SHAREDIR} -I${COUPLERDIR} -I${LIBRARYDIR} -I${MAGNETOGRAMDIR} \
@@ -36,5 +35,5 @@ ${MY_LIB}: ${BATSRUS_LIB} ${OBJECTS}
 clean: cleanfiles
 
 distclean: clean
-	rm -f ModBuffer.f90 ModGridDescriptor.f90 
+	rm -f ModGridDescriptor.f90 
 

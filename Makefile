@@ -432,7 +432,7 @@ EE/BATSRUS/src/Makefile:
 	cd GM/BATSRUS/src; cp *.f90 *.h Makefile* ../../../EE/BATSRUS/src
 	cd GM/BATSRUS/srcBATL; cp *.f90 Makefile* ../../../EE/BATSRUS/srcBATL
 	cd GM/BATSRUS/srcInterface/; \
-		cp ModGridDescriptor.f90 ModBuffer.f90 \
+		cp ModGridDescriptor.f90 \
 		../../../EE/BATSRUS/srcInterface
 	cp GM/BATSRUS/srcUser/*.f90 EE/BATSRUS/srcUser/
 	if [ -d GM/BATSRUS/srcUserExtra ]; then \
@@ -533,7 +533,7 @@ OH/BATSRUS/src/Makefile:
 
 	cd OH/BATSRUS/srcInterface/; perl -i -pe \
 	's/IH/OH/g;s/Ih/Oh/g;s/_sc/_ih/;s/SC/IH/g;s/Sc/Ih/g;s/Inner/Outer/' \
-		OH_wrapper.f90 ModBuffer.f90
+		OH_wrapper.f90
 
 # rename OH source files to avoid name conflicts
 OH_SRC = src/*.f90 src/*.h srcBATL/*.f90 srcUser/*.f90 srcEquation/*.f90 \
