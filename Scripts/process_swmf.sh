@@ -60,5 +60,5 @@ grep -v logo_small.png manual.log | grep -C10 Error > manual.err
 # Check Fortran formatting
 cd ~/Sites/SWMF
 make FORMATF90 > ~/Sites/fortran.err
-# return to original code (we could also commit it!)
-gitall checkout .
+# commit formatted code
+gitall commit -m FormatFortran .; git push
