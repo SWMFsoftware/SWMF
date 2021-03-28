@@ -83,7 +83,6 @@ contains
     ! pass this info to IH and OH
     call set_couple_var_info(IH_, OH_)
 
-
     ! Set buffer grid location and size in OH, and retrieve them for coupler
     if(is_proc(OH_))then
        call OH_set_buffer_grid_get_info( &
