@@ -618,18 +618,18 @@ contains
   !============================================================================
 
   subroutine IH_set_buffer_grid_get_info(CompID_, &
-       nR, nPhi, nTheta, BufferMinMax_DI)
+       nR, nLon, nLat, BufferMinMax_DI)
 
     use IH_domain_decomposition, ONLY: is_proc
-    use IH_ModMain,              ONLY: BuffR_, nPhiBuff, nThetaBuff,&
+    use IH_ModBuffer,            ONLY: BuffR_, nLonBuff, nLatBuff,&
          nRBuff, BufferMin_D, BufferMax_D, dSphBuff_D
 
     integer, intent(in)     :: CompID_
-    integer, intent(out)    :: nR, nPhi, nTheta
+    integer, intent(out)    :: nR, nLon, nLat
     real, intent(out)       :: BufferMinMax_DI(3,2)
 
     integer  :: nCell_D(3)
-    logical :: DoTest, DoTestMe
+    logical  :: DoTest, DoTestMe
 
     character(len=*), parameter :: NameSub = 'IH_set_buffer_grid_get_info'
     !--------------------------------------------------------------------------
@@ -643,11 +643,11 @@ contains
     BufferMinMax_DI(:,2) = BufferMax_D
 
     nR     = nRBuff 
-    nPhi   = nPhiBuff
-    nTheta = nThetaBuff
+    nLon   = nLonBuff
+    nLat   = nLatBuff
 
     ! Calculate grid spacing and save in IH_BATSRUS
-    nCell_D = (/nR, nPhi, nTheta/)
+    nCell_D = (/nR, nLon, nLat/)
     dSphBuff_D = (BufferMax_D - BufferMin_D)/real(nCell_D)
     dSphBuff_D(BuffR_) = (BufferMax_D(BuffR_) - BufferMin_D(BuffR_)) &
          /real(nCell_D(BuffR_) - 1)
@@ -661,8 +661,8 @@ contains
 
   end subroutine IH_set_buffer_grid_get_info
   !===========================================================================
-  subroutine IH_save_global_buffer(nVarCouple, nR, nPhi, nTheta, BufferIn_VG)
-    use IH_ModMain,        ONLY: BufferState_VG
+  subroutine IH_save_global_buffer(nVarCouple, nR, nLon, nLat, BufferIn_VG)
+    use IH_ModBuffer,      ONLY: BufferState_VG
     use IH_ModMessagePass, ONLY: DoExtraMessagePass
     ! spherical buffer coupling
     use IH_ModBuffer,      ONLY: TypeCoordSource
@@ -684,13 +684,13 @@ contains
     use IH_ModMultiFluid, ONLY: IsFullyCoupledFluid
     use IH_ModPhysics,    ONLY: No2Si_V, Si2No_V, UnitRho_, UnitB_, UnitX_
     use IH_ModPhysics,    ONLY: UnitRhoU_, UnitEnergyDens_, UnitP_
-    integer,intent(in) :: nVarCouple, nR, nPhi, nTheta
-    real,intent(in)    :: BufferIn_VG(nVarCouple,nR,0:nPhi+1,0:nTheta+1)
+    integer,intent(in) :: nVarCouple, nR, nLon, nLat
+    real,intent(in)    :: BufferIn_VG(nVarCouple,nR,0:nLon+1,0:nLat+1)
     
     character(len=*), parameter :: NameSub = 'IH_save_global_buffer'
     !-------------------------------------------------------------------------
     if(.not. allocated(BufferState_VG))&
-         allocate(BufferState_VG(nVar, nR, 0:nPhi+1, 0:nTheta+1))
+         allocate(BufferState_VG(nVar, nR, 0:nLon+1, 0:nLat+1))
     TypeCoordSource = Grid_C(iCompSourceCouple) % TypeCoord
     BufferState_VG  = BufferIn_VG
     ! Convert from SI units to normalized units
@@ -755,8 +755,8 @@ contains
     use IH_ModMessagePass, ONLY: exchange_messages, fill_in_from_buffer
     use IH_ModGeometry,ONLY:R_BLK
     use IH_BATL_lib,  ONLY: Xyz_DGB, iProc
-    use IH_ModMain,   ONLY:&
-         nI,nJ,nK, BufferMax_D, MaxDim,nBlock, Unused_B
+    use IH_ModMain,   ONLY: nI, nJ, nK, MaxDim, nBlock, Unused_B
+    use IH_ModBuffer, ONLY: BufferMax_D, get_from_spher_buffer_grid
     use IH_ModAdvance,ONLY:nVar,State_VGB,rho_,rhoUx_,rhoUz_,Ux_,Uz_
     use IH_ModIO,     ONLY:IsRestartCoupler
 
@@ -793,7 +793,7 @@ contains
              x_D = Xyz_DGB(:,i,j,k,iBlock)*rBuffMax/R_BLK(i,j,k,iBlock)
 
              ! The grid point values are extracted from the base values
-             call IH_get_from_spher_buffer_grid(&
+             call get_from_spher_buffer_grid(&
                   x_D, nVar, State_VGB(:,i,j,k,iBlock))
 
              !Transform primitive variables to conservative ones:
@@ -818,7 +818,7 @@ contains
   !============================================================================
 
   subroutine IH_get_for_global_buffer(&
-       nR, nPhi,nTheta, BufferMinMax_DI, &
+       nR, nLon,nLat, BufferMinMax_DI, &
        TimeCoupling, iCompSource, iCompTarget, Buffer_VG)
 
     ! DESCRIPTION
@@ -850,7 +850,8 @@ contains
 
     !USES:
     use IH_ModSize, ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
-    use IH_ModMain, ONLY: UseB0, BuffR_, BuffPhi_, BuffTheta_
+    use IH_ModMain, ONLY: UseB0
+    use IH_ModBuffer,  ONLY: BuffR_, BuffLon_, BuffLat_
     use IH_ModAdvance, ONLY: State_VGB, UseElectronPressure
     use IH_ModB0, ONLY: B0_DGB
     use IH_ModPhysics, ONLY: &
@@ -868,21 +869,21 @@ contains
          CollisionlessHeatFlux_, ChargeStateFirstCouple_, &
          ChargeStateLastCouple_, ChargeState_, iVar_V, &
          DoCoupleVar_V, nVarCouple
-    use ModCoordTransform, ONLY: sph_to_xyz
+    use ModCoordTransform, ONLY: rlonlat_to_xyz
     use ModInterpolate,    ONLY: trilinear
     use IH_BATL_lib,       ONLY: iProc, &
          find_grid_block, xyz_to_coord, CoordMin_DB, CellSize_DB, nDim
 
     !INPUT ARGUMENTS:
     ! Buffer size and limits
-    integer,intent(in) :: nR, nPhi, nTheta
+    integer,intent(in) :: nR, nLon, nLat
     real, intent(in)   :: TimeCoupling
     real, intent(in)   :: BufferMinMax_DI(nDim,2)
     integer,intent(in) :: iCompSource, iCompTarget
 
     ! OUTPUT ARGUMENTS
     ! State variables to be fiiled in all buffer grid points
-    real,dimension(nVarCouple, nR, 0:nPhi+1 ,0:nTheta+1), intent(out):: &
+    real,dimension(nVarCouple, nR, 0:nLon+1 ,0:nLat+1), intent(out):: &
          Buffer_VG
 
     ! variables for defining the buffer grid
@@ -922,8 +923,8 @@ contains
          iEhotCouple
 
 
-    integer   :: iPhiNew, iBlock, iPe, iR, iPhi, iTheta
-    real      :: r, theta, phi
+    integer   :: iLonNew, iBlock, iPe, iR, iLon, iLat
+    real      :: r, lon, lat
     logical   :: DoTest, DoTestMe
     
     character (len=*), parameter :: NameSub='IH_get_for_buffer_grid'
@@ -948,7 +949,7 @@ contains
     iChargeStateLastCouple  = iVar_V(ChargeStateLastCouple_)
 
     ! Calculate buffer grid spacing
-    nCell_D  = (/nR, nPhi, nTheta/)
+    nCell_D  = (/nR, nLon, nLat/)
     SphMin_D = BufferMinMax_DI(:,1)
     SphMax_D = BufferMinMax_DI(:,2)
 
@@ -956,15 +957,15 @@ contains
     dSph_D(BuffR_) = (SphMax_D(BuffR_) - SphMin_D(BuffR_))/(nCell_D(BuffR_)-1)
 
     ! Loop over buffer grid points
-    do iTheta = 1, nTheta ; do iPhi = 1, nPhi ; do iR = 1, nR  
+    do iLat = 1, nLat ; do iLon = 1, nLon ; do iR = 1, nR  
 
        ! Find the coordinates of the current buffer grid point, 
        r     =  SphMin_D(BuffR_)     + (iR - 1)*dSph_D(BuffR_)
-       Phi   =  SphMin_D(BuffPhi_)   + (real(iPhi)-0.5)*dSph_D(BuffPhi_)
-       Theta =  SphMin_D(BuffTheta_) + (real(iTheta)-0.5)*dSph_D(BuffTheta_)
+       Lon   =  SphMin_D(BuffLon_)   + (real(iLon)-0.5)*dSph_D(BuffLon_)
+       Lat   =  SphMin_D(BuffLat_)   + (real(iLat)-0.5)*dSph_D(BuffLat_)
 
        ! Convert to xyz
-       call sph_to_xyz(r, Theta, Phi, XyzBuffer_D)
+       call rlonlat_to_xyz(r, Lon, Lat, XyzBuffer_D)
 
        ! Find the block and PE in the IH_BATSRUS grid
        call find_grid_block(XyzBuffer_D, iPe, iBlock)
@@ -1033,19 +1034,19 @@ contains
             StateInPoint_V(Ehot_)*No2Si_V(UnitEnergyDens_)
 
        ! DONE - fill the buffer grid
-       Buffer_VG(:,iR, iPhi,iTheta) = Buffer_V
+       Buffer_VG(:,iR, iLon,iLat) = Buffer_V
 
     end do; end do; end do
 
     ! Fill buffer grid ghost cells
-    do iPhi = 1, nPhi 
-       iPhiNew = iPhi + nPhi/2
-       if (iPhiNew > nPhi) iPhiNew = iPhiNew - nPhi
-       Buffer_VG(:,:,iPhi, 0) = Buffer_VG(:,:,iPhiNew, 1)
-       Buffer_VG(:,:,iPhi,nTheta+1) = Buffer_VG(:,:,iPhiNew, nTheta)
+    do iLon = 1, nLon 
+       iLonNew = iLon + nLon/2
+       if (iLonNew > nLon) iLonNew = iLonNew - nLon
+       Buffer_VG(:,:,iLon, 0) = Buffer_VG(:,:,iLonNew, 1)
+       Buffer_VG(:,:,iLon,nLat+1) = Buffer_VG(:,:,iLonNew, nLat)
     end do
-    Buffer_VG(:,:,0,:) = Buffer_VG(:,:,nPhi,:)
-    Buffer_VG(:,:,nPhi+1,:) = Buffer_VG(:,:,1,:)
+    Buffer_VG(:,:,0,:) = Buffer_VG(:,:,nLon,:)
+    Buffer_VG(:,:,nLon+1,:) = Buffer_VG(:,:,1,:)
   end subroutine IH_get_for_global_buffer
 
   !============================================================================
