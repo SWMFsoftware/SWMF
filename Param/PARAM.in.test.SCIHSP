@@ -251,12 +251,12 @@ buffergrid		TypeBcBody
 
 #BUFFERGRID
 2			nRBuff
-64			nPhiBuff
-32			nThetaBuff
+64			nLonBuff
+32			nLatBuff
 18.0			rBuffMin
 20.0			rBuffMax
-0.0			PhiBuffMin
-360.			PhiBuffMax
+0.0			LonBuffMin
+360.			LonBuffMax
 -90.0			LatBuffMin
 90.0			LatBuffMax
 
