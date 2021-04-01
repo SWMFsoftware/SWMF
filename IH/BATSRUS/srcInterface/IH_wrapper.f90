@@ -622,13 +622,12 @@ contains
 
     use IH_domain_decomposition, ONLY: is_proc
     use IH_ModBuffer,            ONLY: BuffR_, nLonBuff, nLatBuff,&
-         nRBuff, BufferMin_D, BufferMax_D, dSphBuff_D
+         nRBuff, BufferMin_D, BufferMax_D
 
     integer, intent(in)     :: CompID_
     integer, intent(out)    :: nR, nLon, nLat
     real, intent(out)       :: BufferMinMax_DI(3,2)
 
-    integer  :: nCell_D(3)
     logical  :: DoTest, DoTestMe
 
     character(len=*), parameter :: NameSub = 'IH_set_buffer_grid_get_info'
@@ -646,17 +645,10 @@ contains
     nLon   = nLonBuff
     nLat   = nLatBuff
 
-    ! Calculate grid spacing and save in IH_BATSRUS
-    nCell_D = (/nR, nLon, nLat/)
-    dSphBuff_D = (BufferMax_D - BufferMin_D)/real(nCell_D)
-    dSphBuff_D(BuffR_) = (BufferMax_D(BuffR_) - BufferMin_D(BuffR_)) &
-         /real(nCell_D(BuffR_) - 1)
-
     if(DoTest) then
-       write(*,*) NameSub,': with nR, nPhi, nTheta = ',nCell_D
+       write(*,*) NameSub,': with nR, nLon, nLat = ',nR, nLon, nLat
        write(*,*) 'BufferMin_D: ',BufferMin_D
        write(*,*) 'BufferMax_D: ',BufferMax_D
-       write(*,*) 'dSph_D: ',dSphBuff_D
     end if
 
   end subroutine IH_set_buffer_grid_get_info
@@ -689,10 +681,7 @@ contains
     
     character(len=*), parameter :: NameSub = 'IH_save_global_buffer'
     !-------------------------------------------------------------------------
-    if(.not. allocated(BufferState_VG))&
-         allocate(BufferState_VG(nVar, nR, 0:nLon+1, 0:nLat+1))
     TypeCoordSource = Grid_C(iCompSourceCouple) % TypeCoord
-    BufferState_VG  = BufferIn_VG
     ! Convert from SI units to normalized units
     BufferState_VG(Rho_,:,:,:) = BufferIn_VG(iVar_V(RhoCouple_),:,:,:)&
          *Si2No_V(UnitRho_)
