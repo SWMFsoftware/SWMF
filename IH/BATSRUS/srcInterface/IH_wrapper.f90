@@ -848,7 +848,6 @@ contains
 
     ! Buffer size and limits
     integer,intent(in) :: nR, nLon, nLat
-    real, intent(in)   :: TimeCoupling
     real, intent(in)   :: BufferMinMax_DI(3,2)
 
     ! OUTPUT ARGUMENTS
