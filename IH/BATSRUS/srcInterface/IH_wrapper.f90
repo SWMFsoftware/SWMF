@@ -825,7 +825,7 @@ contains
 
     ! INPUT:
 
-    ! nR, nPhi, nTheta: grid spacing for the buffer grid
+    ! nR, nLon, nLat: grid spacing for the buffer grid
     ! BufferMinMAx_DI : Buffer grid minimum and maximum coordinates, in all
     ! dimensions.
 
@@ -839,7 +839,7 @@ contains
 
     !USES:
     use IH_ModSize, ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
-    use IH_ModMain, ONLY: UseB0
+    use IH_ModMain, ONLY: UseB0, rUpperModel
     use IH_ModBuffer,  ONLY: BuffR_, BuffLon_, BuffLat_
     use IH_ModAdvance, ONLY: State_VGB, UseElectronPressure
     use IH_ModB0, ONLY: B0_DGB
@@ -941,6 +941,9 @@ contains
     nCell_D  = (/nR, nLon, nLat/)
     SphMin_D = BufferMinMax_DI(:,1)
     SphMax_D = BufferMinMax_DI(:,2)
+
+    ! Save the upper boundary radius as the limit for LOS integration span
+    rUpperModel = SphMax_D(BuffR_)
 
     dSph_D     = (SphMax_D - SphMin_D)/real(nCell_D)
     dSph_D(BuffR_) = (SphMax_D(BuffR_) - SphMin_D(BuffR_))/(nCell_D(BuffR_)-1)
