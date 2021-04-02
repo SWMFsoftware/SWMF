@@ -11,7 +11,6 @@ Param/PARAM.in.test.restart.SCIH_threadbc: Time accurate SC-IH run with SC switc
 #TIMEACCURATE
 T			IsTimeAccurate
 
-
 #BEGIN_COMP SC ---------------------------------------------------------------
 
 #INCLUDE
@@ -232,7 +231,6 @@ load			NameCommand
 SC/Param/los_EuviB.dat		NameFile
 ascii			TypeFile
 
-
 #SATELLITE
 3			nSatellite
 MHD			StringSatellite
@@ -262,17 +260,6 @@ IH/restartIN/restart.H
 
 #INNERBOUNDARY
 buffergrid		TypeBcBody
-
-#BUFFERGRID
-2			nRBuff
-64			nLonBuff
-32			nLatBuff
-18.0			rBuffMin
-20.0			rBuffMax
-0.0			LonBuffMin
-360.			LonBuffMax
--90.0			LatBuffMin
-90.0			LatBuffMax
 
 #OUTERBOUNDARY
 float			TypeBc1
