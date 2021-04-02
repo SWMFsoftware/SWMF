@@ -1,0 +1,183 @@
+#INCLUDE
+PARAM.in.test.SCIHSP_long
+#RUN ##########################################################################
+Begin session: 4
+#COMPONENT
+SP			NameComp
+T			UseComp
+
+#FIELDLINE
+SP			NameTarget
+2			nSource
+SC			NameSource
+1.15			RScMin
+21.55			RScMax
+IH			NameSource
+20			RIhMin
+220			RIhMax
+
+#TEST
+couple_mh_sp		StringTest
+
+#BEGIN_COMP SC ---------------------------------------------------------------
+
+
+#CORONALHEATING
+turbulentcascade		TypeCoronalHeating
+T			UseWaveReflection
+1.5e5			LperpTimesSqrtBSi
+0.0			rMinWaveReflection
+F			UseSurfaceWaveRefl
+
+#HEATPARTITIONING
+stochasticheating		TypeHeatPartitioning
+0.34			StochasticExponent
+0.18			StochasticAmplitude
+
+#TEST
+radiative_cooling		StringTest
+
+#SEMIKRYLOV
+GMRES			TypeKrylov
+1.0e-5			ErrorMaxKrylov
+10			MaxMatvecKrylov
+
+#REGION
+test			NameRegion
+box_gen			StringShape
+5.0			xMinBox
+180.0			yMinBox
+0.0			zMinBox
+32.0			xMaxBox
+360.0			yMaxBox
+90.0			zMaxBox
+
+#AMRCRITERIALEVEL
+2			nRefineCrit
+Level			StringRefine
+2			RefineTo
+2			CoarsenFrom
+Level test		StringRefine
+3			RefineTo
+3			CoarsenFrom
+
+
+#DOAMR
+T			DoAmr
+-1			DnAmr
+1			DtAmr
+T			IsStrictAmr
+
+#SAVEPLOT
+1			nPlotFile
+pnt mhd tec		StringPlot
+10			DnSavePlot
+-1.			DtSavePlot
+
+
+#END_COMP SC -----------------------------------------------------------------
+
+#BEGIN_COMP IH ---------------------------------------------------------------
+
+
+#DOAMR
+F			DoAmr
+
+#SAVEPLOT
+1			nPlotFile
+pnt mhd tec		StringPlot
+10 			DnSavePlot
+-1.			DtSavePlot
+
+
+#END_COMP IH -----------------------------------------------------------------
+
+#BEGIN_COMP SP ---------------------------------------------------------------
+
+#NSTEP
+0			nStep
+
+#DORUN
+F			DoRun
+
+#TEST
+F			DoTraceShock
+F			UseDiffusion
+
+
+#ORIGIN
+2.5			ROrigin
+-10			LonMin
+25			LatMin
+10			LonMax
+90			LatMax
+
+#SAVEPLOT
+1			nFileOut
+mh1d R idl		StringPlot
+
+#SAVEINITIAL
+T			DoSaveInitial
+
+#END_COMP SP -----------------------------------------------------------------
+
+#COUPLE1
+SC			NameSource
+IH			NameTarget
+-1			DnCouple
+1.0			DtCouple
+
+#COUPLE1
+SC			NameSource
+SP			NameTarget
+-1			DnCouple
+1.0			DtCouple
+
+#COUPLE1
+IH			NameSource
+SP			NameTarget
+-1			DnCouple
+1.0			DtCouple
+
+#STOP
+-1			MaxIter
+102			TimeMax
+
+End session: 4
+#RUN ##########################################################################
+Begin session: 5
+
+#BEGIN_COMP SC ---------------------------------------------------------------
+
+#DOAMR
+F			DoAmr
+
+#END_COMP SC -----------------------------------------------------------------
+
+#STOP
+-1			MaxIter
+105			TimeMax
+
+End session: 5
+#RUN ##########################################################################
+Begin session: 6
+
+#SAVERESTART
+F			DoSaveRestart
+
+#BEGIN_COMP SP ---------------------------------------------------------------
+
+#SAVEINITIAL
+F			DoSaveInitial
+
+#USEDATETIME
+F			UseDateTime
+
+#END_COMP SP -----------------------------------------------------------------
+
+#STOP
+-1			MaxIter
+110			TimeMax
+
+End session: 6
+#END
