@@ -1,36 +1,46 @@
 For a single-temperature solar wind simulation, configure SWMF with
 
 ./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
-./Config.pl -o=SC:u=Awsom,e=MhdWaves,g=6,4,4
-./Config.pl -o=IH:u=Awsom,e=MhdWaves,g=4,4,4
+./Config.pl -o=SC:u=Awsom,e=MhdWaves,g=6,4,4,nG=3
+./Config.pl -o=IH:u=Awsom,e=MhdWaves,g=4,4,4,nG=3
 
 For a two-temperature solar wind simulation, configure SWMF with
 
 ./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
-./Config.pl -o=SC:u=Awsom,e=Awsom,g=6,4,4
-./Config.pl -o=IH:u=Awsom,e=Awsom,g=4,4,4
+./Config.pl -o=SC:u=Awsom,e=Awsom,g=6,4,4,nG=3
+./Config.pl -o=IH:u=Awsom,e=Awsom,g=4,4,4,nG=3
 
-For a three-temperature solar wind simulation with 5th order scheme use
+For a three-temperature solar wind simulation, configure SWMF with
 
 ./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
-./Config.pl -o=SC:u=Awsom,e=AwsomAnisoPi,ng=3,g=6,8,8
-./Config.pl -o=IH:u=Awsom,e=AwsomAnisoPi,ng=3,g=8,8,8
+./Config.pl -o=SC:u=Awsom,e=AwsomAnisoPi,g=6,8,8,nG=3
+./Config.pl -o=IH:u=Awsom,e=AwsomAnisoPi,g=8,8,8,nG=3
+
+Default rMinWaveReflection is 0.0
+Default UseSurfaceWaveRefl is F
+
+For changing the distance of the source surface, rMax in FDIPS.in
+needs to change if using FDIPS and rSourceSurface in this file
+needs to change if using harmonics.
+
+IMPORTANT:
+Use the user CHROMOBC command to increase the inner boundary number
+density so that the run does not fail for solar maximum
 
 RESTART SC for boundary & couple with IH for 0 steps
 RESTART IH to run 5th order scheme
 
 Begin session: 1
 
-ID Proc0 ProcLast Stride
-#COMPONENTMAP
-SC  0  -1  1		CompMap
-IH  0  -1  1		CompMap
-
 #DESCRIPTION
-Param/PARAM.in.test.restart.SCIH: Input file for creating a steady state solar corona		StringDescription
+Param/PARAM.in.test.restart.SCIH: create steady state solar corona		StringDescription
 
 #INCLUDE
 RESTART.in
+
+#COMPONENTMAP
+SC 0 -1 1		CompMap
+IH 0 -1 1		CompMap
 
 #TIMEACCURATE
 F			IsTimeAccurate
@@ -72,37 +82,39 @@ load			NameCommand
 SC/fdips_bxyz.out		NameFile
 real4			TypeFile
 
+HARMONICSFILE
+SC/harmonics_adapt.dat	NameHarmonicsFile
+
+HARMONICSGRID
+1.0			rMagnetogram
+25			rSourceSurface^
+T			IsLogRadius^
+180			MaxOrder
+400			nR
+180			nLon
+90			nLat
+
+FACTORB0
+1.0			FactorB0 BrFactor^
+
 #USECURLB0
 T			UseCurlB0
 2.5			rCurrentFreeB0
 
-To run the dipole test, deactivate #USECURLB0 and #LOOKUPTABLE B0 above
-and activea #HELIODIPOLE below
-
-HELIODIPOLE
-2.8e-4			HelioDipoleStrengthSi
-0.0			HelioDipoleTilt
-
-#USERSWITCH
-+init +ic		StringSwitch
-
 #POYNTINGFLUX
-1.0e6			PoyntingFluxPerBSi [J/m^2/s/T]
+1.0e6			PoyntingFluxPerBSi^ [J/m^2/s/T]
 
 #CORONALHEATING
 turbulentcascade		TypeCoronalHeating
 T			UseWaveReflection
-1.5e5			LperpTimesSqrtBSi
-0.0			rMinWaveReflection
-F			UseSurfaceWaveRefl
+1.5e5			LperpTimesSqrtBSi^
+0.0			rMinWaveReflection^
+F			UseSurfaceWaveRefl^
 
 #HEATPARTITIONING
 stochasticheating		TypeHeatPartitioning
-0.21			StochasticExponent
-0.18			StochasticAmplitude
-
-TEST
-krylov
+0.21			StochasticExponent^
+0.18			StochasticAmplitude^
 
 #RADIATIVECOOLING
 T			UseRadCooling
@@ -125,14 +137,14 @@ T			UseCoarseAxis
 turn these off when restarting
 ---------------------------------------------------
 GRIDGEOMETRY
-spherical_genr
-SC/Param/grid_awsom.dat
+spherical_genr		TypeGeometry
+SC/Param/grid_awsom.dat	NameGridFile
 
 ! Use a true sphere, so box is made much larger
 GRID
-2			nRootBlockX
-2			nRootBlockY
-1			nRootBlockZ
+2			nRootBlock1
+2			nRootBlock2
+1			nRootBlock3
 -100.0			xMin
  100.0			xMax
 -100.0			yMin
@@ -211,42 +223,60 @@ RAW			StringLog
 
 #OUTERBOUNDARY
 user			TypeBc1   user for spherical and user_outerbcs
-float			TypeBc2
-float			TypeBc3
-float			TypeBc4
-float			TypeBc5
-float			TypeBc6
+float			TypeBc2   rMax
+periodic		TypeBc3   LonMin
+periodic		TypeBc4   LonMax
+periodic		TypeBc5   LatMin
+periodic		TypeBc6   LatMax
+
+#USERSWITCH
++init +ic		StringSwitch
 
 #SAVEPLOT
-4			nPlotFile
+5			nPlotFile
 x=0 VAR idl		StringPlot
 5			DnSavePlot
 -1.0			DtSavePlot
 -1.0			DxSavePlot
-{MHD} b1x b1y b1z qheat qebyq qparbyq qperpbyq		NameVars
+{MHD} b1x b1y b1z te ti	NameVars
 {default}		NamePars
 y=0 VAR idl		StringPlot
 5			DnSavePlot
 -1.			DtSavePlot
 -1.0			DxSavePlot
-{MHD} b1x b1y b1z qheat qebyq qparbyq qperpbyq		NameVars
+{MHD} b1x b1y b1z te ti	NameVars
 {default}		NamePars
 z=0 VAR idl		StringPlot
 5			DnSavePlot
 -1.			DtSavePlot
 -1.0			DxSavePlot
-{MHD} b1x b1y b1z qheat qebyq qparbyq qperpbyq		NameVars
+{MHD} b1x b1y b1z te ti	NameVars
 {default}		NamePars
 3d VAR idl		StringPlot
 5			DnSavePlot
 -1.			DtSavePlot
 -1.			DxSavePlot
-{MHD} b1x b1y b1z qheat qebyq qparbyq qperpbyq		NameVars
+{MHD} b1x b1y b1z te ti	NameVars
 {default}		NamePars
-los INS tec		StringPlot
+los ins idl_ascii		StringPlot
 5			DnSavePlot
 -1.0			DtSavePlot
-sta:euvi stb:euvi sdo:aia
+sta:euvi stb:euvi sdo:aia		StringsInstrument
+
+#SATELLITE
+3			nSatellite
+MHD			StringSatellite
+-1			DnOutput
+-1.0			DtOutput [sec]
+SC/TRAJECTORY/earth.dat		NameTrajectoryFile
+MHD			StringSatellite
+-1			DnOutput
+-1.0			DtOutput [sec]
+SC/TRAJECTORY/sta.dat		NameTrajectoryFile
+MHD			StringSatellite
+-1			DnOutput
+-1.0			DtOutput [sec]
+SC/TRAJECTORY/stb.dat		NameTrajectoryFile
 
 #LOOKUPTABLE
 AiaXrt			NameTable
@@ -271,21 +301,6 @@ EuviB			NameTable
 load			NameCommand
 SC/Param/los_EuviB.dat		NameFile
 ascii			TypeFile
-
-#SATELLITE
-3			nSatellite
-MHD			StringSatellite
--1			DnOutput
--1.0			DtOutput [sec]
-SC/TRAJECTORY/earth.dat		NameTrajectoryFile
-MHD			StringSatellite
--1			DnOutput
--1.0			DtOutput [sec]
-SC/TRAJECTORY/sta.dat		NameTrajectoryFile
-MHD			StringSatellite
--1			DnOutput
--1.0			DtOutput [sec]
-SC/TRAJECTORY/stb.dat		NameTrajectoryFile
 
 #SAVEINITIAL
 T			DoSaveInitial
@@ -316,9 +331,9 @@ T			UseBody
 1.0			ElectronTemperatureRatio
 
 GRID
-1			nRootBlockX
-1			nRootBlockY
-1			nRootBlockZ
+1			nRootBlock1
+1			nRootBlock2
+1			nRootBlock3
 -250.0			xMin
  250.0			xMax
 -250.0			yMin
@@ -332,21 +347,21 @@ shell0			StringShape
 18.0			RadiusInner
 21.0			Radius
 
-#AMRCRITERIALEVEL
+#AMRCRITERIARESOLUTION
 3			nRefineCrit
-Level			StringRefine
-3			RefineTo
-3			CoarsenFrom
-Level +OuterShell		StringRefine
-6			RefineTo
-6			CoarsenFrom
+dx			StringRefine
+8.			RefineTo
+4.			CoarsenFrom
+dx +Outershell		StringRefine
+1.0			RefineTo
+0.5			CoarsenFrom
 currentsheet		StringRefine
 0.5			CoarsenLimit
 0.5			RefineLimit
-6			MaxLevel
+1.0			MaxResolution
 
-#GRIDLEVEL
-6			nLevel
+#GRIDRESOLUTION
+1.0			Resolution
 initial			StringShape
 
 #SAVEINITIAL
@@ -372,14 +387,14 @@ T			UseAccurateReschange
 #CORONALHEATING
 turbulentcascade		TypeCoronalHeating
 T			UseWaveReflection
-1.5e5			LperpTimesSqrtBSi
-0.0			rMinWaveReflection
-F			UseSurfaceWaveRefl
+1.5e5			LperpTimesSqrtBSi^
+0.0			rMinWaveReflection^
+F			UseSurfaceWaveRefl^
 
 #HEATPARTITIONING
 stochasticheating		TypeHeatPartitioning
-0.21			StochasticExponent
-0.18			StochasticAmplitude
+0.21			StochasticExponent^
+0.18			StochasticAmplitude^
 
 #SCHEME
 2			nOrder
@@ -419,33 +434,33 @@ x=0 VAR idl		StringPlot
 2			DnSavePlot
 -1.			DtSavePlot
 -1.0			DxSavePlot
-{MHD} b1x b1y b1z		NameVars
-g rbody			NamePars
+{MHD} b1x b1y b1z te ti	NameVars
+{default}		NamePars
 y=0 VAR idl		StringPlot
 2 			DnSavePlot
 -1.			DtSavePlot
 -1.0			DxSavePlot
-{MHD} b1x b1y b1z		NameVars
-g rbody			NamePars
+{MHD} b1x b1y b1z te ti	NameVars
+{default}		NamePars
 z=0 VAR idl		StringPlot
 2 			DnSavePlot
 -1.			DtSavePlot
 -1.0			DxSavePlot
-{MHD} b1x b1y b1z		NameVars
-g rbody			NamePars
+{MHD} b1x b1y b1z te ti	NameVars
+{default}		NamePars
 3d VAR idl		StringPlot
 2			DnSavePlot
 -1.			DtSavePlot
 -1			DxSavePlot
-{MHD} b1x b1y b1z		NameVars
-g rbody			NamePars
+{MHD} b1x b1y b1z te ti	NameVars
+{default}		NamePars
 
 #SATELLITE
 1			nSatellite
 VAR trajrange		StringSatellite
 1			DnOutput
 -1.0			DtOutput [sec]
-IH/TRAJECTORY/earth.dat		NameTrajectoryFile
+IH/TRAJECTORY/earth.dat	NameTrajectoryFile
 -5 d			StartTimeTraj
 5 d			EndTimeTraj
 1 h			DtTraj
