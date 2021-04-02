@@ -86,7 +86,7 @@ contains
     ! Set buffer grid location and size in OH, and retrieve them for coupler
     if(is_proc(OH_))then
        call OH_set_buffer_grid_get_info( &
-            OH_, iSize, jSize, kSize, BufferMinMaxIh_DI)
+            iSize, jSize, kSize, BufferMinMaxIh_DI)
 
        ! Convert units for radial coordinate
        BufferMinMaxIh_DI(1,:) = BufferMinMaxIh_DI(1,:) &
@@ -126,7 +126,7 @@ contains
     ! Transfer buffer grid from IH to OH to be used for inner boundary
     allocate(Buffer_VIII(nVarCouple,iSize,0:jSize+1,0:kSize+1))
     if(is_proc(IH_)) call IH_get_for_global_buffer(iSize, jSize, kSize, &
-         BufferMinMaxIh_DI, TimeCoupling, IH_, OH_, Buffer_VIII)
+         BufferMinMaxIh_DI, Buffer_VIII)
 
     ! Add up Buffer on IH processors and transfer to OH
     call transfer_real_array(IH_, OH_, size(Buffer_VIII), Buffer_VIII, &
@@ -164,21 +164,6 @@ contains
     !--------------------------------------------------------------------------
     call CON_stop(NameSub// &
          ' is not yet implemented. Correct #COUPLERTYPE command in PARAM.in')
-    call CON_set_do_test(NameSub,DoTest,DoTestMe)
-
-    if(DoTest)write(*,*)NameSub,' starting iProc=',i_proc()
-
-    ! allocate(Buffer_VIII(nVarCouple,iSize, jSize, kSize))
-    ! if(is_proc(OH_)) &
-    !     call OH_get_for_mh(Buffer_VIII, iSize, jSize, kSize, nVarCouple)
-    ! call transfer_real_array(OH_, IH_, iSize*jSize*kSize*nVarCouple, &
-    !     Buffer_VIII)
-    ! if(is_proc(IH_)) &
-    !    call IH_put_from_mh(Buffer_VIII, iSize+1, jSize, kSize, nVarCouple)
-    ! deallocate(Buffer_VIII)
-
-    if(DoTest)write(*,*)NameSub,' finished, iProc=',i_proc()
-
   end subroutine couple_oh_ih
   !============================================================================
 

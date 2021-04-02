@@ -1,5 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 module IH_wrapper
@@ -48,7 +48,7 @@ module IH_wrapper
   public:: IH_put_particles
   public:: IH_get_particle_indexes
   public:: IH_get_particle_coords
- 
+
   ! Coupling with GM
   public:: IH_get_for_gm
 
@@ -62,18 +62,16 @@ module IH_wrapper
   public:: IH_put_from_ee
 
 contains
-  !==========================================================================
+  !============================================================================
 
   subroutine IH_init_session(iSession, TimeSimulation)
 
-    !INPUT PARAMETERS:
     integer,  intent(in) :: iSession         ! session number (starting from 1)
     real,     intent(in) :: TimeSimulation   ! seconds from start time
 
-    character(len=*), parameter :: NameSub='IH_init_session'
-
     logical :: IsUninitialized = .true.
     logical :: DoTest, DoTestMe
+    character(len=*), parameter:: NameSub = 'IH_init_session'
     !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest, DoTestMe)
 
@@ -86,8 +84,8 @@ contains
     if(DoTest)write(*,*)NameSub,' finished for session ',iSession
 
   end subroutine IH_init_session
+  !============================================================================
 
-  !==========================================================================
   subroutine IH_set_param(CompInfo, TypeAction)
 
     use CON_comp_info
@@ -100,14 +98,13 @@ contains
     use CON_physics, ONLY: get_time
     use ModTimeConvert, ONLY: time_real_to_int
 
-    character (len=*), parameter :: NameSub='IH_set_param'
-
     ! Arguments
     type(CompInfoType), intent(inout):: CompInfo   ! Information for this comp.
     character (len=*), intent(in)    :: TypeAction ! What to do
 
     logical :: DoTest,DoTestMe
-    !-------------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'IH_set_param'
+    !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
 
     if(DoTest)write(*,*)NameSub,' called with TypeAction,iProc=',&
@@ -150,19 +147,16 @@ contains
        call CON_stop(NameSub//' SWMF_ERROR: invalid TypeAction='//TypeAction)
     end select
   end subroutine IH_set_param
-
   !============================================================================
 
   subroutine IH_finalize(TimeSimulation)
 
     use IH_ModMain, ONLY: time_loop
 
-    !INPUT PARAMETERS:
     real,     intent(in) :: TimeSimulation   ! seconds from start time
 
-    character(len=*), parameter :: NameSub='IH_finalize'
-
     integer :: iError
+    character(len=*), parameter:: NameSub = 'IH_finalize'
     !--------------------------------------------------------------------------
     ! We are not advancing in time any longer
     time_loop = .false.
@@ -172,20 +166,17 @@ contains
     call IH_error_report('PRINT',0.,iError,.true.)
 
   end subroutine IH_finalize
-
   !============================================================================
 
   subroutine IH_save_restart(TimeSimulation)
 
-    !INPUT PARAMETERS:
     real,     intent(in) :: TimeSimulation   ! seconds from start time
 
-    character(len=*), parameter :: NameSub='IH_save_restart'
-
+    character(len=*), parameter:: NameSub = 'IH_save_restart'
+    !--------------------------------------------------------------------------
     call BATS_save_files('RESTART')
 
   end subroutine IH_save_restart
-
   !============================================================================
 
   subroutine IH_run(TimeSimulation,TimeSimulationLimit)
@@ -193,15 +184,12 @@ contains
     use IH_BATL_lib, ONLY: iProc
     use IH_ModMain, ONLY: Time_Simulation
 
-    !INPUT/OUTPUT ARGUMENTS:
     real, intent(inout):: TimeSimulation   ! current time of component
 
-    !INPUT ARGUMENTS:
     real, intent(in):: TimeSimulationLimit ! simulation time not to be exceeded
 
-    character(len=*), parameter :: NameSub='IH_run'
-
     logical :: DoTest, DoTestMe
+    character(len=*), parameter:: NameSub = 'IH_run'
     !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
 
@@ -220,8 +208,8 @@ contains
     TimeSimulation = Time_Simulation
 
   end subroutine IH_run
-
   !============================================================================
+
   subroutine IH_get_grid_info(nDimOut, iGridOut, iDecompOut)
 
     use IH_BATL_lib, ONLY: nDim
@@ -229,12 +217,11 @@ contains
 
     integer, intent(out):: nDimOut    ! grid dimensionality
     integer, intent(out):: iGridOut   ! grid index (increases with AMR)
-    integer, intent(out):: iDecompOut ! decomposition index 
-
-    character(len=*), parameter :: NameSub='IH_get_grid_info'
+    integer, intent(out):: iDecompOut ! decomposition index
 
     ! Return basic grid information useful for model coupling.
     ! The decomposition index increases with load balance and AMR.
+    character(len=*), parameter:: NameSub = 'IH_get_grid_info'
     !--------------------------------------------------------------------------
 
     nDimOut    = nDim
@@ -267,13 +254,13 @@ contains
     end do
 
   end subroutine IH_find_points
+  !============================================================================
 
-  !===========================================================================
   subroutine IH_get_point_data( &
        iBlockCell_DI, Dist_DI, IsNew, &
        NameVar, nVarIn, nDimIn, nPoint, Xyz_DI, Data_VI, &
        DoSendAllVar)
-    
+
     ! Generic routine for providing point data to another component
     ! If DoSendAllVar is true, send all variables in State_VGB
     ! Otherwise send the variables defined by iVarSource_V
@@ -311,7 +298,7 @@ contains
     integer:: iPoint, iBlock, iProcFound, iVarBuffer, iVar
 
     logical:: DoTest, DoTestMe
-    character(len=*), parameter:: NameSub='IH_get_point_data'
+    character(len=*), parameter:: NameSub = 'IH_get_point_data'
     !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
@@ -388,21 +375,21 @@ contains
     use IH_domain_decomposition
     use CON_coupler
     use IH_ModMain, ONLY: TypeCoordSystem, nVar, NameVarCouple
-    use IH_ModPhysics,ONLY:No2Si_V, UnitX_
+    use IH_ModPhysics, ONLY:No2Si_V, UnitX_
     use IH_ModGeometry,   ONLY: RadiusMin, RadiusMax
-    use IH_BATL_geometry, ONLY: TypeGeometry, IsGenRadius, LogRGen_I 
+    use IH_BATL_geometry, ONLY: TypeGeometry, IsGenRadius, LogRGen_I
     use IH_BATL_lib, ONLY: CoordMin_D, CoordMax_D, Particle_I
     use IH_ModParticleFieldLine, ONLY: KindReg_, &
          UseParticles
     logical:: DoTest,DoTestMe
     logical:: UseParticleLine = .false.
     integer:: nParticle = 0, iError = 0
+
     character(len=*), parameter:: NameSub = 'IH_set_grid'
     !--------------------------------------------------------------------------
-
     DoTest=.false.;DoTestMe=.false.
     ! Here we should set the IH (MH) grid descriptor
-    if(done_dd_init(IH_))return
+    if(done_dd_init(IH_))RETURN
     call init_decomposition(&
          GridID_=IH_,&
          CompID_=IH_,&
@@ -418,7 +405,7 @@ contains
             NameVar   = NameVarCouple,   &
             TypeGeometry = TypeGeometry, &
             Coord1_I  = LogRGen_I,       &
-            Coord2_I  = (/RadiusMin, RadiusMax/))
+            Coord2_I  = [RadiusMin, RadiusMax])
     else
        call set_coord_system(&
             GridID_   = IH_,             &
@@ -427,11 +414,11 @@ contains
             nVar      = nVar,            &
             NameVar   = NameVarCouple,   &
             TypeGeometry = TypeGeometry, &
-            Coord2_I  = (/RadiusMin, RadiusMax/))
+            Coord2_I  = [RadiusMin, RadiusMax])
     end if
 
     if(is_Proc(IH_))then
-       !Initialize the local grid
+       ! Initialize the local grid
 
        call init_decomposition(&
             Domain=MH_Domain,&
@@ -439,23 +426,23 @@ contains
             nDim=3,&
             IsTreeDecomposition=.true.)
 
-       !Get the octree root array
+       ! Get the octree root array
        call MH_get_root_decomposition(MH_Domain)
 
-       !Get the whole octree after the initial refinement
+       ! Get the whole octree after the initial refinement
        call MH_update_local_decomposition(MH_Domain)
 
        MH_Domain%IsLocal=.true.
     end if
     call CON_set_do_test('test_grids',DoTest,DoTestMe)
-    !Repeat the initialization at the global grid level:
-    !Octree root array:
+    ! Repeat the initialization at the global grid level:
+    ! Octree root array:
     if(is_proc0(IH_))call MH_get_root_decomposition(IH_)
 
-    !Broadcast root array:
+    ! Broadcast root array:
     call bcast_decomposition(IH_)
 
-    !Synchronize global and local grids:
+    ! Synchronize global and local grids:
     call synchronize_refinement(&
          GridID_=IH_,&
          LocalDomain=MH_Domain)
@@ -469,19 +456,19 @@ contains
           nParticle = Particle_I(KindReg_)%nParticleMax
           call get_root_decomposition_dd(&
                MH_LineDecomposition, &
-               (/n_proc(IH_)/),      &
-               (/0.50/),              &
+               [n_proc(IH_)],      &
+               [0.50],              &
                ! factors are converted separately to prevent
                ! integer overflow
-               (/real(n_proc(IH_))*real(nParticle) + 0.50/), &
-               (/nParticle/))
+               [real(n_proc(IH_))*real(nParticle) + 0.50], &
+               [nParticle])
        end if
        call bcast_decomposition_dd(MH_LineDecomposition)
        if(DoTest.and.is_proc0(IH_))call show_domain_decomp(&
             MH_LineDecomposition)
     end if
   end subroutine IH_set_grid
-  !============================
+  !============================================================================
   subroutine IH_xyz_to_coord(XyzIn_D, CoordOut_D)
     use CON_coupler
     use ModCoordTransform, ONLY: &
@@ -493,8 +480,8 @@ contains
     integer, parameter :: x_=1, y_=2, z_=3, r_=1
     integer            :: Phi_
     character(len=20)  :: TypeGeometry
-    character(len=*), parameter :: NameSub = 'IH_xyz_to_coord'
-    !----------------------------------------
+    character(len=*), parameter:: NameSub = 'IH_xyz_to_coord'
+    !--------------------------------------------------------------------------
     TypeGeometry = Grid_C(IH_)%TypeGeometry
     if(TypeGeometry(1:9)  == 'cartesian')then
        CoordOut_D = XyzIn_D
@@ -519,6 +506,7 @@ contains
        call radius_to_gen(CoordOut_D(1))
     end if
   contains
+    !==========================================================================
     subroutine radius_to_gen(r)
       use ModInterpolate, ONLY: find_cell
       real, intent(inout) :: r
@@ -527,15 +515,16 @@ contains
       integer       :: i
       real          :: dCoord
       real, pointer :: LogRgen_I(:)
-      !-------------
+      !------------------------------------------------------------------------
       LogRgen_I=>Grid_C(IH_)%Coord1_I
       nRgen    = Grid_C(IH_)%nCoord_D(1)
       call find_cell(0, nRgen-1, alog(r), &
            i, dCoord, LogRgen_I, DoExtrapolate=.true.)
       r = (i + dCoord)/(nRgen - 1)
     end subroutine radius_to_gen
+    !==========================================================================
   end subroutine IH_xyz_to_coord
-  !=============================
+  !============================================================================
   subroutine IH_coord_to_xyz(CoordIn_D, XyzOut_D)
     use CON_coupler
     use ModCoordTransform, ONLY: sph_to_xyz, rlonlat_to_xyz
@@ -546,8 +535,8 @@ contains
     integer, parameter :: x_=1, r_=1
     integer            :: Phi_
     character(len=20)  :: TypeGeometry
-    character(len=*), parameter :: NameSub = 'IH_coord_to_xyz'
-    !-------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'IH_coord_to_xyz'
+    !--------------------------------------------------------------------------
     TypeGeometry = Grid_C(IH_)%TypeGeometry
     if(TypeGeometry(1:9)  == 'cartesian')then
        XyzOut_D = CoordIn_D
@@ -576,23 +565,24 @@ contains
             ' not yet implemented for TypeGeometry='//TypeGeometry)
     end if
   contains
+    !==========================================================================
     subroutine gen_to_radius(r)
       use ModInterpolate, ONLY: linear
-      
+
       ! Convert generalized radial coordinate to true radial coordinate
       real, intent(inout):: r
       integer       :: nRgen
       real, pointer :: LogRgen_I(:)
-      !-------------
+      !------------------------------------------------------------------------
       LogRgen_I=>Grid_C(IH_)%Coord1_I
       nRgen    = Grid_C(IH_)%nCoord_D(1)
-      
+
       ! interpolate the LogRgen_I array for the general coordinate
       r = exp(linear(LogRgen_I, 0, nRgen-1, r*(nRgen-1), DoExtrapolate=.true.))
     end subroutine gen_to_radius
+    !==========================================================================
   end subroutine IH_coord_to_xyz
-
-  !===============================================================
+  !============================================================================
 
   subroutine IH_synchronize_refinement(iProc0,iCommUnion)
 
@@ -601,9 +591,10 @@ contains
 
     integer, intent(in) ::iProc0,iCommUnion
 
-    !Synchronize the local grid decomposition to accomodate the
-    !grid change.
+    ! Synchronize the local grid decomposition to accomodate the
+    ! grid change.
 
+    !--------------------------------------------------------------------------
     if(is_proc(IH_)) &
          call MH_update_local_decomposition(MH_Domain)
 
@@ -614,34 +605,28 @@ contains
          iCommUnion=iCommUnion)
 
   end subroutine IH_synchronize_refinement
-
   !============================================================================
 
-  subroutine IH_set_buffer_grid_get_info(CompID_, &
-       nR, nLon, nLat, BufferMinMax_DI)
+  subroutine IH_set_buffer_grid_get_info(nR, nLon, nLat, BufferMinMax_DI)
 
     use IH_domain_decomposition, ONLY: is_proc
-    use IH_ModBuffer,            ONLY: BuffR_, nLonBuff, nLatBuff,&
-         nRBuff, BufferMin_D, BufferMax_D
+    use IH_ModBuffer,            ONLY: BuffR_, nRBuff, nLonBuff, nLatBuff,&
+         BufferMin_D, BufferMax_D
 
-    integer, intent(in)     :: CompID_
     integer, intent(out)    :: nR, nLon, nLat
     real, intent(out)       :: BufferMinMax_DI(3,2)
 
     logical  :: DoTest, DoTestMe
 
-    character(len=*), parameter :: NameSub = 'IH_set_buffer_grid_get_info'
+    character(len=*), parameter:: NameSub = 'IH_set_buffer_grid_get_info'
     !--------------------------------------------------------------------------
-    call CON_set_do_test(NameSub,DoTest, DoTestMe)
-
-    ! Make sure only a coupling target component is executing this 
-    if(.not. is_proc(CompID_)) RETURN
+    call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
     ! Return buffer size and limits to SWMF calling routine
     BufferMinMax_DI(:,1) = BufferMin_D
     BufferMinMax_DI(:,2) = BufferMax_D
 
-    nR     = nRBuff 
+    nR     = nRBuff
     nLon   = nLonBuff
     nLat   = nLatBuff
 
@@ -652,7 +637,7 @@ contains
     end if
 
   end subroutine IH_set_buffer_grid_get_info
-  !===========================================================================
+  !============================================================================
   subroutine IH_save_global_buffer(nVarCouple, nR, nLon, nLat, BufferIn_VG)
     use IH_ModBuffer,      ONLY: BufferState_VG
     use IH_ModMessagePass, ONLY: DoExtraMessagePass
@@ -678,9 +663,9 @@ contains
     use IH_ModPhysics,    ONLY: UnitRhoU_, UnitEnergyDens_, UnitP_
     integer,intent(in) :: nVarCouple, nR, nLon, nLat
     real,intent(in)    :: BufferIn_VG(nVarCouple,nR,0:nLon+1,0:nLat+1)
-    
-    character(len=*), parameter :: NameSub = 'IH_save_global_buffer'
-    !-------------------------------------------------------------------------
+
+    character(len=*), parameter:: NameSub = 'IH_save_global_buffer'
+    !--------------------------------------------------------------------------
     TypeCoordSource = Grid_C(iCompSourceCouple) % TypeCoord
     ! Convert from SI units to normalized units
     BufferState_VG(Rho_,:,:,:) = BufferIn_VG(iVar_V(RhoCouple_),:,:,:)&
@@ -693,12 +678,12 @@ contains
          BufferState_VG(Bx_:Bz_,:,:,:) =  &
          BufferIn_VG(iVar_V(BxCouple_):iVar_V(BzCouple_),:,:,:)      &
          *Si2No_V(UnitB_)
-    
+
     if(DoCoupleVar_V(Wave_))&
          BufferState_VG(WaveFirst_:WaveLast_,:,:,:) =  &
          BufferIn_VG(iVar_V(WaveFirstCouple_):iVar_V(WaveLastCouple_),:,:,:)&
          *Si2No_V(UnitEnergyDens_)
-    
+
     if(DoCoupleVar_V(ChargeState_))&
          BufferState_VG(ChargeStateFirst_:ChargeStateLast_,:,:,:) = &
          BufferIn_VG(&
@@ -735,21 +720,20 @@ contains
     else
        IsFullyCoupledFluid = .true.
     end if
-    ! Make sure that ghost cells get filled after 
+    ! Make sure that ghost cells get filled after
     DoExtraMessagePass = .true.
   end subroutine IH_save_global_buffer
-  !===========================================================================
+  !============================================================================
   subroutine IH_match_ibc
 
     use IH_ModMessagePass, ONLY: exchange_messages, fill_in_from_buffer
-    use IH_ModGeometry,ONLY:R_BLK
+    use IH_ModGeometry, ONLY:R_BLK
     use IH_BATL_lib,  ONLY: Xyz_DGB, iProc
     use IH_ModMain,   ONLY: nI, nJ, nK, MaxDim, nBlock, Unused_B
     use IH_ModBuffer, ONLY: BufferMax_D, get_from_spher_buffer_grid
-    use IH_ModAdvance,ONLY:nVar,State_VGB,rho_,rhoUx_,rhoUz_,Ux_,Uz_
+    use IH_ModAdvance, ONLY:nVar,State_VGB,rho_,rhoUx_,rhoUz_,Ux_,Uz_
     use IH_ModIO,     ONLY:IsRestartCoupler
 
-    character(len=*), parameter :: NameSub='IH_match_ibc'
     character(len=*), parameter :: StringTest ='IH_fill_buffer_only'
 
     integer  :: iBlock
@@ -757,6 +741,8 @@ contains
     real     :: x_D(MaxDim), rBuffMax
     logical  :: DoTest,DoTestMe
     ! ------------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'IH_match_ibc'
+    !--------------------------------------------------------------------------
     if(IsRestartCoupler) RETURN
 
     rBuffMax = BufferMax_D(1)
@@ -774,23 +760,23 @@ contains
 
        ! Fill in the physical cells, which are outside the buffer grid
        ! When testing, do not fill cells outside the buffer
-       if(.not. DoTest) then 
+       if(.not. DoTest) then
           do k = 1, nK; do j = 1 , nJ; do i = 1, nI
              if(R_BLK(i,j,k,iBlock) < rBuffMax)CYCLE
 
-             ! For each grid point, get the values at the base (buffer) 
+             ! For each grid point, get the values at the base (buffer)
              x_D = Xyz_DGB(:,i,j,k,iBlock)*rBuffMax/R_BLK(i,j,k,iBlock)
 
              ! The grid point values are extracted from the base values
              call get_from_spher_buffer_grid(&
                   x_D, nVar, State_VGB(:,i,j,k,iBlock))
 
-             !Transform primitive variables to conservative ones:
+             ! Transform primitive variables to conservative ones:
              State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock)=&
                   State_VGB(Ux_:Uz_,i,j,k,iBlock)*&
                   State_VGB(rho_,i,j,k,iBlock)
 
-             !Scale as (r/R)^2:
+             ! Scale as (r/R)^2:
              State_VGB(:,i,j,k,iBlock)=&
                   State_VGB(:,i,j,k,iBlock)*&
                   (rBuffMax/R_BLK(i,j,k,iBlock))**2
@@ -800,27 +786,25 @@ contains
     end do
 
     ! Fill in the ghostcells, calculate energy
-    call exchange_messages 
+    call exchange_messages
 
   end subroutine IH_match_ibc
-
   !============================================================================
 
   subroutine IH_get_for_global_buffer(&
-       nR, nLon,nLat, BufferMinMax_DI, &
-       TimeCoupling, iCompSource, iCompTarget, Buffer_VG)
+       nR, nLon, nLat, BufferMinMax_DI, Buffer_VG)
 
     ! DESCRIPTION
 
-    ! This subroutines fills a buffer grid by interpolating from a source 
+    ! This subroutines fills a buffer grid by interpolating from a source
     ! IH_BATSRUS grid using second-order trilinear interpolation.
 
     ! The buffer grid can be a spherical shell, or a segment of such a shell.
 
     ! All state variables in the source grid are interpolated, but only those
-    ! needed for coupling (as determined by CON_coupler) are actually passed. 
+    ! needed for coupling (as determined by CON_coupler) are actually passed.
 
-    ! The filled buffer state vector is converted to SI units and vector 
+    ! The filled buffer state vector is converted to SI units and vector
     ! quantities are rotated to the target component coordinate system.
 
     ! INPUT:
@@ -837,7 +821,6 @@ contains
     ! REVISION HISTORY
     ! 30Dec2011 R. Oran   - initial version
 
-    !USES:
     use IH_ModSize, ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use IH_ModMain, ONLY: UseB0, rUpperModel
     use IH_ModBuffer,  ONLY: BuffR_, BuffLon_, BuffLat_
@@ -861,14 +844,12 @@ contains
     use ModCoordTransform, ONLY: rlonlat_to_xyz
     use ModInterpolate,    ONLY: trilinear
     use IH_BATL_lib,       ONLY: iProc, &
-         find_grid_block, xyz_to_coord, CoordMin_DB, CellSize_DB, nDim
+         find_grid_block, xyz_to_coord, CoordMin_DB, CellSize_DB
 
-    !INPUT ARGUMENTS:
     ! Buffer size and limits
     integer,intent(in) :: nR, nLon, nLat
     real, intent(in)   :: TimeCoupling
-    real, intent(in)   :: BufferMinMax_DI(nDim,2)
-    integer,intent(in) :: iCompSource, iCompTarget
+    real, intent(in)   :: BufferMinMax_DI(3,2)
 
     ! OUTPUT ARGUMENTS
     ! State variables to be fiiled in all buffer grid points
@@ -899,27 +880,26 @@ contains
     integer   :: &
          iRhoCouple,              &
          iRhoUxCouple,            &
-         iRhoUzCouple,            &   
-         iPCouple,                &       
-         iPeCouple,               &      
-         iPparCouple,             &    
-         iBxCouple,               &      
-         iBzCouple,               &      
+         iRhoUzCouple,            &
+         iPCouple,                &
+         iPeCouple,               &
+         iPparCouple,             &
+         iBxCouple,               &
+         iBzCouple,               &
          iWaveFirstCouple,        &
          iWaveLastCouple,         &
          iChargeStateFirstCouple, &
          iChargeStateLastCouple,  &
          iEhotCouple
 
-
     integer   :: iLonNew, iBlock, iPe, iR, iLon, iLat
     real      :: r, lon, lat
     logical   :: DoTest, DoTestMe
-    
-    character (len=*), parameter :: NameSub='IH_get_for_buffer_grid'
+
+    character(len=*), parameter:: NameSub = 'IH_get_for_global_buffer'
     !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
-   
+
     Buffer_VG = 0.0
 
     ! get variable indices in buffer
@@ -938,7 +918,7 @@ contains
     iChargeStateLastCouple  = iVar_V(ChargeStateLastCouple_)
 
     ! Calculate buffer grid spacing
-    nCell_D  = (/nR, nLon, nLat/)
+    nCell_D  = [nR, nLon, nLat]
     SphMin_D = BufferMinMax_DI(:,1)
     SphMax_D = BufferMinMax_DI(:,2)
 
@@ -949,9 +929,9 @@ contains
     dSph_D(BuffR_) = (SphMax_D(BuffR_) - SphMin_D(BuffR_))/(nCell_D(BuffR_)-1)
 
     ! Loop over buffer grid points
-    do iLat = 1, nLat ; do iLon = 1, nLon ; do iR = 1, nR  
+    do iLat = 1, nLat ; do iLon = 1, nLon ; do iR = 1, nR
 
-       ! Find the coordinates of the current buffer grid point, 
+       ! Find the coordinates of the current buffer grid point,
        r     =  SphMin_D(BuffR_)     + (iR - 1)*dSph_D(BuffR_)
        Lon   =  SphMin_D(BuffLon_)   + (real(iLon)-0.5)*dSph_D(BuffLon_)
        Lat   =  SphMin_D(BuffLat_)   + (real(iLat)-0.5)*dSph_D(BuffLat_)
@@ -971,12 +951,12 @@ contains
        ! Buffer grid point position normalized by the grid spacing
        BufferNorm_D = (CoordBuffer_D - CoordMin_DB(:,iBlock)) &
             / CellSize_DB(:,iBlock) + 0.5
-       
+
        ! Interpolate from the true solution block to the buffer grid point
        StateInPoint_V = &
             trilinear(State_VGB(:,:,:,:,iBlock), &
             nVar, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
-            BufferNorm_D) 
+            BufferNorm_D)
 
        ! Fill in the coupled state variables
        ! Convert to SI units
@@ -984,7 +964,7 @@ contains
        Buffer_V(iRhoCouple)= StateInPoint_V(rho_)*No2Si_V(UnitRho_)
        Buffer_V(iRhoUxCouple:iRhoUzCouple) = &
             StateInPoint_V(rhoUx_:rhoUz_)*No2Si_V(UnitRhoU_)
-      
+
        if(DoCoupleVar_V(Bfield_)) then
           if(UseB0)then
              B0_D = &
@@ -1000,7 +980,7 @@ contains
        end if
 
        Buffer_V(iPCouple)  = StateInPoint_V(p_)*No2Si_V(UnitP_)
-       
+
        if(DoCoupleVar_V(Wave_)) &
             Buffer_V(iWaveFirstCouple:iWaveLastCouple) = &
             StateInPoint_V(WaveFirst_:WaveLast_)&
@@ -1010,7 +990,6 @@ contains
             Buffer_V(iChargeStateFirstCouple:iChargeStateLastCouple) = &
             StateInPoint_V(ChargeStateFirst_:ChargeStateLast_)&
             * No2Si_V(UnitRho_)
-       
 
        if(DoCoupleVar_V(ElectronPressure_))then
           Buffer_V(iPeCouple) = StateInPoint_V(Pe_)*No2Si_V(UnitP_)
@@ -1031,7 +1010,7 @@ contains
     end do; end do; end do
 
     ! Fill buffer grid ghost cells
-    do iLon = 1, nLon 
+    do iLon = 1, nLon
        iLonNew = iLon + nLon/2
        if (iLonNew > nLon) iLonNew = iLonNew - nLon
        Buffer_VG(:,:,iLon, 0) = Buffer_VG(:,:,iLonNew, 1)
@@ -1040,12 +1019,10 @@ contains
     Buffer_VG(:,:,0,:) = Buffer_VG(:,:,nLon,:)
     Buffer_VG(:,:,nLon+1,:) = Buffer_VG(:,:,1,:)
   end subroutine IH_get_for_global_buffer
-
   !============================================================================
 
   subroutine IH_get_for_mh(nPartial,iGetStart,Get,W,State_V,nVar)
 
-    !USES:
     use IH_ModAdvance, ONLY: State_VGB, UseElectronPressure
     use IH_ModB0,      ONLY: B0_DGB
     use IH_ModPhysics, ONLY: No2Si_V, UnitRho_, UnitP_, UnitRhoU_, UnitB_
@@ -1055,7 +1032,7 @@ contains
     use IH_ModMain,    ONLY: UseB0
 
     use CON_router, ONLY: IndexPtrType, WeightPtrType
-    use CON_coupler,ONLY: iVar_V, DoCoupleVar_V, &
+    use CON_coupler, ONLY: iVar_V, DoCoupleVar_V, &
          RhoCouple_, RhoUxCouple_, &
          RhoUzCouple_, PCouple_, BxCouple_, BzCouple_, PeCouple_, PparCouple_,&
          WaveFirstCouple_, WaveLastCouple_, Bfield_, Wave_, AnisoPressure_, &
@@ -1063,7 +1040,6 @@ contains
          CollisionlessHeatFlux_, ChargeStateFirstCouple_, &
          ChargeStateLastCouple_, ChargeState_
 
-    !INPUT ARGUMENTS:
     integer,intent(in)              ::nPartial,iGetStart,nVar
     type(IndexPtrType),intent(in)   ::Get
     type(WeightPtrType),intent(in)  ::W
@@ -1074,22 +1050,21 @@ contains
     integer   :: &
          iRhoCouple,              &
          iRhoUxCouple,            &
-         iRhoUzCouple,            &   
-         iPCouple,                &       
-         iPeCouple,               &      
-         iPparCouple,             &    
-         iBxCouple,               &      
-         iBzCouple,               &      
+         iRhoUzCouple,            &
+         iPCouple,                &
+         iPeCouple,               &
+         iPparCouple,             &
+         iBxCouple,               &
+         iBzCouple,               &
          iWaveFirstCouple,        &
          iWaveLastCouple,         &
          iChargeStateFirstCouple, &
          iChargeStateLastCouple,  &
          iEhotCouple
 
-    character (len=*), parameter :: NameSub='IH_get_for_mh'
-
     ! 'Safety' parameter, to keep the coupler toolkit unchanged
     ! Useless, to my mind.
+    character(len=*), parameter:: NameSub = 'IH_get_for_mh'
     !--------------------------------------------------------------------------
     ! get variable indices in buffer
     iRhoCouple       = iVar_V(RhoCouple_)
@@ -1133,7 +1108,7 @@ contains
     if(DoCoupleVar_V(ChargeState_)) &
          State_V(iChargeStateFirstCouple:iChargeStateLastCouple) = &
          State_VGB(ChargeStateFirst_:ChargeStateLast_,i,j,k,iBlock)*Weight
-    
+
     State_V(iPCouple)  = State_VGB(p_,i,j,k,iBlock) *Weight
 
     if(DoCoupleVar_V(ElectronPressure_))then
@@ -1159,7 +1134,7 @@ contains
 
        State_V(iRhoCouple) = &
             State_V(iRhoCouple) + &
-            State_VGB(rho_,i,j,k,iBlock)*Weight 
+            State_VGB(rho_,i,j,k,iBlock)*Weight
         if(DoCoupleVar_V(Momentum_))State_V(iRhoUxCouple:iRhoUzCouple) = &
             State_V(iRhoUxCouple:iRhoUzCouple) + &
             State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock) *Weight
@@ -1169,7 +1144,7 @@ contains
                   State_V(iBxCouple:iBzCouple) + &
                   (State_VGB(Bx_:Bz_,i,j,k,iBlock) + &
                   B0_DGB(:,i,j,k,iBlock))*Weight
-          else 
+          else
              State_V(iBxCouple:iBzCouple) = &
                   State_V(iBxCouple:iBzCouple) + &
                   State_VGB(Bx_:Bz_,i,j,k,iBlock)*Weight
@@ -1185,7 +1160,7 @@ contains
             State_V(iChargeStateFirstCouple:iChargeStateLastCouple) = &
             State_V(iChargeStateFirstCouple:iChargeStateLastCouple) + &
             State_VGB(ChargeStateFirst_:ChargeStateLast_,i,j,k,iBlock)*Weight
-       
+
        if(DoCoupleVar_V(AnisoPressure_)) State_V(iPparCouple) = &
             State_V(iPparCouple) + &
             State_VGB(Ppar_,i,j,k,iBlock)*Weight
@@ -1229,7 +1204,7 @@ contains
          State_V(iChargeStateFirstCouple:iChargeStateLastCouple) = &
          State_V(iChargeStateFirstCouple:iChargeStateLastCouple) &
          * No2Si_V(UnitRho_)
-    
+
     if(DoCoupleVar_V(ElectronPressure_)) State_V(iPeCouple) = &
          State_V(iPeCouple)*No2Si_V(UnitP_)
 
@@ -1251,15 +1226,14 @@ contains
     integer,          intent(in) :: iTraceMode
     integer,          intent(in) :: iIndex_II(:,:)
     real,             intent(in) :: RSoftBoundary
-    character(len=*), parameter  :: NameSub='IH_extract_line'
+    character(len=*), parameter:: NameSub = 'IH_extract_line'
     !--------------------------------------------------------------------------
-    ! set the soft boundary 
+    ! set the soft boundary
          RSoftBoundaryBats = RSoftBoundary
     ! extract field lines starting at input points
     call extract_particle_line(Xyz_DI,iTraceMode,iIndex_II,&
          UseInputInGenCoord=.true.)
   end subroutine IH_extract_line
-
   !============================================================================
 
   subroutine IH_put_particles(Xyz_DI, iIndex_II)
@@ -1268,7 +1242,7 @@ contains
     ! add particles with specified coordinates to the already existing lines
     real,    intent(in):: Xyz_DI(:,:)
     integer, intent(in):: iIndex_II(:,:)
-    !------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     call put_particles(&
          iKindParticle      = KindReg_ ,&
          StateIn_VI         = Xyz_DI   ,&
@@ -1276,39 +1250,36 @@ contains
          UseInputInGenCoord = .true.   ,&
          DoReplace          = .true.     )
   end subroutine IH_put_particles
-  !=====================================
+  !============================================================================
   subroutine IH_get_particle_indexes(iParticle, iIndex_I)
     use IH_ModParticleFieldLine, ONLY: fl_, id_, KindReg_
     use IH_BATL_particles, ONLY: Particle_I
     integer, intent(in) :: iParticle
     integer, intent(out):: iIndex_I(2)
-    character(len=*), parameter:: NameSub='IH_get_particle_indexes'
-    !---------------------------------------
+    character(len=*), parameter:: NameSub = 'IH_get_particle_indexes'
+    !--------------------------------------------------------------------------
     iIndex_I(1) = Particle_I(KindReg_)%iIndex_II(fl_, iParticle)
     iIndex_I(2) = Particle_I(KindReg_)%iIndex_II(id_, iParticle)
   end subroutine IH_get_particle_indexes
-  !====================================
+  !============================================================================
   subroutine IH_get_particle_coords(iParticle, Xyz_D)
     use IH_BATL_lib, ONLY: nDim
     use IH_ModParticleFieldLine, ONLY: KindReg_
     use IH_BATL_particles, ONLY: Particle_I
     integer, intent(in) :: iParticle
     real,    intent(out):: Xyz_D(nDim)
-    !--------------------------------------------------------------
+    !--------------------------------------------------------------------------
     Xyz_D = Particle_I(KindReg_)%State_VI(1:nDim, iParticle)
   end subroutine IH_get_particle_coords
   !============================================================================
-  !BOP
-  !ROUTINE: IH_put_from_mh - transform and put the data got from MH
-  !INTERFACE:
+  ! ROUTINE: IH_put_from_mh - transform and put the data got from MH
   subroutine IH_put_from_mh(nPartial,&
        iPutStart,&
-       Put,& 
+       Put,&
        Weight,&
        DoAdd,&
        StateSI_V,&
        nVar)
-    !USES:
     use CON_router,    ONLY: IndexPtrType, WeightPtrType
     use CON_coupler,   ONLY: iVar_V, DoCoupleVar_V, &
          RhoCouple_, RhoUxCouple_, RhoUzCouple_, &
@@ -1327,26 +1298,22 @@ contains
          WaveFirst_, WaveLast_, Pe_, Ppar_, Ehot_, ChargeStateFirst_, &
          ChargeStateLast_
 
-    !INPUT ARGUMENTS:
     integer,intent(in)::nPartial,iPutStart,nVar
     type(IndexPtrType),intent(in)::Put
     type(WeightPtrType),intent(in)::Weight
     logical,intent(in)::DoAdd
     real,dimension(nVar),intent(in)::StateSI_V
 
-    !REVISION HISTORY:
-    !18JUL03     I.Sokolov <igorsok@umich.edu> - intial prototype/code
-    !23AUG03                                     prolog
-    !03SEP03     G.Toth    <gtoth@umich.edu>   - simplified
-    !05APR11     R. Oran   <oran@umich.edu>    - Use non-fixed coupling indices
+    ! revision history:
+    ! 18JUL03     I.Sokolov <igorsok@umich.edu> - intial prototype/code
+    ! 23AUG03                                     prolog
+    ! 03SEP03     G.Toth    <gtoth@umich.edu>   - simplified
+    ! 05APR11     R. Oran   <oran@umich.edu>    - Use non-fixed coupling indices
     !                                          derived by the coupler according
     !                                           to actual variable names
     !                                           (see use CON_coupler).
     !                                           Handle anisotropic pressure.
-    !                                 
-    !EOP
-
-    character (len=*), parameter :: NameSub='IH_put_from_mh'
+    !
 
     real,dimension(nVar)::State_V
     integer             :: i, j, k, iBlock
@@ -1365,6 +1332,7 @@ contains
          iChargeStateLastCouple,  &
          iEhotCouple
 
+    character(len=*), parameter:: NameSub = 'IH_put_from_mh'
     !--------------------------------------------------------------------------
     ! get variable indices in buffer
     iRhoCouple       = iVar_V(RhoCouple_)
@@ -1491,7 +1459,7 @@ contains
        if(DoCoupleVar_V(ChargeState_))&
             State_VGB(ChargeStateFirst_:ChargeStateLast_,i,j,k,iBlock) = &
             State_V(iChargeStateFirstCouple:iChargeStateLastCouple)
-       
+
        State_VGB(p_,i,j,k,iBlock) = State_V(iPCouple)
        if(DoCoupleVar_V(AnisoPressure_))then
           State_VGB(Ppar_,i,j,k,iBlock) = State_V(iPparCouple)
@@ -1512,8 +1480,8 @@ contains
     end if
 
   end subroutine IH_put_from_mh
-
   !============================================================================
+
   subroutine IH_check_ready_for_sp(IsReady)
     use ModMpi
     use CON_coupler, ONLY: is_proc0, i_proc0, i_comm
@@ -1521,8 +1489,8 @@ contains
     logical, intent(out):: IsReady
 
     integer :: iError
-    !------------------------------------------------
     ! get value at IH root and broadcast to all SWMF processors
+    !--------------------------------------------------------------------------
     if(is_proc0(IH_)) &
          IsReady = UseParticles
     call MPI_Bcast(IsReady, 1, MPI_LOGICAL, i_proc0(IH_), i_comm(), iError)
@@ -1532,14 +1500,12 @@ contains
   subroutine IH_get_for_gm(&
        nPartial,iGetStart,Get,W,State_V,nVar,TimeCoupling)
 
-    !USES:
     use IH_ModAdvance, ONLY: State_VGB, Rho_, RhoUx_, RhoUz_, Bx_, Bz_,P_
     use IH_ModB0,      ONLY: B0_DGB
     use IH_ModPhysics, ONLY: No2Si_V, UnitRho_, UnitP_, UnitRhoU_, UnitB_
     use IH_ModMain,    ONLY: UseRotatingFrame,UseB0
     use CON_router
 
-    !INPUT ARGUMENTS:
     integer,intent(in)::nPartial,iGetStart,nVar
     type(IndexPtrType),intent(in)::Get
     type(WeightPtrType),intent(in)::W
@@ -1549,9 +1515,8 @@ contains
     integer::iGet, i, j, k, iBlock
     real :: Weight, Momentum_D(3),Density
 
-    character (len=*), parameter :: NameSub='IH_get_for_gm'
-    !The meaning of state intdex in buffer and in model can be 
-    !different. Below are the conventions for buffer:
+    ! The meaning of state intdex in buffer and in model can be
+    ! different. Below are the conventions for buffer:
     integer,parameter::&
          BuffRho_  =1,&
          BuffRhoUx_=2,&
@@ -1560,8 +1525,8 @@ contains
          BuffBz_   =7,&
          BuffP_    =8
 
-
-    !----------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'IH_get_for_gm'
+    !--------------------------------------------------------------------------
 
     i      = Get%iCB_II(1,iGetStart)
     j      = Get%iCB_II(2,iGetStart)
@@ -1593,7 +1558,7 @@ contains
        iBlock = Get%iCB_II(4,iGet)
        Weight = W%Weight_I(iGet)
 
-       Density = State_VGB(rho_,i,j,k,iBlock) 
+       Density = State_VGB(rho_,i,j,k,iBlock)
        State_V(BuffRho_)=State_V(BuffRho_) + Density*Weight
 
        Momentum_D = State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock)
@@ -1633,16 +1598,17 @@ contains
       Momentum_D(y_)= Momentum_D(y_) &
            + Density*OmegaBody*Xyz_DGB(x_,i,j,k,iBlock)
     end subroutine add_density_omega_cross_r
+    !==========================================================================
 
   end subroutine IH_get_for_gm
-
   !============================================================================
+
   subroutine IH_get_for_pt(IsNew, NameVar, nVarIn, nDimIn, nPoint, Xyz_DI, &
        Data_VI)
-    
+
     ! This routine is actually for OH-PT coupling
 
-    ! Interpolate Data_VI from OH at the list of positions Xyz_DI 
+    ! Interpolate Data_VI from OH at the list of positions Xyz_DI
     ! required by PT
 
     logical,          intent(in):: IsNew   ! true for new point array
@@ -1657,13 +1623,13 @@ contains
     ! Optimize search by storing indexes and distances
     integer, allocatable, save:: iBlockCell_DI(:,:)
     real,    allocatable, save:: Dist_DI(:,:)
-    !-----------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     call IH_get_point_data(iBlockCell_DI, Dist_DI, IsNew, &
          NameVar, nVarIn, nDimIn, nPoint, Xyz_DI, Data_VI, &
          DoSendAllVar=.true.)
 
   end subroutine IH_get_for_pt
-  !===========================================================================
+  !============================================================================
   subroutine IH_put_from_pt( &
        NameVar, nVarData, nPoint, Data_VI, iPoint_I, Pos_DI)
 
@@ -1684,12 +1650,12 @@ contains
     real, intent(out), allocatable, optional:: Pos_DI(:,:)  ! Position vectors
 
     ! For unit conversion
-    real, allocatable, save:: Si2No_I(:) 
+    real, allocatable, save:: Si2No_I(:)
 
     integer:: i, j, k, iBlock, iPoint, iVar
 
     logical:: DoTest, DoTestMe
-    character(len=*), parameter :: NameSub='IH_put_from_pt'
+    character(len=*), parameter:: NameSub = 'IH_put_from_pt'
     !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
     if(DoTestMe)write(*,*) NameSub,' starting with present(Data_VI)=', &
@@ -1744,7 +1710,7 @@ contains
     iPoint = 0
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
-       
+
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
           iPoint = iPoint + 1
@@ -1758,7 +1724,7 @@ contains
          ExtraSource_ICB(:,iTest,jTest,kTest,iBlockTest)
 
   end subroutine IH_put_from_pt
-  !===========================================================================
+  !============================================================================
   subroutine IH_get_for_pt_dt(DtSi)
     ! Calculate the global time step for PC
     use IH_ModMain,            ONLY: Dt
@@ -1771,11 +1737,11 @@ contains
     call set_global_timestep(TimeSimulationLimit=-1.0)
     DtSi = Dt*No2Si_V(UnitT_)
   end subroutine IH_get_for_pt_dt
-  !===========================================================================
+  !============================================================================
   subroutine IH_get_for_sc(IsNew, NameVar, nVarIn, nDimIn, nPoint, Xyz_DI, &
        Data_VI)
 
-    ! Interpolate Data_VI from EE at the list of positions Xyz_DI 
+    ! Interpolate Data_VI from EE at the list of positions Xyz_DI
     ! required by SC
 
     use IH_ModPhysics, ONLY: Si2No_V, UnitX_, No2Si_V, iUnitCons_V
@@ -1806,7 +1772,7 @@ contains
     integer:: iPoint, iBlock, iProcFound
 
     logical:: DoTest, DoTestMe
-    character(len=*), parameter:: NameSub='IH_get_for_sc'
+    character(len=*), parameter:: NameSub = 'IH_get_for_sc'
     !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
@@ -1884,7 +1850,7 @@ contains
     use IH_ModMain,      ONLY: UseB0
     use IH_ModB0,        ONLY: B0_DGB
     use IH_ModAdvance,   ONLY: State_VGB, Bx_, Bz_
-    use IH_ModMultiFluid,ONLY: nIonFluid
+    use IH_ModMultiFluid, ONLY: nIonFluid
     use IH_ModEnergy,    ONLY: calc_energy
     use CON_coupler,     ONLY: Grid_C, EE_, iVarTarget_V
     use ModNumConst,     ONLY: cPi, cTwoPi
@@ -1901,7 +1867,7 @@ contains
     integer :: i, j, k, iBlock, iPoint, iVarBuffer, iVar
     real    :: CoordMinEe_D(3), CoordMaxEe_D(3), Coord_D(3)
 
-    character(len=*), parameter :: NameSub='IH_get_ee_region'
+    character(len=*), parameter:: NameSub = 'IH_get_ee_region'
     !--------------------------------------------------------------------------
     if(.not.IsRLonLat) &
          call CON_stop(NameSub//' works for spherical grid only')
@@ -1923,7 +1889,7 @@ contains
 
           ! Set generalized coordinates (longitude and latitude)
           Coord_D = &
-               CoordMin_DB(:,iBlock) + ((/i,j,k/)-0.5)*CellSize_DB(:,iBlock)
+               CoordMin_DB(:,iBlock) + ([i,j,k]-0.5)*CellSize_DB(:,iBlock)
 
           ! Overwrite first coordinate with true radius
           Coord_D(1) = r_BLK(i,j,k,iBlock)
@@ -1963,8 +1929,8 @@ contains
     if(DoCountOnly) nPoint = iPoint
 
   end subroutine IH_get_ee_region
+  !============================================================================
 
-  !===========================================================================
   subroutine IH_put_from_ee( &
        NameVar, nVarData, nPoint, Data_VI, iPoint_I, Pos_DI)
 
@@ -1980,7 +1946,7 @@ contains
     integer, intent(in), optional:: iPoint_I(nPoint)! Order of data
     real, intent(out), allocatable, optional:: Pos_DI(:,:) ! Position vectors
 
-    character(len=*), parameter :: NameSub='IH_put_from_ee'
+    character(len=*), parameter:: NameSub = 'IH_put_from_ee'
     !--------------------------------------------------------------------------
 
     if(.not. present(Data_VI))then
@@ -2001,14 +1967,14 @@ contains
     call IH_get_ee_region(NameVar, nVarData, nPoint, Pos_DI, Data_VI, iPoint_I)
 
   end subroutine IH_put_from_ee
+  !============================================================================
 
-  !===========================================================================
   subroutine IH_get_for_ee(IsNew, NameVar, nVarIn, nDimIn, nPoint, Xyz_DI, &
        Data_VI)
-    
+
     ! This routine is actually for SC-EE coupling
 
-    ! Interpolate Data_VI from SC at the list of positions Xyz_DI 
+    ! Interpolate Data_VI from SC at the list of positions Xyz_DI
     ! required by EE
 
     logical,          intent(in):: IsNew   ! true for new point array
@@ -2023,18 +1989,20 @@ contains
     ! Optimize search by storing indexes and distances
     integer, allocatable, save:: iBlockCell_DI(:,:)
     real,    allocatable, save:: Dist_DI(:,:)
-    !-----------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     call IH_get_point_data(iBlockCell_DI, Dist_DI, IsNew, &
          NameVar, nVarIn, nDimIn, nPoint, Xyz_DI, Data_VI)
 
   end subroutine IH_get_for_ee
-  !===========================
+  !============================================================================
   integer function IH_n_particle(iBlockLocal)
     use IH_ModParticleFieldLine, ONLY: KindReg_
     use IH_BATL_lib, ONLY: Particle_I
     integer, intent(in) :: iBlockLocal
-    !---------------------------------
+    !--------------------------------------------------------------------------
     IH_n_particle = Particle_I(KindReg_)%nParticle
   end function IH_n_particle
+  !============================================================================
 
 end module IH_wrapper
+!==============================================================================

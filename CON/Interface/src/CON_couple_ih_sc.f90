@@ -74,8 +74,7 @@ contains
 
     ! Set buffer grid location and size in IH, and retrieve them for coupler
     if(is_proc(IH_)) then
-       call IH_set_buffer_grid_get_info( &
-            IH_,iSize, jSize, kSize, BufferMinMaxSc_DI)
+       call IH_set_buffer_grid_get_info(iSize, jSize, kSize, BufferMinMaxSc_DI)
 
        ! Convert units for radial coordinate  before passing to SC
        BufferMinMaxSc_DI(1,:) = BufferMinMaxSc_DI(1,:) &
@@ -116,7 +115,7 @@ contains
     ! Transfer buffer grid from SC to IH to be used for inner boundary
     allocate(Buffer_VIII(nVarCouple,iSize,0:jSize+1,0:kSize+1))
     if(is_proc(SC_)) call SC_get_for_global_buffer(iSize, jSize, kSize, &
-         BufferMinMaxSc_DI, TimeCoupling, SC_, IH_, Buffer_VIII)
+         BufferMinMaxSc_DI, Buffer_VIII)
 
     ! Add up Buffer on SC processors and transfer to IH
     call transfer_real_array(SC_, IH_, size(Buffer_VIII), Buffer_VIII, &
