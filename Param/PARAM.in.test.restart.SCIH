@@ -83,7 +83,7 @@ SC/fdips_bxyz.out		NameFile
 real4			TypeFile
 
 HARMONICSFILE
-SC/harmonics_adapt.dat	NameHarmonicsFile
+SC/harmonics_adapt.dat		NameHarmonicsFile
 
 HARMONICSGRID
 1.0			rMagnetogram
@@ -102,19 +102,19 @@ T			UseCurlB0
 2.5			rCurrentFreeB0
 
 #POYNTINGFLUX
-1.0e6			PoyntingFluxPerBSi^ [J/m^2/s/T]
+1.0e6			PoyntingFluxPerBSi [J/m^2/s/T]
 
 #CORONALHEATING
 turbulentcascade		TypeCoronalHeating
 T			UseWaveReflection
-1.5e5			LperpTimesSqrtBSi^
-0.0			rMinWaveReflection^
-F			UseSurfaceWaveRefl^
+1.5e5			LperpTimesSqrtBSi
+0.0			rMinWaveReflection
+F			UseSurfaceWaveRefl
 
 #HEATPARTITIONING
 stochasticheating		TypeHeatPartitioning
-0.21			StochasticExponent^
-0.18			StochasticAmplitude^
+0.21			StochasticExponent
+0.18			StochasticAmplitude
 
 #RADIATIVECOOLING
 T			UseRadCooling
@@ -138,7 +138,7 @@ turn these off when restarting
 ---------------------------------------------------
 GRIDGEOMETRY
 spherical_genr		TypeGeometry
-SC/Param/grid_awsom.dat	NameGridFile
+SC/Param/grid_awsom.dat		NameGridFile
 
 ! Use a true sphere, so box is made much larger
 GRID
@@ -238,25 +238,25 @@ x=0 VAR idl		StringPlot
 5			DnSavePlot
 -1.0			DtSavePlot
 -1.0			DxSavePlot
-{MHD} b1x b1y b1z te ti	NameVars
+{MHD} b1x b1y b1z te ti		NameVars
 {default}		NamePars
 y=0 VAR idl		StringPlot
 5			DnSavePlot
 -1.			DtSavePlot
 -1.0			DxSavePlot
-{MHD} b1x b1y b1z te ti	NameVars
+{MHD} b1x b1y b1z te ti		NameVars
 {default}		NamePars
 z=0 VAR idl		StringPlot
 5			DnSavePlot
 -1.			DtSavePlot
 -1.0			DxSavePlot
-{MHD} b1x b1y b1z te ti	NameVars
+{MHD} b1x b1y b1z te ti		NameVars
 {default}		NamePars
 3d VAR idl		StringPlot
 5			DnSavePlot
 -1.			DtSavePlot
 -1.			DxSavePlot
-{MHD} b1x b1y b1z te ti	NameVars
+{MHD} b1x b1y b1z te ti		NameVars
 {default}		NamePars
 los ins idl_ascii		StringPlot
 5			DnSavePlot
@@ -387,14 +387,14 @@ T			UseAccurateReschange
 #CORONALHEATING
 turbulentcascade		TypeCoronalHeating
 T			UseWaveReflection
-1.5e5			LperpTimesSqrtBSi^
-0.0			rMinWaveReflection^
-F			UseSurfaceWaveRefl^
+1.5e5			LperpTimesSqrtBSi
+0.0			rMinWaveReflection
+F			UseSurfaceWaveRefl
 
 #HEATPARTITIONING
 stochasticheating		TypeHeatPartitioning
-0.21			StochasticExponent^
-0.18			StochasticAmplitude^
+0.21			StochasticExponent
+0.18			StochasticAmplitude
 
 #SCHEME
 2			nOrder
@@ -434,25 +434,25 @@ x=0 VAR idl		StringPlot
 2			DnSavePlot
 -1.			DtSavePlot
 -1.0			DxSavePlot
-{MHD} b1x b1y b1z te ti	NameVars
+{MHD} b1x b1y b1z te ti		NameVars
 {default}		NamePars
 y=0 VAR idl		StringPlot
 2 			DnSavePlot
 -1.			DtSavePlot
 -1.0			DxSavePlot
-{MHD} b1x b1y b1z te ti	NameVars
+{MHD} b1x b1y b1z te ti		NameVars
 {default}		NamePars
 z=0 VAR idl		StringPlot
 2 			DnSavePlot
 -1.			DtSavePlot
 -1.0			DxSavePlot
-{MHD} b1x b1y b1z te ti	NameVars
+{MHD} b1x b1y b1z te ti		NameVars
 {default}		NamePars
 3d VAR idl		StringPlot
 2			DnSavePlot
 -1.			DtSavePlot
 -1			DxSavePlot
-{MHD} b1x b1y b1z te ti	NameVars
+{MHD} b1x b1y b1z te ti		NameVars
 {default}		NamePars
 
 #SATELLITE
@@ -460,7 +460,7 @@ z=0 VAR idl		StringPlot
 VAR trajrange		StringSatellite
 1			DnOutput
 -1.0			DtOutput [sec]
-IH/TRAJECTORY/earth.dat	NameTrajectoryFile
+IH/TRAJECTORY/earth.dat		NameTrajectoryFile
 -5 d			StartTimeTraj
 5 d			EndTimeTraj
 1 h			DtTraj
