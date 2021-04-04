@@ -341,7 +341,7 @@ foreach my $machine (@machines){
 if(-s $f90errorfile){
     print FILE "
 <h3><A HREF=$f90errorfile TARGET=swmf_f90_error>
-<font color=red>Errors in Fortran formatting.</font></A>
+Fixed Fortran formatting.</A>
 </h3>
 ";
 }
