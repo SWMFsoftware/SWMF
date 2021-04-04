@@ -727,67 +727,23 @@ contains
   subroutine IH_match_ibc
 
     use IH_ModMessagePass, ONLY: exchange_messages
-    use IH_ModGeometry, ONLY:R_BLK
-    use IH_BATL_lib,  ONLY: Xyz_DGB, iProc
-    use IH_ModMain,   ONLY: nI, nJ, nK, MaxDim, nBlock, Unused_B
-    use IH_ModBuffer, ONLY: BufferMax_D, get_from_spher_buffer_grid, &
-         fill_in_from_buffer
-    use IH_ModAdvance, ONLY:nVar,State_VGB,rho_,rhoUx_,rhoUz_,Ux_,Uz_
-    use IH_ModIO,     ONLY:IsRestartCoupler
+    use IH_ModIO,          ONLY: IsRestartCoupler
+    use IH_ModBuffer,      ONLY: match_ibc
+    
 
     character(len=*), parameter :: StringTest ='IH_fill_buffer_only'
-
-    integer  :: iBlock
-    integer  :: i,j,k
-    real     :: x_D(MaxDim), rBuffMax
     logical  :: DoTest,DoTestMe
-    ! ------------------------------------------------------------------------
-    character(len=*), parameter:: NameSub = 'IH_match_ibc'
     !--------------------------------------------------------------------------
     if(IsRestartCoupler) RETURN
-
-    rBuffMax = BufferMax_D(1)
-
     call CON_set_do_test(StringTest, DoTest, DoTestMe)
-    if(DoTest .and. iProc == 0)  write(*,*) &
-         NameSub,' in test mode: no filling of cells outside the buffer grid.'
 
-    ! Fill all spatial domain with values depend on the BC
-    do iBlock = 1, nBlock
-       if(Unused_B(iBlock))CYCLE
+    ! Fill in the physical cells, which are outside the buffer grid
+    ! When testing, do not fill cells outside the buffer
+    if(.not. DoTest)call match_ibc
 
-       ! Fill in the cells, covered by the bufer grid, including ghost cells
-       call fill_in_from_buffer(iBlock)
-
-       ! Fill in the physical cells, which are outside the buffer grid
-       ! When testing, do not fill cells outside the buffer
-       if(.not. DoTest) then
-          do k = 1, nK; do j = 1 , nJ; do i = 1, nI
-             if(R_BLK(i,j,k,iBlock) < rBuffMax)CYCLE
-
-             ! For each grid point, get the values at the base (buffer)
-             x_D = Xyz_DGB(:,i,j,k,iBlock)*rBuffMax/R_BLK(i,j,k,iBlock)
-
-             ! The grid point values are extracted from the base values
-             call get_from_spher_buffer_grid(&
-                  x_D, nVar, State_VGB(:,i,j,k,iBlock))
-
-             ! Transform primitive variables to conservative ones:
-             State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock)=&
-                  State_VGB(Ux_:Uz_,i,j,k,iBlock)*&
-                  State_VGB(rho_,i,j,k,iBlock)
-
-             ! Scale as (r/R)^2:
-             State_VGB(:,i,j,k,iBlock)=&
-                  State_VGB(:,i,j,k,iBlock)*&
-                  (rBuffMax/R_BLK(i,j,k,iBlock))**2
-
-          end do; end do; end do
-       end if
-    end do
-
+    ! Fill in the cells, covered by the bufer grid, including ghost cells.
     ! Fill in the ghostcells, calculate energy
-    call exchange_messages
+    call exchange_messages(UseBufferIn = .true.)
 
   end subroutine IH_match_ibc
   !============================================================================
