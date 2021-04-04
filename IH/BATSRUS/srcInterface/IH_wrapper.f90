@@ -85,7 +85,6 @@ contains
 
   end subroutine IH_init_session
   !============================================================================
-
   subroutine IH_set_param(CompInfo, TypeAction)
 
     use CON_comp_info
@@ -726,67 +725,17 @@ contains
   !============================================================================
   subroutine IH_match_ibc
 
-    use IH_ModMessagePass, ONLY: exchange_messages, fill_in_from_buffer
-    use IH_ModGeometry, ONLY:R_BLK
-    use IH_BATL_lib,  ONLY: Xyz_DGB, iProc
-    use IH_ModMain,   ONLY: nI, nJ, nK, MaxDim, nBlock, Unused_B
-    use IH_ModBuffer, ONLY: BufferMax_D, get_from_spher_buffer_grid
-    use IH_ModAdvance, ONLY:nVar,State_VGB,rho_,rhoUx_,rhoUz_,Ux_,Uz_
-    use IH_ModIO,     ONLY:IsRestartCoupler
-
-    character(len=*), parameter :: StringTest ='IH_fill_buffer_only'
-
-    integer  :: iBlock
-    integer  :: i,j,k
-    real     :: x_D(MaxDim), rBuffMax
-    logical  :: DoTest,DoTestMe
-    ! ------------------------------------------------------------------------
+    use IH_ModMessagePass, ONLY: exchange_messages
+    use IH_ModIO,          ONLY: IsRestartCoupler
+    use IH_ModBuffer,      ONLY: match_ibc
+ 
+    
     character(len=*), parameter:: NameSub = 'IH_match_ibc'
     !--------------------------------------------------------------------------
     if(IsRestartCoupler) RETURN
-
-    rBuffMax = BufferMax_D(1)
-
-    call CON_set_do_test(StringTest, DoTest, DoTestMe)
-    if(DoTest .and. iProc == 0)  write(*,*) &
-         NameSub,' in test mode: no filling of cells outside the buffer grid.'
-
-    ! Fill all spatial domain with values depend on the BC
-    do iBlock = 1, nBlock
-       if(Unused_B(iBlock))CYCLE
-
-       ! Fill in the cells, covered by the bufer grid, including ghost cells
-       call fill_in_from_buffer(iBlock)
-
-       ! Fill in the physical cells, which are outside the buffer grid
-       ! When testing, do not fill cells outside the buffer
-       if(.not. DoTest) then
-          do k = 1, nK; do j = 1 , nJ; do i = 1, nI
-             if(R_BLK(i,j,k,iBlock) < rBuffMax)CYCLE
-
-             ! For each grid point, get the values at the base (buffer)
-             x_D = Xyz_DGB(:,i,j,k,iBlock)*rBuffMax/R_BLK(i,j,k,iBlock)
-
-             ! The grid point values are extracted from the base values
-             call get_from_spher_buffer_grid(&
-                  x_D, nVar, State_VGB(:,i,j,k,iBlock))
-
-             ! Transform primitive variables to conservative ones:
-             State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock)=&
-                  State_VGB(Ux_:Uz_,i,j,k,iBlock)*&
-                  State_VGB(rho_,i,j,k,iBlock)
-
-             ! Scale as (r/R)^2:
-             State_VGB(:,i,j,k,iBlock)=&
-                  State_VGB(:,i,j,k,iBlock)*&
-                  (rBuffMax/R_BLK(i,j,k,iBlock))**2
-
-          end do; end do; end do
-       end if
-    end do
-
+    call match_ibc
     ! Fill in the ghostcells, calculate energy
-    call exchange_messages
+    call exchange_messages(UseBufferIn = .true.)
 
   end subroutine IH_match_ibc
   !============================================================================
@@ -823,7 +772,6 @@ contains
 
     use IH_ModSize, ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use IH_ModMain, ONLY: UseB0, rUpperModel
-    use IH_ModBuffer,  ONLY: BuffR_, BuffLon_, BuffLat_
     use IH_ModAdvance, ONLY: State_VGB, UseElectronPressure
     use IH_ModB0, ONLY: B0_DGB
     use IH_ModPhysics, ONLY: &
@@ -858,7 +806,7 @@ contains
     ! variables for defining the buffer grid
 
     integer :: nCell_D(3)
-    real    :: SphMin_D(3), SphMax_D(3), dSph_D(3)
+    real    :: SphMin_D(3), SphMax_D(3), dSph_D(3), Sph_D(3)
 
     ! Variables for interpolating from a grid block to a buffer grid point
 
@@ -875,24 +823,7 @@ contains
     ! (in IH_BATSRUS grid generalized coordinates)
     real :: BufferNorm_D(3)
 
-    ! variable indices in buffer
-    integer   :: &
-         iRhoCouple,              &
-         iRhoUxCouple,            &
-         iRhoUzCouple,            &
-         iPCouple,                &
-         iPeCouple,               &
-         iPparCouple,             &
-         iBxCouple,               &
-         iBzCouple,               &
-         iWaveFirstCouple,        &
-         iWaveLastCouple,         &
-         iChargeStateFirstCouple, &
-         iChargeStateLastCouple,  &
-         iEhotCouple
-
     integer   :: iLonNew, iBlock, iPe, iR, iLon, iLat
-    real      :: r, lon, lat
     logical   :: DoTest, DoTestMe
 
     character(len=*), parameter:: NameSub = 'IH_get_for_global_buffer'
@@ -901,42 +832,24 @@ contains
 
     Buffer_VG = 0.0
 
-    ! get variable indices in buffer
-    iRhoCouple              = iVar_V(RhoCouple_)
-    iRhoUxCouple            = iVar_V(RhoUxCouple_)
-    iRhoUzCouple            = iVar_V(RhoUzCouple_)
-    iPCouple                = iVar_V(PCouple_)
-    iPeCouple               = iVar_V(PeCouple_)
-    iPparCouple             = iVar_V(PparCouple_)
-    iBxCouple               = iVar_V(BxCouple_)
-    iBzCouple               = iVar_V(BzCouple_)
-    iWaveFirstCouple        = iVar_V(WaveFirstCouple_)
-    iWaveLastCouple         = iVar_V(WaveLastCouple_)
-    iEhotCouple             = iVar_V(EhotCouple_)
-    iChargeStateFirstCouple = iVar_V(ChargeStateFirstCouple_)
-    iChargeStateLastCouple  = iVar_V(ChargeStateLastCouple_)
-
     ! Calculate buffer grid spacing
     nCell_D  = [nR, nLon, nLat]
     SphMin_D = BufferMinMax_DI(:,1)
     SphMax_D = BufferMinMax_DI(:,2)
 
     ! Save the upper boundary radius as the limit for LOS integration span
-    rUpperModel = SphMax_D(BuffR_)
+    rUpperModel = SphMax_D(1)
 
     dSph_D     = (SphMax_D - SphMin_D)/real(nCell_D)
-    dSph_D(BuffR_) = (SphMax_D(BuffR_) - SphMin_D(BuffR_))/(nCell_D(BuffR_)-1)
+    dSph_D(1) = (SphMax_D(1) - SphMin_D(1))/(nCell_D(1)-1)
 
     ! Loop over buffer grid points
     do iLat = 1, nLat ; do iLon = 1, nLon ; do iR = 1, nR
 
        ! Find the coordinates of the current buffer grid point,
-       r     =  SphMin_D(BuffR_)     + (iR - 1)*dSph_D(BuffR_)
-       Lon   =  SphMin_D(BuffLon_)   + (real(iLon)-0.5)*dSph_D(BuffLon_)
-       Lat   =  SphMin_D(BuffLat_)   + (real(iLat)-0.5)*dSph_D(BuffLat_)
-
-       ! Convert to xyz
-       call rlonlat_to_xyz(r, Lon, Lat, XyzBuffer_D)
+       Sph_D = SphMin_D + [real(iR - 1), real(iLon)-0.5, real(iLat)-0.5]*dSph_D
+       ! Find Xyz coordinates of the grid point
+       call rlonlat_to_xyz(Sph_D, XyzBuffer_D)
 
        ! Find the block and PE in the IH_BATSRUS grid
        call find_grid_block(XyzBuffer_D, iPe, iBlock)
@@ -944,24 +857,21 @@ contains
        ! Check if this block belongs to this processor
        if (iProc /= iPe) CYCLE
 
-       ! Convert buffer grid point coordinate to IH_BATSRUS generalized coords
+       ! Convert buffer grid point Xyz to IH_BATSRUS generalized coords
        call xyz_to_coord(XyzBuffer_D, CoordBuffer_D)
 
-       ! Buffer grid point position normalized by the grid spacing
+       ! Buffer grid point gen coords normalized by the block grid spacing
        BufferNorm_D = (CoordBuffer_D - CoordMin_DB(:,iBlock)) &
-            / CellSize_DB(:,iBlock) + 0.5
+            /CellSize_DB(:,iBlock) + 0.5
 
        ! Interpolate from the true solution block to the buffer grid point
-       StateInPoint_V = &
-            trilinear(State_VGB(:,:,:,:,iBlock), &
-            nVar, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
-            BufferNorm_D)
+       StateInPoint_V = trilinear(State_VGB(:,:,:,:,iBlock),      &
+            nVar, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, BufferNorm_D)
 
-       ! Fill in the coupled state variables
-       ! Convert to SI units
+       ! Fill in the coupled state variables, convert to SI units
 
-       Buffer_V(iRhoCouple)= StateInPoint_V(rho_)*No2Si_V(UnitRho_)
-       Buffer_V(iRhoUxCouple:iRhoUzCouple) = &
+       Buffer_V(iVar_V(RhoCouple_))= StateInPoint_V(rho_)*No2Si_V(UnitRho_)
+       Buffer_V(iVar_V(RhoUxCouple_):iVar_V(RhoUzCouple_)) = &
             StateInPoint_V(rhoUx_:rhoUz_)*No2Si_V(UnitRhoU_)
 
        if(DoCoupleVar_V(Bfield_)) then
@@ -970,38 +880,38 @@ contains
                   trilinear(B0_DGB(:,:,:,:,iBlock), &
                   3, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
                   BufferNorm_D, DoExtrapolate = .TRUE.)
-             Buffer_V(iBxCouple:iBzCouple) = &
+             Buffer_V(iVar_V(BxCouple_):iVar_V(BzCouple_)) = &
                   (StateInPoint_V(Bx_:Bz_) + B0_D)*No2Si_V(UnitB_)
           else
-             Buffer_V(iBxCouple:iBzCouple) = &
+             Buffer_V(iVar_V(BxCouple_):iVar_V(BzCouple_)) = &
                   StateInPoint_V(Bx_:Bz_)*No2Si_V(UnitB_)
           end if
        end if
 
-       Buffer_V(iPCouple)  = StateInPoint_V(p_)*No2Si_V(UnitP_)
+       Buffer_V(iVar_V(PCouple_))  = StateInPoint_V(p_)*No2Si_V(UnitP_)
 
        if(DoCoupleVar_V(Wave_)) &
-            Buffer_V(iWaveFirstCouple:iWaveLastCouple) = &
+            Buffer_V(iVar_V(WaveFirstCouple_):iVar_V(WaveLastCouple_)) = &
             StateInPoint_V(WaveFirst_:WaveLast_)&
             * No2Si_V(UnitEnergyDens_)
 
-       if(DoCoupleVar_V(ChargeState_)) &
-            Buffer_V(iChargeStateFirstCouple:iChargeStateLastCouple) = &
+       if(DoCoupleVar_V(ChargeState_)) Buffer_V(&
+            iVar_V(ChargeStateFirstCouple_):iVar_V(ChargeStateLastCouple_)) = &
             StateInPoint_V(ChargeStateFirst_:ChargeStateLast_)&
-            * No2Si_V(UnitRho_)
+            *No2Si_V(UnitRho_)
 
        if(DoCoupleVar_V(ElectronPressure_))then
-          Buffer_V(iPeCouple) = StateInPoint_V(Pe_)*No2Si_V(UnitP_)
+          Buffer_V(iVar_V(PeCouple_)) = StateInPoint_V(Pe_)*No2Si_V(UnitP_)
        else if(UseElectronPressure)then
-          Buffer_V(iPCouple) = Buffer_V(iPCouple) + StateInPoint_V(Pe_)&
-               *No2Si_V(UnitP_)
+          Buffer_V(iVar_V(PCouple_)) = Buffer_V(iVar_V(PCouple_)) + &
+               StateInPoint_V(Pe_)*No2Si_V(UnitP_)
        end if
 
-       if(DoCoupleVar_V(AnisoPressure_)) Buffer_V(iPparCouple) = &
+       if(DoCoupleVar_V(AnisoPressure_)) Buffer_V(iVar_V(PparCouple_)) = &
             StateInPoint_V(Ppar_)*No2Si_V(UnitP_)
 
-       if(DoCoupleVar_V(CollisionlessHeatFlux_)) Buffer_V(iEhotCouple) = &
-            StateInPoint_V(Ehot_)*No2Si_V(UnitEnergyDens_)
+       if(DoCoupleVar_V(CollisionlessHeatFlux_)) Buffer_V(iVar_V(EhotCouple_))&
+            = StateInPoint_V(Ehot_)*No2Si_V(UnitEnergyDens_)
 
        ! DONE - fill the buffer grid
        Buffer_VG(:,iR, iLon,iLat) = Buffer_V
@@ -1480,7 +1390,6 @@ contains
 
   end subroutine IH_put_from_mh
   !============================================================================
-
   subroutine IH_check_ready_for_sp(IsReady)
     use ModMpi
     use CON_coupler, ONLY: is_proc0, i_proc0, i_comm
