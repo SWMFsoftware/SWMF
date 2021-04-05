@@ -124,7 +124,7 @@ contains
     if(DoTest)write(*,*)NameSub,' starting, iProc=',i_proc()
 
     ! Transfer buffer grid from IH to OH to be used for inner boundary
-    allocate(Buffer_VIII(nVarCouple,iSize,0:jSize+1,0:kSize+1))
+    allocate(Buffer_VIII(nVarCouple,iSize,jSize,kSize))
     if(is_proc(IH_)) call IH_get_for_global_buffer(iSize, jSize, kSize, &
          BufferMinMaxIh_DI, Buffer_VIII)
 

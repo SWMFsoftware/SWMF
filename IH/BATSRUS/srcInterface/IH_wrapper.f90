@@ -85,7 +85,6 @@ contains
 
   end subroutine IH_init_session
   !============================================================================
-
   subroutine IH_set_param(CompInfo, TypeAction)
 
     use CON_comp_info
@@ -612,6 +611,9 @@ contains
     use IH_domain_decomposition, ONLY: is_proc
     use IH_ModBuffer,            ONLY: BuffR_, nRBuff, nLonBuff, nLatBuff,&
          BufferMin_D, BufferMax_D
+    ! spherical buffer coupling
+    use IH_ModBuffer,      ONLY: TypeCoordSource
+    use CON_coupler,       ONLY: iCompSourceCouple,  Grid_C
 
     integer, intent(out)    :: nR, nLon, nLat
     real, intent(out)       :: BufferMinMax_DI(3,2)
@@ -635,15 +637,14 @@ contains
        write(*,*) 'BufferMin_D: ',BufferMin_D
        write(*,*) 'BufferMax_D: ',BufferMax_D
     end if
-
+    TypeCoordSource = Grid_C(iCompSourceCouple) % TypeCoord
   end subroutine IH_set_buffer_grid_get_info
   !============================================================================
   subroutine IH_save_global_buffer(nVarCouple, nR, nLon, nLat, BufferIn_VG)
-    use IH_ModBuffer,      ONLY: BufferState_VG
+    use IH_ModBuffer,      ONLY: BufferState_VG, fill_in_buffer_grid_gc
     use IH_ModMessagePass, ONLY: DoExtraMessagePass
     ! spherical buffer coupling
-    use IH_ModBuffer,      ONLY: TypeCoordSource
-    use CON_coupler,       ONLY: iCompSourceCouple,  Grid_C, &
+    use CON_coupler,       ONLY: &
          iVar_V, DoCoupleVar_V
     use IH_ModAdvance,        ONLY: nVar, &
          UseElectronPressure, UseAnisoPressure, UseMultiSpecies
@@ -662,55 +663,59 @@ contains
     use IH_ModPhysics,    ONLY: No2Si_V, Si2No_V, UnitRho_, UnitB_, UnitX_
     use IH_ModPhysics,    ONLY: UnitRhoU_, UnitEnergyDens_, UnitP_
     integer,intent(in) :: nVarCouple, nR, nLon, nLat
-    real,intent(in)    :: BufferIn_VG(nVarCouple,nR,0:nLon+1,0:nLat+1)
+    real,intent(in)    :: BufferIn_VG(nVarCouple,nR,nLon,nLat)
 
+    ! Convert from SI units to normalized units
     character(len=*), parameter:: NameSub = 'IH_save_global_buffer'
     !--------------------------------------------------------------------------
-    TypeCoordSource = Grid_C(iCompSourceCouple) % TypeCoord
-    ! Convert from SI units to normalized units
-    BufferState_VG(Rho_,:,:,:) = BufferIn_VG(iVar_V(RhoCouple_),:,:,:)&
+    BufferState_VG(Rho_,:,1:nLon,1:nLat) = &
+         BufferIn_VG(iVar_V(RhoCouple_),:,1:nLon,1:nLat)&
          *Si2No_V(UnitRho_)
     ! Transform to primitive variables
-    BufferState_VG(RhoUx_:RhoUz_,:,:,:) = &
-         BufferIn_VG(iVar_V(RhoUxCouple_):iVar_V(RhoUzCouple_),:,:,:)&
+    BufferState_VG(RhoUx_:RhoUz_,:,1:nLon,1:nLat) = &
+         BufferIn_VG(iVar_V(RhoUxCouple_):iVar_V(RhoUzCouple_),:,1:nLon,1:nLat)&
          *Si2No_V(UnitRhoU_)
     if(DoCoupleVar_V(Bfield_))             &
-         BufferState_VG(Bx_:Bz_,:,:,:) =  &
-         BufferIn_VG(iVar_V(BxCouple_):iVar_V(BzCouple_),:,:,:)      &
+         BufferState_VG(Bx_:Bz_,:,1:nLon,1:nLat) =  &
+         BufferIn_VG(iVar_V(BxCouple_):iVar_V(BzCouple_),:,1:nLon,1:nLat)  &
          *Si2No_V(UnitB_)
 
     if(DoCoupleVar_V(Wave_))&
-         BufferState_VG(WaveFirst_:WaveLast_,:,:,:) =  &
-         BufferIn_VG(iVar_V(WaveFirstCouple_):iVar_V(WaveLastCouple_),:,:,:)&
+         BufferState_VG(WaveFirst_:WaveLast_,:,1:nLon,1:nLat) = BufferIn_VG(&
+         iVar_V(WaveFirstCouple_):iVar_V(WaveLastCouple_),:,1:nLon,1:nLat)&
          *Si2No_V(UnitEnergyDens_)
 
     if(DoCoupleVar_V(ChargeState_))&
-         BufferState_VG(ChargeStateFirst_:ChargeStateLast_,:,:,:) = &
+         BufferState_VG(ChargeStateFirst_:ChargeStateLast_,:,1:nLon,1:nLat) = &
          BufferIn_VG(&
-         iVar_V(ChargeStateFirstCouple_):iVar_V(ChargeStateLastCouple_),:,:,:)&
-         *Si2No_V(UnitRho_)
+         iVar_V(ChargeStateFirstCouple_):iVar_V(ChargeStateLastCouple_),:,&
+         1:nLon,1:nLat)*Si2No_V(UnitRho_)
 
-    BufferState_VG(p_,:,:,:)  = BufferIn_VG(iVar_V(PCouple_),:,:,:)&
+    BufferState_VG(p_,:,1:nLon,1:nLat)  = &
+         BufferIn_VG(iVar_V(PCouple_),:,1:nLon,1:nLat)&
          *Si2No_V(UnitP_)
     if(DoCoupleVar_V(ElectronPressure_))then
-       BufferState_VG(Pe_,:,:,:) = &
-            BufferIn_VG(iVar_V(PeCouple_),:,:,:)*Si2No_V(UnitP_)
+       BufferState_VG(Pe_,:,1:nLon,1:nLat) = &
+            BufferIn_VG(iVar_V(PeCouple_),:,1:nLon,1:nLat)*Si2No_V(UnitP_)
     else if(UseElectronPressure)then
-       BufferState_VG(Pe_,:,:,:) = 0.5*BufferState_VG(p_, :,:,:)
-       BufferState_VG(p_ ,:,:,:) =     BufferState_VG(Pe_,:,:,:)
+       BufferState_VG(Pe_,:,1:nLon,1:nLat) = &
+            0.5*BufferState_VG(p_, :,1:nLon,1:nLat)
+       BufferState_VG(p_ ,:,1:nLon,1:nLat) = &
+            BufferState_VG(Pe_,:,1:nLon,1:nLat)
     end if
 
     if(DoCoupleVar_V(AnisoPressure_))then
-       BufferState_VG(Ppar_,:,:,:) = &
-            BufferIn_VG(iVar_V(PparCouple_),:,:,:)*Si2No_V(UnitP_)
+       BufferState_VG(Ppar_,:,1:nLon,1:nLat) = &
+            BufferIn_VG(iVar_V(PparCouple_),:,1:nLon,1:nLat)*Si2No_V(UnitP_)
     else if(UseAnisoPressure)then
-       BufferState_VG(Ppar_,:,:,:) = &
-       BufferIn_VG(iVar_V(PCouple_),:,:,:)*Si2No_V(UnitP_)
+       BufferState_VG(Ppar_,:,1:nLon,1:nLat) = &
+       BufferIn_VG(iVar_V(PCouple_),:,1:nLon,1:nLat)*Si2No_V(UnitP_)
     end if
 
     if(DoCoupleVar_V(CollisionlessHeatFlux_))then
-       BufferState_VG(Ehot_,:,:,:) = &
-            BufferIn_VG(iVar_V(EhotCouple_),:,:,:)*Si2No_V(UnitEnergyDens_)
+       BufferState_VG(Ehot_,:,1:nLon,1:nLat) = &
+            BufferIn_VG(iVar_V(EhotCouple_),:,1:nLon,1:nLat)&
+            *Si2No_V(UnitEnergyDens_)
     endif
 
     if( .not. DoCoupleVar_V(MultiFluid_)  .and. nFluid > 1 .or. &
@@ -721,6 +726,7 @@ contains
        IsFullyCoupledFluid = .true.
     end if
     ! Make sure that ghost cells get filled after
+    call fill_in_buffer_grid_gc
     DoExtraMessagePass = .true.
   end subroutine IH_save_global_buffer
   !============================================================================
@@ -729,7 +735,6 @@ contains
     use IH_ModMessagePass, ONLY: exchange_messages
     use IH_ModIO,          ONLY: IsRestartCoupler
     use IH_ModBuffer,      ONLY: match_ibc
-    
 
     character(len=*), parameter :: StringTest ='IH_fill_buffer_only'
     logical  :: DoTest,DoTestMe
@@ -780,7 +785,6 @@ contains
 
     use IH_ModSize, ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use IH_ModMain, ONLY: UseB0, rUpperModel
-    use IH_ModBuffer,  ONLY: BuffR_, BuffLon_, BuffLat_
     use IH_ModAdvance, ONLY: State_VGB, UseElectronPressure
     use IH_ModB0, ONLY: B0_DGB
     use IH_ModPhysics, ONLY: &
@@ -809,13 +813,13 @@ contains
 
     ! OUTPUT ARGUMENTS
     ! State variables to be fiiled in all buffer grid points
-    real,dimension(nVarCouple, nR, 0:nLon+1 ,0:nLat+1), intent(out):: &
+    real,dimension(nVarCouple, nR, nLon, nLat), intent(out):: &
          Buffer_VG
 
     ! variables for defining the buffer grid
 
     integer :: nCell_D(3)
-    real    :: SphMin_D(3), SphMax_D(3), dSph_D(3)
+    real    :: SphMin_D(3), SphMax_D(3), dSph_D(3), Sph_D(3)
 
     ! Variables for interpolating from a grid block to a buffer grid point
 
@@ -848,8 +852,7 @@ contains
          iChargeStateLastCouple,  &
          iEhotCouple
 
-    integer   :: iLonNew, iBlock, iPe, iR, iLon, iLat
-    real      :: r, lon, lat
+    integer   :: iBlock, iPe, iR, iLon, iLat
     logical   :: DoTest, DoTestMe
 
     character(len=*), parameter:: NameSub = 'IH_get_for_global_buffer'
@@ -879,21 +882,18 @@ contains
     SphMax_D = BufferMinMax_DI(:,2)
 
     ! Save the upper boundary radius as the limit for LOS integration span
-    rUpperModel = SphMax_D(BuffR_)
+    rUpperModel = SphMax_D(1)
 
     dSph_D     = (SphMax_D - SphMin_D)/real(nCell_D)
-    dSph_D(BuffR_) = (SphMax_D(BuffR_) - SphMin_D(BuffR_))/(nCell_D(BuffR_)-1)
+    dSph_D(1) = (SphMax_D(1) - SphMin_D(1))/(nCell_D(1) - 1)
 
     ! Loop over buffer grid points
     do iLat = 1, nLat ; do iLon = 1, nLon ; do iR = 1, nR
 
        ! Find the coordinates of the current buffer grid point,
-       r     =  SphMin_D(BuffR_)     + (iR - 1)*dSph_D(BuffR_)
-       Lon   =  SphMin_D(BuffLon_)   + (real(iLon)-0.5)*dSph_D(BuffLon_)
-       Lat   =  SphMin_D(BuffLat_)   + (real(iLat)-0.5)*dSph_D(BuffLat_)
-
-       ! Convert to xyz
-       call rlonlat_to_xyz(r, Lon, Lat, XyzBuffer_D)
+       Sph_D = SphMin_D + [real(iR - 1), real(iLon)-0.5, real(iLat)-0.5]*dSph_D
+       ! Find Xyz coordinates of the grid point
+       call rlonlat_to_xyz(Sph_D, XyzBuffer_D)
 
        ! Find the block and PE in the IH_BATSRUS grid
        call find_grid_block(XyzBuffer_D, iPe, iBlock)
@@ -901,21 +901,18 @@ contains
        ! Check if this block belongs to this processor
        if (iProc /= iPe) CYCLE
 
-       ! Convert buffer grid point coordinate to IH_BATSRUS generalized coords
+       ! Convert buffer grid point Xyz to IH_BATSRUS generalized coords
        call xyz_to_coord(XyzBuffer_D, CoordBuffer_D)
 
-       ! Buffer grid point position normalized by the grid spacing
+       ! Buffer grid point gen coords normalized by the block grid spacing
        BufferNorm_D = (CoordBuffer_D - CoordMin_DB(:,iBlock)) &
-            / CellSize_DB(:,iBlock) + 0.5
+            /CellSize_DB(:,iBlock) + 0.5
 
        ! Interpolate from the true solution block to the buffer grid point
-       StateInPoint_V = &
-            trilinear(State_VGB(:,:,:,:,iBlock), &
-            nVar, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
-            BufferNorm_D)
+       StateInPoint_V = trilinear(State_VGB(:,:,:,:,iBlock),      &
+            nVar, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, BufferNorm_D)
 
-       ! Fill in the coupled state variables
-       ! Convert to SI units
+       ! Fill in the coupled state variables, convert to SI units
 
        Buffer_V(iRhoCouple)= StateInPoint_V(rho_)*No2Si_V(UnitRho_)
        Buffer_V(iRhoUxCouple:iRhoUzCouple) = &
@@ -964,16 +961,6 @@ contains
        Buffer_VG(:,iR, iLon,iLat) = Buffer_V
 
     end do; end do; end do
-
-    ! Fill buffer grid ghost cells
-    do iLon = 1, nLon
-       iLonNew = iLon + nLon/2
-       if (iLonNew > nLon) iLonNew = iLonNew - nLon
-       Buffer_VG(:,:,iLon, 0) = Buffer_VG(:,:,iLonNew, 1)
-       Buffer_VG(:,:,iLon,nLat+1) = Buffer_VG(:,:,iLonNew, nLat)
-    end do
-    Buffer_VG(:,:,0,:) = Buffer_VG(:,:,nLon,:)
-    Buffer_VG(:,:,nLon+1,:) = Buffer_VG(:,:,1,:)
   end subroutine IH_get_for_global_buffer
   !============================================================================
 
