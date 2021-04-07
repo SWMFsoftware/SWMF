@@ -1557,11 +1557,11 @@ test15_pt_run:
 	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
 
 test15_pt_check:
-	cat ${TESTDIR}/RESULTS/PT/MH_data_*_*_t00000030_n000010.out \
+	cat ${TESTDIR}/RESULTS/PT/MH_data_*_*_t00000030.out \
 	    > ${TESTDIR}/RESULTS/PT/MH_data.outs
 	-(${DIFFNUM} -a=1e-6 -r=1e-6 -b \
 		${TESTDIR}/RESULTS/PT/MH_data.outs \
-		output/test15/MH_data.ref.gz \
+		output/test15_pt/MH_data.ref.gz \
 		> test15_scihpt.diff)
 	ls -l test15_scihpt.diff
 
