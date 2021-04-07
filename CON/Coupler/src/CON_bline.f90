@@ -28,10 +28,13 @@ module CON_bline
   public :: BL_interface_point_coords ! points rMinInterface<R<rMaxInterface
   public :: BL_put_line               ! points rMin < R < rMax
   public :: BL_set_line_foot_b
+  public :: save_mhd
 
   ! The following public members are available at all PEs
-  integer, public :: BL_ =-1   ! ID of the target model (SP_, PT_)
-  logical, public :: UseBLine_C(MaxComp)=.false. ! To switch coupler for PT
+  integer, public :: BL_ =-1         ! ID of the target model (SP_, PT_)
+  character(len=2):: NameCompBl = '' ! Name of the target model ('SP', 'PT'...)
+  Character(len=3):: TypeCoordSystemBl  = ''     ! Coord system of the Bl Model
+  logical, public :: UseBLine_C(MaxComp)=.false. ! To switch coupler for PT/SP
 
   ! The rest is available on the BL_ processors
   ! Boundaries of coupled domains in SC and IH
@@ -79,6 +82,9 @@ module CON_bline
        'Wave1     ', &
        'Wave2     ']
 
+  character(len=61) :: NamePlotVar = ''
+  character(len=16) :: NameMHData = ''
+  character(len=*), parameter:: NameExtension='.out'
   ! Local variables
   integer :: iProc = -1  ! Rank    of PE in communicator of BL_
   integer :: nProc = -1  ! Number of PEs in communicator of BL_
@@ -140,8 +146,8 @@ contains
     character(len=2) :: NameComp = ''
     character(len=*), parameter:: NameSub = 'BL_read_param'
     !--------------------------------------------------------------------------
-    call read_var('NameTarget', NameComp)
-    BL_ = i_comp(NameComp)
+    call read_var('NameTarget', NameCompBl)
+    BL_ = i_comp(NameCompBl)
     if(.not.use_comp(BL_)) then
        if(is_proc0()) write(*,*) NameSub//&
             ' SWMF_ERROR for NameMaster: '// &
@@ -204,12 +210,17 @@ contains
     if(.not.is_proc(BL_))RETURN
     RMin = RScMin; RMax = RIhMax
     Lower_ = SC_; Upper_ = IH_
-
+    select  case(BL_)
+    case(PT_)
+       NameMHData = 'PT/plots/MH_data'
+    case(SP_)
+       NameMHData = 'SP/IO2/MH_data'
+    end select
   end subroutine BL_read_param
   !============================================================================
   subroutine BL_init(nParticleIn, nLonIn, nLatIn, &
        rPointer_VIB,  nPointer_B,  nVarIn, StateIO_VIB, FootPointIn_VB)
-
+    use ModUtilities, ONLY: join_string
     real,    intent(inout), pointer :: rPointer_VIB(:,:,:)
     integer, intent(inout), pointer :: nPointer_B(:)
     integer, intent(in)             :: nParticleIn, nLonIn, nLatIn
@@ -268,6 +279,12 @@ contains
     ! Set iOffset_B array
 
     allocate(iOffset_B(nLine)); iOffset_B = 0
+
+    ! Set plot variable names
+
+    call join_string(NameVar_V(LagrID_:nMHData), NamePlotVar)
+    NamePlotVar = trim(NamePlotVar)//' LagrID x y z'
+    if(iProc==0)write(*,'(a)')NamePlotVar
   end subroutine BL_init
   !============================================================================
   subroutine BL_get_origin_points(ROrigin, LonMin, LonMax, LatMin, LatMax)
@@ -372,6 +389,7 @@ contains
          NameVar      = NameVarCouple, &
          UnitX        = UnitX)
     if(.not.is_proc(BL_))RETURN
+    TypeCoordSystemBl = TypeCoordSystem
     if(present(EnergySi2IoIn))EnergySi2Io = EnergySi2IoIn
   contains
     !==========================================================================
@@ -877,6 +895,94 @@ contains
     FootPoint_VB(LagrID_,    iLine) = MHData_VIB(LagrID_,1,iLine) - 1.0
   end subroutine BL_set_line_foot_b
   !============================================================================
+  subroutine make_file_name(Time, iLine, NameOut)
+    ! creates a string with file name and stores in NameOut;
+    ! result is as follows:
+    !   StringBase_Lon=?.?_Lat=?.?][_t?].NameExtension
+    real,                 intent(in) :: Time
+    integer,              intent(in) :: iLine
+    character(len=100),   intent(out):: NameOut
+
+    ! timetag
+    character(len=8):: StringTime
+    ! lon, lat indexes corresponding to iLineAll
+    integer:: iLon, iLat
+    !--------------------------------------------------------------------------
+    write(NameOut,'(a)')trim(NameMHData)
+
+    call BL_iblock_to_lon_lat(iLine, iLon, iLat)
+    write(NameOut,'(a,i3.3,a,i3.3)') &
+         trim(NameOut)//'_',iLon,'_',iLat
+
+    call get_time_string(Time, StringTime)
+    write(NameOut,'(a,i6.6,a)')  &
+         trim(NameOut)//'_t'//StringTime
+    write(NameOut,'(a)') trim(NameOut)//trim(NameExtension)
+  end subroutine make_file_name
+  !============================================================================
+  subroutine get_time_string(Time, StringTime)
+    ! the subroutine converts real variable Time into a string,
+    ! the structure of the string is 'ddhhmmss',
+    ! i.e shows number of days, hours, minutes and seconds
+    ! after the beginning of the simulation
+    real,             intent(in) :: Time
+    character(len=8), intent(out):: StringTime
+
+    ! This is the value if the time is too large
+
+    !--------------------------------------------------------------------------
+    StringTime = '99999999'
+    if(Time < 100.0*86400) &
+         write(StringTime,'(i2.2,i2.2,i2.2,i2.2)') &
+         int(                  Time          /86400.), & ! # days
+         int((Time-(86400.*int(Time/86400.)))/ 3600.), & ! # hours
+         int((Time-( 3600.*int(Time/ 3600.)))/   60.), & ! # minutes
+         int( Time-(   60.*int(Time/   60.)))            ! # seconds
+  end subroutine get_time_string
+  !============================================================================
+  subroutine save_mhd(Time)
+    use ModPlotFile, ONLY: save_plot_file
+    ! write the output data
+    ! separate file is created for each field line,
+    ! name format is:
+    ! MH_data_<iLon>_<iLat>_n<ddhhmmss>_n<iIter>.{out/dat}
+    ! name of the output file
+    real, intent(in) :: Time
+    character(len=100):: NameFile
+    ! header for the file
+    character(len=500):: StringHeader
+    ! loop variables
+    integer:: iLine
+    ! index of last particle on the field line
+    integer:: iLast
+    character(len=*), parameter:: NameSub = 'save_mhd'
+    !--------------------------------------------------------------------------
+    ! Write ouput files themselves
+    StringHeader = &
+         'MFLAMPA: data along a field line; '//&
+         'Coordindate system: '//trim(TypeCoordSystemBl)//'; '
+    do iLine = 1, nLine
+       call make_file_name(Time,   &
+            iLine         = iLine, &
+            NameOut       = NameFile)
+         ! get min and max particle indexes on this field line
+         iLast  = nVertex_B(   iLine)
+         ! print data to file
+         call save_plot_file(&
+              NameFile      = NameFile,     &
+              StringHeaderIn= StringHeader, &
+              TypeFileIn    = 'ascii',      &
+              nDimIn        = 1,            &
+              TimeIn        = Time,         &
+              CoordMinIn_D  = [MHData_VIB(LagrID_,1,iLine)], &
+              CoordMaxIn_D  = [MHData_VIB(LagrID_,iLast,iLine)], &
+              NameVarIn     = NamePlotVar,  &
+              VarIn_VI      = MHData_VIB(1:nMHData, 1:iLast, iLine),&
+              ParamIn_I     = FootPoint_VB(LagrID_:Z_,iLine))
+      end do
+  end subroutine save_mhd
+  !============================================================================
+
 end module CON_bline
 !==============================================================================
 
