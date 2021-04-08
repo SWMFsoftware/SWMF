@@ -43,12 +43,12 @@ SC 0 -1 1		CompMap
 IH 0 -1 1		CompMap
 
 #TIMEACCURATE
-F			IsTimeAccurate
+T			IsTimeAccurate
 
 #SAVERESTART
 T			DoSaveRestart
-2			DnSaveRestart
--1			DtSaveRestart
+-1			DnSaveRestart
+10.0			DtSaveRestart
 
 #BEGIN_COMP SC ---------------------------------------------------------------
 
@@ -181,10 +181,14 @@ currentsheet		StringRefine
 initial			StringShape
 
 #DOAMR
-T			DoAmr
-3			DnAmr
--1.0			DtAmr
+F			DoAmr
+-1			DnAmr
+4.0			DtAmr
 T			IsStrictAmr
+
+#TIMESTEPLIMIT
+T			UseDtLimit
+0.5			DtLimitDim
 
 #TIMESTEPPING
 2			nStage
@@ -233,34 +237,35 @@ periodic		TypeBc6   LatMax
 +init +ic		StringSwitch
 
 #SAVEPLOT
-5			nPlotFile
+3			nPlotFile
 x=0 VAR idl		StringPlot
-5			DnSavePlot
--1.0			DtSavePlot
+-1			DnSavePlot
+5.0			DtSavePlot
 -1.0			DxSavePlot
 {MHD} b1x b1y b1z te ti		NameVars
 {default}		NamePars
 y=0 VAR idl		StringPlot
-5			DnSavePlot
--1.			DtSavePlot
+-1			DnSavePlot
+5.0			DtSavePlot
 -1.0			DxSavePlot
 {MHD} b1x b1y b1z te ti		NameVars
 {default}		NamePars
 z=0 VAR idl		StringPlot
-5			DnSavePlot
--1.			DtSavePlot
+-1			DnSavePlot
+5.0			DtSavePlot
 -1.0			DxSavePlot
 {MHD} b1x b1y b1z te ti		NameVars
 {default}		NamePars
+
 3d VAR idl		StringPlot
-5			DnSavePlot
--1.			DtSavePlot
+-1			DnSavePlot
+5.0			DtSavePlot
 -1.			DxSavePlot
 {MHD} b1x b1y b1z te ti		NameVars
 {default}		NamePars
 los ins idl_ascii		StringPlot
-5			DnSavePlot
--1.0			DtSavePlot
+-1			DnSavePlot
+5.0			DtSavePlot
 sta:euvi stb:euvi sdo:aia		StringsInstrument
 
 #SATELLITE
@@ -306,6 +311,20 @@ ascii			TypeFile
 T			DoSaveInitial
 
 #END_COMP SC -----------------------------------------------------------------
+
+#COMPONENT
+IH			NameComp
+F			UseComp
+
+#STOP
+-1			MaxIter
+5 s			TimeMax
+
+#RUN ##########################################################################
+
+#COMPONENT
+IH			NameComp
+T			UseComp
 
 #BEGIN_COMP IH ---------------------------------------------------------------
 
@@ -471,12 +490,12 @@ rho ux uy uz bx by bz p ppar pperp pe ehot I01 I02		NameSatelliteVars
 #COUPLE1
 SC			NameSource
 IH			NameTarget
-1			DnCouple
--1.0			DtCouple
+-1			DnCouple
+1.0			DtCouple
 
 #STOP
-0			MaxIter
--1.0			TimeMax
+-1			MaxIter
+6.0			TimeMax
 
 End session: 1
 #RUN ##########################################################################
@@ -508,7 +527,7 @@ T			UseFDFaceFlux
 MP5			TypeLimiter
 F			UseHighResChange
 F			UseHighOrderAMR
-T			DoCorrectFace
+F			DoCorrectFace
 
 #LIMITER
 F			UseLogRhoLimiter
@@ -518,8 +537,8 @@ F			UseRhoRatioLimiter
 #END_COMP IH -----------------------------------------------------------------
 
 #STOP
-2			MaxIter
--1.0			TimeMax
+-1			MaxIter
+10 s			TimeMax
 
 End Session: 2
 #END ########################################################################
