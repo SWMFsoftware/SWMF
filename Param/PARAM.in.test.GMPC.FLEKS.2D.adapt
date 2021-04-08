@@ -189,10 +189,10 @@ shell0			StringShape
 
 #PICCRITERIA
 1			nPicCriteria
-j/b			StringPicCriteria
+j/bperp			StringPicCriteria
 0.0			MinCriteriaValue
 2.5e-3			MaxCriteriaValue
-0.0			CriteriaB1
+1e-2			CriteriaB1
 
 #PICADAPT
 T			DoAdaptPic
@@ -254,7 +254,7 @@ z=0 var idl_ascii		StringPlot
 1			DnSavePlot
 -0.05			DtSavePlot
 0.			DxSavePlot
-rho mx my bx by p pic pic_active pic_crit		NameVars
+rho mx my bx by p jb jbperp pic pic_active pic_crit		NameVars
 g rbody			NamePars
 
 #END_COMP GM -----------------------------------------------------------------
