@@ -1495,7 +1495,7 @@ test15_long_check:
 		output/test15_long/MH_data.ref.gz \
 		> test15_long_sp.diff)
 	ls -l test15_long*.diff
-	
+
 ### test15_single: same as test15_long, but with no restart
 
 test15_single:
@@ -1759,6 +1759,76 @@ test18_check:
 		output/test18/3d.ref.gz \
 		> test18.diff)
 	ls -l test18.diff
+###
+### test19: SC+IH+OH+SP
+
+test19:
+	rm -f test19*.diff
+	@echo "test19_compile..." >> test19_sp.diff
+	${MAKE} test19_compile
+	@echo "test19_rundir..." >> test19_sp.diff
+	${MAKE} test19_rundir
+	@echo "test19_run..." >> test19_sp.diff
+	${MAKE} test19_run
+	@echo "test19_restart..." >> test19_sp.diff
+	${MAKE} test19_restart
+	@echo "test19_check..." >> test19_sp.diff
+	${MAKE} test19_check
+
+test19_compile:
+	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS,OH/BATSRUS,SP/MFLAMPA
+	./Config.pl -o=SC:u=Awsom,e=Awsom,ng=2,g=4,4,4
+	./Config.pl -o=IH:u=Awsom,e=Awsom,ng=2,g=4,4,4
+	./Config.pl -o=OH:u=Default,e=Mhd,ng=2,g=4,4,4
+	./Config.pl -o=SP:g=2000
+	${MAKE} SWMF
+	make PIDL
+
+test19_rundir:
+	rm -rf ${TESTDIR}
+	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
+	cp Param/PARAM.in.test.SCIHOHSP ${TESTDIR}/PARAM.in
+	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
+
+test19_run:
+	cd ${TESTDIR}; rm -rf RESTART
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./Restart.pl -o -W RESTART
+
+test19_restart:
+	cd ${TESTDIR}; rm -rf RESULTS runlog_restart
+	cd ${TESTDIR}; ./Restart.pl -i RESTART
+	cd ${TESTDIR}; mv PARAM.in PARAM.in_start; rm -f PARAM.in_orig_
+	cd ${TESTDIR}; cp Param/PARAM.in.test.restart.SCIHSP_long PARAM.in
+	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_restart
+	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS
+
+test19_check:
+	-(${DIFFNUM} -b -r=1e-5 -a=1e-26 \
+		${TESTDIR}/RESULTS/SC/log_n000000.log \
+		output/test15_long/SC_log_n000000.log \
+		> test19_sc.diff)
+	-(${DIFFNUM} -b -r=1e-5 -a=1e-26 \
+		${TESTDIR}/RESULTS/SC/rfr_rwi_4_*.outs \
+		output/test8/SC_rfr.ref.gz \
+		> test19_sc_rfr.diff)
+	-(${DIFFNUM} -b -r=1e-5 \
+		${TESTDIR}/RESULTS/IH/log_n000000.log \
+		output/test19/IH_log_n000000.log \
+		> test19_ih.diff)
+	-(${DIFFNUM} -b -r=1e-5 \
+		${TESTDIR}/RESULTS/SC/los_sdo_aia*.out \
+		SC/BATSRUS/data/output/test8/SC_los_sdo_aia.out.gz \
+		> test19_sc_los.diff)
+	cat ${TESTDIR}/RESULTS/SP/MH_data_*_*_t00000150_n000010.out \
+	    > ${TESTDIR}/RESULTS/SP/MH_data.outs
+	-(${DIFFNUM} -a=1e-6 -r=1e-6 -b \
+		${TESTDIR}/RESULTS/SP/MH_data.outs \
+		output/test19/MH_data.ref.gz \
+		> test19_sp.diff)
+	ls -l test19*.diff
+
 
 ### test_ramscb: GM+IE+IM/RAMSCB ###
 
