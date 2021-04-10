@@ -336,7 +336,7 @@ Needed for AMR
 IH/restartIN/restart.H
 
 #COORDSYSTEM
-HGC			TypeCoordSystem
+HGI			TypeCoordSystem
 
 #BODY
 T			UseBody
