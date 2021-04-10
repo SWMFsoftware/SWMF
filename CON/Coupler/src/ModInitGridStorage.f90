@@ -3,23 +3,28 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModInitGridStorage
   use CON_world, ONLY: MaxComp
-  use CON_comp_param
+  use CON_comp_param, ONLY: EE_, GM_, IE_, IH_, IM_, OH_, PC_, PS_, &
+       PT_, PW_, RB_, SC_, SP_, UA_, CZ_
   use CON_domain_decomposition, ONLY: DomainPointerType, DomainType
   implicit none
-  integer,parameter:: MaxGrid = MaxComp+3
-  type(DomainType),private,save,target::&
+  PRIVATE ! Except
+  integer, public, parameter:: MaxGrid = MaxComp
+  type(DomainType), save, target :: &
        EeGrid, GmGrid, IeGrid, IhGrid, ImGrid, OhGrid, PcGrid, PsGrid, &
        PtGrid, PwGrid, RbGrid, ScGrid, SpGrid, UaGrid, CzGrid
+  ! Public member:
+  ! Sets pointer for the component on target DD
+  public :: init_grid_storage
 contains
   !============================================================================
   ! revision history:
   ! 09SEP03              I.Sokolov<igorsok@umich.edu - initial prototype/code
   ! 12SEP03              version for any operating system
   ! 16JAN05              G.Toth removed the obsolete GmIe_grid
-  subroutine init_grid_storage(Domain_I,GridID_)
-    integer,intent(in)::GridID_
-    type(DomainPointerType), dimension(MaxGrid), intent(inout) :: Domain_I
-    ! information for the global grids is stored at each of the PEs so it is
+  subroutine init_grid_storage(Domain_I, GridID_)
+    integer,                 intent(in )   :: GridID_
+    type(DomainPointerType), intent(inout) :: Domain_I(MaxGrid)
+    ! information for the global grids is stored at all PEs so it is
     ! important to reduce the memory requirements. This short procedure
     ! describes how the memory is allocated for the domain decomposition
     ! structure. This solution satisfies the most picky SGI compiler,
