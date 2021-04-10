@@ -2,8 +2,8 @@ Begin session: 1
 
 #COMPONENTMAP
 SC  0 -1  1		CompMap
-IH  0 -1  1		CompMap
-OH  0 -1  1		CompMap
+IH  1 -1  2		CompMap
+OH  0 -1  2		CompMap
 SP  0 -1  2		CompMap
 
 #DESCRIPTION
@@ -466,6 +466,160 @@ End session: 2 (SC+IH steady state to 100 iterations)
 #RUN ##########################################################################
 Begin session: 3
 
+#COMPONENT
+OH			NameComp
+T			UseComp
+
+#TEST
+couple_ih_oh couple_sc_ih		StringTest
+
+#BEGIN_COMP OH ---------------------------------------------------------------
+
+#COORDSYSTEM
+HGI			TypeCoordSystem
+
+#BODY
+T			UseBody
+1.0			rBody
+3.0E+8			BodyNDim
+3.5E+6			BodyTDim
+
+#PLASMA
+1.0			FluidMass [amu]
+1.0			IonCharge [e]
+1.0			ElectronTemperatureRatio
+
+#GRID
+1			nRootBlock1
+1			nRootBlock2
+1			nRootBlock3
+-10.0			xMin
+ 10.0			xMax
+-10.0			yMin
+ 10.0			yMax
+-10.0			zMin
+ 10.0			zMax
+
+#GRIDBLOCKALL
+6800			MaxBlock
+
+#AMRREGION
+OuterShell		NameRegion
+shell0			StringShape
+1.0			RadiusInner
+1.1			Radius
+
+#AMRCRITERIALEVEL
+3			nRefineCrit
+Level			StringRefine
+4			RefineTo
+4			CoarsenFrom
+Level +OuterShell		StringRefine
+5			RefineTo
+5			CoarsenFrom
+currentsheet		StringRefine
+0.1			CoarsenLimit
+0.1			RefineLimit
+5			MaxLevel
+
+#GRIDLEVEL
+5			nLevel
+initial			StringShape
+
+#INNERBOUNDARY
+buffergrid		TypeBcBody
+
+#HELIOBUFFERGRID
+2			nRBuff
+64			nLonBuff
+32			nLatBuff
+0.95			RBuffMin
+1.10			RBuffMax
+
+
+#OUTERBOUNDARY
+float			TypeBc1
+float			TypeBc2
+float			TypeBc3
+float			TypeBc4
+float			TypeBc5
+float			TypeBc6
+
+#RESCHANGE
+T			UseAccurateReschange
+
+#USERSWITCH
++init			StringSwitch
+
+#CORONALHEATING
+turbulentcascade		TypeCoronalHeating
+T			UseWaveReflection
+1.5e5			LperpTimesSqrtBSi
+0.0			rMinWaveReflection
+F			UseSurfaceWaveRefl
+
+#SCHEME
+2			nOrder
+Sokolov			TypeFlux
+mc3			TypeLimiter
+1.2			LimiterBeta
+
+#NONCONSERVATIVE
+T			UseNonConservative
+
+#TIMESTEPPING
+2			nStage
+0.8			CflExpl
+
+#DIVB
+T			UseDivbSource
+T			UseDivbDiffusion
+F			UseProjection
+F			UseConstrainB
+
+#SAVELOGFILE
+T			DoSaveLogfile
+RAW			StringLog
+1			DnSaveLogfile
+-1.			DtSaveLogfile
+
+#SAVEINITIAL
+T			DoSaveInitial
+
+#SAVEPLOT
+3			nPlotFile
+x=0 VAR idl		StringPlot
+10 			DnSavePlot
+-1.			DtSavePlot
+-1.0			DxSavePlot
+rho ux uy uz ti te bx by bz I01 I02 p		NameVars
+g rbody			NamePars
+y=0 VAR idl		StringPlot
+10			DnSavePlot
+-1.			DtSavePlot
+-1.0			DxSavePlot
+rho ux uy uz ti te bx by bz I01 I02 p		NameVars
+g rbody			NamePars
+z=0 VAR idl		StringPlot
+10 			DnSavePlot
+-1.			DtSavePlot
+-1.0			DxSavePlot
+rho ux uy uz ti te bx by bz I01 I02 p		NameVars
+g rbody			NamePars
+
+
+#PARTICLELINE
+T			UseParticles
+16			nFieldLineMax
+1000			nParticlePerLine
+-1			SpaceStepMin
+-1			SpaceStepMax
+import			InitMode
+radius			OrderMode
+F			UseCorrection
+
+#END_COMP OH -----------------------------------------------------------------
+
 #TIMEACCURATE
 T			IsTimeAccurate
 
@@ -476,11 +630,15 @@ IH			NameTarget
 -1			DnCouple
 1.0			DtCouple
 
-
+#COUPLE1
+IH			NameSource
+OH			NameTarget
+-1			DnCouple
+10.0			DtCouple
 
 #STOP
 -1			MaxIter
-50			TimeMax
+50.0			TimeMax
 
 #BEGIN_COMP SC ---------------------------------------------------------------
 
@@ -498,7 +656,8 @@ HGI			TypeCoordSystem
 
 #END_COMP IH -----------------------------------------------------------------
 
-End session: 3 (SC+IH time accurate to 50 s)
+
+End session: 3 (SC+IH+OH time accurate to 50 s)
 #RUN ##########################################################################
 Begin session: 4
 
@@ -618,9 +777,35 @@ buf MHD idl		StringPlot
 
 #END_COMP IH -----------------------------------------------------------------
 
+#BEGIN_COMP OH ---------------------------------------------------------------
+
+#SAVEPLOT
+3			nPlotFile
+x=0 VAR idl		StringPlot
+10 			DnSavePlot
+-1.			DtSavePlot
+-1.0			DxSavePlot
+rho ux uy uz ti te bx by bz I01 I02 p		NameVars
+g rbody			NamePars
+y=0 VAR idl		StringPlot
+10			DnSavePlot
+-1.			DtSavePlot
+-1.0			DxSavePlot
+rho ux uy uz ti te bx by bz I01 I02 p		NameVars
+g rbody			NamePars
+z=0 VAR idl		StringPlot
+10 			DnSavePlot
+-1.			DtSavePlot
+-1.0			DxSavePlot
+rho ux uy uz ti te bx by bz I01 I02 p		NameVars
+g rbody			NamePars
+
+
+#END_COMP OH -----------------------------------------------------------------
+
 #STOP
 -1			MaxIter
 100.0			TimeMax
 
-End session: 4 (SC+IH to 100 s)
+End session: 5 (SC+IH+OH to 100 s)
 #END ##########################################################################
