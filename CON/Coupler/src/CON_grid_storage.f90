@@ -325,6 +325,7 @@ contains
     !--------------------------------------------------------------------------
     call bcast_decomposition_dd(Domain_I(GridID_)%Ptr)
   end subroutine bcast_decomposition_id
+  !============================================================================
   !
   ! If any of the optional parameters is not present, the global
   ! decomposition at all the PEs of the global communicator is
@@ -355,6 +356,7 @@ contains
   !============================================================================
   subroutine glue_margin_id(GridID_,Coord_D)
     integer,intent(in)::GridID_
+    !--------------------------------------------------------------------------
     real,dimension(nDim_C(GridID_)),&
          intent(inout)::Coord_D
     !--------------------------------------------------------------------------
@@ -363,6 +365,7 @@ contains
   !============================================================================
   subroutine search_in_id(GridID_,Coord_D,lGlobalTreeNumber)
     integer,intent(in)::GridID_
+    !--------------------------------------------------------------------------
     real,dimension(nDim_C(GridID_)),&
          intent(inout)::Coord_D
     integer,intent(out)::lGlobalTreeNumber
@@ -373,6 +376,7 @@ contains
   subroutine search_cell_id(&
        GridID_,lGlobalTreeNumber,Coord_D,iCells_D)
     integer,intent(in)::GridID_,lGlobalTreeNumber
+    !--------------------------------------------------------------------------
     real,dimension(nDim_C(GridID_)),&
          intent(inout)::Coord_D
     integer,dimension(nDim_C(GridID_)),&
@@ -491,7 +495,7 @@ contains
     DomainPointer%Ptr=>Domain_I(GridID_)%Ptr
   end subroutine associate_dd_pointer_id
   !============================================================================
- 
+
 end module CON_grid_storage
 !==============================================================================
 

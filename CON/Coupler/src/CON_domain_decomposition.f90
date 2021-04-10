@@ -11,7 +11,7 @@ module CON_domain_decomposition
   ! icludes both the uniformly spaced ones (uniformly spaced with
   ! respect to some generalized coordinates) and Octree or Quadric
   ! tree for adaptive block decompositions.
-  
+
   use ModUtilities, ONLY: check_allocate
   use CON_world
   use ModNumConst
@@ -319,7 +319,7 @@ contains
     Domain%IsTreeDecomposition=.false.
     if(present(IsTreeDecomposition))&
          Domain%IsTreeDecomposition=IsTreeDecomposition
-       
+
     Domain%nDim=nDim
     if(Domain%IsTreeDecomposition)then
        if(.not.present(nDimTree))then
@@ -392,7 +392,7 @@ contains
 
     Domain%IsLocal=.false.
     if(present(IsLocal)) Domain%IsLocal = IsLocal
-   
+
     Domain%nTreeNodes=1
     Domain%nAllocatedNodes=-1
 
@@ -470,12 +470,11 @@ contains
          Domain%nTreeNodes
   end subroutine check_octree_allocation
   !============================================================================
-  ! To get a decomposition domain, even the tree one, the root     
-  ! decomposition should be first constructed                      
+  ! To get a decomposition domain, even the tree one, the root
+  ! decomposition should be first constructed
   !                        ATTENTION
-  ! PE here are the ranks in the LOCAL communicator for the        
+  ! PE here are the ranks in the LOCAL communicator for the
   ! component
-  
 
   subroutine get_root_decomposition_dd(&
        Domain,&! Decomposition to be constructed
@@ -661,7 +660,6 @@ contains
 
   end subroutine set_iglobal_and_bp_dd
   !============================================================================
- 
 
   ! Allocates the part of the grid descriptor which is only used
   ! with octree grids. Checks the allocation for the arrayes needed
@@ -823,7 +821,7 @@ contains
     call complete(Domain)
   end subroutine bcast_indexes
   !============================================================================
-  ! complete recovers the geometric variables in situ         
+  ! complete recovers the geometric variables in situ
 
   subroutine complete(Domain)
     type (DomainType),intent(inout)::&
@@ -1380,7 +1378,8 @@ contains
     nullify(DomainPointer%Ptr)
     DomainPointer%Ptr=>Domain
   end subroutine associate_dd_pointer_dd
-  
+  !============================================================================
+
 end module CON_domain_decomposition
 !==============================================================================
 
