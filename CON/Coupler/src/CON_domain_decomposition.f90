@@ -7,42 +7,11 @@
 !
 module CON_domain_decomposition
 
-  ! The toolkit for coupling the different data sets within a
-  ! single component code, or within a framework as it is now (see
-  ! the date below) consists of:
-  !
-  ! ModMpi (iclude for mpif90.h)
-  !
-  ! ModNumConst
-  !
-  ! CON\_world
-  !
-  ! CON\_domain\_decomposition
-  !
-  ! CON\_grid\_descriptor
-  !
-  ! CON\_router
-  !
-  ! CON\_global\_message\_pass
-  !
-  !
   ! This file presents the class of the domain decompositions which
   ! icludes both the uniformly spaced ones (uniformly spaced with
   ! respect to some generalized coordinates) and Octree or Quadric
   ! tree for adaptive block decompositions.
-  !
-  !
-  ! The methods include: allocation, initialization, broadcast,
-  ! and searching tools, as well as the means for registering the
-  ! domain decompositions for a single component or with a
-  ! framework
-  !
-  !
-  ! If the CON\_world is modified, use the following lines for
-  ! renaming. The functions like i\_proc()         should give the
-  ! rank in the global communicator etc. NOTE: CON\_stop is the
-  ! interface procedure.
-
+  
   use ModUtilities, ONLY: check_allocate
   use CON_world
   use ModNumConst
@@ -94,7 +63,7 @@ module CON_domain_decomposition
      ! each of the nDim left boundary faces being defined with
      ! respect to the correspondent direction
 
-     real,dimension(:),pointer::CoordMin_D,CoordMax_D
+     real, pointer::CoordMin_D(:), CoordMax_D(:)
 
      !================ROOT DECOMPOSITION=============================
      ! Root decomposition:=  decomposition of the domain for
@@ -112,7 +81,7 @@ module CON_domain_decomposition
      !(For the uniformly spaced grids the root decomposition is the
      ! map of blocks, for tree grid - the map of the roots)
 
-     integer,dimension(:),pointer::iRootMapDim_D
+     integer, pointer :: iRootMapDim_D(:)
 
      !================CELL DECOMPOSITION=============================
      ! Cell decomposition:=decomposition of each of the blocks for
@@ -133,7 +102,7 @@ module CON_domain_decomposition
      ! allow to find readily the number of the nearest node, nearest
      ! edge and so on.
 
-     integer,dimension(:),pointer::nCells_D
+     integer, pointer :: nCells_D(:)
 
      !============TREE DECOMPOSITION=================================
      !RECURSIVE DEFINITION:
@@ -152,12 +121,12 @@ module CON_domain_decomposition
      ! If the tree decomposition is allowed for a given domain, set
      ! IsTreeGrid=.true.
 
-     logical::IsTreeDecomposition
+     logical :: IsTreeDecomposition
 
      ! Octree or Quadric tree. Is only used for the decomposition with
      ! IsTreeDecomposition=.true.
 
-     integer ::nDimTree
+     integer :: nDimTree
 
      ! nChildren=2**nDimTree for the tree grid
 
@@ -167,7 +136,7 @@ module CON_domain_decomposition
      ! For tree decomposition this is a full tree structure saved as
      ! described in the figure (PE is a CPU rank in a i_comm(Global_)
 
-     integer,dimension(:,:),pointer::iDecomposition_II
+     integer, pointer::iDecomposition_II(:,:)
 
      !---------------------------------------------------------------
      !
@@ -212,48 +181,13 @@ module CON_domain_decomposition
      ! for non-tree grid, or the number of all nodes
      ! in the tree.
 
-     integer::nTreeNodes,nAllocatedNodes
+     integer::nTreeNodes, nAllocatedNodes
 
      !---------------------------------------------------------------
      ! The following is not allocated if the grid is a tree grid.
      ! The GlobalTree of the tree roots in the
      ! iDecomposition_II array (the values for the second index
-     integer,dimension(:),pointer::iRoot_I
-
-     !==============REFINEMENT DESCRIPTOR============================
-     ! Parent Block:= the lGlobalNode for the block which disappears
-     ! in the coarse of the refinement procedure as described above
-     ! Children:= the values of lGlobalNode for the nChildren blocks
-     ! appearing as the results of the refinement procedures
-     !
-     ! refinement[iDecomposition_II]:=&
-     ! begin algorithm
-     ! choose lParent=lGlobalNode to be refined
-     ! if(iDecomposition_II(FirstChild_,lParent)/=None)&
-     !   stop('The Node can not be re-refined')!
-     ! do lGlobalNodes=1,nTreeNodes
-     ! if (iDecomposition_II(FirstChild_,lGlobalNode)==None_) CYCLE
-     ! if(iDecomposition_II(Parent_,lGlobalNode)>lParent)&
-     ! iDecomposition_II(Parent_,lGlobalNode)=&
-     ! iDecomposition_II(Parent_,lGlobalNode)+nChildren
-     ! where(iDecomposition_II(1:nChildren,lGlobalNode)>lParent)&
-     ! iDecomposition_II(1:nChildren,lGlobalNode)=&
-     ! iDecomposition_II(1:nChildren,lGlobalNode)+nChildren
-     ! end do
-     ! iDecomposition_II(1:nChildren,lParent)=&
-     !     lParent+1:lParent+nChildren
-     ! (or reordering(lParent+1:lParent+nChildren) in accordance with
-     !   the Hilbert_Peano curve)
-     ! iDecomposition_II(Parent_,lParent+1:lParent+nChildren)
-     ! iDecomposition_II(Parent_,lParent+1:lParent+nChildren)
-     ! end algorithm
-     !
-     ! After this the values for
-     ! iDecomposition_II(PE_:BLK_,lParent+1:lParent+nChildren)
-     ! should be assigned to be exactly the same as in the component
-     ! to set the relationship between the ChildNumber in
-     ! iDecomposition and the concrete block in the component we use
-     ! geometric relationships.
+     integer, pointer :: iRoot_I(:)
      !
      ! Introduce the array nDimTree*nChildren, which defines the
      ! spacial shift vector of the Child's zero corner with respect to
@@ -266,7 +200,7 @@ module CON_domain_decomposition
      ! the control module, this array should be organized exaclty as
      ! it done in the "component".
 
-     integer,dimension(:,:),pointer::iShift_DI
+     integer, pointer :: iShift_DI(:, :)
 
      !===============GEOMETRY CHARACTERISTICS========================
      ! In principle, the array introduced above contains all the
@@ -277,15 +211,15 @@ module CON_domain_decomposition
      ! CoordBlock_DI are the generalized coordinates of the left corner
      ! of the block,
 
-     real,dimension(:,:),pointer::CoordBlock_DI
+     real, pointer :: CoordBlock_DI(:, :)
 
      ! DCoordBlock_D is the BLOCK size
 
-     real,dimension(:,:),pointer::DCoordBlock_DI
+     real, pointer :: DCoordBlock_DI(:,:)
 
      ! and DCoordCell_D is the cell size.
 
-     real,dimension(:,:),pointer::DCoordCell_DI
+     real, pointer :: DCoordCell_DI(:,:)
 
      ! First index inumerates the spatial component of the
      ! generalized coordinates, second is lGlobalNode
@@ -297,7 +231,7 @@ module CON_domain_decomposition
      ! boundary conditions. For the domain with periodic boundary
      ! conditions the following array is introduced
 
-     logical,dimension(:),pointer::IsPeriodic_D
+     logical, pointer::IsPeriodic_D(:)
 
      ! For more complicated cases (spherical and analogous geometries
      ! having a pole singularity) a special procedure
@@ -311,18 +245,18 @@ module CON_domain_decomposition
      ! from the previously found node (from the previous search). To
      ! do this we have this previuosly found value saved in lSearch
 
-     integer::lSearch
+     integer :: lSearch
 
      ! For the grids which can be refined, the realization number for
      ! the domain decomposition should be stored
 
-     integer:: iRealization
+     integer :: iRealization
 
      !===================LOCAL AND GLOBAL DECOMPOSITIONS=============
      ! In the local decomposition the PE ranks are defined to be in a
      ! local communicator, for a particular component
 
-     logical::IsLocal
+     logical :: IsLocal
 
      ! The derived type described below consists of decompositions,
      ! for which IsLocal=.false., but if the decomposition allows
@@ -335,16 +269,14 @@ module CON_domain_decomposition
      ! The inverse mapping (iPE,iBlock)->global node number is mantained
      ! using the following components:
 
-     integer::MinBlock,MaxBlock
-     integer,dimension(:,:),pointer::iGlobal_BP
+     integer :: MinBlock, MaxBlock
+     integer, pointer::iGlobal_BP(:,:)
 
      ! The inverse mapping GlobalBlock number->global node number
      ! is mantained using the following components:
 
      integer::nBlockAll
-     integer,dimension(:),pointer::iGlobal_A
-
-     !\end{verbatim}
+     integer, pointer :: iGlobal_A(:)
 
   end type DomainType
   !================DERIVED TYPE===================================
@@ -368,14 +300,13 @@ contains
        CompID_,&            ! As in DomainType
        nDim,&               ! As in DomainType
        IsTreeDecomposition,&! As in DomainType
-       nDimTree,IsLocal)
+       nDimTree, IsLocal)
 
-    type(DomainType),intent(inout)::&
-         Domain
-    integer,intent(in)::CompID_,nDim
-    logical,intent(in),optional::IsTreeDecomposition
-    integer,intent(in),optional::nDimTree
-    logical,intent(in),optional::IsLocal
+    type(DomainType),intent(inout) :: Domain
+    integer, intent(in)            :: CompID_, nDim
+    logical, intent(in), optional  :: IsTreeDecomposition
+    integer, intent(in), optional  :: nDimTree
+    logical, intent(in), optional  :: IsLocal
     integer::iError,iDim,iChildFirst,iChildLast
 
     !--------------------------------------------------------------------------
@@ -385,14 +316,10 @@ contains
        call CON_stop(&
             'Unauthorized use of the component')
     end if
-
-    if(present(IsTreeDecomposition))then
-       Domain%IsTreeDecomposition=&
-            IsTreeDecomposition
-    else
-       Domain%IsTreeDecomposition=.false.
-    end if
-
+    Domain%IsTreeDecomposition=.false.
+    if(present(IsTreeDecomposition))&
+         Domain%IsTreeDecomposition=IsTreeDecomposition
+       
     Domain%nDim=nDim
     if(Domain%IsTreeDecomposition)then
        if(.not.present(nDimTree))then
@@ -407,32 +334,30 @@ contains
     end if
 
     nullify(Domain%iRootMapDim_D)
-    allocate(Domain%iRootMapDim_D(&
-         nDim),stat=iError)
+    allocate(Domain%iRootMapDim_D(nDim),stat=iError)
     call check_allocate(iError,"iRootMapDim_D")
-    Domain%iRootMapDim_D=1
+    Domain%iRootMapDim_D = 1
 
     nullify(Domain%CoordMin_D)
     allocate(Domain%CoordMin_D(nDim),stat=iError)
     call check_allocate(iError,"CoordMin_D")
-    Domain%CoordMin_D=0.0
+    Domain%CoordMin_D = 0.0
 
     nullify(Domain%CoordMax_D)
     allocate(Domain%CoordMax_D(nDim),stat=iError)
     call check_allocate(iError,"CoordMax_D")
-    Domain%CoordMax_D=1.0
+    Domain%CoordMax_D = 1.0
 
     nullify(Domain%nCells_D)
     allocate(Domain%nCells_D(nDim),stat=iError)
     call check_allocate(iError,"nCells_D")
-    Domain%nCells_D=1
+    Domain%nCells_D = 1
 
     nullify(Domain%IsPeriodic_D)
-    allocate(&
-         Domain%IsPeriodic_D(nDim),stat=iError)
+    allocate(Domain%IsPeriodic_D(nDim),stat=iError)
     call check_allocate(iError,"IsPeriodic_D")
-    Domain%IsPeriodic_D=.false.
-    Domain%DoGlueMargins=.false.
+    Domain%IsPeriodic_D  = .false.
+    Domain%DoGlueMargins = .false.
     Domain%iDirMinusGlue = 0
     Domain%iDirPlusGlue  = 0
     Domain%iDirCycle     = 0
@@ -459,21 +384,15 @@ contains
           iChildLast=min(&
                Domain%nChildren,2*iChildLast)
           if(iChildFirst<iChildLast)EXIT
-          Domain%iShift_DI(&
-               :,iChildFirst:iChildLast)=&
-               Domain%iShift_DI(&
-               :,1:1+iChildLast-iChildFirst)
-          Domain%iShift_DI(&
-               iDim,iChildFirst:iChildLast)=1
+          Domain%iShift_DI(:,iChildFirst:iChildLast)=&
+               Domain%iShift_DI(:,1:1+iChildLast-iChildFirst)
+          Domain%iShift_DI(iDim,iChildFirst:iChildLast) = 1
        end do
     end if
 
-    if(present(IsLocal))then
-       Domain%IsLocal=IsLocal
-    else
-       Domain%IsLocal=.false.
-    end if
-
+    Domain%IsLocal=.false.
+    if(present(IsLocal)) Domain%IsLocal = IsLocal
+   
     Domain%nTreeNodes=1
     Domain%nAllocatedNodes=-1
 
@@ -482,31 +401,25 @@ contains
     nullify(Domain%DCoordBlock_DI)
     nullify(Domain%DCoordCell_DI)
     call check_octree_allocation(Domain)
-    Domain%lSearch=1
-    Domain%iRealization=0
+    Domain%lSearch = 1
+    Domain%iRealization = 0
     nullify(Domain%iGlobal_BP)
     Domain%MinBlock=1
     Domain%MaxBlock=1
     if(Domain%IsLocal)then
-       allocate(Domain%iGlobal_BP(1:1,&
-            0:-1+n_proc(Domain%CompID_)),&
+       allocate(Domain%iGlobal_BP(1:1, 0:-1+n_proc(Domain%CompID_)),&
             stat=iError)
     else
-       allocate(Domain%iGlobal_BP(1:1,&
-            0:&
-            i_proc_last(CompID_)),&
+       allocate(Domain%iGlobal_BP(1:1, 0:i_proc_last(CompID_)),&
             stat=iError)
     end if
     call check_allocate(iError,'iGlobal_BP,first allocation')
     Domain%nBlockAll=1
     nullify(Domain%iGlobal_A)
-    allocate(Domain%iGlobal_A(&
-         1:Domain%nBlockAll),&
-         stat=iError)
+    allocate(Domain%iGlobal_A(1:Domain%nBlockAll),stat=iError)
     call check_allocate(iError,'iGlobal_A,first allocation')
   end subroutine init_decomposition_dd
   !============================================================================
-  !============================NO INTERFACE=======================!
 
   ! Checks the array allocation for a given grid desciptor and
   ! extends its dimension if required
@@ -519,9 +432,8 @@ contains
     !--------------------------------------------------------------------------
     nUbound= GlobalBlock_
     if(Domain%IsTreeDecomposition)&
-         nUbound=max(nUbound,Domain%nChildren)
-    if(Domain%nAllocatedNodes>=&
-         Domain%nTreeNodes)RETURN
+         nUbound=max(nUbound, Domain%nChildren)
+    if(Domain%nAllocatedNodes>=Domain%nTreeNodes)RETURN
     if(associated(Domain%iDecomposition_II))then
        deallocate(Domain%iDecomposition_II,stat=iError)
        deallocate(Domain%CoordBlock_DI,stat=iError)
@@ -530,39 +442,26 @@ contains
     end if
 
     nullify(Domain%iDecomposition_II)
-    allocate(&
-         Domain%iDecomposition_II&
-         (Parent_:nUBound,&
-         Domain%nTreeNodes)&
-         ,stat=iError)
-    call check_allocate(iError,'iDecomposition_II')
+    allocate(Domain%iDecomposition_II&
+         (Parent_:nUBound, Domain%nTreeNodes), stat=iError)
+    call check_allocate(iError, 'iDecomposition_II')
     Domain%iDecomposition_II=None_
-    Domain%iDecomposition_II(&
-         MyNumberAsAChild_,:)=0
+    Domain%iDecomposition_II(MyNumberAsAChild_,:)=0
 
     nullify(Domain%CoordBlock_DI)
-    allocate(&
-         Domain%CoordBlock_DI&
-         (Domain%nDim,&
-         Domain%nTreeNodes)&
+    allocate(Domain%CoordBlock_DI(Domain%nDim, Domain%nTreeNodes)&
          ,stat=iError)
     call  check_allocate(iError,'CoordBlock_DI')
     Domain% CoordBlock_DI=0.0
 
     nullify(Domain%DCoordBlock_DI)
-    allocate(&
-         Domain%DCoordBlock_DI&
-         (Domain%nDim,&
-         Domain%nTreeNodes)&
-         ,stat=iError)
+    allocate(Domain%DCoordBlock_DI&
+         (Domain%nDim,Domain%nTreeNodes),stat=iError)
     call  check_allocate(iError,'DCoordBlock_DI')
-    Domain%DCoordBlock_DI=1.0
+    Domain%DCoordBlock_DI = 1.0
 
     nullify(Domain%DCoordCell_DI)
-    allocate(&
-         Domain%DCoordCell_DI&
-         (Domain%nDim,&
-         Domain%nTreeNodes)&
+    allocate(Domain%DCoordCell_DI(Domain%nDim, Domain%nTreeNodes)&
          ,stat=iError)
     call  check_allocate(iError,'DCoordCell_DI')
     Domain%DCoordCell_DI=1.0
@@ -571,14 +470,12 @@ contains
          Domain%nTreeNodes
   end subroutine check_octree_allocation
   !============================================================================
-  !==========================WITH INTERFACE=======================!
-  !\begin{verbatim}
-  ! To get a decomposition domain, even the tree one, the root     !
-  ! decomposition should be first constructed                      !
-  !====================ATTENTION==================================!
-  ! PE here are the ranks in the LOCAL communicator for the        !
+  ! To get a decomposition domain, even the tree one, the root     
+  ! decomposition should be first constructed                      
+  !                        ATTENTION
+  ! PE here are the ranks in the LOCAL communicator for the        
   ! component
-  !\end{verbatim}
+  
 
   subroutine get_root_decomposition_dd(&
        Domain,&! Decomposition to be constructed
@@ -665,20 +562,19 @@ contains
 
     if(Domain%IsTreeDecomposition)then
        call check_iroot_allocation(Domain)
-       if(present(iShift_DI))&
-            Domain%iShift_DI=iShift_DI
+       if(present(iShift_DI))Domain%iShift_DI=iShift_DI
     end if
 
     ! If neither PE\_I nor iBlock\_I is present, the root
     ! decomposition blocks are balanced for an optimal load
     if((.not.present(PE_I)).and.(.not.present(iBlock_I)))then
-       MaxBlock=(Domain%nTreeNodes-1)/&
-            n_proc(Domain%CompID_)+1
-       do lBlock=1,Domain%nTreeNodes
-          call set_pe_and_local_blk_dd(Domain,&
-               lBlock,&
-               iPE=(lBlock-1)/MaxBlock,&
-               iBlock=mod(lBlock,MaxBlock)+1)
+       MaxBlock=(Domain%nTreeNodes - 1)/&
+            n_proc(Domain%CompID_) + 1
+       do lBlock=1, Domain%nTreeNodes
+          Domain%iDecomposition_II(BLK_, lBlock) = &
+               mod(lBlock - 1, MaxBlock) + 1
+          Domain%iDecomposition_II(PE_, lBlock) =  &
+               (lBlock - 1)/MaxBlock
        end do
        call set_iglobal_and_bp_dd(Domain)
        RETURN
@@ -692,46 +588,16 @@ contains
        Domain%iDecomposition_II&
             (PE_,1:Domain%nTreeNodes)=0
     end if
-    !\begin{verbatim}
-    ! If the iBlock_I is not given, they are assumed to be enumerated
-    ! like in the following loop:
-    !      lBlock=0
-    !      do kRoot=1,iRootMapDim_D(3)
-    !          do jRoot=1,iRootMapDim_D(2)
-    !             do iRoot=1,iRootMapDim_D(1)
-    !               lBlock=lBlock+1
-    !               BLK(iRoot,jRoot,kRoot)=lBlock
-    !             end do
-    !          end do
-    !      end do
-    !\end{verbatim}
+
     if(present(iBlock_I))then
-       Domain%iDecomposition_II&
-            (BLK_,1:Domain%nTreeNodes)=iBlock_I
+       Domain%iDecomposition_II(BLK_, 1:Domain%nTreeNodes) = iBlock_I
     else
        do lBlock=1, Domain%nTreeNodes
-          Domain%iDecomposition_II&
-               (BLK_,lBlock)=lBlock
+          Domain%iDecomposition_II(BLK_, lBlock) = lBlock
        end do
     end if
     call set_iglobal_and_bp_dd(Domain)
   end subroutine get_root_decomposition_dd
-  !============================================================================
-  subroutine set_pe_and_local_blk_dd(&
-       Domain,lGlobalTreeNode,iPE,iBlock)
-    type(DomainType),intent(inout)::&
-         Domain
-    integer,intent(in)::lGlobalTreeNode,iPE,iBlock
-    !--------------------------------------------------------------------------
-    if(Domain%iDecomposition_II&
-         (FirstChild_,lGlobalTreeNode)/=None_)call CON_stop(&
-         'You can not assign pe and blk for tree node')
-
-    Domain%iDecomposition_II&
-         (BLK_,lGlobalTreeNode)=iBlock
-    Domain%iDecomposition_II&
-         (PE_,lGlobalTreeNode)=iPE
-  end subroutine set_pe_and_local_blk_dd
   !============================================================================
   subroutine set_iglobal_and_bp_dd(Domain)
     type(DomainType),intent(inout)::&
@@ -795,7 +661,7 @@ contains
 
   end subroutine set_iglobal_and_bp_dd
   !============================================================================
-  !=====================NO INTERFACE==============================!
+ 
 
   ! Allocates the part of the grid descriptor which is only used
   ! with octree grids. Checks the allocation for the arrayes needed
@@ -818,7 +684,6 @@ contains
     Domain%iRoot_I=None_
   end subroutine allocate_iroot
   !============================================================================
-  !---------------------------------------------------------------!
   subroutine check_iroot_allocation(Domain)
     type(DomainType),intent(inout)::&
          Domain
@@ -829,8 +694,7 @@ contains
   end subroutine check_iroot_allocation
   !============================================================================
 
-  !===========================WITH INTERFACE======================!
-  ! Broadcasts a given grid descriptor from the root PE
+  ! Broadcasts a given domain decomposition from the root PE
   ! via the global communicator iComm
 
   subroutine bcast_decomposition_dd(Domain)
@@ -877,7 +741,7 @@ contains
             MPI_INTEGER,&
             iProc0, iComm,iError)
     end if
-    call bcast_indexes_dd(&
+    call bcast_indexes(&
          Domain)
 
     call MPI_Bcast(Domain%DoGlueMargins,&
@@ -894,8 +758,6 @@ contains
 
   end subroutine bcast_decomposition_dd
   !============================================================================
-  !---------------------------------------------------------------!
-  !
   ! Broadcasts only Decomposition\_II. This is a part of the
   ! synchronize\_refinement procedure, but it can be used separately
   ! too. If any of the optional parameters is not present, the
@@ -906,8 +768,8 @@ contains
   ! Recalculate local PE ranks to their values in the global
   ! communicator while broadcasting.
 
-  subroutine bcast_indexes_dd(&
-       Domain,iProcUnion,iCommUnion)
+  subroutine bcast_indexes(&
+       Domain, iProcUnion, iCommUnion)
     type (DomainType),intent(inout)::&
          Domain
     integer,optional,intent(in)::iProcUnion,iCommUnion
@@ -959,10 +821,9 @@ contains
          iProc0, iComm,iError)
 
     call complete(Domain)
-  end subroutine bcast_indexes_dd
+  end subroutine bcast_indexes
   !============================================================================
-  !===========================NO INTERFACE========================!
-  ! complete recovers the geometric variables in situ         !
+  ! complete recovers the geometric variables in situ         
 
   subroutine complete(Domain)
     type (DomainType),intent(inout)::&
@@ -1086,71 +947,62 @@ contains
        GlobalDomain%iDecomposition_II(:,1:GlobalDomain%nTreeNodes)=&
             LocalDomain%iDecomposition_II(:,1:LocalDomain%nTreeNodes)
     end if
-    if(present(iProcUnion).and.present(iCommUnion))then
-       call bcast_indexes_dd(GlobalDomain,&
-            iProcUnion,iCommUnion)
-    else
-       call bcast_indexes_dd(GlobalDomain)
-    end if
+    call bcast_indexes(GlobalDomain,&
+         iProcUnion,iCommUnion)
   end subroutine synchronize_refinement_dd
   !============================================================================
-  !\begin{verbatim}
-  !
-  !                 METODS
-  !           ALL WITH INTERFACE
   ! The "methods" below show how to use the information available
   ! from grid descriptors.They involve some elements of the
   ! connectivity list for blocks and searching tools
   !
   !================CONNECTIVITY LIST==============================
   !
-  !\end{verbatim}
   ! Returns the nDim vector, whose iDim's component is true, if
   ! along the iDim's direction there is a domain Boundary to the
   ! Left from the block with the number lGlobalTreeNumber
 
-  function is_left_boundary_dd(&
+  function is_left_boundary_d(&
        Domain,lGlobalTreeNumber)
     integer,intent(in)::lGlobalTreeNumber
     type(DomainType),intent(in)::&
          Domain
     logical,dimension(Domain%nDim)::&
-         is_left_boundary_dd
+         is_left_boundary_d
     !--------------------------------------------------------------------------
-    is_left_boundary_dd=.not.(Domain%IsPeriodic_D)&
+    is_left_boundary_d=.not.(Domain%IsPeriodic_D)&
          .and.Domain%CoordBlock_DI(&
          :,lGlobalTreeNumber)<&
          cThird*Domain%DCoordBlock_DI(&
          :,lGlobalTreeNumber)+&
          Domain%CoordMin_D
-  end function is_left_boundary_dd
+  end function is_left_boundary_d
   !============================================================================
   ! Returns the nDim vector, whose iDim's component is true, if
   ! along the iDim's direction there is a Tree Boundary to the
   ! Right from the block with the number lGlobalTreeNumber
 
-  function is_right_boundary_dd(&
+  function is_right_boundary_d(&
        Domain,lGlobalTreeNumber)
     integer,intent(in)::lGlobalTreeNumber
     type(DomainType),intent(in)::&
          Domain
     logical,dimension(Domain%nDim)::&
-         is_right_boundary_dd
+         is_right_boundary_d
     !--------------------------------------------------------------------------
-    is_right_boundary_dd=.not.&
+    is_right_boundary_d=.not.&
          (Domain%IsPeriodic_D).and.&
          Domain%CoordBlock_DI(:,lGlobalTreeNumber)+&
          (1.0+cThird)*Domain%DCoordBlock_DI(&
          :,lGlobalTreeNumber)>&
          Domain%CoordMax_D
-  end function is_right_boundary_dd
+  end function is_right_boundary_d
   !============================================================================
   ! Tree neighbor
   ! returns the number of octree node, to which the center of the
   !"ghost cell" belongs, which is marked with iCells\_D cell index
   ! vector.
 
-  integer function l_neighbor_dd(&
+  integer function l_neighbor(&
        Domain,lGlobalTreeNumber,iCells_D)
     integer,intent(in)::lGlobalTreeNumber
     type(DomainType),intent(inout)::&
@@ -1159,12 +1011,12 @@ contains
     integer,dimension(Domain%nDim),&
          intent(in)::iCells_D
     real,dimension(Domain%nDim)::Coord_D
-    if(any(is_left_boundary_dd( Domain,&
+    if(any(is_left_boundary_d( Domain,&
          lGlobalTreeNumber).and.iCells_D<1).or.&
-         any(is_right_boundary_dd(Domain,&
+         any(is_right_boundary_d(Domain,&
          lGlobalTreeNumber).and.iCells_D>&
          Domain%nCells_D))then
-       l_neighbor_dd=None_
+       l_neighbor=None_
     else
 
        ! Cell center coordinates
@@ -1172,9 +1024,9 @@ contains
             Domain%CoordBlock_DI(:,lGlobalTreeNumber) + &
             Domain%DCoordCell_DI(:,lGlobalTreeNumber)*&
             (real(iCells_D) - 0.5)
-       call search_in_dd(Domain, Coord_D, l_neighbor_dd)
+       call search_in_dd(Domain, Coord_D, l_neighbor)
     end if
-  end function l_neighbor_dd
+  end function l_neighbor
   !============================================================================
   subroutine glue_margin_dd(&
        Domain,Coord_D)
@@ -1528,8 +1380,7 @@ contains
     nullify(DomainPointer%Ptr)
     DomainPointer%Ptr=>Domain
   end subroutine associate_dd_pointer_dd
-  !============================================================================
-  !==============================END==============================!
+  
 end module CON_domain_decomposition
 !==============================================================================
 

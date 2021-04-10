@@ -11,7 +11,7 @@ module CON_grid_storage
   type(DomainPointerType),dimension(MaxGrid),&
        private::&
        Domain_I
-  logical,dimension(MaxGrid)::DoneDomainInit_C=.false.
+  logical :: DoneDomainInit_C(MaxGrid)=.false.
 
   ! Introduced to bypass the HALEM compiler restrictions
   integer,dimension(MaxGrid)::nDim_C=0
@@ -36,29 +36,9 @@ module CON_grid_storage
      module procedure bcast_decomposition_dd
   end interface
 
-  interface bcast_dd_indexes
-     module procedure bcast_indexes_id
-     module procedure bcast_indexes_dd
-  end interface
-
   interface synchronize_refinement
      module procedure synchronize_refinement_id
      module procedure synchronize_refinement_dd
-  end interface
-
-  interface is_left_boundary_d
-     module procedure is_left_boundary_id
-     module procedure is_left_boundary_dd
-  end interface
-
-  interface is_right_boundary_d
-     module procedure is_right_boundary_id
-     module procedure is_right_boundary_dd
-  end interface
-
-  interface l_neighbor
-     module procedure l_neighbor_id
-     module procedure l_neighbor_dd
   end interface
 
   interface glue_margin
@@ -338,7 +318,6 @@ contains
     call set_iglobal_and_bp_dd(Domain_I(GridID_)%Ptr)
   end subroutine get_root_decomposition_id
   !============================================================================
-  !---------------------------------------------------------------!
   subroutine bcast_decomposition_id(&
        GridID_)
 
@@ -346,39 +325,6 @@ contains
     !--------------------------------------------------------------------------
     call bcast_decomposition_dd(Domain_I(GridID_)%Ptr)
   end subroutine bcast_decomposition_id
-  !============================================================================
-  !---------------------------------------------------------------!
-  ! Broadcasts only Decomposition\_II. This is a part of the
-  ! synchronize\_refinement procedure, but it can be used separately
-  ! too. If any of the optional parameters is not present, the
-  ! Decomposition\_II array is sent from the root processor of the
-  ! components to all PEs in the global communicator, otherwise
-  ! it itis sent FROM the PE having the rank iProcUnion in the
-  ! communicator iCommUnion TO all PEs of this communicator.
-  ! Recalculate local PE ranks to their values in the global
-  ! communicator while broadcasting.
-  subroutine bcast_indexes_id(&
-       GridID_,iProcUnion,iCommUnion)
-
-    integer,intent(in)::GridID_
-    integer,intent(in),optional::iProcUnion,iCommUnion
-
-    !--------------------------------------------------------------------------
-    if(present(iProcUnion).and.present(iCommUnion))then
-       call bcast_indexes_dd(&
-            Domain_I(GridID_)%Ptr,iProcUnion,iCommUnion)
-    else
-       call bcast_indexes_dd(&
-            Domain_I(GridID_)%Ptr)
-    end if
-  end subroutine bcast_indexes_id
-  !============================================================================
-  !---------------------------------------------------------------!
-  !\begin{verbatim}
-  !           SYNCHRONIZE LOCAL AND GLOBAL GRID
-  !           NOTE: IF GridID\_ is used for global grid, then
-  !           synchronize\_refinement is the only way to properly
-  !           account for the refinement
   !
   ! If any of the optional parameters is not present, the global
   ! decomposition at all the PEs of the global communicator is
@@ -407,64 +353,31 @@ contains
     end if
   end subroutine synchronize_refinement_id
   !============================================================================
-  function is_left_boundary_id(&
-       GridID_,lGlobalTreeNumber)
-    integer,intent(in)::lGlobalTreeNumber
-    integer,intent(in)::GridID_
-    logical,dimension(nDim_C(GridID_))::&
-         is_left_boundary_id
-    !--------------------------------------------------------------------------
-    is_left_boundary_id=is_left_boundary_dd(&
-         Domain_I(GridID_)%Ptr,lGlobalTreeNumber)
-  end function is_left_boundary_id
-  !============================================================================
-  function is_right_boundary_id(&
-       GridID_,lGlobalTreeNumber)
-    integer,intent(in)::GridID_,lGlobalTreeNumber
-    logical,dimension(nDim_C(GridID_))::&
-         is_right_boundary_id
-    !--------------------------------------------------------------------------
-    is_right_boundary_id=&
-         is_right_boundary_dd(&
-         Domain_I(GridID_)%Ptr,lGlobalTreeNumber)
-  end function is_right_boundary_id
-  !============================================================================
-  integer function l_neighbor_id(&
-       GridID_,lGlobalTreeNumber,iCells_D)
-    integer,intent(in)::GridID_,lGlobalTreeNumber
-    !--------------------------------------------------------------------------
-    integer,dimension(nDim_C(GridID_)),&
-         intent(in)::iCells_D
-    l_neighbor_id=l_neighbor_dd(&
-         Domain_I(GridID_)%Ptr,lGlobalTreeNumber,iCells_D)
-  end function l_neighbor_id
-  !============================================================================
   subroutine glue_margin_id(GridID_,Coord_D)
     integer,intent(in)::GridID_
-    !--------------------------------------------------------------------------
     real,dimension(nDim_C(GridID_)),&
          intent(inout)::Coord_D
-    !-----------
+    !--------------------------------------------------------------------------
     call glue_margin_dd(Domain_I(GridID_)%Ptr,Coord_D)
   end subroutine glue_margin_id
   !============================================================================
   subroutine search_in_id(GridID_,Coord_D,lGlobalTreeNumber)
     integer,intent(in)::GridID_
-    !--------------------------------------------------------------------------
     real,dimension(nDim_C(GridID_)),&
          intent(inout)::Coord_D
     integer,intent(out)::lGlobalTreeNumber
+    !--------------------------------------------------------------------------
     call search_in_dd(Domain_I(GridID_)%Ptr,Coord_D,lGlobalTreeNumber)
   end subroutine search_in_id
   !============================================================================
   subroutine search_cell_id(&
        GridID_,lGlobalTreeNumber,Coord_D,iCells_D)
     integer,intent(in)::GridID_,lGlobalTreeNumber
-    !--------------------------------------------------------------------------
     real,dimension(nDim_C(GridID_)),&
          intent(inout)::Coord_D
     integer,dimension(nDim_C(GridID_)),&
          intent(out)::iCells_D
+    !--------------------------------------------------------------------------
     call search_cell_dd(Domain_I(GridID_)%Ptr,&
          lGlobalTreeNumber,Coord_D,iCells_D)
   end subroutine search_cell_id
@@ -578,7 +491,7 @@ contains
     DomainPointer%Ptr=>Domain_I(GridID_)%Ptr
   end subroutine associate_dd_pointer_id
   !============================================================================
-  !---------------------------------------------------------------!
+ 
 end module CON_grid_storage
 !==============================================================================
 
