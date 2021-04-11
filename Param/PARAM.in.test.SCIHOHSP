@@ -807,5 +807,5 @@ g rbody			NamePars
 -1			MaxIter
 100.0			TimeMax
 
-End session: 5 (SC+IH+OH to 100 s)
+End session: 4 (SC+IH+OH to 100 s)
 #END ##########################################################################
