@@ -2,9 +2,10 @@
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module CON_router
-  use CON_grid_storage
+  use CON_world
+  use ModMpi
   use CON_grid_descriptor
-  use ModMPI, ONLY: MPI_UNDEFINED
+  use ModUtilities, ONLY: check_allocate
   ! This file presents the class of routers between the grids, each!
   ! of them can be either the uniformly spaced or Octree or Quadric!
   ! adaptive block grid                   .                      !
@@ -141,8 +142,8 @@ contains
 
     ! Check grid registration
     !--------------------------------------------------------------------------
-    Router%iCompSource = compid(GridSource%Domain%Ptr)
-    Router%iCompTarget = compid(GridTarget%Domain%Ptr)
+    Router%iCompSource = GridSource%Domain%Ptr%CompID_
+    Router%iCompTarget = GridTarget%Domain%Ptr%CompID_
 
     ! Check if the grids are both local or both global
     !              !

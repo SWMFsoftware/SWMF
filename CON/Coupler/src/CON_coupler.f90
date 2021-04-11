@@ -12,6 +12,9 @@ module CON_coupler
   use CON_world
   use CON_global_message_pass, &
        couple_comp => global_message_pass
+  use CON_grid_storage, ONLY: compid, done_dd_init, ndim_id, i_realization, &
+       init_decomposition, get_root_decomposition, bcast_decomposition,     &
+       ncell_id
   use CON_router
   use CON_time, ONLY: FreqType
   use ModUtilities, ONLY: check_allocate
@@ -1081,13 +1084,13 @@ contains
     if(present(nIndexSource))then
        nIndexSourceHere=nIndexSource
     else
-       nIndexSourceHere=ndim_grid(iCompSource)+1
+       nIndexSourceHere=ndim_id(iCompSource) + 1
     end if
 
     if(present(nIndexTarget))then
        nIndexTargetHere=nIndexTarget
     else
-       nIndexTargetHere=ndim_grid(iCompTarget)+1
+       nIndexTargetHere=ndim_id(iCompTarget) + 1
     end if
     call init_router(&
          GridSource,&

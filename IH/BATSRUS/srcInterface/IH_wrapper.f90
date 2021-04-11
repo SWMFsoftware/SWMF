@@ -393,7 +393,7 @@ contains
          GridID_=IH_,&
          CompID_=IH_,&
          nDim=3,     &
-         IsTreeDecomposition=.true.)
+         IsTreeDD = .true.)
 
     if(IsGenRadius)then
        call set_coord_system(            &
@@ -423,7 +423,7 @@ contains
             Domain=MH_Domain,&
             CompID_=IH_,&
             nDim=3,&
-            IsTreeDecomposition=.true.)
+            IsTreeDD = .true.)
 
        ! Get the octree root array
        call MH_get_root_decomposition(MH_Domain)

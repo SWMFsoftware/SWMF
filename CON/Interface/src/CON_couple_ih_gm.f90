@@ -194,7 +194,7 @@ contains
 
     !--------------------------------------------------------------------------
     IsLeftFace_D=i_D(x_:z_)  < 1
-    IsRightFace_D=i_D(x_:z_) > GM_Grid%Domain%Ptr%nCells_D
+    IsRightFace_D=i_D(x_:z_) > GM_Grid%Domain%Ptr%nCell_D
     IsInterfacePoint=IsRightFace_D(x_).and..not.&
          (any(IsLeftFace_D(y_:z_)).or.any(IsRightFace_D(y_:z_)))
 

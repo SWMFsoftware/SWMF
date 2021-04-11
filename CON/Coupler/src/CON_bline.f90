@@ -374,7 +374,7 @@ contains
             iRootMapDim_D = [1, nLon, nLat],&
             CoordMin_D    = [0.50, 0.50, 0.50],&
             CoordMax_D    = [nVertexMax, nLon, nLat] + 0.50,&
-            nCells_D      = [nVertexMax, 1, 1],&
+            nCell_D       = [nVertexMax, 1, 1],&
             PE_I          = iGridGlobal_IA(Proc_,:),&
             iBlock_I      = iGridGlobal_IA(Block_,:))
        deallocate(iGridGlobal_IA)
