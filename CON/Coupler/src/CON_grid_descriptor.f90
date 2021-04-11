@@ -900,7 +900,7 @@ contains
        nImage=nImageNew
     end do
     !---------------------------------------------------------------!
-    ! Check if the grid point index is within the index limits       
+    ! Check if the grid point index is within the index limits
     do iImages=1,nImage
        if(.not.(any(IsUp_DI(:,iImages)).or.&
             any(IsDown_DI(:,iImages))))then

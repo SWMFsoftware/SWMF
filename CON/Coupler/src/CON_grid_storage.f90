@@ -131,8 +131,9 @@ contains
     integer, optional, intent(in) :: iDirPlusGlue
     integer, optional, intent(in) :: iDirCycle
     integer::lBlock,MaxBlock
-    
-    ! Check the dimension of PE_I and iBlock_I                       
+
+    ! Check the dimension of PE_I and iBlock_I
+    !--------------------------------------------------------------------------
     if(present(PE_I))then
        if(ubound(PE_I,1)/=product(iRootMapDim_D))&
             call CON_stop('The dimension of PE_I should be equal to '//&
@@ -333,6 +334,7 @@ contains
     !--------------------------------------------------------------------------
     compid = Domain_I(GridID_)%Ptr%CompID_
   end function compid
+  !============================================================================
 end module CON_grid_storage
 !==============================================================================
 
