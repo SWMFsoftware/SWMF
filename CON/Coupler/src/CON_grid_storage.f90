@@ -73,7 +73,7 @@ contains
     DoneDomainInit_C(GridID_) = .true.;  nDim_C(GridID_) = nDim
   end subroutine init_decomposition_id
   !============================================================================
-  ! To get a decomposition domain, even the tree one, the root     
+  ! To get a decomposition domain, even the tree one, the root
   ! decomposition should be first constructed. PE here are the ranks in the
   ! LOCAL communicator for the component
   subroutine get_root_decomposition_id(&
@@ -144,7 +144,7 @@ contains
     integer,           intent(in) :: GridID_      ! Global grid ID
     type(DomainType),  intent(in) :: LocalDomain  ! Local Grid with which the
     integer, optional, intent(in) :: iProcUnion,iCommUnion
-    !-------------------------------------------------------------------------- 
+    !--------------------------------------------------------------------------
     call synchronize_refinement_dd(&
             Domain_I(GridID_)%Ptr, LocalDomain, iProcUnion, iCommUnion)
   end subroutine synchronize_refinement_id

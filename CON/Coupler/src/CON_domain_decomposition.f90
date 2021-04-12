@@ -138,7 +138,7 @@ module CON_domain_decomposition
      integer          :: nBlockAll
      integer, pointer :: iGlobal_A(:)
   end type DomainType
-  
+
   type DomainPointerType
      type(DomainType),pointer::Ptr
   end type DomainPointerType
