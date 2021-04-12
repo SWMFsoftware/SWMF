@@ -80,6 +80,14 @@ y=0 MHD idl		StringPlot
 #USERSWITCH
 +init +Sexpl		StringSwitch
 
+!#LOOKUPTABLE
+!ChargeExchange            NameTable
+!load                    NameCommand
+!../GM/BATSRUS/Param/OUTERHELIO/ExchangeRate.dat    NameFile
+!ascii                   TypeFile
+
+
+
 #UNIFORMSTATE
 0.01			StateVar Rho
 -100			StateVar Ux
