@@ -4,7 +4,11 @@
 module CON_router
   use CON_world
   use ModMpi
-  use CON_grid_descriptor
+  use CON_domain_decomposition, ONLY: BLK_, GlobalBlock_
+  use CON_grid_descriptor, ONLY: GridType, LocalGridType, coord_grid_d,    &
+       nearest_grid_points, bilinear_interpolation, interpolation_amr_gc,  &
+       GridPointFirst_, CellCentered_, Nodes_, set_standard_grid_descriptor,&
+       set_local_gd, clean_gd, global_i_grid_point_to_icb
   use ModUtilities, ONLY: check_allocate
   ! This file presents the class of routers between the grids, each!
   ! of them can be either the uniformly spaced or Octree or Quadric!
@@ -355,7 +359,6 @@ contains
     Router%Get_P(iPE)%Weight_I = 0.0
   end subroutine allocate_get_arrays
   !============================================================================
-  !==========================PRIVATE===========================!
   subroutine allocate_buffer_source(Router, nLength)
     type(RouterType),intent(inout) :: Router
     integer,         intent(in)    :: nLength
@@ -417,7 +420,6 @@ contains
     nlength_buffer_target = sum(Router%nRecv_P(:))
   end function nlength_buffer_target
   !============================================================================
-  !============================PRIVATE======================!
   subroutine check_router_allocation(Router)
     type(RouterType),intent(inout)::Router
     integer :: iPE, nTotalPut, nTotalGet, UBound_I(2)

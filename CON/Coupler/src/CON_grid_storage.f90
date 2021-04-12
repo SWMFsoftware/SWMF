@@ -6,16 +6,12 @@ module CON_grid_storage
   use CON_domain_decomposition, ONLY: DomainType, DomainPointerType, &
        init_decomposition_dd, get_root_decomposition_dd,  &
        bcast_decomposition_dd, synchronize_refinement_dd, &
-       search_cell, search_in, &
-       associate_dd_pointer_dd, glue_margin_dd, iglobal_block_dd, &
-       iglobal_node_dd
-  use ModInitGridStorage, ONLY:init_grid_storage, MaxGrid
+       associate_dd_pointer_dd
+  use ModInitGridStorage, ONLY:  init_grid_storage, MaxGrid
   implicit none
 
-  ! The resulted domain decompositions should be properly
-  ! registered and should obtain the unique GridID
   type(DomainPointerType), private :: Domain_I(MaxGrid)
-  logical   :: DoneDomainInit_C(MaxGrid)=.false.
+  logical   :: DoneDomainInit_C(MaxGrid)= .false.
   ! Introduced to bypass the HALEM compiler restrictions
   integer :: nDim_C(MaxGrid) = 0
   interface init_decomposition
@@ -36,22 +32,6 @@ module CON_grid_storage
   interface synchronize_refinement
      module procedure synchronize_refinement_id
      module procedure synchronize_refinement_dd
-  end interface
-
-  interface glue_margin
-     module procedure glue_margin_id
-     module procedure glue_margin_dd
-  end interface glue_margin
-
-  
-  interface i_global_node_a
-     module procedure iglobal_node_dd
-     module procedure iglobal_node_id
-  end interface
-
-  interface i_global_block
-     module procedure iglobal_block_dd
-     module procedure iglobal_block_id
   end interface
 
   interface associate_dd_pointer
@@ -168,28 +148,6 @@ contains
     call synchronize_refinement_dd(&
             Domain_I(GridID_)%Ptr, LocalDomain, iProcUnion, iCommUnion)
   end subroutine synchronize_refinement_id
-  !============================================================================
-  subroutine glue_margin_id(GridID_, Coord_D)
-    integer,         intent(in) :: GridID_
-    real,         intent(inout) :: Coord_D(nDim_C(GridID_))
-    !--------------------------------------------------------------------------
-    call glue_margin_dd(Domain_I(GridID_)%Ptr,Coord_D)
-  end subroutine glue_margin_id
-  !============================================================================
-  integer function iglobal_node_id(GridID_,iBlockAll)
-    integer, intent(in) :: GridID_
-    integer, intent(in) :: iBlockAll
-    !--------------------------------------------------------------------------
-    iglobal_node_id = Domain_I(GridID_)%Ptr%iGlobal_A(iBlockAll)
-  end function iglobal_node_id
-  !============================================================================
-  integer function iglobal_block_id(GridID_,  iTreeNode)
-    use CON_domain_decomposition, ONLY: GlobalBlock_
-    integer, intent(in) :: GridID_
-    integer, intent(in) :: iTreeNode
-    !--------------------------------------------------------------------------
-    iglobal_block_id=Domain_I(GridID_)%Ptr%iDD_II(GlobalBlock_,iTreeNode)
-  end function iglobal_block_id
   !============================================================================
   integer function i_realization(GridID_)
     integer, intent(in) :: GridID_

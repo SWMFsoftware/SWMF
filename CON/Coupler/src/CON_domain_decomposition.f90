@@ -48,7 +48,6 @@ module CON_domain_decomposition
      ! (For the uniformly spaced grids the root decomposition is the
      ! map of blocks, for tree grid - the map of the roots)
      integer, pointer :: iRootMapDim_D(:)
-     !================CELL DECOMPOSITION=============================
      ! Each of  block is split for
      ! nCell_D(1)*nCell_D(2)*.....nCell_D(nDim) cells,
      ! which are spatially uniform in the geralized coordinates
@@ -134,26 +133,19 @@ module CON_domain_decomposition
      ! local communicator, for a particular component
      logical :: IsLocal
      !
-     ! The inverse mapping (iPE,iBlock)->global node number is mantained
-     ! using the following components:
-     ! integer           :: MinBlock, MaxBlock
-     ! integer, pointer  :: iGlobal_BP(:,:)
      ! The inverse mapping GlobalBlock number->global node number
      ! is mantained using the following components:
      integer          :: nBlockAll
      integer, pointer :: iGlobal_A(:)
   end type DomainType
-  !================DERIVED TYPE===================================
+  
   type DomainPointerType
      type(DomainType),pointer::Ptr
   end type DomainPointerType
 
   ! Needed for searching and interpolating algorithms
   real, parameter:: cTol  = 0.00000010, cTol2 = cTol**(nByteReal/4)
-  real, parameter:: &
-       cAlmostOne   = 1.0 - cTol2,&
-       cAlmostTwo   = 2*cAlmostOne,&
-       cAlmostHalf  = 0.5*cAlmostOne
+  real, parameter:: cAlmostOne   = 1.0 - cTol2
   private:: is_used_block_dd
 contains
   !============================================================================
@@ -245,16 +237,15 @@ contains
     call check_octree_allocation(Domain)
     Domain%lSearch      = 1
     Domain%iRealization = 0
-    ! Domain%MinBlock = 1; Domain%MaxBlock = 1
     Domain%nBlockAll = 1; nullify( Domain%iGlobal_A)
-    allocate(Domain%iGlobal_A(1:Domain%nBlockAll),stat=iError)
+    allocate(Domain%iGlobal_A(1:Domain%nBlockAll), stat=iError)
     call check_allocate(iError,'iGlobal_A,first allocation')
   end subroutine init_decomposition_dd
   !============================================================================
   subroutine check_octree_allocation(Domain)
     ! Checks the array allocation for a given grid desciptor and
     ! extends its dimension if required
-    
+
     type(DomainType), intent(inout) :: Domain
     integer::iError,nUbound
     !--------------------------------------------------------------------------
@@ -306,7 +297,7 @@ contains
     !                        ATTENTION
     ! PE here are the ranks in the LOCAL communicator for the
     ! component
-    
+
     type(DomainType), intent(inout) :: Domain
     integer, intent(in) :: iRootMapDim_D(Domain%nDim)
     real,    intent(in) :: CoordMin_D(Domain%nDim)
@@ -429,7 +420,7 @@ contains
   subroutine bcast_decomposition_dd(Domain)
     ! Broadcasts a given domain decomposition from the root PE
     ! via the global communicator iComm
-    
+
     type (DomainType), intent(inout) :: Domain
     integer :: iComm, iProc0, iError
     !--------------------------------------------------------------------------
@@ -470,7 +461,7 @@ contains
     ! communicator iCommUnion TO all PEs of this communicator.
     ! Recalculate local PE ranks to their values in the global
     ! communicator while broadcasting.
-    
+
     type (DomainType), intent(inout) :: Domain
     integer, optional, intent(in)    :: iProcUnion,iCommUnion
 
@@ -505,7 +496,7 @@ contains
   !============================================================================
   subroutine complete(Domain)
     ! complete recovers the geometric variables in situ
-    
+
     type (DomainType), intent(inout) :: Domain
     real    :: DCoordRoot_D(Domain%nDim)
     integer ::iTreeNode, lRoot, i, iDim, nDim
@@ -565,13 +556,13 @@ contains
     ! iProcUnion in the communicator iCommUnion.
     ! Recalculate local PE ranks (of the local grid) to their values
     ! in the global communicator (i\_comm()).
-    
+
     type(DomainType),  intent(inout) :: GlobalDomain
     type(DomainType),  intent(in)    :: LocalDomain
     integer, optional, intent(in)    :: iProcUnion, iCommUnion
     integer :: iProc0, iComm, LocalIRealization, iError
     logical :: IsSynchronized
-  !----------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     if(present(iProcUnion).and.present(iCommUnion))then
        iProc0 = iProcUnion; iComm = iCommUnion
     else
@@ -602,7 +593,7 @@ contains
     integer,           intent(in) :: iTreeNode
     type(DomainType),  intent(in) :: Domain
     logical  :: is_left_boundary_d(Domain%nDim)
-  !----------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     is_left_boundary_d = .not.(Domain%IsPeriodic_D).and.&
          Domain%CoordBlock_DI(:, iTreeNode)   < &
          cThird*Domain%DCoordBlock_DI(:,iTreeNode) + Domain%CoordMin_D
@@ -616,7 +607,7 @@ contains
     integer,         intent(in) :: iTreeNode
     type(DomainType),intent(in) :: Domain
     logical :: is_right_boundary_d(Domain%nDim)
-  !----------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     is_right_boundary_d=.not.(Domain%IsPeriodic_D).and.              &
          Domain%CoordBlock_DI(:,iTreeNode) +                 &
          (1.0 + cThird)*Domain%DCoordBlock_DI(:,iTreeNode) > &
@@ -624,7 +615,7 @@ contains
   end function is_right_boundary_d
   !============================================================================
   integer function l_neighbor(Domain, iTreeNode, iCells_D)
-    ! Tree neighbor returns the number of octree node, to which the center of 
+    ! Tree neighbor returns the number of octree node, to which the center of
     ! "ghost cell" belongs, which is marked with iCells\_D cell index vector.
 
     type(DomainType), intent(inout) :: Domain
@@ -644,8 +635,8 @@ contains
        call search_in(Domain, Coord_D, l_neighbor)
     end if
   end function l_neighbor
-!==============================================================================
-  subroutine glue_margin_dd(Domain, Coord_D)
+  !============================================================================
+  subroutine glue_margin(Domain, Coord_D)
     type(DomainType), intent(in)    :: Domain
     real,             intent(inout) :: Coord_D(Domain%nDim)
     ! Loop variable:
@@ -655,7 +646,7 @@ contains
     ! Domain boundaries:
     real, pointer :: CoordMin_D(:), CoordMax_D(:)
     logical :: DoCycle
-  !----------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     nDim          = Domain%nDim
     CoordMin_D    => Domain%CoordMin_D
     CoordMax_D    => Domain%CoordMax_D
@@ -683,7 +674,7 @@ contains
                CoordMax_D(iDirCycle) - CoordMin_D(iDirCycle))
        end if
     end do
-  end subroutine glue_margin_dd
+  end subroutine glue_margin
   !============================================================================
   subroutine search_in(Domain, Coord_D, iTreeNode)
     ! The searching tools start from here which allow to find the
@@ -697,14 +688,14 @@ contains
     ! coordinates with respect to the left corner of the found block.
     ! The values of Coord_D are allowed to be outside of the domain,
     ! the nearest block is found in this case.
-    
+
     type(DomainType), intent(inout) :: Domain
     real,             intent(inout) :: Coord_D(Domain%nDim)
     integer,          intent(out)   :: iTreeNode
     real    :: CoordTrunc_D(Domain%nDim), Discr_D(Domain%nDim)
     integer :: iChild, iDim, lFound, iShift_D(Domain%nDim), &
          iRootMinusOne_D(Domain%nDim), iRootMinusOneStart_D(Domain%nDim)
-  !----------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     ! Start from the result of the previous search
     lFound=Domain%lSearch
 
@@ -779,7 +770,7 @@ contains
     integer,          intent(in) :: iTreeNode
     integer,         intent(out) :: iCells_D(Domain%nDim)
     real ::DCoordCells_D(Domain%nDim)
-  !----------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     DCoordCells_D = Domain%DCoordCell_DI(:, iTreeNode)
     iCells_D      = floor(Coord_D/DCoordCells_D)
     Coord_D       = Coord_D - DCoordCells_D*iCells_D
@@ -790,11 +781,11 @@ contains
     type(DomainType),intent(in) :: Domain
     integer,         intent(in) :: iTreeNode
     integer,        intent(out) :: iPEOut,iBlockOut
-  !----------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     iPEOut    = Domain%iDD_II(PE_,  iTreeNode)
     iBlockOut = Domain%iDD_II(BLK_, iTreeNode)
   end subroutine pe_and_blk
-!==============================================================================
+  !============================================================================
   integer function n_block(Domain, iPE)
     type(DomainType), intent(in) :: Domain
     integer,          intent(in) :: iPE
@@ -802,35 +793,21 @@ contains
     n_block = count(Domain%iDD_II(FirstChild_, 1:Domain%nTreeNode)==None_&
          .and. Domain%iDD_II(PE_, 1:Domain%nTreeNode)==iPE)
   end function n_block
-!==============================================================================
-  integer function iglobal_node_dd(Domain,iBlockAll)
-    type(DomainType), intent(in) :: Domain
-    integer,          intent(in) :: iBlockAll
-  !----------------------------------------------------------------------------
-    iglobal_node_dd = Domain%iGlobal_A(iBlockAll)
-  end function iglobal_node_dd
-!==============================================================================
-  integer function iglobal_block_dd(Domain, iTreeNode)
-    type(DomainType), intent(in) :: Domain
-    integer,          intent(in) :: iTreeNode
-  !----------------------------------------------------------------------------
-    iglobal_block_dd = Domain%iDD_II(GlobalBlock_, iTreeNode)
-  end function iglobal_block_dd
-!==============================================================================
+  !============================================================================
   logical function is_used_block_dd(Domain, iTreeNode)
     type(DomainType), intent(in) :: Domain
     integer,          intent(in) :: iTreeNode
-  !----------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     is_used_block_dd = Domain%iDD_II(FirstChild_, iTreeNode) == None_
   end function is_used_block_dd
-!==============================================================================
+  !============================================================================
   subroutine associate_dd_pointer_dd(Domain, DomainPointer)
     Type(DomainType), target, intent(in)  :: Domain
     type(DomainPointerType),  intent(out) :: DomainPointer
-  !----------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     nullify(DomainPointer%Ptr); DomainPointer%Ptr=>Domain
   end subroutine associate_dd_pointer_dd
-!==============================================================================
+  !============================================================================
 
 end module CON_domain_decomposition
 !==============================================================================

@@ -13,22 +13,16 @@ module CON_grid_descriptor
   !
   ! The methods include the grid descriptor allocation, coordinate
   ! computations and the interpolation procedures
-  use CON_domain_decomposition, ONLY: is_left_boundary_d, is_right_boundary_d, &
-       l_neighbor, n_block,  pe_and_blk, cAlmostOne, PE_, BLK_, GlobalBlock_  
-  use CON_grid_storage, ONLY: DomainType, DomainPointerType, ndim_id,          &
-       search_cell, search_in, associate_dd_pointer, &
-       ncell_id, glue_margin, i_global_block, i_global_node_a
-  ! revision history:
-  ! Sokolov I.V.
-  ! 6.18.03-7.11.03
-  ! igorsok@umich.edu
-  ! phone(734)647-4705
+  use CON_domain_decomposition, ONLY: DomainType, DomainPointerType,    &
+       is_left_boundary_d, is_right_boundary_d,                         &
+       glue_margin, search_cell, search_in,  l_neighbor,                &
+       n_block,  pe_and_blk, cAlmostOne, PE_, BLK_,  GlobalBlock_  
+  use CON_grid_storage, ONLY: ndim_id, associate_dd_pointer, ncell_id
   implicit none
 
   PRIVATE ! Except
   public :: GridType
   type GridType
-
      ! The concept of the grid descriptor is very close to the domain
      ! decomposition, the pointer for the DomainType
      ! structure is the most important element of the grid descriptor.
@@ -142,8 +136,6 @@ module CON_grid_descriptor
   ! it returns the same output.
   public :: global_i_grid_point_to_icb
   interface global_i_grid_point_to_icb
-     module procedure global_i_grid_point_to_icb4
-     module procedure global_i_grid_point_to_icb8
      module procedure global_i_grid_point_to_icb4_l
      module procedure global_i_grid_point_to_icb8_l
   end interface global_i_grid_point_to_icb
@@ -158,16 +150,6 @@ module CON_grid_descriptor
      module procedure coord_grid_d_local
   end interface coord_grid_d
 
-  public :: i_grid_point_global
-  interface i_grid_point_global
-     module procedure i_grid_point_global_g
-     module procedure i_grid_point_global_l
-  end interface i_grid_point_global
-  public :: i8_grid_point_global
-  interface i8_grid_point_global
-     module procedure i8_grid_point_global_g
-     module procedure i8_grid_point_global_l
-  end interface i8_grid_point_global
 
   ! local storage for a grid descriptor passed to interpolation_amr_gc;
   ! it is shared by interpolate_amr_gc and find_amr
@@ -206,7 +188,7 @@ module CON_grid_descriptor
   public :: n_grid_points_per_block
 
   ! Interpolation procedures
-  public :: nearest_grid_points     ! First order interpolation
+  public :: nearest_grid_points    ! First order interpolation
   public :: bilinear_interpolation ! For uniform or node-based grid
   public :: interpolation_amr_gc   ! Employs ghostcells
 
@@ -336,31 +318,6 @@ contains
     end select
   end subroutine set_standard_grid_descriptor_dd
   !============================================================================
-  subroutine set_grid_descriptor_id(&
-       iGridID, nDim, iPointMin_D, iPointMax_D, Displacement_D, Grid)
-    ! More general grid descriptor
-
-    integer,intent(in)::iGridID
-    integer,intent(in)::nDim
-    integer,intent(in),dimension(nDim)::iPointMin_D
-    integer,intent(in),dimension(nDim)::iPointMax_D
-    real,intent(in),dimension(nDim)::Displacement_D
-    type(GridType),intent(out)::Grid
-    integer::iError,iMyStandard,nGhostGridPointsMy
-    !--------------------------------------------------------------------------
-    call associate_dd_pointer(iGridID, Grid%Domain)
-    Grid%nDim=nDim
-    allocate(Grid%Displacement_D(1:Grid%nDim), stat=iError)
-    call check_allocate(iError,"Displacement_D")
-    Grid%Displacement_D=Displacement_D
-    allocate(Grid%iPointMin_D(1:Grid%nDim), stat=iError)
-    call check_allocate(iError, "iPointMin_D")
-    Grid%iPointMin_D=iPointMin_D
-    allocate(Grid%iPointMax_D(1:Grid%nDim), stat=iError)
-    call check_allocate(iError,"iPointMax_D")
-    Grid%iPointMax_D=iPointMax_D
-  end subroutine set_grid_descriptor_id
-  !============================================================================
   subroutine set_local_gd(iProc, Grid, LocalGrid)
     ! PE rank (in a local group for a local model, or in a
     ! global group for a global model)
@@ -441,67 +398,6 @@ contains
 
   end function n_grid_points_per_block
   !============================================================================
-  subroutine global_i_grid_point_to_icb4(&
-       Grid,&
-       iPointGlobal,&
-       iTreeNode,&
-       iPoint_D)
-
-    !          ENUMERATION
-    ! All the points of the grid of the type considered here can be
-    ! easily enumerated, but with the simplest way to do this there
-    ! is some amounts of unused global cell numbers, for
-    ! TreeDDs. The following procedures are used the
-    ! CON_router and will be used then for coupling via the MCT, to
-    ! construct the global segmentation map
-    ! The following procedure transforms the global grid point number
-    ! to the iCB index
-    ! To use this procedure, the grid descriptor should be
-    ! constructed  first
-
-    type(GridType),intent(in)::Grid
-    integer,intent(in)::iPointGlobal
-    integer,intent(out):: iTreeNode
-    integer,dimension(Grid%nDim),intent(out)::&
-         iPoint_D
-    integer,dimension(Grid%nDim)::nGridPoints_D
-    integer::iDim,iMisc,iMisc1
-    !--------------------------------------------------------------------------
-    nGridPoints_D=1+Grid%iPointMax_D-&
-         Grid%iPointMin_D
-    iMisc=iPointGlobal-1
-    do idim=1,Grid%nDim
-       iMisc1 = mod(iMisc,nGridPoints_D(iDim))
-       iPoint_D(iDim)=Grid%iPointMin_D(iDim)+iMisc1
-       iMisc=(iMisc-iMisc1)/nGridPoints_D(iDim)
-    end do
-    iTreeNode=i_global_node_a(Grid%Domain%Ptr,iMisc+1)
-  end subroutine global_i_grid_point_to_icb4
-  !============================================================================
-  subroutine global_i_grid_point_to_icb8(&
-       Grid, iPointGlobal, iTreeNode, iPoint_D)
-
-    type(GridType),intent(in)::Grid
-    integer(Int8_),intent(in)::iPointGlobal
-    integer, intent(out):: iTreeNode
-    integer, intent(out):: iPoint_D(Grid%nDim)
-
-    integer(Int8_):: nGridPoints_D(Grid%nDim)
-    integer       :: iDim, iMisc1
-    integer(Int8_):: i8Misc
-    !--------------------------------------------------------------------------
-    nGridPoints_D = 1_Int8_ + Grid%iPointMax_D -&
-         Grid%iPointMin_D
-    i8Misc = iPointGlobal - 1_Int8_
-    do idim=1,Grid%nDim
-       iMisc1=int(mod(i8Misc, nGridPoints_D(iDim)))
-       iPoint_D(iDim) = Grid%iPointMin_D(iDim) + iMisc1
-       i8Misc = (i8Misc-iMisc1)/nGridPoints_D(iDim)
-    end do
-    iTreeNode = i_global_node_a(Grid%Domain%Ptr,int(i8Misc)+1)
-
-  end subroutine global_i_grid_point_to_icb8
-  !============================================================================
   subroutine global_i_grid_point_to_icb4_l(&
        Grid, iPointLocal, iBlockUsed, iPoint_D)
 
@@ -560,99 +456,6 @@ contains
          (int(i8Misc)+1))
     iBlockUsed = loc(1)
   end subroutine global_i_grid_point_to_icb8_l
-  !============================================================================
-
-  integer function i_grid_point_global_g(Grid, iTreeNode, iPoint_D)
-
-    ! The inverse procedures
-    type(GridType), intent(in) :: Grid
-    integer,        intent(in) :: iTreeNode
-    integer,        intent(in) :: iPoint_D(Grid%nDim)
-
-    integer :: nGridPoints_D(Grid%nDim)
-    integer :: iDim, iMisc, iMisc1
-    !--------------------------------------------------------------------------
-    nGridPoints_D(1:Grid%nDim) = 1 +  &
-         Grid%iPointMax_D -       &
-         Grid%iPointMin_D
-    i_grid_point_global_g = i_global_block(Grid%Domain%Ptr,&
-         iTreeNode) - 1
-    do idim = Grid%nDim, 1, -1
-       i_grid_point_global_g = i_grid_point_global_g*     &
-            nGridPoints_D(iDim) + iPoint_D(iDim) -    &
-            Grid%iPointMin_D(iDim)
-    end do
-    i_grid_point_global_g = i_grid_point_global_g + 1
-
-  end function i_grid_point_global_g
-  !============================================================================
-  function i8_grid_point_global_g(Grid, iTreeNode, iPoint_D)
-
-    integer(Int8_):: i8_grid_point_global_g
-    type(GridType), intent(in) :: Grid
-    integer, intent(in) :: iTreeNode
-    integer, intent(in) :: iPoint_D(Grid%nDim)
-
-    integer :: nGridPoints_D(Grid%nDim)
-    integer :: iDim, iMisc, iMisc1
-    !--------------------------------------------------------------------------
-    nGridPoints_D(1:Grid%nDim) = 1 + &
-         Grid%iPointMax_D - &
-         Grid%iPointMin_D
-    i8_grid_point_global_g = i_global_block(Grid%Domain%Ptr,&
-         iTreeNode) - 1
-    do idim = Grid%nDim, 1, -1
-       i8_grid_point_global_g = i8_grid_point_global_g*&
-            nGridPoints_D(iDim) + iPoint_D(iDim) -&
-            Grid%iPointMin_D(iDim)
-    end do
-    i8_grid_point_global_g = i8_grid_point_global_g + 1
-  end function i8_grid_point_global_g
-  !============================================================================
-  integer function i_grid_point_global_l(Grid, iBlockUsed, iPoint_D)
-
-    type(LocalGridType), intent(in) :: Grid
-    integer,             intent(in) :: iBlockUsed
-    integer,             intent(in) :: iPoint_D(Grid%nDim)
-
-    integer :: nGridPoints_D(Grid%nDim)
-    integer :: iDim, iMisc, iMisc1
-    !--------------------------------------------------------------------------
-    nGridPoints_D(1:Grid%nDim) = 1 +  &
-         Grid%iPointMax_D -       &
-         Grid%iPointMin_D
-    i_grid_point_global_l = iBlockUsed - 1
-    do idim = Grid%nDim, 1, -1
-       i_grid_point_global_l = i_grid_point_global_l*     &
-            nGridPoints_D(iDim) + iPoint_D(iDim) -    &
-            Grid%iPointMin_D(iDim)
-    end do
-    i_grid_point_global_l = i_grid_point_global_l + 1
-
-  end function i_grid_point_global_l
-  !============================================================================
-  function i8_grid_point_global_l(Grid, iBlockUsed, iPoint_D)
-
-    integer(Int8_):: i8_grid_point_global_l
-    type(LocalGridType), intent(in) :: Grid
-    integer,           intent(in) :: iBlockUsed
-    integer,           intent(in) :: iPoint_D(Grid%nDim)
-
-    integer :: nGridPoints_D(Grid%nDim)
-    integer :: iDim, iMisc, iMisc1
-    !--------------------------------------------------------------------------
-    nGridPoints_D(1:Grid%nDim) = 1 + &
-         Grid%iPointMax_D - &
-         Grid%iPointMin_D
-    i8_grid_point_global_l = Grid%iIndex_IB(&
-         GlobalBlock_,iBlockUsed) - 1
-    do idim = Grid%nDim, 1, -1
-       i8_grid_point_global_l = i8_grid_point_global_l*&
-            nGridPoints_D(iDim) + iPoint_D(iDim) -&
-            Grid%iPointMin_D(iDim)
-    end do
-    i8_grid_point_global_l = i8_grid_point_global_l + 1
-  end function i8_grid_point_global_l
   !============================================================================
   subroutine nearest_grid_points( &
        nDim,Coord_D, Grid, nIndex, iIndex_II, nImage, Weight_I)
