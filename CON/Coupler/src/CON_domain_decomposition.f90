@@ -510,7 +510,8 @@ contains
     call complete(Domain)
   end subroutine bcast_indexes
   !============================================================================
-  ! complete recovers the geometric variables in situ  subroutine complete(Domain)
+  ! complete recovers the geometric variables in situ
+  subroutine complete(Domain)
     type (DomainType), intent(inout) :: Domain
     real    :: DCoordRoot_D(Domain%nDim)
     integer ::iTreeNode, lRoot, i, iDim, nDim
