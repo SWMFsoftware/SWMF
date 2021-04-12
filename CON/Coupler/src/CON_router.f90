@@ -5,40 +5,30 @@ module CON_router
   use CON_world
   use ModMpi
   use CON_domain_decomposition, ONLY: BLK_, GlobalBlock_
-  use CON_grid_descriptor, ONLY: GridType, LocalGridType, coord_grid_d,    &
-       nearest_grid_points, bilinear_interpolation, interpolation_amr_gc,  &
+  use CON_grid_descriptor, ONLY: GridType, LocalGridType, coord_grid_d,     &
+       nearest_grid_points, bilinear_interpolation, interpolation_amr_gc,   &
        GridPointFirst_, CellCentered_, Nodes_, set_standard_grid_descriptor,&
        set_local_gd, clean_gd, global_i_grid_point_to_icb
   use ModUtilities, ONLY: check_allocate
-  ! This file presents the class of routers between the grids, each!
-  ! of them can be either the uniformly spaced or Octree or Quadric!
-  ! adaptive block grid                   .                      !
+  ! This file presents the class of routers between the grids, each
+  ! of them can be either the uniformly spaced or Octree or Quadric
+  ! adaptive block grid                   .
   !
-  ! The methods include: allocation, initialization, cleaner and !
-  ! two different constructors.                                  !
+  ! The methods include: allocation, initialization, cleaner and
+  ! two different constructors.
   !
-  ! revision history:
-  ! Sokolov I.V.                                                !
-  ! 7.20.03-7.21.03                                             !
-  ! igorsok@umich.edu                                           !
-  ! phone(734)647-4705                                          !
   implicit none
   SAVE
   logical,parameter:: UseUnionComm=.true.
-  !==========================DERIVED TYPES========================!
-  !\begin{verbatim}
   type DoAddPtrType
      logical,dimension(:),pointer::DoAdd_I
   end type DoAddPtrType
-  !\end{verbatim}
-  !---------------------------------------------------------------!
-  ! See CON\_grid\_descriptor about iCB index. In the array iCB\_I !
-  ! the second index enumerates the grid points belonging to some!
-  ! list, while the first one numerates the position of (0) PE, at !
-  ! which the point is localized, (1:nDim) grid point indexes in !
-  ! the block and (nDim+1), if exists, stores the local block    !
+  ! See CON\_grid\_descriptor about iCB index. In the array iCB\_I
+  ! the second index enumerates the grid points belonging to some
+  ! list, while the first one numerates the position of (0) PE, at
+  ! which the point is localized, (1:nDim) grid point indexes in
+  ! the block and (nDim+1), if exists, stores the local block
   ! number.
-  !\begin{verbatim}
   type IndexPtrType
      integer,dimension(:,:),pointer::iCB_II
   end type IndexPtrType
@@ -46,7 +36,6 @@ module CON_router
   type WeightPtrType
      real,dimension(:),pointer::Weight_I
   end type WeightPtrType
-  !\end{verbatim}
 
   type RouterType
      ! The router can be set between the grids of different dimensions!
@@ -55,64 +44,54 @@ module CON_router
      ! For the router between LOCAL grids of a component we use the   !
      ! communicator of the model for sending-receiving the data,      !
      ! otherwise the global communicator                              !
-     !\begin{verbatim}
-     logical::IsLocal,IsProc
-     integer::iProc,nProc,iComm
-     !\end{verbatim}
+     !
+     logical :: IsLocal, IsProc
+     integer :: iProc, nProc, iComm
      ! If the union group is constructed, then for use with broadcast !
      ! we need the union communicator and the root PE ranks in this   !
      ! communicator
-     !\begin{verbatim}
-     integer::iCommUnion,iProc0Source,iProc0Target
-     integer,dimension(:),pointer::iTranslated_P
-     !\end{verbatim}
+     !
+     integer::iCommUnion, iProc0Source, iProc0Target
+     integer, pointer :: iTranslated_P(:)
+     !
      ! As the default we use iCB indexes to construct the router,     !
      ! hence the grid point is characterized by the                   !
-     ! Grid%nDim grid point indexes plus one more index for !
+     ! Grid%nDim grid point indexes plus one more index for           !
      ! the block number. Also we allow to use exactly                 !
-     ! Grid%nDim indexes, without the block number which    !
+     ! Grid%nDim indexes, without the block number which              !
      ! only seems to be of sence for the component which is localized !
      ! at one PE only, or which has exactly one block per PE          !
-     !\begin{verbatim}
-     integer::nIndexSource,nIndexTarget
-     !\end{verbatim}
+     !
+     integer::nIndexSource, nIndexTarget
+     !
      ! The total amounts of the buffer segments to be sent-received   !
      ! to/from the PE. The total amounts of the grid points from which!
      ! the data should be got or to which the data should be put,some !
      ! data points may be counted more than one time                  !
-     !\begin{verbatim}
+     !
      integer, dimension(:), pointer :: &
           nGet_P, nPut_P, nRecv_P, nSend_P
-     !\end{verbatim}
      ! iCB indexes and the weight coefficients for the points of the  !
      ! target and source grids, which are connected through the router!
-     !\begin{verbatim}
      type(IndexPtrType), dimension(:), pointer :: iGet_P
      type(IndexPtrType), dimension(:), pointer :: iPut_P
      type(DoAddPtrType), dimension(:), pointer :: DoAdd_P
      type(WeightPtrType), dimension(:),pointer :: Get_P
      type(WeightPtrType), dimension(:),pointer :: Put_P
-     !\end{verbatim}
-     ! Mapped gird points. Fully identical to global mapping vector, however, is
-     ! not present on all processors, only on those which control either the target
-     ! (source) points or the images of the mapped point on source (target)
-     !\begin{verbatim}
+     ! Mapped gird points.
      real, dimension(:,:), pointer:: BufferSource_II
      real, dimension(:,:), pointer:: BufferTarget_II
-     !\end{verbatim}
-     ! As long as we do not keep the entire mapping vector, we may wabt to know
-     ! a list of global point numbers for the mapped points, i.e. nMappedPointIndex=1
-     ! integer per each mapped point. It may be convenient to keep more than one
-     ! index (a global tree node number, global block number etc, with the
-     ! only restriction that these indexes are sufficient to recover the global
-     ! point number for the mapped point.)
-     !\begin{verbatim}
+     ! As long as we do not keep the entire mapping vector, we may want to know
+     ! a list of global point numbers for the mapped points, i.e.
+     ! nMappedPointIndex=1 integer per each mapped point. It may be convenient
+     ! to keep more than one index (a global tree node number, global block
+     ! number etc, with the only restriction that these indexes are sufficient
+     ! to recover the global point number for the mapped point.)
+
      integer :: nMappedPointIndex
-     !\end{verbatim}
-     !\begin{verbatim}
+
      integer :: nBufferSource, nBufferTarget
      integer :: nVar, iCoordStart, iCoordEnd, iAuxStart, iAuxEnd
-     !\end{verbatim}
   end type RouterType
   ! aux integer arrays to put data in BufferS_II in the correct order
   integer, allocatable :: iAux_P(:), iProc_I(:), iOrder_I(:)
@@ -132,17 +111,14 @@ contains
        nIndexSource,&
        nIndexTarget,&
        nMappedPointIndex)
-    type(GridType),intent(in)::&
-         GridSource,&
-         GridTarget
-    type (RouterType),intent(out)::Router
-    integer,intent(in),optional::nIndexSource
-    integer,intent(in),optional::nIndexTarget
-    integer,intent(in),optional::nMappedPointIndex
-    integer::iPE,iError
-    integer::nProc
-    integer::iProc0Source,iProc0Target,iProcUnion
-    integer::iGroupUnion,iGroupSource,iGroupTarget, iGroup
+    type(GridType), intent(in)     :: GridSource, GridTarget
+    type (RouterType), intent(out) :: Router
+    integer, optional, intent(in)  :: nIndexSource
+    integer, optional, intent(in)  :: nIndexTarget
+    integer, optional, intent(in)  :: nMappedPointIndex
+    integer::iPE, iError, nProc
+    integer::iProc0Source,iProc0Target, iProcUnion
+    integer::iGroupUnion, iGroupSource, iGroupTarget, iGroup
 
     ! Check grid registration
     !--------------------------------------------------------------------------
@@ -222,27 +198,24 @@ contains
                   iGroupUnion,&
                   Router%iTranslated_P,&
                   iError)
-             Router%iProc0Source=&
+             Router%iProc0Source = &
                   Router%iTranslated_P(iProc0Source)
           end if
-          call MPI_COMM_CREATE(&
-               i_comm(),&
-               iGroupUnion,&
-               Router%iCommUnion,&
-               iError)
-          call MPI_group_rank(iGroupUnion,iProcUnion,iError)
-          Router%IsProc=iProcUnion/=MPI_UNDEFINED
-          if(iProcUnion/=Router%iProc0Target.and.&
+          call MPI_COMM_CREATE(i_comm(), iGroupUnion,&
+               Router%iCommUnion, iError)
+          call MPI_group_rank(iGroupUnion, iProcUnion, iError)
+          Router%IsProc = iProcUnion /= MPI_UNDEFINED
+          if(iProcUnion /= Router%iProc0Target.and.&
                i_proc()==iProc0Target)call CON_stop(&
                'Wrongly defined Router%iProc0Target')
           if(iProcUnion/=Router%iProc0Source.and.&
                i_proc()==iProc0Source)call CON_stop(&
                'Wrongly defined Router%iProc0Source')
-          call MPI_GROUP_FREE(iGroupUnion,iError)
+          call MPI_GROUP_FREE(iGroupUnion, iError)
        else
-          Router%iCommUnion=Router%iComm
-          Router%iProc0Source=iProc0Source
-          Router%iProc0Target=iProc0Target
+          Router%iCommUnion   = Router%iComm
+          Router%iProc0Source = iProc0Source
+          Router%iProc0Target = iProc0Target
        end if
     else
        call CON_stop(&
@@ -252,11 +225,11 @@ contains
     Router%nIndexSource = &
          GridSource%nDim + 1
     if(present(nIndexSource))then
-       if(nIndexSource>=Router%nIndexSource-1&
-            .or.nIndexSource==1)then
+       if(nIndexSource >= Router%nIndexSource - 1&
+            .or. nIndexSource==1)then
           Router%nIndexSource=nIndexSource
        else
-          write(*,*)'IndexMin=',Router%nIndexSource-1
+          write(*,*)'IndexMin=', Router%nIndexSource - 1
           call CON_stop('nIndexSource should be at least IndexMin')
        end if
     end if

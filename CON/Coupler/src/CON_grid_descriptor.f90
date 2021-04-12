@@ -16,7 +16,7 @@ module CON_grid_descriptor
   use CON_domain_decomposition, ONLY: DomainType, DomainPointerType,    &
        is_left_boundary_d, is_right_boundary_d,                         &
        glue_margin, search_cell, search_in,  l_neighbor,                &
-       n_block,  pe_and_blk, cAlmostOne, PE_, BLK_,  GlobalBlock_  
+       n_block,  pe_and_blk, cAlmostOne, PE_, BLK_,  GlobalBlock_
   use CON_grid_storage, ONLY: ndim_id, associate_dd_pointer, ncell_id
   implicit none
 
@@ -150,7 +150,6 @@ module CON_grid_descriptor
      module procedure coord_grid_d_local
   end interface coord_grid_d
 
-
   ! local storage for a grid descriptor passed to interpolation_amr_gc;
   ! it is shared by interpolate_amr_gc and find_amr
   type(GridType) :: GridAMR
@@ -233,20 +232,15 @@ contains
     integer,intent(in),optional::iStandard
     integer,intent(in),optional::nGhostGridPoints
     type(GridType),intent(out)::Grid
-    integer::iError,iMyStandard,nGhostGridPointsMy
+    integer::iError, iMyStandard, nGhostGridPointsMy
     !--------------------------------------------------------------------------
-    call associate_dd_pointer(&
-         iGridID,&
-         Grid%Domain)
+    call associate_dd_pointer(iGridID, Grid%Domain)
     Grid%nDim=ndim_id(iGridID)
-    allocate(Grid%Displacement_D(&
-         1:Grid%nDim),stat=iError)
+    allocate(Grid%Displacement_D(1:Grid%nDim),stat=iError)
     call check_allocate(iError,"Displacement_D")
-    allocate(Grid%iPointMin_D(&
-         1:Grid%nDim),stat=iError)
+    allocate(Grid%iPointMin_D(1:Grid%nDim),stat=iError)
     call check_allocate(iError,"iPointMin_D")
-    allocate(Grid%iPointMax_D(&
-         1:Grid%nDim),stat=iError)
+    allocate(Grid%iPointMax_D(1:Grid%nDim),stat=iError)
     call check_allocate(iError,"iPointMax_D")
     if(present(nGhostGridPoints))then
        nGhostGridPointsMy=nGhostGridPoints
@@ -351,7 +345,7 @@ contains
          LocalGrid%iIndex_IB(GlobalTreeNode_,:))
     LocalGrid%iIndex_IB(GlobalBlock_,:) = iDomain_II(GlobalBlock_,&
          LocalGrid%iIndex_IB(GlobalTreeNode_,:))
-    allocate(LocalGrid%DCoord_DB(1:nDim,1:nBlock),stat=iError)
+    allocate(LocalGrid%DCoord_DB(1:nDim,1:nBlock), stat=iError)
     call check_allocate(iError,'LocalGrid%DCoord_DB')
     allocate(LocalGrid%CoordBlock_DB(1:nDim,1:nBlock),stat=iError)
     call check_allocate(iError,'LocalGrid%CoordBlock_DB')
@@ -413,8 +407,7 @@ contains
     integer  :: iDim,iMisc,iMisc1
 
     !--------------------------------------------------------------------------
-    nGridPoints_D=1+Grid%iPointMax_D-&
-         Grid%iPointMin_D
+    nGridPoints_D=1+Grid%iPointMax_D - Grid%iPointMin_D
 
     iMisc = iPointLocal - 1
     do idim = 1, Grid%nDim
