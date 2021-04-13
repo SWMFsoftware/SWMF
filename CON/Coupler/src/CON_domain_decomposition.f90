@@ -21,7 +21,6 @@ module CON_domain_decomposition
        FirstChild_  =1,&
        BLK_         =2,&
        PE_          =3,&
-       GlobalBlock_ =4,&
        None_        =-777
   type DomainType
      ! The type is to describe the domain decomposition for a
@@ -40,10 +39,9 @@ module CON_domain_decomposition
      ! blocks, which are spatially uniform in geralized coordinates
      !
      ! The principle "block is not shared" is assumed, that is if the
-     ! physical data at any point geometrically belonging to the block
-     ! are allocated at the given PE, then all the points in the
-     ! Component, which geometrically belong to this block, should be
-     ! also allocated at the same PE.
+     ! physical data at any point, geometrically belonging to the block,
+     ! are allocated at the given PE, then all the points, which geometrically
+     ! belong to this block, should be also allocated at the same PE.
      !
      ! (For the uniformly spaced grids the root decomposition is the
      ! map of blocks, for tree grid - the map of the roots)
@@ -132,11 +130,6 @@ module CON_domain_decomposition
      ! In the local decomposition the PE ranks are defined to be in a
      ! local communicator, for a particular component
      logical :: IsLocal
-     !
-     ! The inverse mapping GlobalBlock number->global node number
-     ! is mantained using the following components:
-     integer          :: nBlockAll
-     integer, pointer :: iGlobal_A(:)
   end type DomainType
 
   type DomainPointerType
@@ -144,35 +137,22 @@ module CON_domain_decomposition
   end type DomainPointerType
 
   ! Needed for searching and interpolating algorithms
-  real, parameter:: cTol  = 0.00000010, cTol2 = cTol**(nByteReal/4)
-  real, parameter:: cAlmostOne   = 1.0 - cTol2
-  private:: is_used_block_dd
+  real, parameter :: cTol  = 0.00000010, cTol2 = cTol**(nByteReal/4)
+  real, parameter :: cAlmostOne   = 1.0 - cTol2
 contains
   !============================================================================
-  subroutine init_decomposition_dd(Domain, &
-       CompID_, &            ! As in DomainType
-       nDim,    &            ! As in DomainType
-       IsTreeDD,&            ! As in DomainType
-       IsLocal)
+  subroutine init_decomposition_dd(Domain, CompID_, nDim, IsTreeDD, IsLocal)
     type(DomainType),intent(inout) :: Domain
     integer,           intent(in)  :: CompID_, nDim
     logical, optional, intent(in)  :: IsTreeDD
     logical, optional, intent(in)  :: IsLocal
+    
     integer::iError,iDim,iChildFirst,iChildLast
     !--------------------------------------------------------------------------
-    if(use_comp(CompID_))then
-       Domain%CompID_ = CompID_
-    else
-       call CON_stop('Unauthorized use of the component')
-    end if
-    Domain%IsTreeDD = .false.
-    if(present(IsTreeDD))Domain%IsTreeDD = IsTreeDD
-    Domain%nDim=nDim
-    if(Domain%IsTreeDD)then
-       Domain%nChildren = 2**Domain%nDim
-    else
-       Domain%nChildren=1
-    end if
+    if(.not.use_comp(CompID_))call CON_stop('The component is not used')
+    Domain%CompID_   = CompID_
+    Domain%nDim      = nDim
+    ! Allocate arrays with the the size of nDim
     nullify(Domain%iRootMapDim_D)
     allocate(Domain%iRootMapDim_D(nDim), stat=iError)
     call check_allocate(iError, "iRootMapDim_D")
@@ -197,14 +177,21 @@ contains
     allocate(Domain%IsPeriodic_D(nDim), stat=iError)
     call check_allocate(iError,"IsPeriodic_D")
     Domain%IsPeriodic_D  = .false.
+    
+   
+ 
     Domain%DoGlueMargins = .false.
     Domain%iDirMinusGlue = 0
     Domain%iDirPlusGlue  = 0
     Domain%iDirCycle     = 0
 
+    Domain%IsTreeDD  = .false.
+    Domain%nChildren = 1
+    if(present(IsTreeDD))Domain%IsTreeDD = IsTreeDD
     if(Domain%IsTreeDD)then
+       Domain%nChildren = 2**Domain%nDim
        nullify(Domain%iRoot_I)
-       call allocate_iroot(Domain)
+       call allocate_iroot(Domain) ! Single element in array
 
        nullify(Domain%iShift_DI)
        allocate(Domain%iShift_DI(Domain%nDim, Domain%nChildren), stat=iError)
@@ -237,9 +224,6 @@ contains
     call check_octree_allocation(Domain)
     Domain%lSearch      = 1
     Domain%iRealization = 0
-    Domain%nBlockAll = 1; nullify( Domain%iGlobal_A)
-    allocate(Domain%iGlobal_A(1:Domain%nBlockAll), stat=iError)
-    call check_allocate(iError,'iGlobal_A,first allocation')
   end subroutine init_decomposition_dd
   !============================================================================
   subroutine check_octree_allocation(Domain)
@@ -249,7 +233,7 @@ contains
     type(DomainType), intent(inout) :: Domain
     integer::iError,nUbound
     !--------------------------------------------------------------------------
-    nUbound = GlobalBlock_
+    nUbound = PE_
     if(Domain%IsTreeDD)nUbound = max(nUbound, Domain%nChildren)
     if(Domain%nAllocatedNodes >= Domain%nTreeNode)RETURN
     if(associated(Domain%iDD_II))deallocate( Domain%iDD_II, &
@@ -317,15 +301,7 @@ contains
     Domain%CoordMin_D    = CoordMin_D
     Domain%CoordMax_D    = CoordMax_D
     Domain%nCell_D       = nCell_D
-    ! Check the dimension of PE_I and iBlock_I                       !
-    if(present(PE_I))then
-       if(ubound(PE_I,1)/=product(iRootMapDim_D))&
-            call CON_stop('Size of PE_I is wrong')
-    end if
-    if(present(iBlock_I))then
-       if(ubound(iBlock_I,1)/=product(iRootMapDim_D))&
-            call CON_stop('Size of iBlock_I is wrong')
-    end if
+    
     if(present(DoGlueMargins)) Domain%DoGlueMargins = DoGlueMargins
     if(present(iDirMinusGlue)) Domain%iDirMinusGlue = iDirMinusGlue
     if(present(iDirPlusGlue))  Domain%iDirPlusGlue  = iDirPlusGlue
@@ -342,8 +318,9 @@ contains
     end do
 
     if(Domain%IsTreeDD)then
-       call check_iroot_allocation(Domain)
-       if(present(iShift_DI))Domain%iShift_DI=iShift_DI
+       if(ubound(Domain%iRoot_I, 1) < product(Domain%iRootMapDim_D))&
+            call allocate_iroot(Domain)
+       if(present(iShift_DI))Domain%iShift_DI = iShift_DI
     end if
 
     ! If neither PE_I nor iBlock_I is present, the root
@@ -354,48 +331,29 @@ contains
           Domain%iDD_II(BLK_, lBlock) = mod(lBlock - 1, MaxBlock) + 1
           Domain%iDD_II(PE_, lBlock)  = (lBlock - 1)/MaxBlock
        end do
-       call set_iglobal_and_bp_dd(Domain)
        RETURN
     end if
-    ! If the PE\_I is not given, it is assumed that all the blocks
-    ! are at the root PE
     if(present(PE_I))then
+       ! Check size of PE_I                       !
+       if(ubound(PE_I,1)/=product(iRootMapDim_D))&
+            call CON_stop('Size of PE_I is wrong')
        Domain%iDD_II(PE_,1:Domain%nTreeNode) = PE_I
     else
+       ! If the PE\_I is not given, it is assumed that all the blocks
+       ! are at the root PE
        Domain%iDD_II(PE_,1:Domain%nTreeNode) = 0
     end if
 
     if(present(iBlock_I))then
+       ! Check size of iBlock_I 
+       if(ubound(iBlock_I,1)/=product(iRootMapDim_D))&
+            call CON_stop('Size of iBlock_I is wrong')
        Domain%iDD_II(BLK_, 1:Domain%nTreeNode) = iBlock_I
     else
-       do lBlock=1, Domain%nTreeNode
-          Domain%iDD_II(BLK_, lBlock) = lBlock
-       end do
+       call CON_stop(&
+            'Combination of present PE_I + non-present Block_I in undefined ')
     end if
-    call set_iglobal_and_bp_dd(Domain)
   end subroutine get_root_decomposition_dd
-  !============================================================================
-  subroutine set_iglobal_and_bp_dd(Domain)
-    type(DomainType), intent(inout) :: Domain
-    integer :: iError, iPE, iBlock
-    integer :: iGlobalNode, iGlobalBlock
-    !--------------------------------------------------------------------------
-    Domain%nBlockAll=count(Domain%iDD_II(FirstChild_, 1:Domain%nTreeNode)&
-         ==None_ .and. Domain%iDD_II(PE_,1:Domain%nTreeNode)/=None_)
-    if(ubound(Domain%iGlobal_A,1) < Domain%nBlockAll)then
-       deallocate(Domain%iGlobal_A)
-       allocate(Domain%iGlobal_A(1:Domain%nBlockAll), stat=iError)
-       call check_allocate(iError,'iGlobal_A - reallocate')
-    end if
-    Domain%iGlobal_A = None_
-    iGlobalBlock = 0
-    do iGlobalNode = 1, Domain%nTreeNode
-       if(.not.is_used_block_dd(Domain, iGlobalNode))CYCLE
-       iGlobalBlock = iGlobalBlock + 1
-       Domain%iDD_II(GlobalBlock_, iGlobalNode) = iGlobalBlock
-       Domain%iGlobal_A(iGlobalBlock) = iGlobalNode
-    end do
-  end subroutine set_iglobal_and_bp_dd
   !============================================================================
   subroutine allocate_iroot(Domain)
     ! Allocates the part of the grid descriptor which is only used
@@ -409,13 +367,6 @@ contains
     allocate(Domain%iRoot_I(product(Domain%iRootMapDim_D)), stat=iError)
     call check_allocate(iError,'iRoot_I'); Domain%iRoot_I = None_
   end subroutine allocate_iroot
-  !============================================================================
-  subroutine check_iroot_allocation(Domain)
-    type(DomainType), intent(inout) :: Domain
-    !--------------------------------------------------------------------------
-    if(ubound(Domain%iRoot_I, 1) < product(Domain%iRootMapDim_D))&
-         call allocate_iroot(Domain)
-  end subroutine check_iroot_allocation
   !============================================================================
   subroutine bcast_decomposition_dd(Domain)
     ! Broadcasts a given domain decomposition from the root PE
@@ -440,7 +391,8 @@ contains
     call MPI_Bcast(Domain%nCell_D(1),     &
          Domain%nDim, MPI_INTEGER, iProc0, iComm, iError)
     if(Domain%IsTreeDD)then
-       call check_iroot_allocation(Domain)
+       if(ubound(Domain%iRoot_I, 1) < product(Domain%iRootMapDim_D))&
+         call allocate_iroot(Domain)
        call MPI_Bcast(Domain%iShift_DI(1,1),&
             Domain%nDim*Domain%nChildren, MPI_INTEGER, iProc0, iComm, iError)
     end if
@@ -537,7 +489,6 @@ contains
                Domain%iShift_DI(:, iChildNumber)
        end if
     end do
-    call set_iglobal_and_bp_dd(Domain)
   end subroutine complete
   !============================================================================
   subroutine synchronize_refinement_dd(&
@@ -743,7 +694,7 @@ contains
              Discr_D(1:Domain%nDim) = (Discr_D(1:Domain%nDim) + &
                   real(Domain%iShift_DI(:, iChild)))*0.50
           end if
-       elseif(is_used_block_dd(Domain,lFound))then
+       elseif(Domain%iDD_II(FirstChild_, lFound) == None_)then
           EXIT ! Octree node is found
        else
           ! Ascend the octree: calculate the shift
@@ -785,21 +736,6 @@ contains
     iPEOut    = Domain%iDD_II(PE_,  iTreeNode)
     iBlockOut = Domain%iDD_II(BLK_, iTreeNode)
   end subroutine pe_and_blk
-  !============================================================================
-  integer function n_block(Domain, iPE)
-    type(DomainType), intent(in) :: Domain
-    integer,          intent(in) :: iPE
-    !--------------------------------------------------------------------------
-    n_block = count(Domain%iDD_II(FirstChild_, 1:Domain%nTreeNode)==None_&
-         .and. Domain%iDD_II(PE_, 1:Domain%nTreeNode)==iPE)
-  end function n_block
-  !============================================================================
-  logical function is_used_block_dd(Domain, iTreeNode)
-    type(DomainType), intent(in) :: Domain
-    integer,          intent(in) :: iTreeNode
-    !--------------------------------------------------------------------------
-    is_used_block_dd = Domain%iDD_II(FirstChild_, iTreeNode) == None_
-  end function is_used_block_dd
   !============================================================================
   subroutine associate_dd_pointer_dd(Domain, DomainPointer)
     Type(DomainType), target, intent(in)  :: Domain

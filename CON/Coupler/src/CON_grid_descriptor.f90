@@ -16,7 +16,7 @@ module CON_grid_descriptor
   use CON_domain_decomposition, ONLY: DomainType, DomainPointerType,    &
        is_left_boundary_d, is_right_boundary_d,                         &
        glue_margin, search_cell, search_in,  l_neighbor,                &
-       n_block,  pe_and_blk, cAlmostOne, PE_, BLK_,  GlobalBlock_
+       None_,  pe_and_blk, cAlmostOne, PE_, BLK_,  FirstChild_
   use CON_grid_storage, ONLY: ndim_id, associate_dd_pointer, ncell_id
   implicit none
 
@@ -51,7 +51,7 @@ module CON_grid_descriptor
      ! for index, CB stands   for Cell+Block).
      !
      ! iCB:=(Cell Index, Block Index)
-     ! Block Index:= GlobalTreeNode when all the grid points are
+     ! Block Index:= TreeNode when all the grid points are
      !              enumerated.or.Local block number, when only those
      !              grid points are enumerated which belongs to the
      !              piece of grid, which is associated with one of
@@ -88,12 +88,12 @@ module CON_grid_descriptor
 
      ! The block index IS NOT AFFECTED by this transformation and this
      ! is of crucial importance. Although the grid points of the
-     ! extended grid at some value of block index= nGlobalTreeNode
+     ! extended grid at some value of block index= nTreeNode
      ! can belong to the domain with differing block number, we still
-     ! relate these points to the block index value= nGlobalTreeNode.
+     ! relate these points to the block index value= nTreeNode.
      ! This can be of sense only if the complete data sets at the
      ! extended point set is asessible at the PE, to which the block
-     ! nGlobalTreeNode is assigned.
+     ! nTreeNode is assigned.
      ! Typically the data sets in the extended grid are shaped as
      ! arrays, like as follows:
      ! real,dimension(iPointMin_D(1):iPointMax_D(1),&
@@ -160,9 +160,10 @@ module CON_grid_descriptor
 
   ! Order of indexes in the array
   ! Declared in CON_domain_decomposition:
-  ! PE_ = 3, BLK_=2, GlobalBlock_ =4
-  public :: BLK_, GlobalBlock_
-  integer, parameter, public:: GlobalTreeNode_ = 1, GridPointFirst_ = 3
+  ! PE_ = 3, BLK_=2, 
+  public :: BLK_
+  integer, parameter, public :: GlobalBlock_ = 4
+  integer, parameter, public :: TreeNode_ = 1, GridPointFirst_ = 3
 
   type LocalGridType
 
@@ -319,45 +320,59 @@ contains
     type(GridType),          intent(in)  :: Grid
     type(LocalGridType),     intent(out) :: LocalGrid
     ! Misc
-    integer :: nDim, nBlock, nPointPerBlock, iBlock, iError
-    integer, pointer:: iDomain_II(:,:), iGlobal_A(:)
+    integer :: nDim, nPointPerBlock, iBlock, nBlock, iBlockAll, iTreeNode, nTreeNode
+    integer :: iError
+    integer, pointer:: iDomain_II(:,:)
     !--------------------------------------------------------------------------
     nDim                     = Grid%nDim
     LocalGrid%nDim             = nDim
     LocalGrid%Displacement_D  => Grid%Displacement_D
     LocalGrid%iPointMin_D => Grid%iPointMin_D
     LocalGrid%iPointMax_D => Grid%iPointMax_D
-    nBlock = n_block(Grid%Domain%Ptr, iProc)
+    ! For better readability
+    iDomain_II => Grid%Domain%Ptr%iDD_II
+    nTreeNode  = Grid%Domain%Ptr%nTreeNode
+    ! Number of used blocks on a given process
+    nBlock =  count(iDomain_II(FirstChild_, 1:nTreeNode)==None_ &
+         .and. iDomain_II(PE_, 1:nTreeNode)==iProc)
     LocalGrid%nBlock           = nBlock
     nPointPerBlock =    n_grid_points_per_block(Grid)
     LocalGrid%nPointPerBlock   = nPointPerBlock
 
-    allocate(LocalGrid%iIndex_IB(GlobalTreeNode_:GlobalBlock_,&
+    allocate(LocalGrid%iIndex_IB(TreeNode_:GlobalBlock_,&
          1:nBlock),stat=iError)
     call check_allocate(iError,'LocalGrid%iIndex_IB')
-
-    ! For better readability
-    iDomain_II=>Grid%Domain%Ptr%iDD_II
-    iGlobal_A=>Grid%Domain%Ptr%iGlobal_A
-    LocalGrid%iIndex_IB(GlobalTreeNode_,:) = pack(iGlobal_A,&
-         MASK = iDomain_II(PE_,iGlobal_A)==iProc)
-    LocalGrid%iIndex_IB(BLK_,:) = iDomain_II(BLK_,&
-         LocalGrid%iIndex_IB(GlobalTreeNode_,:))
-    LocalGrid%iIndex_IB(GlobalBlock_,:) = iDomain_II(GlobalBlock_,&
-         LocalGrid%iIndex_IB(GlobalTreeNode_,:))
     allocate(LocalGrid%DCoord_DB(1:nDim,1:nBlock), stat=iError)
     call check_allocate(iError,'LocalGrid%DCoord_DB')
     allocate(LocalGrid%CoordBlock_DB(1:nDim,1:nBlock),stat=iError)
     call check_allocate(iError,'LocalGrid%CoordBlock_DB')
-    do iBlock = 1, nBlock
+    ! Constrain the domain decomposition arrays for a given PE
+    iBlock = 0; iBlockAll = 0
+    ! Loop over all tree nodes
+    do  iTreeNode = 1, nTreeNode
+       ! Skip unused blocks
+       if(iDomain_II(FirstChild_, iTreeNode) /= None_)CYCLE
+       !  iBlockAll enumerates all used blocks
+       iBlockAll = iBlockAll + 1
+       ! Skip all used blocks allocated at procs other than iProc
+       if(iDomain_II(PE_, iTreeNode) /=iProc)CYCLE
+       ! iBlock enumerates used blocks on the process iProc
+       iBlock = iBlock + 1
+       ! Store iTreeNode
+       LocalGrid%iIndex_IB(TreeNode_, iBlock) = iTreeNode
+       ! Comy and save local block ID as stored in the global DD
+       LocalGrid%iIndex_IB(BLK_, iBlock)  = iDomain_II(BLK_, iTreeNode)
+       ! Store iBlockAll
+       LocalGrid%iIndex_IB(GlobalBlock_, iBlock) = iBlockAll
+       ! Store the point index for the first point on this block
        LocalGrid%iIndex_IB(GridPointFirst_,iBlock) = (iBlock - 1)*&
             nPointPerBlock + 1
-       LocalGrid%DCoord_DB(1:nDim,iBlock)     = &
-            Grid%Domain%Ptr%DCoordCell_DI(1:nDim, &
-            LocalGrid%iIndex_IB(GlobalTreeNode_,iBlock))
-       LocalGrid%CoordBlock_DB(1:nDim,iBlock) = &
-            Grid%Domain%Ptr%CoordBlock_DI(1:nDim, &
-            LocalGrid%iIndex_IB(GlobalTreeNode_,iBlock))
+       ! Store the grid resolution for this block
+       LocalGrid%DCoord_DB(:,iBlock) = &
+            Grid%Domain%Ptr%DCoordCell_DI(:, iTreeNode)
+       ! Store coords of the block left corner
+       LocalGrid%CoordBlock_DB(:,iBlock) = &
+            Grid%Domain%Ptr%CoordBlock_DI(:, iTreeNode)
     end do
   end subroutine set_local_gd
   !============================================================================
