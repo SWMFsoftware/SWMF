@@ -160,7 +160,7 @@ module CON_grid_descriptor
 
   ! Order of indexes in the array
   ! Declared in CON_domain_decomposition:
-  ! PE_ = 3, BLK_=2, 
+  ! PE_ = 3, BLK_=2,
   public :: BLK_
   integer, parameter, public :: GlobalBlock_ = 4
   integer, parameter, public :: TreeNode_ = 1, GridPointFirst_ = 3

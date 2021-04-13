@@ -146,7 +146,7 @@ contains
     integer,           intent(in)  :: CompID_, nDim
     logical, optional, intent(in)  :: IsTreeDD
     logical, optional, intent(in)  :: IsLocal
-    
+
     integer::iError,iDim,iChildFirst,iChildLast
     !--------------------------------------------------------------------------
     if(.not.use_comp(CompID_))call CON_stop('The component is not used')
@@ -177,9 +177,7 @@ contains
     allocate(Domain%IsPeriodic_D(nDim), stat=iError)
     call check_allocate(iError,"IsPeriodic_D")
     Domain%IsPeriodic_D  = .false.
-    
-   
- 
+
     Domain%DoGlueMargins = .false.
     Domain%iDirMinusGlue = 0
     Domain%iDirPlusGlue  = 0
@@ -301,7 +299,7 @@ contains
     Domain%CoordMin_D    = CoordMin_D
     Domain%CoordMax_D    = CoordMax_D
     Domain%nCell_D       = nCell_D
-    
+
     if(present(DoGlueMargins)) Domain%DoGlueMargins = DoGlueMargins
     if(present(iDirMinusGlue)) Domain%iDirMinusGlue = iDirMinusGlue
     if(present(iDirPlusGlue))  Domain%iDirPlusGlue  = iDirPlusGlue
@@ -345,7 +343,7 @@ contains
     end if
 
     if(present(iBlock_I))then
-       ! Check size of iBlock_I 
+       ! Check size of iBlock_I
        if(ubound(iBlock_I,1)/=product(iRootMapDim_D))&
             call CON_stop('Size of iBlock_I is wrong')
        Domain%iDD_II(BLK_, 1:Domain%nTreeNode) = iBlock_I

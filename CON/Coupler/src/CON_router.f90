@@ -40,33 +40,33 @@ module CON_router
      ! The router can be set between grids of different dimensions
      character(LEN=3)::Name
      integer:: iCompTarget, iCompSource
-     ! For the router between LOCAL grids of a component we use the   
-     ! communicator of the model for sending-receiving the data,      
-     ! otherwise the global communicator                             
+     ! For the router between LOCAL grids of a component we use the
+     ! communicator of the model for sending-receiving the data,
+     ! otherwise the global communicator
      !
      logical :: IsLocal, IsProc
      integer :: iProc, nProc, iComm
-     ! If the union group is constructed, then for use with broadcast 
-     ! we need the union communicator and the root PE ranks in this   
+     ! If the union group is constructed, then for use with broadcast
+     ! we need the union communicator and the root PE ranks in this
      ! communicator
      !
      integer::iCommUnion, iProc0Source, iProc0Target
      integer, pointer :: iTranslated_P(:)
      !
-     ! As the default we use iCB indexes to construct the router,     
-     ! hence the grid point is characterized by the                   
-     ! Grid%nDim grid point indexes plus one more index for           
-     ! the block number. Also we allow to use exactly                 
-     ! Grid%nDim indexes, without the block number which              
-     ! only seems to be of sence for the component which is localized 
-     ! at one PE only, or which has exactly one block per PE          
+     ! As the default we use iCB indexes to construct the router,
+     ! hence the grid point is characterized by the
+     ! Grid%nDim grid point indexes plus one more index for
+     ! the block number. Also we allow to use exactly
+     ! Grid%nDim indexes, without the block number which
+     ! only seems to be of sence for the component which is localized
+     ! at one PE only, or which has exactly one block per PE
      !
      integer::nIndexSource, nIndexTarget
      !
-     ! The total amounts of the buffer segments to be sent-received   
+     ! The total amounts of the buffer segments to be sent-received
      ! to/from the PE. The total amounts of the grid points from which
-     ! the data should be got or to which the data should be put,some 
-     ! data points may be counted more than one time                  
+     ! the data should be got or to which the data should be put,some
+     ! data points may be counted more than one time
      !
      integer, dimension(:), pointer :: &
           nGet_P, nPut_P, nRecv_P, nSend_P
