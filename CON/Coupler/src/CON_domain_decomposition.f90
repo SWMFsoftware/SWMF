@@ -348,8 +348,9 @@ contains
             call CON_stop('Size of iBlock_I is wrong')
        Domain%iDD_II(BLK_, 1:Domain%nTreeNode) = iBlock_I
     else
-       call CON_stop(&
-            'Combination of present PE_I + non-present Block_I in undefined ')
+       do lBlock=1, Domain%nTreeNode
+          Domain%iDD_II(BLK_, lBlock) = lBlock
+       end do
     end if
   end subroutine get_root_decomposition_dd
   !============================================================================
