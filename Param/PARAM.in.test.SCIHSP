@@ -387,7 +387,7 @@ SP			NameTarget
 
 #STOP
 -1			MaxIter
-22			TimeMax
+21			TimeMax
 
 End session: 1
 #RUN ##########################################################################
