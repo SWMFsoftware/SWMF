@@ -120,7 +120,7 @@ contains
          GridID_ = EE_, &
          CompID_ = EE_, &
          nDim = 3,      &
-         IsTreeDecomposition = .true.)
+         IsTreeDD = .true.)
 
     call set_coord_system( &
          GridID_ = EE_, &
@@ -141,7 +141,7 @@ contains
             Domain = MH_Domain, &
             CompID_ = EE_, &
             nDim = 3, &
-            IsTreeDecomposition = .true.)
+            IsTreeDD = .true.)
 
        ! Get the octree root array
        call MH_get_root_decomposition(MH_Domain)
