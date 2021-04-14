@@ -94,26 +94,6 @@ y=0 MHD idl		StringPlot
 0			StateVar Pu3Uy
 0			StateVar Pu3Uz
 1.01E-12		StateVar Pu3P
-1E-5			StateVar NeuRho
-0			StateVar NeuUx
-0			StateVar NeuUy
-0			StateVar NeuUz
-1E-16			StateVar NeuP
-1E-5			StateVar Ne2Rho
-0			StateVar Ne2Ux
-0			StateVar Ne2Uy
-0			StateVar Ne2Uz
-1E-16			StateVar Ne2P
-1E-5			StateVar Ne3Rho
-0			StateVar Ne3Ux
-0			StateVar Ne3Uy
-0			StateVar Ne3Uz
-1E-16			StateVar Ne3P
-0.18			StateVar Ne4Rho
-100			StateVar Ne4Ux
-0			StateVar Ne4Uy
-0			StateVar Ne4Uz
-1.6E-13			StateVar Ne4P
 
 #USERINPUTBEGIN -----------------------------------
 
