@@ -405,6 +405,14 @@ contains
             TypeGeometry = TypeGeometry, &
             Coord1_I  = LogRGen_I,       &
             Coord2_I  = [RadiusMin, RadiusMax])
+    elseif(TypeGeometry=='roundcube')then
+       call set_coord_system(&
+            GridID_   = IH_,             &
+            TypeCoord = TypeCoordSystem, &
+            UnitX     = No2Si_V(UnitX_), &
+            nVar      = nVar,            &
+            NameVar   = NameVarCouple,   &
+            TypeGeometry = 'cartesian')
     else
        call set_coord_system(&
             GridID_   = IH_,             &
