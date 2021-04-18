@@ -1539,7 +1539,7 @@ test15_pt_compile:
 	./Config.pl -o=SC:u=Awsom,e=Awsom,ng=2,g=4,4,4
 	./Config.pl -o=IH:u=Awsom,e=Awsom,ng=2,g=4,4,4
 	./Config.pl -o=PT:spice-path=nospice,spice-kernels=nospice,\
-	application=test/sep_focused_transport-ih-mflampa,amps-test=on
+	application=test/sep_focused_transport-ih-mflampa-fl,amps-test=on
 	${MAKE} SWMF
 	make PIDL
 
