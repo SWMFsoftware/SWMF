@@ -5,7 +5,7 @@
 module IH_wrapper
   use CON_domain_decomposition
   ! Wrapper for an "empty" Inner Heliosphere (IH) component
-
+  use CON_coupler,             ONLY: IH_, GridType, LocalGridType
   implicit none
 
   private ! except
@@ -27,7 +27,10 @@ module IH_wrapper
   public:: IH_get_for_mh_with_xyz
   public:: IH_put_from_mh
   public:: IH_n_particle
-  type(DomainType), public:: IH_LineDD
+  type(GridType), public :: IH_Grid     ! Grid (MHD data)
+  type(GridType), public :: IH_LineGrid ! Global GD for lines
+  type(LocalGridType), public :: IH_LocalGrid     ! Local GD (MHD data)
+  type(LocalGridType), public :: IH_LocalLineGrid ! Local GD for lines)
 
   ! Coupling with SC
   public:: IH_set_buffer_grid_get_info

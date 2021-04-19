@@ -8,7 +8,8 @@ module CON_bline
 #endif
   use ModUtilities,      ONLY: check_allocate
   use ModConst,          ONLY: cBoltzmann
-  use CON_coupler,       ONLY: MaxComp, is_proc0
+  use CON_coupler,       ONLY: MaxComp, is_proc0, i_proc, &
+       GridType, LocalGridType, set_standard_grid_descriptor, set_local_gd
   implicit none
 
   SAVE
@@ -29,7 +30,8 @@ module CON_bline
   public :: BL_put_line               ! points rMin < R < rMax
   public :: BL_set_line_foot_b
   public :: save_mhd
-
+  type(GridType),      public :: BL_Grid          ! Grid descriptor (global)
+  type(LocalGridType), public :: BL_LocalGrid     ! Grid descriptor (local)
   ! The following public members are available at all PEs
   integer, public :: BL_ =-1         ! ID of the target model (SP_, PT_)
   character(len=2):: NameCompBl = '' ! Name of the target model ('SP', 'PT'...)
@@ -388,8 +390,10 @@ contains
          TypeGeometry = 'cartesian', &
          NameVar      = NameVarCouple, &
          UnitX        = UnitX)
+    call set_standard_grid_descriptor(BL_, Grid=BL_Grid)
     if(.not.is_proc(BL_))RETURN
     TypeCoordSystemBl = TypeCoordSystem
+    call set_local_gd(iProc = i_proc(), Grid=BL_Grid, LocalGrid=BL_LocalGrid)
     if(present(EnergySi2IoIn))EnergySi2Io = EnergySi2IoIn
   contains
     !==========================================================================

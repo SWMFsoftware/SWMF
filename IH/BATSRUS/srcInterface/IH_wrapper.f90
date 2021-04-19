@@ -5,14 +5,13 @@
 module IH_wrapper
 
   ! Wrapper for IH_BATSRUS Inner Heliosphere (IH) component
-  use CON_coupler,             ONLY: IH_
-  use IH_domain_decomposition, ONLY: IH_LineDD=>MH_LineDecomposition
+  use CON_coupler,             ONLY: IH_, GridType, LocalGridType
   use IH_ModBatsrusMethods,    ONLY: &
        BATS_init_session, BATS_setup, BATS_advance, BATS_save_files, &
        BATS_finalize
 
   implicit none
-
+  SAVE
   private ! except
 
   ! CON wrapper
@@ -31,7 +30,11 @@ module IH_wrapper
   public:: IH_get_for_mh
   public:: IH_put_from_mh
   public:: IH_n_particle
-  public:: IH_LineDD
+
+  type(GridType), public :: IH_Grid     ! Grid (MHD data)
+  type(GridType), public :: IH_LineGrid ! Global GD for lines
+  type(LocalGridType), public :: IH_LocalGrid     ! Local GD (MHD data)
+  type(LocalGridType), public :: IH_LocalLineGrid ! Local GD for lines)
 
   ! Coupling with SC
   public:: IH_set_buffer_grid_get_info
@@ -373,7 +376,7 @@ contains
     use CON_comp_param
     use IH_domain_decomposition
     use CON_coupler
-    use IH_ModMain, ONLY: TypeCoordSystem, nVar, NameVarCouple
+    use IH_ModMain, ONLY: TypeCoordSystem, nVar, NameVarCouple, nG
     use IH_ModPhysics, ONLY:No2Si_V, UnitX_
     use IH_ModGeometry,   ONLY: RadiusMin, RadiusMax
     use IH_BATL_geometry, ONLY: TypeGeometry, IsGenRadius, LogRGen_I
@@ -383,7 +386,7 @@ contains
     logical:: DoTest,DoTestMe
     logical:: UseParticleLine = .false.
     integer:: nParticle = 0, iError = 0
-
+    integer:: IH_nG = 0
     character(len=*), parameter:: NameSub = 'IH_set_grid'
     !--------------------------------------------------------------------------
     DoTest=.false.;DoTestMe=.false.
@@ -453,6 +456,15 @@ contains
     call synchronize_refinement(&
          GridID_=IH_,&
          LocalDomain=MH_Domain)
+    if(is_proc0(IH_))IH_nG = nG
+    call MPI_bcast(IH_nG, 1, MPI_INTEGER,&
+         i_proc0(IH_), i_comm(), iError)
+    call set_standard_grid_descriptor(IH_,  & ! CompID_
+         IH_nG,                             & ! Gcn
+         CellCentered_,                     & ! Grid type
+         IH_Grid)
+    if(is_proc(IH_))call set_local_gd(iProc = i_proc(),   &
+           Grid = IH_Grid, LocalGrid = IH_LocalGrid)
     if(is_proc0(IH_))UseParticleLine = UseParticles
     call MPI_bcast(UseParticleLine,1,MPI_LOGICAL,&
          i_proc0(IH_),i_comm(),iError)
@@ -473,6 +485,11 @@ contains
        call bcast_decomposition_dd(MH_LineDecomposition)
        if(DoTest.and.is_proc0(IH_))call show_domain_decomp(&
             MH_LineDecomposition)
+       ! Set local GD on the Particle_I structure
+       call set_standard_grid_descriptor(MH_LineDecomposition, &
+            Grid=IH_LineGrid)
+       if(is_proc(IH_))call set_local_gd(iProc = i_proc(),   &
+           Grid = IH_LineGrid, LocalGrid = IH_LocalLineGrid)
     end if
   end subroutine IH_set_grid
   !============================================================================

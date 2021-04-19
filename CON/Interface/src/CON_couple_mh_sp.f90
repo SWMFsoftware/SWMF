@@ -17,13 +17,14 @@ module CON_couple_mh_sp
        IH_xyz_to_coord          ,&  ! Conversion Cartesian <-> generalized
        IH_coord_to_xyz          ,&  ! coords in the IH.
        IH_get_for_mh            ,&  ! Gets MHD information from a given cell
-       IH_LineDD      ! 1D "grid": Coord = real(iParticle + iProc*nParticleMax)
+       IH_Grid, IH_LineGrid, IH_LocalLineGrid  ! Grid descriptors
+ 
 
   !^CMP IF SC BEGIN
   use SC_wrapper, ONLY: SC_check_ready_for_sp, SC_synchronize_refinement,    &
        SC_extract_line, SC_put_particles, SC_n_particle,                     &
        SC_get_particle_coords, SC_get_particle_indexes, SC_xyz_to_coord,     &
-       SC_get_for_mh, SC_LineDD
+       SC_get_for_mh, SC_Grid, SC_LineGrid, SC_LocalLineGrid
   !^CMP END SC
   use SP_wrapper, ONLY: &
        SP_do_extract_lines      ,&  ! If returns .true., extract the mf lines
@@ -41,7 +42,8 @@ module CON_couple_mh_sp
        BL_n_particle            ,&  ! Number of "points" in a given line in SP
        BL_put_from_mh           ,&  ! Put MHD info from SC or IH to SP
        BL_interface_point_coords,&  ! Check if the point is within interface
-       BL_put_line                  ! Put particle Xyz from SC/IH to SP
+       BL_put_line              ,&  ! Put particle Xyz from SC/IH to SP
+       BL_Grid, BL_LocalGrid        ! Grid descriptors (global and local)
 
   implicit none
 
@@ -50,18 +52,10 @@ module CON_couple_mh_sp
   public::couple_ih_sp
   public::couple_sc_sp              !^CMP IF SC
 
-  type(GridType)     , save::BL_Grid           ! Target (Particle coords)
-  type(LocalGridType), save::BL_LocalGrid      ! Target (MHD data)
-  type(GridType)     , save::IH_Grid           ! Source (MHD data)
   type(RouterType),save,private::RouterIhBl    ! IH (MHD data) => SP
-  type(GridType)     , save::IH_LineGrid       ! Misc
-  type(LocalGridType), save::IH_LocalLineGrid  ! Source (MHD data)
   type(RouterType),save,private::RouterLineIhBl    ! IH (Particle coords)=>SP
   !^CMP IF SC BEGIN
-  type(GridType)     , save::SC_Grid           ! Source (MHD data)
   type(RouterType),save,private::RouterScBl        ! SC MHD data => BL
-  type(GridType)     , save::SC_LineGrid       ! Misc
-  type(LocalGridType), save::SC_LocalLineGrid  ! Source (Particle Coords)
   type(RouterType),save,private::RouterLineScBl    ! SC (Particle coords)=>BL
   !^CMP END SC
 
@@ -144,7 +138,6 @@ contains
     if(use_comp(SC_))call couple_sc_sp_init  !^CMP IF SC
     if(use_comp(IH_))call couple_ih_sp_init
     if(DoExtract.and.is_proc(BL_))call BL_init_foot_points
-
     ! After couple_mh_sp_init
     ! (a) set of low and upper boundaries in the coupler
     ! (b) set of the Lagrangian point coordinates in BL
@@ -169,20 +162,13 @@ contains
       ! SC, at the stage of the router construction. To further benefit
       ! from this opportunity, two BL grid indexes are also sent from
       ! BL to SC,at this stage, therefore nMappedPointIndex = 2.
-      call init_coupler(iCompSource = SC_          ,&
-           iCompTarget       = BL_                 ,&
+      call init_router(                             &
            GridSource        = SC_Grid             ,&
            GridTarget        = BL_Grid             ,&
            nMappedPointIndex = nAux                ,&
-           Router            = RouterScBl          ,&
-           LocalGridTarget   = BL_LocalGrid)
-
-      ! Set local GD on the Particle_I structure
-      call set_standard_grid_descriptor(SC_LineDD,Grid=SC_LineGrid)
+           Router            = RouterScBl          )
       call init_router(SC_LineGrid, BL_Grid, RouterLineScBl)
       if(.not.RouterScBl%IsProc)RETURN
-      if(is_proc(SC_))call set_local_gd(iProc = i_proc(),   &
-           Grid = SC_LineGrid, LocalGrid = SC_LocalLineGrid)
       ! Router to send particles is initialized.
       if(.not.DoExtract)RETURN
       !
@@ -249,29 +235,21 @@ contains
       ! BL to IH, at this stage, therefore nMappedPointIndex = 2.
       if(use_comp(SC_))then          !^CMP IF SC BEGIN
          ! Do not reset already installed BL_LocalGrid
-         call init_coupler(iCompSource = IH_          ,&
-              iCompTarget          = BL_              ,&
+         call init_router(                             &
               GridSource           = IH_Grid          ,&
               GridTarget           = BL_Grid          ,&
               nMappedPointIndex    = nAux             ,&
               Router               = RouterIhBl)
       else                           !^CMP END SC
-         call init_coupler(iCompSource = IH_          ,&
-              iCompTarget          = BL_              ,&
+         call init_router(                             &
               GridSource           = IH_Grid          ,&
               GridTarget           = BL_Grid          ,&
               nMappedPointIndex    = nAux             ,&
-              Router               = RouterIhBl       ,&
-              LocalGridTarget      = BL_LocalGrid)
+              Router               = RouterIhBl        )
       end if                         !^CMP IF SC
       ! Set local GD on the Particle_I structure
-      call set_standard_grid_descriptor(IH_LineDD,Grid=&
-           IH_LineGrid)
       call init_router(IH_LineGrid, BL_Grid, RouterLineIhBl)
       if(.not.RouterIhBl%IsProc)RETURN
-      if(is_proc(IH_))call set_local_gd(iProc = i_proc(),&
-           Grid      = IH_LineGrid                      ,&
-           LocalGrid = IH_LocalLineGrid)
       ! Router to send particles is initialized.
       if(.not.DoExtract)RETURN
       if(is_proc(BL_))then
