@@ -79,8 +79,7 @@ module CON_global_message_pass
 contains
   !============================================================================
   ! BEGIN
-  subroutine global_message_pass(Router, nVar, fill_buffer, apply_buffer, copy)
-
+  subroutine global_message_pass(Router, nVar, fill_buffer, apply_buffer)
     ! Router: should be preset. See CON_router for the instructions.
     ! nVar is the number of REAL variables which are sent-received.
     ! nVar>1 means that more than one scalar field is involved. In
@@ -119,11 +118,9 @@ contains
     ! non-clashing PE sets, this procedure is not applied at all and
     ! it is pointless to have it present.
 
-    type(RouterType),intent(in)::Router
-    integer,intent(in)::nVar
-
+    type(RouterType),intent(in) :: Router
+    integer,         intent(in) :: nVar
     interface
-
        ! Should get nVar values from some arrays using indexes
        !
        ! Get%Index_II(:,iGetStart:iGetStart+nPartial-1), take the sum(s)
@@ -132,23 +129,6 @@ contains
        ! results to the buffer array VSend_I, starting from iBuffStart
        ! value of indexes.
        !
-       ! Pseudocode:
-       !\end{verbatim}
-       !$$
-       ! VSend_I(iBuffStart:iBuffStart+nVar-1)=
-       !$$
-       !$$
-       ! sum_{iGet=iGetStart}^
-       !{iGetStart+nPartial-1}
-       ! V(1:nVar)(Get\  Index(:,iGet)),
-       !$$
-       !\begin{verbatim}
-       ! where
-       ! V(1:nVar)(IndexVector)      is a vector of nVar real variables,
-       ! which are indexed by vector index Get%Index_II(:,iGet). As an
-       ! example, the vector index can be
-       !
-       !   iCell,jCell,kCell,iBlock,
        !
        ! and the vector V can be the set of the conserved variables in
        ! the thus numbered control volumes
@@ -161,20 +141,9 @@ contains
          type(WeightPtrType),intent(in)::Weight
          real,dimension(nVar),intent(out)::Buff_I
        end subroutine fill_buffer
-
        ! Inverse operation: gets nVar variables from
        ! iRecv_I(iBuff:iBuff+nVar-1) and puts it to the state vector
        ! with the index vector being equal to Put%iCB_II(:,iPut)
-       !
-       ! Pseudocode:
-       ! if(DoAdd)then
-       !   V(1:nVar)(Put%iCB_II(:,iPut))=V(1:nVar)&
-       !        (Put%iCB_II(:,iPut))+&
-       !        VRecv_I(iBuffStart:iBuffStart+nVar-1)
-       ! else
-       !   V(1:nVar)(Put%iCB_II(:,iPut))=&
-       !        VRecv_I(iBuffStart:iBuffStart+nVar-1)
-       ! end if
        subroutine apply_buffer(nPartial, &
             iPutStart, Put, Weight, DoAdd, Buff_I, nVar)
          use CON_router
@@ -185,26 +154,8 @@ contains
          logical,intent(in)::DoAdd
          real,dimension(nVar),intent(in)::Buff_I
        end subroutine apply_buffer
-
-       ! OPTIONAL
-       ! Can be thought of as the combination of fill_buffer, which puts
-       ! the result into an auxiliary buffer of the length of nVar,
-       ! instead of vSend_I, and apply_buffer which uses this auxiliary
-       ! buffer instead of vRecv_I
-       subroutine copy(nPartialGet, iGetStart, Get, Weight, &
-            nPartialPut, iPutStart, Put, Weight1, DoAdd)
-         use CON_router
-         implicit none
-         integer,intent(in)::nPartialGet,nPartialPut
-         integer,intent(in)::iGetStart,iPutStart
-         type(IndexPtrType),intent(in)::Get,Put
-         type(WeightPtrType),intent(in)::Weight,Weight1
-         logical,intent(in)::DoAdd
-       end subroutine copy
     end interface
-
-    optional::copy
-
+    
     integer :: iProc,nProc,iComm,iCommUnion
     integer :: iV,iPE, iError, nError, lBuff, lGet, lPut
     integer :: nPartialGet, nPartialPut
@@ -227,81 +178,48 @@ contains
     iRecvStart_P=0
     do iPE=0,nProc-2
        if(iPE==iProc)then
-          iSendStart_P(iPE+1)=iSendStart_P(iPE)
-          iRecvStart_P(iPE+1)=iRecvStart_P(iPE)
+          iSendStart_P(iPE+1) = iSendStart_P(iPE)
+          iRecvStart_P(iPE+1) = iRecvStart_P(iPE)
        else
-          iSendStart_P(iPE+1)=iSendStart_P(iPE)+&
-               Router%nSend_P(iPE)
-          iRecvStart_P(iPE+1)=iRecvStart_P(iPE)+&
-               Router%nRecv_P(iPE)
+          iSendStart_P(iPE+1) = iSendStart_P(iPE) + Router%nSend_P(iPE)
+          iRecvStart_P(iPE+1) = iRecvStart_P(iPE) + Router%nRecv_P(iPE)
        end if
     end do
-    if(nVar<1)call CON_stop(&
-         'In GlobalMessagePass you can not use nVar<1')
+    if(nVar < 1)call CON_stop('In GlobalMessagePass you can not use nVar<1')
     ! Check send/recv buffers
-    nSendAll=(iSendStart_P(nProc-1)+&
-         Router%nSend_P(nProc-1))*nVar
+    nSendAll = (iSendStart_P(nProc-1) + Router%nSend_P(nProc-1))*nVar
 
     if(nSendAll>0)call check_send_buffer(nSendAll)
 
-    nRecvAll=(iRecvStart_P(nProc-1)+&
-         Router%nRecv_P(nProc-1))*nVar
+    nRecvAll=(iRecvStart_P(nProc-1) + Router%nRecv_P(nProc-1))*nVar
     if(nRecvAll>0)call check_recv_buffer(nRecvAll)
 
-    iPE=iProc
-    lGet=0;lPut=0
-
+    iPE = iProc
+    lGet=0; lPut=0
     if(Router%nSend_P(iPE)>0)then
-       if(present(copy))then
-          do iV=1,Router%nSend_P(iPE)
-             nPartialGet=Router%iGet_P(iPE)%iCB_II(0,lGet+1)
-             nPartialPut=Router%iPut_P(iPE)%iCB_II(0,lPut+1)
-             call copy(nPartialGet,&
-                  lGet+1,  &
-                  Router%iGet_P(iPE),&
-                  Router%Get_P(iPE),&
-                  nPartialPut,&
-                  lPut+1,&
-                  Router%iPut_P(iPE),&
-                  Router%Put_P(iPE),&
-                  Router%DoAdd_P(iPE)%DoAdd_I(lPut+1))
-             lGet=lGet+nPartialGet
-             lPut=lPut+nPartialPut
-          end do
-       else
-          do iV=1,Router%nSend_P(iPE)
-             nPartialGet=Router%iGet_P(iPE)%iCB_II(0,lGet+1)
-             nPartialPut=Router%iPut_P(iPE)%iCB_II(0,lPut+1)
-             call fill_buffer(nPartialGet,&
-                  lGet+1,  &
-                  Router%iGet_P(iPE),&
-                  Router%Get_P(iPE),&
-                  TempBuff_I,nVar)
-             call apply_buffer(nPartialPut,&
-                  lPut+1,&
-                  Router%iPut_P(iPE),&
-                  Router%Put_P(iPE),&
-                  Router%DoAdd_P(iPE)%DoAdd_I(lPut+1),&
-                  TempBuff_I,nVar)
-             lGet=lGet+nPartialGet
-             lPut=lPut+nPartialPut
-          end do
-       end if
+       do iV=1,Router%nSend_P(iPE)
+          nPartialGet = Router%iGet_P(iPE)%iCB_II(0,lGet+1)
+          nPartialPut = Router%iPut_P(iPE)%iCB_II(0,lPut+1)
+          call fill_buffer(nPartialGet, lGet+1, Router%iGet_P(iPE),   &
+               Router%Get_P(iPE), TempBuff_I,nVar)
+          call apply_buffer(nPartialPut, lPut+1, Router%iPut_P(iPE),  &
+               Router%Put_P(iPE), Router%DoAdd_P(iPE)%DoAdd_I(lPut+1),&
+               TempBuff_I,nVar)
+          lGet = lGet + nPartialGet
+          lPut = lPut + nPartialPut
+       end do
     end if
 
     ! Collect values into VSend that need to be passed to other processors
     lBuff=0
-    do iPE=0,nProc-1
+    do iPE = 0, nProc - 1
        if(iPE==iProc) CYCLE
        if(Router%nSend_P(iPE)==0) CYCLE
        lGet=0
        do iV=1,Router%nSend_P(iPE)
           nPartialGet=Router%iGet_P(iPE)%iCB_II(0,lGet+1)
-          call fill_buffer(nPartialGet,&
-               lGet+1,&
-               Router%iGet_P(iPE),&
-               Router%Get_P(iPE),&
-               VSend_I(lBuff+1:lBuff+nVar),nVar)
+          call fill_buffer(nPartialGet, lGet+1, Router%iGet_P(iPE),&
+               Router%Get_P(iPE), VSend_I(lBuff+1:lBuff+nVar), nVar)
           lGet=lGet+nPartialGet
           lBuff=lBuff+nVar
        end do
@@ -309,7 +227,7 @@ contains
 
     ! Post receives first so that they are ready
     nRECVrequests = 0
-    do iPE=0,nProc-1
+    do iPE = 0, nProc - 1
        if(iPE == iProc) CYCLE
        if(Router%nRecv_P(iPE)==0) CYCLE
        if(DoBreakUpMessages)then
@@ -317,26 +235,25 @@ contains
           do i=1,nSends
              itag = nProc*(i-1)+iPE
              nRECVrequests = nRECVrequests + 1
-             if(nRECVrequests>maxMessages)then
+             if(nRECVrequests > maxMessages)then
                 write(*,*)'Too many messages!!'
                 call MPI_Abort(iComm,iError,nError)
              end if
-             call MPI_irecv(VRecv_I(1+nVar*&
-                  (iRecvStart_P(iPE)+(i-1)*MessageSize)),&
-                  nVar*min(MessageSize,&
-                  Router%nRecv_P(iPE)-((i-1)*MessageSize)), &
-                  MPI_REAL,iPE,itag,iComm,&
+             call MPI_irecv(VRecv_I(1 + nVar*                   &
+                  (iRecvStart_P(iPE) + (i - 1)*MessageSize)),   &
+                  nVar*min(MessageSize,                         &
+                  Router%nRecv_P(iPE) - ((i - 1)*MessageSize)), &
+                  MPI_REAL, iPE, itag, iComm,                   &
                   RECVrequests(nRECVrequests),iError)
           end do
        else
           itag = iPE
           nRECVrequests = nRECVrequests + 1
-          if(nRECVrequests>maxMessages)&
+          if(nRECVrequests > maxMessages)&
                call CON_stop("Too many RECVs in mp_SendValues")
-          call MPI_irecv(VRecv_I(iRecvStart_P(iPE)*nVar+1),&
-               nVar*Router%nRecv_P(iPE), &
-               MPI_REAL,iPE,itag,iComm,&
-               RECVrequests(nRECVrequests),iError)
+          call MPI_irecv(VRecv_I(iRecvStart_P(iPE)*nVar+1),         &
+               nVar*Router%nRecv_P(iPE), MPI_REAL, iPE, itag, iComm,&
+               RECVrequests(nRECVrequests), iError)
        end if
     end do
 
@@ -347,63 +264,57 @@ contains
 
     ! VSend array sent to VRecv array on other PEs
     nSENDrequests = 0
-    do iPE=0,nProc-1
+    do iPE = 0, nProc - 1
        if(iPE == iProc) CYCLE
        if(Router%nSend_P(iPE)==0) CYCLE
        if(DoBreakUpMessages)then
-          nSends=1+((Router%nSend_P(iPE)-1)/MessageSize)
+          nSends=1 + ((Router%nSend_P(iPE)-1)/MessageSize)
           do i=1,nSends
-             itag = nProc*(i-1)+iProc
+             itag = nProc*(i - 1) + iProc
              if(DoRSend)then
                 call MPI_rsend(VSend_I(1+nVar*&
-                     (iSendStart_P(iPE)+(i-1)*MessageSize)),&
+                     (iSendStart_P(iPE) + (i-1)*MessageSize)),&
                      nVar*min(MessageSize,&
-                     Router%nSend_P(iPE)-((i-1)*MessageSize)), &
-                     MPI_REAL,iPE,itag,iComm,iError)
+                     Router%nSend_P(iPE) - ((i - 1)*MessageSize)), &
+                     MPI_REAL, iPE, itag, iComm, iError)
              else
                 nSENDrequests = nSENDrequests + 1
                 call MPI_isend(VSend_I(1+nVar*&
-                     (iSendStart_P(iPE)+(i-1)*MessageSize)),&
+                     (iSendStart_P(iPE) + (i-1)*MessageSize)),&
                      nVar*min(MessageSize,&
-                     Router%nSend_P(iPE)-((i-1)*MessageSize)), &
-                     MPI_REAL,iPE,itag,iComm,&
-                     SENDrequests(nSENDrequests),iError)
+                     Router%nSend_P(iPE) - ((i - 1)*MessageSize)), &
+                     MPI_REAL, iPE, itag, iComm, &
+                     SENDrequests(nSENDrequests), iError)
              end if
           end do
        else
           itag = iProc
           if(DoRSend)then
-             call MPI_rsend(VSend_I(1+nVar*iSendStart_P(iPE)),&
-                  nVar*Router%nSend_P(iPE), &
-                  MPI_REAL,iPE,itag,iComm,iError)
+             call MPI_rsend(VSend_I(1 + nVar*iSendStart_P(iPE)),&
+                  nVar*Router%nSend_P(iPE), MPI_REAL, iPE, itag, iComm, iError)
           else
              nSENDrequests = nSENDrequests + 1
-             call MPI_isend(VSend_I(1+nVar*iSendStart_P(iPE)),&
-                  nVar*Router%nSend_P(iPE), &
-                  MPI_REAL,iPE,itag,iComm,&
-                  SENDrequests(nSENDrequests),iError)
+             call MPI_isend(VSend_I(1 + nVar*iSendStart_P(iPE)),        &
+                  nVar*Router%nSend_P(iPE), MPI_REAL, iPE, itag, iComm, &
+                  SENDrequests(nSENDrequests), iError)
           end if
        end if
     end do
 
     ! Wait for messages to be received before continuing.
-    call MPI_waitall(&
-         nRECVrequests, RECVrequests(1), MESGstatus(1,1), iError)
-    lBuff=0
-    do iPE=0,nProc-1
+    call MPI_waitall(nRECVrequests, RECVrequests(1), MESGstatus(1,1), iError)
+    lBuff = 0
+    do iPE = 0, nProc - 1
        if(iPE==iProc) CYCLE
        if(Router%nRecv_P(iPE)==0) CYCLE
        lPut=0
-       do iV=1,Router%nRecv_P(iPE)
+       do iV = 1,Router%nRecv_P(iPE)
           nPartialPut=Router%iPut_P(iPE)%iCB_II(0,lPut+1)
-          call apply_buffer(nPartialPut,&
-               lPut+1,&
-               Router%iPut_P(iPE),&
-               Router%Put_P(iPE),&
-               Router%DoAdd_P(iPE)%DoAdd_I(lPut+1),&
+          call apply_buffer(nPartialPut, lPut+1, Router%iPut_P(iPE),  &
+               Router%Put_P(iPE), Router%DoAdd_P(iPE)%DoAdd_I(lPut+1),&
                VRecv_I(lBuff+1:lBuff+nVar),nVar)
-          lPut=lPut+nPartialPut
-          lBuff=lBuff+nVar
+          lPut  = lPut  + nPartialPut
+          lBuff = lBuff + nVar
        end do
     end do
   contains
@@ -413,14 +324,14 @@ contains
       integer::iError,nError
       !------------------------------------------------------------------------
       if(allocated(VRecv_I))then
-         if(ubound(VRecv_I,1)<nSize)then
+         if(ubound(VRecv_I,1) < nSize)then
             deallocate(VRecv_I)
          else
             RETURN
          end if
       end if
-      allocate(VRecv_I(nSize),stat=iError)
-      call check_allocate(iError,'VRecv')
+      allocate(VRecv_I(nSize), stat = iError)
+      call check_allocate(iError, 'VRecv')
     end subroutine check_recv_buffer
     !==========================================================================
     subroutine check_send_buffer(nSize)
@@ -434,11 +345,10 @@ contains
             RETURN
          end if
       end if
-      allocate(VSend_I(nSize),stat=iError)
-      call check_allocate(iError,'VSend_I')
+      allocate(VSend_I(nSize), stat = iError)
+      call check_allocate(iError, 'VSend_I')
     end subroutine check_send_buffer
     !==========================================================================
-
   end subroutine global_message_pass
   !============================================================================
 end module CON_global_message_pass
