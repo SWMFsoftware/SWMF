@@ -1408,26 +1408,19 @@ contains
     optional:: interpolate
     integer::iProc,nProc
     !--------------------------------------------------------------------------
-
-    ! For given PE the number in the communicator is:
-    iProc=Router%iProc
-    !
-
     ! Return if the processor does not belong to the communicator
-    if(iProc<0)RETURN
+    if(.not.Router%IsProc)RETURN
+     ! For given PE the number in the communicator is:
+    iProc=Router%iProc
+
+    Router%iCoordEnd  = GridTarget%nDim
+    Router%nVar       = GridTarget%nDim + Router%nMappedPointIndex
     if(is_proc(Router%iCompSource))&
-         call set_semi_router_from_source(&
-         GridSource,       &
-         GridTarget,       &
-         Router,                     &
-         is_interface_block,         &
-         n_interface_point_in_block, &
-         interface_point_coords,     &
-         mapping,                    &
-         interpolate)
+         call set_semi_router_from_source(GridSource, GridTarget, Router,     &
+         is_interface_block, n_interface_point_in_block,                      &
+         interface_point_coords, mapping, interpolate)
     call synchronize_router_source_to_target(Router)
-    if(is_proc(Router%iCompTarget))&
-         call update_semi_router_at_target(&
+    if(is_proc(Router%iCompTarget))call update_semi_router_at_target(&
          Router, GridTarget, interpolate)
   end subroutine construct_router_from_source
   !============================================================================
@@ -1602,8 +1595,6 @@ contains
     ! some data will be sent to Source, determine amount:
     ! cell and block indexes are sent
     nAux = Router%nMappedPointIndex
-    Router%iCoordEnd  = nDimTarget
-    Router%nVar       = nDimTarget
     ! Check dimensions
     DoCountOnly=.true. ! To enter the loop
     do while(DoCountOnly)
