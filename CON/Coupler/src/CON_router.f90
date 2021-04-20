@@ -111,6 +111,10 @@ contains
     integer :: iProc0Source,iProc0Target, iProcUnion
     integer :: iGroupUnion, iGroupSource, iGroupTarget, iGroup
     !--------------------------------------------------------------------------
+    if(i_proc() < 0)then
+       Router%IsProc = .false.
+       RETURN
+    end if
     Router%iCompSource = GridSource%Domain%Ptr%CompID_
     Router%iCompTarget = GridTarget%Domain%Ptr%CompID_
 
@@ -154,7 +158,6 @@ contains
           iGroupSource = i_group(Router%iCompSource)
           iGroupTarget = i_group(Router%iCompTarget)
           if(iProc0Target>iProc0Source)then
-
              call MPI_GROUP_UNION(iGroupSource, iGroupTarget, &
                   iGroupUnion, iError)
              Router%iProc0Source = 0
@@ -227,10 +230,7 @@ contains
     ! same dimensionality as the source. Should be reset for
     ! the router constructed from source by calling
     ! set_router_dim(Router, GridTarget%nDim)
-    Router%nDim           = GridSource%nDim
-    Router%iAuxStart = Router%nDim + 1
-    Router%iAuxEnd   = Router%nDim + Router%nMappedPointIndex
-    Router%nVar      = Router%iAuxEnd
+    call set_router_dim(Router, GridSource%nDim)
 
     nProc=Router%nProc
     nullify(Router%BufferSource_II)
@@ -257,20 +257,20 @@ contains
     do iPE = 0, nProc - 1
        nullify(Router%iGet_P(iPE)%iCB_II)
        nullify(Router%Get_P(iPE)%Weight_I)
-       call allocate_get_arrays(Router,iPE,1)
+       call allocate_get_arrays(Router, iPE, 1)
     end do
-    allocate(Router%iPut_P(0:nProc-1),stat=iError)
+    allocate(Router%iPut_P(0:nProc-1), stat=iError)
     call check_allocate(iError,'iPut_P')
-    allocate(Router%Put_P(0:nProc-1),stat=iError)
+    allocate(Router%Put_P(0:nProc-1),  stat=iError)
     call check_allocate(iError,'Put_P')
     allocate(Router%DoAdd_P(0:nProc-1),stat=iError)
     call check_allocate(iError,'DoAdd_P')
 
-    do iPE=0,nProc-1
+    do iPE = 0, nProc - 1
        nullify(Router%iPut_P(iPE)%iCB_II)
        nullify(Router%Put_P(iPE)%Weight_I)
        nullify(Router%DoAdd_P(iPE)%DoAdd_I)
-       call allocate_put_arrays(Router,iPE,1)
+       call allocate_put_arrays(Router, iPE, 1)
     end do
 
     Router%nGet_P  = 0
@@ -280,21 +280,39 @@ contains
     call check_router_allocation(Router)
   end subroutine init_router
   !============================================================================
-  subroutine  allocate_get_arrays(Router,iPE,nLength)
-    type(RouterType),intent(inout)::Router
-    integer,intent(in)::iPE,nLength
-    integer::iError
+  subroutine set_router_dim(Router, nDim)
+    ! Set dimensionality of the coordinate vectors, to be sent via
+    ! the router while constructing it.
+
+    ! For the routers constructed from target (using set_router) nDim should
+    ! equal to GridSource%nDim. The points in the target are mapped to the
+    ! source, hence, the sent point should be at the same dimensionality
+    ! as the source. Similarly, for the router constructed from source
+    ! nDim should be equal to GridTarget%nDim
+    type(RouterType),intent(inout) :: Router
+    integer,         intent(in)    :: nDim
+    !--------------------------------------------------------------------------
+    Router%nDim      = nDim
+    Router%iAuxStart = Router%nDim + 1
+    Router%iAuxEnd   = Router%nDim + Router%nMappedPointIndex
+    Router%nVar      = Router%iAuxEnd
+  end subroutine set_router_dim
+  !============================================================================
+  subroutine  allocate_get_arrays(Router, iPE, nLength)
+    type(RouterType),intent(inout) :: Router
+    integer,         intent(in)    :: iPE, nLength
+    integer :: iError
     !--------------------------------------------------------------------------
     if(associated(Router%iGet_P(iPE)%iCB_II))&
          deallocate(Router%iGet_P(iPE)%iCB_II)
     if(associated(Router%Get_P(iPE)%Weight_I))&
          deallocate(Router%Get_P(iPE)%Weight_I)
     allocate(Router%iGet_P(iPE)%iCB_II(&
-         0:Router%nIndexSource,max(1,nLength)),stat=iError)
-    call check_allocate(iError,'iGet_P%iCB_II')
+         0:Router%nIndexSource, max(1, nLength)), stat=iError)
+    call check_allocate(iError, 'iGet_P%iCB_II')
     Router%iGet_P(iPE)%iCB_II = 0
-    allocate(Router%Get_P(iPE)%Weight_I(max(1,nLength)),stat=iError)
-    call check_allocate(iError,'Get_P%Weight_I')
+    allocate(Router%Get_P(iPE)%Weight_I(max(1, nLength)), stat=iError)
+    call check_allocate(iError, 'Get_P%Weight_I')
     Router%Get_P(iPE)%Weight_I = 0.0
   end subroutine allocate_get_arrays
   !============================================================================
@@ -305,9 +323,8 @@ contains
     !--------------------------------------------------------------------------
     if(associated(Router%BufferSource_II))&
          deallocate(Router%BufferSource_II)
-    allocate(Router%BufferSource_II(&
-         Router%nVar,nLength),stat=iError)
-    call check_allocate(iError,'BufferSource_II')
+    allocate(Router%BufferSource_II(Router%nVar, nLength), stat=iError)
+    call check_allocate(iError, 'BufferSource_II')
     Router%BufferSource_II = 0.0
     Router%nBufferSource = nLength
   end subroutine allocate_buffer_source
@@ -322,13 +339,13 @@ contains
     if(associated(Router%DoAdd_P(iPE)%DoAdd_I))&
          deallocate(Router%DoAdd_P(iPE)%DoAdd_I)
     allocate(Router%iPut_P(iPE)%iCB_II(&
-         0:Router%nIndexTarget,max(1,nLength)),stat=iError)
+         0:Router%nIndexTarget, max(1, nLength)), stat=iError)
     call check_allocate(iError,'iPut_P%iCB_II')
     Router%iPut_P(iPE)%iCB_II = 0
-    allocate(Router%Put_P(iPE)%Weight_I(max(1,nLength)),stat=iError)
+    allocate(Router%Put_P(iPE)%Weight_I(max(1, nLength)), stat=iError)
     call check_allocate(iError,'Put_P%Weight_I')
     Router%Put_P(iPE)%Weight_I = 0.0
-    allocate(Router%DoAdd_P(iPE)%DoAdd_I(max(1,nLength)),stat=iError)
+    allocate(Router%DoAdd_P(iPE)%DoAdd_I(max(1, nLength)), stat=iError)
     call check_allocate(iError,'DoAdd_P%DoAdd_I')
     Router%DoAdd_P(iPE)%DoAdd_I = .false.
   end subroutine allocate_put_arrays
@@ -340,12 +357,37 @@ contains
     !--------------------------------------------------------------------------
     if(associated(Router%BufferTarget_II))&
          deallocate(Router%BufferTarget_II)
-    allocate(Router%BufferTarget_II(&
-         Router%nVar,nLength),stat=iError)
-    call check_allocate(iError,'BufferTarget_II')
+    allocate(Router%BufferTarget_II(Router%nVar, nLength), stat=iError)
+    call check_allocate(iError, 'BufferTarget_II')
     Router%BufferTarget_II = 0.0
-    Router%nBufferTarget   = nLength
+    Router%nBufferTarget   =  nLength
   end subroutine allocate_buffer_target
+  !============================================================================
+  subroutine check_router_allocation(Router)
+    type(RouterType),intent(inout)::Router
+    integer :: iPE, nTotalPut, nTotalGet, UBound_I(2)
+    !--------------------------------------------------------------------------
+    do iPE = 0, Router%nProc-1
+       if(ubound(Router%iPut_P(iPE)%iCB_II,2) < Router%nPut_P(iPE))then
+          call allocate_put_arrays(Router, iPE, Router%nPut_P(iPE))
+       end if
+       if(ubound(Router%iGet_P(iPE)%iCB_II,2) < Router%nGet_P(iPE))then
+          call allocate_get_arrays(Router, iPE, Router%nGet_P(iPE))
+       end if
+    end do
+    if(Router%nVar > 0)then
+       UBound_I = ubound(Router%BufferTarget_II)
+       if(  Ubound_I(1)/=Router%nVar.or.&
+            UBound_I(2) < nlength_buffer_target(Router))&
+            call allocate_buffer_target(Router, &
+            max(Router%nProc, nlength_buffer_target(Router)))
+       UBound_I = ubound(Router%BufferSource_II)
+       if(  Ubound_I(1)/=Router%nVar.or.&
+            UBound_I(2) < nlength_buffer_source(Router))&
+            call allocate_buffer_source(Router, &
+            max(Router%nProc,nlength_buffer_source(Router)))
+    end if
+  end subroutine check_router_allocation
   !============================================================================
   integer function nlength_buffer_source(Router)
     type(RouterType),intent(inout)::Router
@@ -358,38 +400,6 @@ contains
     !--------------------------------------------------------------------------
     nlength_buffer_target = sum(Router%nRecv_P(:))
   end function nlength_buffer_target
-  !============================================================================
-  subroutine check_router_allocation(Router)
-    type(RouterType),intent(inout)::Router
-    integer :: iPE, nTotalPut, nTotalGet, UBound_I(2)
-    !--------------------------------------------------------------------------
-    do iPE=0,Router%nProc-1
-       if(ubound(&
-            Router%iPut_P(iPE)%iCB_II,2)<&
-            Router%nPut_P(iPE))then
-          call allocate_put_arrays&
-               (Router,iPE,Router%nPut_P(iPE))
-       end if
-       if(ubound(&
-            Router%iGet_P(iPE)%iCB_II,2)<&
-            Router%nGet_P(iPE))then
-          call allocate_get_arrays&
-               (Router,iPE,Router%nGet_P(iPE))
-       end if
-    end do
-    if(Router%nVar > 0)then
-       UBound_I = ubound(Router%BufferTarget_II)
-       if(  Ubound_I(1)/=Router%nVar.or.&
-            UBound_I(2) < nlength_buffer_target(Router))&
-            call allocate_buffer_target(Router, &
-            max(Router%nProc,nlength_buffer_target(Router)))
-       UBound_I = ubound(Router%BufferSource_II)
-       if(  Ubound_I(1)/=Router%nVar.or.&
-            UBound_I(2) < nlength_buffer_source(Router))&
-            call allocate_buffer_source(Router, &
-            max(Router%nProc,nlength_buffer_source(Router)))
-    end if
-  end subroutine check_router_allocation
   !============================================================================
   subroutine set_router(&
        GridSource, GridTarget, Router, is_interface_block, &
