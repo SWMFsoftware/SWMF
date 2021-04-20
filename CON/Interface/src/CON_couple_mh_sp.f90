@@ -18,7 +18,6 @@ module CON_couple_mh_sp
        IH_coord_to_xyz          ,&  ! coords in the IH.
        IH_get_for_mh            ,&  ! Gets MHD information from a given cell
        IH_Grid, IH_LineGrid, IH_LocalLineGrid  ! Grid descriptors
- 
 
   !^CMP IF SC BEGIN
   use SC_wrapper, ONLY: SC_check_ready_for_sp, SC_synchronize_refinement,    &

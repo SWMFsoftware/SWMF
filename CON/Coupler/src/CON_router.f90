@@ -690,16 +690,16 @@ contains
 
     ! Misc
     integer   :: iBlockMisc,  nAux
+    ! Return if the processor does not belong to the communicator
     character(len=*), parameter:: NameSub = 'set_semi_router_from_target'
     !--------------------------------------------------------------------------
-    ! Return if the processor does not belong to the communicator
     if(.not.Router%IsProc) RETURN
     ! Return if the processor does not belong to the target
     if(.not.is_proc(Router%iCompTarget))RETURN
     ! Stage 1:
     ! on Target PE determine the sources of data and
     ! how much data is to be requested from them
-    
+
     ! For given PE the index in the communicator is:
     iProc       = Router % iProc
     iCompSource = Router%iCompSource
@@ -988,8 +988,8 @@ contains
     integer :: iProc, nProc, iProcFrom, iProcTo
     integer :: iProc0Source, iProcLastSource, iProcStrideSource
     integer :: iProc0Target, iProcLastTarget, iProcStrideTarget
-    !--------------------------------------------------------------------------
     ! Return if the processor does not belong to the communicator
+    !--------------------------------------------------------------------------
     if(.not.Router%IsProc) RETURN
     ! identify components
     ! For given PE the index in the communicator is:

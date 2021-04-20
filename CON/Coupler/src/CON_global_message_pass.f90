@@ -155,7 +155,7 @@ contains
          real,dimension(nVar),intent(in)::Buff_I
        end subroutine apply_buffer
     end interface
-    
+
     integer :: iProc,nProc,iComm,iCommUnion
     integer :: iV,iPE, iError, nError, lBuff, lGet, lPut
     integer :: nPartialGet, nPartialPut
