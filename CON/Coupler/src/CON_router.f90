@@ -18,9 +18,9 @@ module CON_router
   !
   implicit none
   SAVE
-  logical, parameter ::  UseUnionComm=.true.
+  logical, parameter  :: UseUnionComm = .true.
   type DoAddPtrType
-     logical,dimension(:),pointer::DoAdd_I
+     logical, pointer :: DoAdd_I(:)
   end type DoAddPtrType
   ! See CON\_grid\_descriptor about iCB index. In the array iCB\_I
   ! the second index enumerates the grid points belonging to some
@@ -29,11 +29,11 @@ module CON_router
   ! the block and (nDim+1), if exists, stores the local block
   ! number.
   type IndexPtrType
-     integer,dimension(:,:),pointer::iCB_II
+     integer, pointer :: iCB_II(:,:)
   end type IndexPtrType
 
   type WeightPtrType
-     real,dimension(:),pointer::Weight_I
+     real, pointer    :: Weight_I(:)
   end type WeightPtrType
 
   type RouterType
@@ -50,8 +50,7 @@ module CON_router
      ! we need the union communicator and the root PE ranks in this
      ! communicator
      !
-     integer::iCommUnion, iProc0Source, iProc0Target
-     integer, pointer :: iTranslated_P(:)
+     integer :: iCommUnion, iProc0Source, iProc0Target
      !
      ! As the default we use iCB indexes to construct the router,
      ! hence the grid point is characterized by the
@@ -61,25 +60,24 @@ module CON_router
      ! only seems to be of sence for the component which is localized
      ! at one PE only, or which has exactly one block per PE
      !
-     integer::nIndexSource, nIndexTarget
+     integer :: nIndexSource, nIndexTarget
      !
      ! The total amounts of the buffer segments to be sent-received
      ! to/from the PE. The total amounts of the grid points from which
      ! the data should be got or to which the data should be put,some
      ! data points may be counted more than one time
      !
-     integer, dimension(:), pointer :: &
-          nGet_P, nPut_P, nRecv_P, nSend_P
+     integer, pointer :: nGet_P(:), nPut_P(:), nRecv_P(:), nSend_P(:)
      ! iCB indexes and the weight coefficients for the points of the  !
      ! target and source grids, which are connected through the router!
-     type(IndexPtrType), dimension(:), pointer :: iGet_P
-     type(IndexPtrType), dimension(:), pointer :: iPut_P
-     type(DoAddPtrType), dimension(:), pointer :: DoAdd_P
-     type(WeightPtrType), dimension(:),pointer :: Get_P
-     type(WeightPtrType), dimension(:),pointer :: Put_P
+     type(IndexPtrType),  pointer :: iGet_P(:)
+     type(IndexPtrType),  pointer :: iPut_P(:)
+     type(DoAddPtrType),  pointer :: DoAdd_P(:)
+     type(WeightPtrType), pointer :: Get_P(:)
+     type(WeightPtrType), pointer :: Put_P(:)
      ! Mapped gird points.
-     real, dimension(:,:), pointer:: BufferSource_II
-     real, dimension(:,:), pointer:: BufferTarget_II
+     real, pointer :: BufferSource_II(:,:)
+     real, pointer :: BufferTarget_II(:,:)
      ! As long as we do not keep the entire mapping vector, we may want to know
      ! a list of global point numbers for the mapped points, i.e.
      ! nMappedPointIndex=1 integer per each mapped point. It may be convenient
@@ -90,142 +88,108 @@ module CON_router
      integer :: nMappedPointIndex
 
      integer :: nBufferSource, nBufferTarget
-     integer :: nVar, iCoordStart, iCoordEnd, iAuxStart, iAuxEnd
+     integer :: nVar, nDim, iAuxStart, iAuxEnd
   end type RouterType
   ! aux integer arrays to put data in BufferS_II in the correct order
-  integer, allocatable :: iAux_P(:), iProc_I(:), iOrder_I(:)
-  private::allocate_get_arrays
-  private::allocate_put_arrays
-  private::allocate_buffer_target
-  private::allocate_buffer_source
-  private::check_router_allocation
-  private::iAux_P
-  private::check_size
+  integer, allocatable :: iProc_I(:), iOrder_I(:), iTranslated_P(:), iAux_P(:)
+  private :: allocate_get_arrays
+  private :: allocate_put_arrays
+  private :: allocate_buffer_target
+  private :: allocate_buffer_source
+  private :: check_router_allocation
+  private :: check_size
 contains
   !============================================================================
-  subroutine init_router(&
-       GridSource,&
-       GridTarget,&
-       Router,&
-       nIndexSource,&
-       nIndexTarget,&
-       nMappedPointIndex)
-    type(GridType), intent(in)     :: GridSource, GridTarget
+  subroutine init_router(GridSource, GridTarget, Router, &
+       nIndexSource, nIndexTarget, nMappedPointIndex)
+    type(GridType),    intent(in)  :: GridSource, GridTarget
     type (RouterType), intent(out) :: Router
     integer, optional, intent(in)  :: nIndexSource
     integer, optional, intent(in)  :: nIndexTarget
     integer, optional, intent(in)  :: nMappedPointIndex
-    integer::iPE, iError, nProc
-    integer::iProc0Source,iProc0Target, iProcUnion
-    integer::iGroupUnion, iGroupSource, iGroupTarget, iGroup
-
-    ! Check grid registration
+    integer :: iPE, iError, nProc
+    integer :: iProc0Source,iProc0Target, iProcUnion
+    integer :: iGroupUnion, iGroupSource, iGroupTarget, iGroup
     !--------------------------------------------------------------------------
     Router%iCompSource = GridSource%Domain%Ptr%CompID_
     Router%iCompTarget = GridTarget%Domain%Ptr%CompID_
 
     ! Check if the grids are both local or both global
-    !              !
-    if(GridSource%Domain%Ptr%IsLocal.and.&
-         GridTarget%Domain%Ptr%IsLocal)then
+    !
+    if(GridSource%Domain%Ptr%IsLocal.and.GridTarget%Domain%Ptr%IsLocal)then
        Router%IsLocal=.true.
-
        if( Router%iCompSource /= Router%iCompTarget)&
-            call CON_stop(&
-            'Do not couple Local grids of different components!')
+            call CON_stop('Do not couple Local grids of different components!')
 
-       Router%iProc=i_proc(Router%iCompTarget)
-       Router%nProc=n_proc(Router%iCompTarget)
-       Router%iComm=i_comm(Router%iCompTarget)
-       Router%iCommUnion=Router%iComm
-       Router%iProc0Source=0
-       Router%iProc0Target=0
-       Router%IsProc=is_proc(Router%iCompTarget)
+       Router%iProc        = i_proc(Router%iCompTarget)
+       Router%nProc        = n_proc(Router%iCompTarget)
+       Router%iComm        = i_comm(Router%iCompTarget)
+       Router%iCommUnion   = Router%iComm
+       Router%iProc0Source = 0
+       Router%iProc0Target = 0
+       Router%IsProc       = is_proc(Router%iCompTarget)
 
     elseif((.not.GridSource%Domain%Ptr%IsLocal)&
-         .and.(.not.GridTarget%Domain%Ptr%IsLocal))&
-         then
-       Router%IsLocal=.false.
-       Router%iProc=i_proc()
-       Router%nProc=n_proc()
-       Router%iComm=i_comm()
-       Router%IsProc=is_proc()
-       iProc0Source=i_proc0(Router%iCompSource)
-       iProc0Target=i_proc0(Router%iCompTarget)
+         .and.(.not.GridTarget%Domain%Ptr%IsLocal))then
+       Router%IsLocal      = .false.
+       Router%iProc        = i_proc()
+       nProc               = n_proc()
+       Router%nProc        = nProc
+       Router%iComm        = i_comm()
+       Router%IsProc       = is_proc()
+       iProc0Source        = i_proc0(Router%iCompSource)
+       iProc0Target        = i_proc0(Router%iCompTarget)
 
        if(UseUnionComm)then
           if(.not.allocated(iAux_P))then
-             allocate(iAux_P(0:n_proc()-1),stat=iError)
+             allocate(iAux_P(0:nProc - 1), stat = iError)
              call check_allocate(iError,'iAux_P')
-             do iPE=0,n_proc()-1
-                iAux_P(iPE)=iPE
+             allocate(iTranslated_P(0:nProc-1), stat = iError)
+             call check_allocate(iError,'iTranslated_P')
+             do iPE = 0, nProc - 1
+                iAux_P(iPE) = iPE
              end do
           end if
-          nProc=Router%nProc
-          allocate(Router%iTranslated_P(0:nProc-1),stat=iError)
-          call check_allocate(iError,'iTranslated_P')
 
-          iGroupSource=i_group(Router%iCompSource)
-          iGroupTarget=i_group(Router%iCompTarget)
+          iGroupSource = i_group(Router%iCompSource)
+          iGroupTarget = i_group(Router%iCompTarget)
           if(iProc0Target>iProc0Source)then
-             call MPI_GROUP_UNION(&
-                  iGroupSource,&
-                  iGroupTarget,&
-                  iGroupUnion,&
-                  iError)
-             Router%iProc0Source=0
-             call MPI_GROUP_TRANSLATE_RANKS(&
-                  i_group(),&
-                  n_proc(),&
-                  iAux_P(0),&
-                  iGroupUnion,&
-                  Router%iTranslated_P,&
-                  iError)
-             Router%iProc0Target=&
-                  Router%iTranslated_P(iProc0Target)
+
+             call MPI_GROUP_UNION(iGroupSource, iGroupTarget, &
+                  iGroupUnion, iError)
+             Router%iProc0Source = 0
+             call MPI_GROUP_TRANSLATE_RANKS(i_group(), n_proc(), iAux_P(0),&
+                  iGroupUnion, iTranslated_P, iError)
+             Router%iProc0Target = iTranslated_P(iProc0Target)
           else
-             call MPI_GROUP_UNION(&
-                  iGroupTarget,&
-                  iGroupSource,&
-                  iGroupUnion,&
-                  iError)
+             call MPI_GROUP_UNION(iGroupTarget, iGroupSource, &
+                  iGroupUnion, iError)
              Router%iProc0Target=0
-             call MPI_GROUP_TRANSLATE_RANKS(&
-                  i_group(),&
-                  n_proc(),&
-                  iAux_P(0),&
-                  iGroupUnion,&
-                  Router%iTranslated_P,&
-                  iError)
-             Router%iProc0Source = &
-                  Router%iTranslated_P(iProc0Source)
+             call MPI_GROUP_TRANSLATE_RANKS(i_group(), n_proc(), iAux_P(0),&
+                  iGroupUnion, iTranslated_P, iError)
+             Router%iProc0Source = iTranslated_P(iProc0Source)
           end if
-          call MPI_COMM_CREATE(i_comm(), iGroupUnion,&
-               Router%iCommUnion, iError)
+          call MPI_COMM_CREATE(i_comm(), iGroupUnion, Router%iCommUnion, iError)
           call MPI_group_rank(iGroupUnion, iProcUnion, iError)
           Router%IsProc = iProcUnion /= MPI_UNDEFINED
-          if(iProcUnion /= Router%iProc0Target.and.&
-               i_proc()==iProc0Target)call CON_stop(&
-               'Wrongly defined Router%iProc0Target')
-          if(iProcUnion/=Router%iProc0Source.and.&
-               i_proc()==iProc0Source)call CON_stop(&
+          if(iProcUnion /= Router%iProc0Target.and.i_proc()==iProc0Target)&
+               call CON_stop('Wrongly defined Router%iProc0Target')
+          if(iProcUnion /= Router%iProc0Source.and.i_proc()==iProc0Source)&
+               call CON_stop(&
                'Wrongly defined Router%iProc0Source')
           call MPI_GROUP_FREE(iGroupUnion, iError)
-       else
+       else  ! Do not use comm union
           Router%iCommUnion   = Router%iComm
           Router%iProc0Source = iProc0Source
           Router%iProc0Target = iProc0Target
        end if
     else
-       call CON_stop(&
-            'Do not couple a Local grid with a global one')
+       call CON_stop('Do not couple a Local grid with a global one')
     end if
 
-    Router%nIndexSource = &
-         GridSource%nDim + 1
+    Router%nIndexSource = GridSource%nDim + 1
     if(present(nIndexSource))then
-       if(nIndexSource >= Router%nIndexSource - 1&
-            .or. nIndexSource==1)then
+       if(nIndexSource >= Router%nIndexSource - 1.or. nIndexSource==1)then
           Router%nIndexSource=nIndexSource
        else
           write(*,*)'IndexMin=', Router%nIndexSource - 1
@@ -233,36 +197,39 @@ contains
        end if
     end if
 
-    Router%nIndexTarget = &
-         GridTarget%nDim + 1
+    Router%nIndexTarget = GridTarget%nDim + 1
 
     if(present(nIndexTarget))then
-       if(nIndexTarget>=Router%nIndexTarget-1&
-            .or.nIndexTarget==1)then
+       if(nIndexTarget>=Router%nIndexTarget - 1.or.nIndexTarget==1)then
           Router%nIndexTarget=nIndexTarget
        else
-          write(*,*)'IndexMin=',Router%nIndexTarget-1
+          write(*,*)'IndexMin=', Router%nIndexTarget - 1
           call CON_stop('nIndexTarget should be at least IndexMin')
        end if
     end if
 
     Router%nMappedPointIndex   = 0
-    Router%iCoordStart         = 1
-    Router%iCoordEnd           = GridSource%nDim
-
     if(present(nMappedPointIndex))then
-       Router%nMappedPointIndex = &
-            nMappedPointIndex
+       Router%nMappedPointIndex = nMappedPointIndex
        select case(nMappedPointIndex)
        case(0,2)
           ! Allowed so far. Needs more work
        case default
-          call CON_stop(&
-               'Illegal number of mapped point indexes')
+          call CON_stop('Illegal number of mapped point indexes')
        end select
     end if
-    Router%iAuxStart = Router%iCoordEnd + 1
-    Router%iAuxEnd   = Router%iCoordEnd + Router%nMappedPointIndex
+    ! Set dimensionality of the coordinate vectors, to be sent via
+    ! the router while constructing it.
+
+    ! This below choice is only valid for the routers constructed
+    ! from target (using set_router). The points in the target are
+    ! mapped to the source, hence, the sent point should be at the
+    ! same dimensionality as the source. Should be reset for
+    ! the router constructed from source by calling
+    ! set_router_dim(Router, GridTarget%nDim)
+    Router%nDim           = GridSource%nDim
+    Router%iAuxStart = Router%nDim + 1
+    Router%iAuxEnd   = Router%nDim + Router%nMappedPointIndex
     Router%nVar      = Router%iAuxEnd
 
     nProc=Router%nProc
@@ -274,20 +241,20 @@ contains
     Router%nBufferTarget = nProc
 
     ! Allocation:
-    allocate(Router%nGet_P(0:nProc-1),stat=iError)
+    allocate(Router%nGet_P(0:nProc-1),  stat=iError)
     call check_allocate(iError,'nGet_P')
-    allocate(Router%nPut_P(0:nProc-1),stat=iError)
+    allocate(Router%nPut_P(0:nProc-1),  stat=iError)
     call check_allocate(iError,'nPut_P')
-    allocate(Router%nSend_P(0:nProc-1),stat=iError)
+    allocate(Router%nSend_P(0:nProc-1), stat=iError)
     call check_allocate(iError,'nSend_P')
-    allocate(Router%nRecv_P(0:nProc-1),stat=iError)
+    allocate(Router%nRecv_P(0:nProc-1), stat=iError)
     call check_allocate(iError,'nRecv_P')
-    allocate(Router%iGet_P(0:nProc-1),stat=iError)
+    allocate(Router%iGet_P(0:nProc-1),  stat=iError)
     call check_allocate(iError,'iGet_P')
-    allocate(Router%Get_P(0:nProc-1),stat=iError)
+    allocate(Router%Get_P(0:nProc-1),   stat=iError)
     call check_allocate(iError,'Get_P')
 
-    do iPE=0,nProc-1
+    do iPE = 0, nProc - 1
        nullify(Router%iGet_P(iPE)%iCB_II)
        nullify(Router%Get_P(iPE)%Weight_I)
        call allocate_get_arrays(Router,iPE,1)
@@ -992,7 +959,7 @@ contains
             ! fill the buffer to be sent
             ! coordinates on Source
             Router%BufferTarget_II(&
-                 Router%iCoordStart:Router%iCoordEnd, nBuffer)=&
+                 1:Router%nDim, nBuffer)=&
                  CoordSource_D
             if(nAux > 0)then
                if(present(extra_data))then
@@ -1254,7 +1221,7 @@ contains
       integer:: iImage, nImage, nImagePart, iToGet
       !------------------------------------------------------------------------
       CoordSource_D = Router%BufferSource_II(&
-           Router%iCoordStart:Router%iCoordEnd, iBuffer)
+           1:Router%nDim, iBuffer)
       CoordPass_D = CoordSource_D
       if( DoInterpolate)then
          call interpolate(  &
@@ -1413,7 +1380,7 @@ contains
      ! For given PE the number in the communicator is:
     iProc=Router%iProc
 
-    Router%iCoordEnd  = GridTarget%nDim
+    Router%nDim  = GridTarget%nDim
     Router%nVar       = GridTarget%nDim + Router%nMappedPointIndex
     if(is_proc(Router%iCompSource))&
          call set_semi_router_from_source(GridSource, GridTarget, Router,     &
@@ -1825,7 +1792,7 @@ contains
             ! fill the buffer to be sent
             ! coordinates on Source
             Router%BufferSource_II(&
-                 Router%iCoordStart:Router%iCoordEnd, nBuffer)=&
+                 1:Router%nDim, nBuffer)=&
                  CoordTarget_D
             if(nAux > 0)then
                iAux_I(iPointInBlock_) = iPointInBlock
@@ -2039,7 +2006,7 @@ contains
        do iBuffer = nRecvCumSum + 1, &
             nRecvCumSum + Router%nRecv_P(iProcFrom)
           CoordTarget_D = Router%BufferTarget_II(&
-               Router%iCoordStart:Router%iCoordEnd, iBuffer)
+               1:Router%nDim, iBuffer)
           CoordPass_D = CoordTarget_D
           if(DoInterpolate)then
              call interpolate(&
