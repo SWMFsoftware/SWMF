@@ -690,9 +690,9 @@ contains
 
     ! Misc
     integer   :: iBlockMisc,  nAux
+    ! Return if the processor does not belong to the communicator
     character(len=*), parameter:: NameSub = 'set_semi_router_from_target'
     !--------------------------------------------------------------------------
-    ! Return if the processor does not belong to the communicator
     if(.not.Router%IsProc) RETURN
     ! Return if the processor does not belong to the target
     if(.not.is_proc(Router%iCompTarget))RETURN
@@ -981,7 +981,8 @@ contains
     integer :: nRecvCumSum, nSendCumSum, iBuffer
 
     ! MPI-related variables
-    integer :: iStatus_II(MPI_STATUS_SIZE, 2*Router%nProc)
+    integer :: iStatusS_II(MPI_STATUS_SIZE, Router%nProc)
+    integer :: iStatusR_II(MPI_STATUS_SIZE, Router%nProc)
     integer :: iRequestS_I(Router%nProc), iRequestR_I(Router%nProc)
     integer :: nRequestR, nRequestS, iError, iTag=0
     integer :: iProc, nProc, iProcFrom, iProcTo
@@ -1021,6 +1022,7 @@ contains
           ! Do not wait for the message from self
           if(iProc==iProcFrom)CYCLE
           nRequestR = nRequestR + 1
+          iTag = iProcFrom
           call MPI_Irecv(Router % nSend_P(iProcFrom), 1, MPI_INTEGER,&
                iProcFrom, iTag, Router%iComm, iRequestR_I(nRequestR), iError)
        end do
@@ -1036,13 +1038,14 @@ contains
              CYCLE
           end if
           nRequestS = nRequestS + 1
+          iTag = iProc
           call MPI_Isend(Router % nRecv_P(iProcTo), 1, MPI_INTEGER,&
                iProcTo, iTag, Router%iComm, iRequestS_I(nRequestS), iError)
        end do
     end if
     ! Finalize transfer
-    call MPI_waitall(nRequestR, iRequestR_I, iStatus_II, iError)
-    call MPI_waitall(nRequestS, iRequestS_I, iStatus_II, iError)
+    call MPI_waitall(nRequestR, iRequestR_I, iStatusR_II, iError)
+    call MPI_waitall(nRequestS, iRequestS_I, iStatusS_II, iError)
 
     ! send the actual router info
     ! post recvs
@@ -1056,6 +1059,7 @@ contains
           ! Do not wait for the message from self
           if(iProc==iProcFrom)CYCLE
           nRequestR = nRequestR + 1
+          iTag = iProcFrom
           call MPI_Irecv(Router%BufferSource_II(1:Router%nVar,&
                1+nRecvCumSum:Router%nSend_P(iProcFrom)+nRecvCumSum), &
                Router%nSend_P(iProcFrom)*Router%nVar, MPI_REAL,&
@@ -1075,6 +1079,7 @@ contains
           if(Router % nRecv_P(iProcTo) == 0) CYCLE
           if(iProcTo==iProc)CYCLE
           nRequestS = nRequestS + 1
+          iTag = iProc
           call MPI_Isend(Router%BufferTarget_II(1:Router%nVar,&
                1+nSendCumSum:Router%nRecv_P(iProcTo)+nSendCumSum), &
                Router%nRecv_P(iProcTo)*Router%nVar, MPI_REAL,&
@@ -1083,8 +1088,8 @@ contains
        end do
     end if
     ! Finalize transfer
-    call MPI_waitall(nRequestR, iRequestR_I, iStatus_II, iError)
-    call MPI_waitall(nRequestS, iRequestS_I, iStatus_II, iError)
+    call MPI_waitall(nRequestR, iRequestR_I, iStatusR_II, iError)
+    call MPI_waitall(nRequestS, iRequestS_I, iStatusS_II, iError)
   end subroutine synchronize_router_from_target
   !============================================================================
   subroutine update_semi_router_at_source(Router, GridSource, interpolate)
@@ -1733,7 +1738,8 @@ contains
     integer:: nRecvCumSum, nRecvCumSumMy, nSendCumSum
 
     ! MPI-related variables
-    integer :: iStatus_II(MPI_STATUS_SIZE, 2*Router%nProc)
+    integer :: iStatusS_II(MPI_STATUS_SIZE, Router%nProc)
+    integer :: iStatusR_II(MPI_STATUS_SIZE, Router%nProc)
     integer :: iRequestS_I(Router%nProc), iRequestR_I(Router%nProc)
     integer :: nRequestR, nRequestS, iError, iTag=0
     integer :: iProc, nProc
@@ -1776,6 +1782,7 @@ contains
           ! Do not expect the message from self
           if(iProcFrom==iProc)CYCLE
           nRequestR = nRequestR + 1
+          iTag = iProcFrom
           call MPI_Irecv(Router % nRecv_P(iProcFrom), 1, MPI_INTEGER,       &
                iProcFrom, iTag, Router%iComm, iRequestR_I(nRequestR), iError)
        end do
@@ -1790,13 +1797,13 @@ contains
              CYCLE
           end if
           nRequestS = nRequestS + 1
+          iTag = iProc
           call MPI_Isend(Router % nSend_P(iProcTo), 1, MPI_INTEGER,&
                iProcTo, iTag, Router%iComm, iRequestS_I(nRequestS), iError)
        end do
     end if
-    ! Finalize transfer
-    call MPI_waitall(nRequestR, iRequestR_I, iStatus_II, iError)
-    call MPI_waitall(nRequestS, iRequestS_I, iStatus_II, iError)
+    call MPI_waitall(nRequestR, iRequestR_I, iStatusR_II, iError)
+    call MPI_waitall(nRequestS, iRequestS_I, iStatusS_II, iError)
     ! send the actual router info
     ! post recvs
     nRequestR = 0
@@ -1809,6 +1816,7 @@ contains
              nRecvCumSumMy = nRecvCumSum
           else
              nRequestR = nRequestR + 1
+             iTag = iProcFrom
              call MPI_Irecv(Router%BufferTarget_II(1:Router%nVar,&
                   1+nRecvCumSum:Router%nRecv_P(iProcFrom)+nRecvCumSum), &
                   Router%nRecv_P(iProcFrom)*Router%nVar, MPI_REAL,&
@@ -1830,6 +1838,7 @@ contains
                   1+nSendCumSum:Router%nSend_P(iProc)+nSendCumSum)
           else
              nRequestS = nRequestS + 1
+             iTag = iProc
              call MPI_Isend(Router%BufferSource_II(1:Router%nVar,&
                   1+nSendCumSum:Router%nSend_P(iProcTo)+nSendCumSum), &
                   Router%nSend_P(iProcTo)*Router%nVar, MPI_REAL,&
@@ -1839,8 +1848,8 @@ contains
        end do
     end if
     ! Finalize transfer
-    call MPI_waitall(nRequestR, iRequestR_I, iStatus_II, iError)
-    call MPI_waitall(nRequestS, iRequestS_I, iStatus_II, iError)
+    call MPI_waitall(nRequestR, iRequestR_I, iStatusR_II, iError)
+    call MPI_waitall(nRequestS, iRequestS_I, iStatusS_II, iError)
   end subroutine synchronize_router_from_source
   !============================================================================
   subroutine update_semi_router_at_target(&
@@ -1905,7 +1914,7 @@ contains
        iProcLastSource   = i_proc_last(iCompSource)
        iProcStrideSource = i_proc_stride(iCompSource)
     end if
-    
+
     DoInterpolate = present(interpolate)
 
     nDimTarget       = GridTarget%nDim
