@@ -690,9 +690,9 @@ contains
 
     ! Misc
     integer   :: iBlockMisc,  nAux
-    ! Return if the processor does not belong to the communicator
     character(len=*), parameter:: NameSub = 'set_semi_router_from_target'
     !--------------------------------------------------------------------------
+    ! Return if the processor does not belong to the communicator
     if(.not.Router%IsProc) RETURN
     ! Return if the processor does not belong to the target
     if(.not.is_proc(Router%iCompTarget))RETURN
@@ -987,8 +987,8 @@ contains
     integer :: iProc, nProc, iProcFrom, iProcTo
     integer :: iProc0Source, iProcLastSource, iProcStrideSource
     integer :: iProc0Target, iProcLastTarget, iProcStrideTarget
-    ! Return if the processor does not belong to the communicator
     !--------------------------------------------------------------------------
+    ! Return if the processor does not belong to the communicator
     if(.not.Router%IsProc) RETURN
     ! identify components
     ! For given PE the index in the communicator is:
@@ -1047,9 +1047,9 @@ contains
     ! send the actual router info
     ! post recvs
     nRequestR = 0
-    call check_router_allocation(Router)
     if(is_proc(Router%iCompSource))then
-       ! Copy for the data exchange on the same PE
+       ! Allocate source buffer
+       call check_router_allocation(Router)
        nRecvCumSum = Router%nSend_P(iProc)
        do iProcFrom = iProc0Target, iProcLastTarget, iProcStrideTarget
           if(Router%nSend_P(iProcFrom) == 0)CYCLE
@@ -1738,18 +1738,32 @@ contains
     integer :: nRequestR, nRequestS, iError, iTag=0
     integer :: iProc, nProc
     integer :: iProcFrom, iProcTo
+    integer :: iCompTarget,  iCompSource
+    integer :: iProc0Source, iProcLastSource, iProcStrideSource
+    integer :: iProc0Target, iProcLastTarget, iProcStrideTarget
     character(len=*), parameter:: NameSub = 'synchronize_router_from_source'
     !--------------------------------------------------------------------------
-
+    ! Return if the processor does not belong to the communicator
+    if(.not.Router%IsProc) RETURN
     ! For given PE the index in the communicator is:
     iProc = Router % iProc
-
-    ! Return if the processor does not belong to the communicator
-    if(iProc<0) RETURN
-
     ! total number of processors and on components
     nProc       = Router%nProc
-
+    iCompTarget = Router%iCompTarget
+    iCompSource = Router%iCompSource
+    if(Router%IsLocal)then
+       iProc0Source = 0;  iProcStrideSource = 1
+       iProcLastSource = nProc-1
+       iProc0Target = 0;  iProcStrideTarget = 1
+       iProcLastTarget = nProc-1
+    else
+       iProc0Target      = i_proc0(iCompTarget)
+       iProcLastTarget   = i_proc_last(iCompTarget)
+       iProcStrideTarget = i_proc_stride(iCompTarget)
+       iProc0Source      = i_proc0(iCompSource)
+       iProcLastSource   = i_proc_last(iCompSource)
+       iProcStrideSource = i_proc_stride(iCompSource)
+    end if
     ! Stage 2:
     ! send the router info to Target:
     ! first, send the amount of data to be received,
@@ -1757,23 +1771,20 @@ contains
 
     ! post recvs
     nRequestR = 0
-    if(is_proc(Router%iCompTarget))then
-       do iProcFrom =  i_proc0(Router%iCompSource), i_proc_last(Router%iCompSource), &
-            i_proc_stride(Router%iCompSource)
-
+    if(is_proc(iCompTarget))then
+       do iProcFrom = iProc0Source, iProcLastSource, iProcStrideSource
           ! Do not expect the message from self
           if(iProcFrom==iProc)CYCLE
           nRequestR = nRequestR + 1
-          call MPI_Irecv(Router % nRecv_P(iProcFrom), 1, MPI_INTEGER,&
+          call MPI_Irecv(Router % nRecv_P(iProcFrom), 1, MPI_INTEGER,       &
                iProcFrom, iTag, Router%iComm, iRequestR_I(nRequestR), iError)
        end do
     end if
 
     ! post sends
     nRequestS = 0
-    if(is_proc(Router%iCompSource))then
-       do iProcTo =  i_proc0(Router%iCompTarget), i_proc_last(Router%iCompTarget), &
-            i_proc_stride(Router%iCompTarget)
+    if(is_proc(iCompSource))then
+       do iProcTo = iProc0Target, iProcLastTarget, iProcStrideTarget
           if(iProc==iProcTo)then
              Router % nRecv_P(iProc) = Router % nSend_P(iProc)
              CYCLE
@@ -1783,25 +1794,17 @@ contains
                iProcTo, iTag, Router%iComm, iRequestS_I(nRequestS), iError)
        end do
     end if
-
     ! Finalize transfer
     call MPI_waitall(nRequestR, iRequestR_I, iStatus_II, iError)
     call MPI_waitall(nRequestS, iRequestS_I, iStatus_II, iError)
-
     ! send the actual router info
     ! post recvs
     nRequestR = 0
-    if(is_proc(Router%iCompTarget))then
-       ! size of the recv buffer
-       Router%nBufferTarget = sum(Router%nRecv_P)
-       call check_size(2, [Router%nVar, Router%nBufferTarget], PBuffer_II=Router%BufferTarget_II)
-       Router%BufferTarget_II = 0
-
+    if(is_proc(iCompTarget))then
+       call check_router_allocation(Router)
        nRecvCumSum = 0
-       do iProcFrom = i_proc0(Router%iCompSource), i_proc_last(Router%iCompSource), &
-            i_proc_stride(Router%iCompSource)
-          if(Router%nRecv_P(iProcFrom) == 0)&
-               CYCLE
+       do iProcFrom = iProc0Source, iProcLastSource, iProcStrideSource
+          if(Router%nRecv_P(iProcFrom) == 0)CYCLE
           if(iProc==iProcFrom)then
              nRecvCumSumMy = nRecvCumSum
           else
@@ -1813,16 +1816,13 @@ contains
           end if
           nRecvCumSum = nRecvCumSum + Router%nRecv_P(iProcFrom)
        end do
-    end if
-
+    end if  ! is_proc(iCompTarget)
     ! post sends
     nRequestS = 0
-    if(is_proc(Router%iCompSource))then
+    if(is_proc(iCompSource))then
        nSendCumSum = 0
-       do iProcTo =  i_proc0(Router%iCompTarget), i_proc_last(Router%iCompTarget), &
-            i_proc_stride(Router%iCompTarget)
-          if(Router % nSend_P(iProcTo) == 0) &
-               CYCLE
+       do iProcTo = iProc0Target, iProcLastTarget, iProcStrideTarget
+          if(Router % nSend_P(iProcTo) == 0) CYCLE
           if(iProc==iProcTo)then
              Router%BufferTarget_II(:,&
                   1+nRecvCumSumMy:Router%nRecv_P(iProc)+nRecvCumSumMy) = &
@@ -1838,11 +1838,9 @@ contains
           nSendCumSum = nSendCumSum + Router%nSend_P(iProcTo)
        end do
     end if
-
     ! Finalize transfer
     call MPI_waitall(nRequestR, iRequestR_I, iStatus_II, iError)
     call MPI_waitall(nRequestS, iRequestS_I, iStatus_II, iError)
-
   end subroutine synchronize_router_from_source
   !============================================================================
   subroutine update_semi_router_at_target(&
@@ -1936,14 +1934,8 @@ contains
                   nImage         = nImage,       &
                   Weight_I       = Weight_I)
           else
-             call nearest_grid_points(&
-                  nDim           = nDimTarget, &
-                  Coord_D          = CoordPass_D, &
-                  Grid             = GridTarget, &
-                  nIndex         = nIndexTarget, &
-                  iIndex_II      = iIndexPut_II, &
-                  nImage         = nImage, &
-                  Weight_I       = Weight_I)
+             call nearest_grid_points(nDimTarget, CoordPass_D, GridTarget, &
+                  nIndexTarget, iIndexPut_II, nImage, Weight_I)
           end if
           nImagePart = count(iIndexPut_II(0,1:nImage)==iProc)
           Router%nPut_P(iProcFrom) = Router%nPut_P(iProcFrom) + nImagePart
