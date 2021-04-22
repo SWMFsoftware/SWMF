@@ -66,14 +66,8 @@ module CON_global_message_pass
   ! for the message pieces.
   integer, parameter,private  :: MessageSize=99999
 
-  ! The best effeiciency is usually achieved with the MPI pair
-  ! RSend+iRecv. Sometimes the fully non-blocking pair iSend+iRecv
-  ! is more stable and rarely it is more efficient either. In
-  ! the first case use DoRSend=.true. (default), otherwise use
-  ! DoRSend=.false.
-  logical, parameter,private :: DoRSend=.true.
 
-  ! NOTE: with DoRSend=.true. there is no barrier at all in the
+  ! NOTE: with DoRSend=.false. there is no barrier at all in the
   ! global\_message\_pass procedure.
 
 contains

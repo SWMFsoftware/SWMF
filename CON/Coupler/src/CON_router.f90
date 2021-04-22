@@ -90,6 +90,13 @@ module CON_router
      integer :: nBufferSource, nBufferTarget
      integer :: nVar, nDim, iAuxStart, iAuxEnd
   end type RouterType
+  ! The best effeiciency is usually achieved with the MPI pair
+  ! RSend+iRecv. Sometimes the fully non-blocking pair iSend+iRecv
+  ! is more stable and rarely it is more efficient either. In
+  ! the first case use DoRSend=.true. (default), otherwise use
+  ! DoRSend=.false.
+  logical, parameter :: DoRSend=.true.
+
   ! aux integer arrays to put data in BufferS_II in the correct order
   integer, allocatable :: iProc_I(:), iOrder_I(:), iTranslated_P(:), iAux_P(:)
   private :: allocate_get_arrays
@@ -1027,6 +1034,8 @@ contains
                iProcFrom, iTag, Router%iComm, iRequestR_I(nRequestR), iError)
        end do
     end if
+    ! Make sure all recv's are posted before using an rsend
+    if(DoRSend)call MPI_BARRIER(Router%iCommUnion,  iError)
 
     ! post sends
     nRequestS = 0
@@ -1039,13 +1048,19 @@ contains
           end if
           nRequestS = nRequestS + 1
           iTag = iProc
-          call MPI_Isend(Router % nRecv_P(iProcTo), 1, MPI_INTEGER,&
-               iProcTo, iTag, Router%iComm, iRequestS_I(nRequestS), iError)
+          if(DoRSend)then
+             call MPI_Rsend(Router % nRecv_P(iProcTo), 1, MPI_INTEGER,&
+                  iProcTo, iTag, Router%iComm, iError)
+          else
+             call MPI_Isend(Router % nRecv_P(iProcTo), 1, MPI_INTEGER,&
+                  iProcTo, iTag, Router%iComm, iRequestS_I(nRequestS), iError)
+          end if
        end do
     end if
     ! Finalize transfer
     call MPI_waitall(nRequestR, iRequestR_I, iStatusR_II, iError)
-    call MPI_waitall(nRequestS, iRequestS_I, iStatusS_II, iError)
+    if(.not.DoRSend)&
+         call MPI_waitall(nRequestS, iRequestS_I, iStatusS_II, iError)
 
     ! send the actual router info
     ! post recvs
@@ -1067,7 +1082,8 @@ contains
           nRecvCumSum = nRecvCumSum + Router%nSend_P(iProcFrom)
        end do
     end if
-
+    ! Make sure all recv's are posted before using an rsend
+    if(DoRSend)call MPI_BARRIER(Router%iCommUnion,  iError)
     ! post sends
     nRequestS = 0
     if(is_proc(Router%iCompTarget))then
@@ -1081,16 +1097,24 @@ contains
           if(iProcTo==iProc)CYCLE
           nRequestS = nRequestS + 1
           iTag = iProc
-          call MPI_Isend(Router%BufferTarget_II(1:Router%nVar,&
-               1+nSendCumSum:Router%nRecv_P(iProcTo)+nSendCumSum), &
-               Router%nRecv_P(iProcTo)*Router%nVar, MPI_REAL,&
-               iProcTo, iTag, Router%iComm, iRequestS_I(nRequestS), iError)
+          if(DoRSend)then
+             call MPI_Rsend(Router%BufferTarget_II(1:Router%nVar,&
+                  1+nSendCumSum:Router%nRecv_P(iProcTo)+nSendCumSum), &
+                  Router%nRecv_P(iProcTo)*Router%nVar, MPI_REAL,&
+                  iProcTo, iTag, Router%iComm, iError)
+          else
+             call MPI_Isend(Router%BufferTarget_II(1:Router%nVar,&
+                  1+nSendCumSum:Router%nRecv_P(iProcTo)+nSendCumSum), &
+                  Router%nRecv_P(iProcTo)*Router%nVar, MPI_REAL,&
+                  iProcTo, iTag, Router%iComm, iRequestS_I(nRequestS), iError)
+          end if
           nSendCumSum = nSendCumSum + Router%nRecv_P(iProcTo)
        end do
     end if
     ! Finalize transfer
     call MPI_waitall(nRequestR, iRequestR_I, iStatusR_II, iError)
-    call MPI_waitall(nRequestS, iRequestS_I, iStatusS_II, iError)
+    if(.not.DoRSend)&
+         call MPI_waitall(nRequestS, iRequestS_I, iStatusS_II, iError)
   end subroutine synchronize_router_from_target
   !============================================================================
   subroutine update_semi_router_at_source(Router, GridSource, interpolate)
@@ -1622,9 +1646,9 @@ contains
     ! fix the order of Buffer_I so contiguous chunks of data can be sent
     ! to the appropriate processors of Source,
     ! currently iOrder_I contains indices WITHIN these chunks
-    nSendCumSum = 0! Router%nSend_P(iProc)
+    nSendCumSum = Router%nSend_P(iProc)
     do iProcTo = iProc0Target, iProcLastTarget, iProcStrideTarget
-       ! if(iProc == iProcTo)CYCLE
+       if(iProc==iProcTo)CYCLE
        where(iProc_I(1:nBuffer) == iProcTo)&
             iOrder_I( 1:nBuffer) = iOrder_I( 1:nBuffer) + nSendCumSum
        nSendCumSum = nSendCumSum + Router%nSend_P(iProcTo)
@@ -1788,7 +1812,8 @@ contains
                iProcFrom, iTag, Router%iComm, iRequestR_I(nRequestR), iError)
        end do
     end if
-
+    ! Make sure all recv's are posted before using an rsend
+    if(DoRSend)call MPI_BARRIER(Router%iCommUnion,  iError)
     ! post sends
     nRequestS = 0
     if(is_proc(iCompSource))then
@@ -1800,52 +1825,62 @@ contains
           end if
           nRequestS = nRequestS + 1
           iTag = iProc
-          call MPI_Isend(Router % nSend_P(iProcTo), 1, MPI_INTEGER,&
-               iProcTo, iTag, Router%iComm, iRequestS_I(nRequestS), iError)
+          if(DoRSend)then
+             call MPI_Rsend(Router % nSend_P(iProcTo), 1, MPI_INTEGER,&
+                  iProcTo, iTag, Router%iComm, iError)
+          else
+             call MPI_Isend(Router % nSend_P(iProcTo), 1, MPI_INTEGER,&
+                  iProcTo, iTag, Router%iComm, iRequestS_I(nRequestS), iError)
+          end if
        end do
     end if
     call MPI_waitall(nRequestR, iRequestR_I, iStatusR_II, iError)
-    call MPI_waitall(nRequestS, iRequestS_I, iStatusS_II, iError)
+    if(.not.DoRSend)&
+         call MPI_waitall(nRequestS, iRequestS_I, iStatusS_II, iError)
     ! send the actual router info
     ! post recvs
     nRequestR = 0
     if(is_proc(iCompTarget))then
        ! Allocate target buffer
        call check_router_allocation(Router)
-       nRecvCumSum = 0
+       nRecvCumSum =  Router%nRecv_P(iProc)
        do iProcFrom = iProc0Source, iProcLastSource, iProcStrideSource
           if(Router%nRecv_P(iProcFrom) == 0)CYCLE
           ! Do not expect the message from self
-          if(iProc==iProcFrom)then
-             nRecvCumSumMy = nRecvCumSum
-          else
-             nRequestR = nRequestR + 1
-             iTag = iProcFrom
-             call MPI_Irecv(Router%BufferTarget_II(1:Router%nVar,&
-                  1+nRecvCumSum:Router%nRecv_P(iProcFrom)+nRecvCumSum), &
-                  Router%nRecv_P(iProcFrom)*Router%nVar, MPI_REAL,&
-                  iProcFrom, iTag, Router%iComm, iRequestR_I(nRequestR), iError)
-          end if
+          if(iProc==iProcFrom)CYCLE
+          nRequestR = nRequestR + 1
+          iTag = iProcFrom
+          call MPI_Irecv(Router%BufferTarget_II(1:Router%nVar,         &
+               1+nRecvCumSum:Router%nRecv_P(iProcFrom) + nRecvCumSum), &
+               Router%nRecv_P(iProcFrom)*Router%nVar, MPI_REAL,        &
+               iProcFrom, iTag, Router%iComm, iRequestR_I(nRequestR), iError)
           nRecvCumSum = nRecvCumSum + Router%nRecv_P(iProcFrom)
        end do
     end if  ! is_proc(iCompTarget)
+    ! Make sure all recv's are posted before using an rsend
+    if(DoRSend)call MPI_BARRIER(Router%iCommUnion,  iError)
     ! post sends
     nRequestS = 0
     if(is_proc(iCompSource))then
-       nSendCumSum = 0
+       ! Copy, if needed
+       if(Router%nRecv_P(iProc) > 0)&
+            Router%BufferTarget_II(:,1:Router%nRecv_P(iProc)) = &
+            Router%BufferSource_II(:,1:Router%nSend_P(iProc))
+       nSendCumSum = Router%nSend_P(iProc)
        do iProcTo = iProc0Target, iProcLastTarget, iProcStrideTarget
           if(Router % nSend_P(iProcTo) == 0) CYCLE
-          if(iProc==iProcTo)then
-             Router%BufferTarget_II(:,&
-                  1+nRecvCumSumMy:Router%nRecv_P(iProc)+nRecvCumSumMy) = &
-                  Router%BufferSource_II(:,&
-                  1+nSendCumSum:Router%nSend_P(iProc)+nSendCumSum)
+          if(iProc==iProcTo)CYCLE
+          nRequestS = nRequestS + 1
+          iTag = iProc
+          if(DoRSend)then
+             call MPI_Rsend(Router%BufferSource_II(1:Router%nVar,         &
+                  1 + nSendCumSum:Router%nSend_P(iProcTo) + nSendCumSum), &
+                  Router%nSend_P(iProcTo)*Router%nVar, MPI_REAL,          &
+                  iProcTo, iTag, Router%iComm, iError)
           else
-             nRequestS = nRequestS + 1
-             iTag = iProc
-             call MPI_Isend(Router%BufferSource_II(1:Router%nVar,&
-                  1+nSendCumSum:Router%nSend_P(iProcTo)+nSendCumSum), &
-                  Router%nSend_P(iProcTo)*Router%nVar, MPI_REAL,&
+             call MPI_Isend(Router%BufferSource_II(1:Router%nVar,         &
+                  1 + nSendCumSum:Router%nSend_P(iProcTo) + nSendCumSum), &
+                  Router%nSend_P(iProcTo)*Router%nVar, MPI_REAL,          &
                   iProcTo, iTag, Router%iComm, iRequestS_I(nRequestS), iError)
           end if
           nSendCumSum = nSendCumSum + Router%nSend_P(iProcTo)
@@ -1853,7 +1888,8 @@ contains
     end if
     ! Finalize transfer
     call MPI_waitall(nRequestR, iRequestR_I, iStatusR_II, iError)
-    call MPI_waitall(nRequestS, iRequestS_I, iStatusS_II, iError)
+    if(.not.DoRSend)&
+         call MPI_waitall(nRequestS, iRequestS_I, iStatusS_II, iError)
   end subroutine synchronize_router_from_source
   !============================================================================
   subroutine update_semi_router_at_target(Router, GridTarget, interpolate)
@@ -1923,8 +1959,15 @@ contains
     call check_router_allocation(Router)
     Router%nPut_P = 0
     ! fill these containers
-    nRecvCumSum = 0
+
+     ! First process the buffered info from this PE
+    iProcFrom = iProc
+    do iBuffer = 1, Router%nRecv_P(iProc)
+       call put_point_to_semirouter
+    end do
+    nRecvCumSum = Router%nRecv_P(iProc)
     do iProcFrom = iProc0Source, iProcLastSource, iProcStrideSource
+       if(iProcFrom == iProc)CYCLE
        do iBuffer = nRecvCumSum + 1, nRecvCumSum + Router%nRecv_P(iProcFrom)
           call put_point_to_semirouter
        end do    ! iBuffer
