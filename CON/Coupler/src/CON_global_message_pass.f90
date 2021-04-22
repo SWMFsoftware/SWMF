@@ -66,7 +66,6 @@ module CON_global_message_pass
   ! for the message pieces.
   integer, parameter,private  :: MessageSize=99999
 
-
   ! NOTE: with DoRSend=.false. there is no barrier at all in the
   ! global\_message\_pass procedure.
 
