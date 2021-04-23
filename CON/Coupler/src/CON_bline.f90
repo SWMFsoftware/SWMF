@@ -37,14 +37,16 @@ module CON_bline
   character(len=2):: NameCompBl = '' ! Name of the target model ('SP', 'PT'...)
   Character(len=3):: TypeCoordSystemBl  = ''     ! Coord system of the Bl Model
   logical, public :: UseBLine_C(MaxComp)=.false. ! To switch coupler for PT/SP
+  ! Logical to determine, if a particular MH component is coupled to BL
+  logical, public :: IsSource4BL_C(MaxComp) = .false. 
+  ! Boundaries of coupled domains in SC
+  real,    public :: RScMin = 1000.0, RScMax = 0.0
+  ! Boundaries of coupled domains in IH
+  real,    public :: RIhMin = 1000.0, RIhMax = 0.0
+  ! Boundaries of coupled domains in OH
+  real,    public :: ROhMin = 1000.0, ROhMax = 0.0
 
   ! The rest is available on the BL_ processors
-  ! Boundaries of coupled domains in SC
-  real,    public :: RScMin = 0.0, RScMax = 0.0
-  ! Boundaries of coupled domains in IH
-  real,    public :: RIhMin = 0.0, RIhMax = 0.0
-  ! Boundaries of coupled domains in OH
-  real,    public :: ROhMin = 0.0, ROhMax = 0.0
   integer, public :: Lower_=0, Upper_=-1
 
   ! Total number of lines on given PE
@@ -143,7 +145,7 @@ module CON_bline
 contains
   !============================================================================
   subroutine BL_read_param(iError)
-    use CON_coupler, ONLY: use_comp, i_comp, SP_, PT_, SC_, IH_, &
+    use CON_coupler, ONLY: use_comp, i_comp, SP_, PT_, SC_, IH_, OH_, &
          i_proc, n_proc, is_proc
     use ModReadParam, ONLY: read_var
 
@@ -174,13 +176,14 @@ contains
     end if
     call read_var('nSource', nSource)
     if(nSource==0)RETURN ! Uncoupled SP
-    if(nSource/=2)then
+    if(nSource>3)then
        if(is_proc0()) write(*,*) NameSub//&
             ' SWMF_ERROR for NameMaster: '// &
-            'there can be only two source components in MFLAMPA'
+            'there can be only not more than 3 source components in MFLAMPA'
        iError = 34
        RETURN
     end if
+    IsSource4BL_C = .false.
     do iSource = 1, nSource
        call read_var('NameSource', NameComp)
        iComp = i_comp(NameComp)
@@ -195,6 +198,7 @@ contains
           end if
           call read_var('RScMin', RScMin)
           call read_var('RScMax', RScMax)
+          IsSource4BL_C(SC_) = .true.
        case(IH_)
           if(.not.use_comp(IH_)) then
              if(is_proc0()) write(*,*) NameSub//&
@@ -205,6 +209,18 @@ contains
           end if
           call read_var('RIhMin', RIhMin)
           call read_var('RIhMax', RIhMax)
+          IsSource4BL_C(IH_) = .true.
+       case(OH_)
+          if(.not.use_comp(OH_)) then
+             if(is_proc0()) write(*,*) NameSub//&
+                  ' SWMF_ERROR for NameMaster: '// &
+                  ' OH  needed in MFLAMPA is OFF or not registered'
+             iError = 34
+             RETURN
+          end if
+          call read_var('ROhMin', RIhMin)
+          call read_var('ROhMax', RIhMax)
+          IsSource4BL_C(OH_) = .true.
        case default
           if(is_proc0()) write(*,*) NameSub//&
                ' SWMF_ERROR for NameMaster: '// &
@@ -214,8 +230,21 @@ contains
        end select
     end do
     if(.not.is_proc(BL_))RETURN
-    RMin = RScMin; RMax = RIhMax
-    Lower_ = SC_; Upper_ = IH_
+    RMin = min(RScMin, RIhMin); RMax = max(RIhMax, ROhMax)
+    if(IsSource4BL_C(SC_))then
+       Lower_ = SC_
+    elseif(IsSource4BL_C(IH_))then
+       Lower_ = IH_
+    else
+       Lower_ = OH_
+    end if
+    if(IsSource4BL_C(OH_))then
+       Upper_ = OH_
+    elseif(IsSource4BL_C(IH_))then
+       Upper_ = IH_
+    else
+       Upper_ = SC_
+    end if
     select  case(BL_)
     case(PT_)
        NameMHData = 'PT/plots/MH_data'
