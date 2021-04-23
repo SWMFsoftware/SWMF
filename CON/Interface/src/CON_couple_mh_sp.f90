@@ -25,6 +25,12 @@ module CON_couple_mh_sp
        SC_get_particle_coords, SC_get_particle_indexes, SC_xyz_to_coord,     &
        SC_get_for_mh, SC_Grid, SC_LineGrid, SC_LocalLineGrid
   !^CMP END SC
+     !^CMP IF OH BEGIN
+  use OH_wrapper, ONLY: OH_check_ready_for_sp, OH_synchronize_refinement,    &
+       OH_extract_line, OH_put_particles, OH_n_particle,                     &
+       OH_get_particle_coords, OH_get_particle_indexes, OH_xyz_to_coord,     &
+       OH_coord_to_xyz, OH_get_for_mh, OH_Grid, OH_LineGrid, OH_LocalLineGrid
+  !^CMP END OH
   use SP_wrapper, ONLY: &
        SP_do_extract_lines      ,&  ! If returns .true., extract the mf lines
        SP_put_coupling_param    ,&  ! Set time and interaface bounds
@@ -36,6 +42,7 @@ module CON_couple_mh_sp
   use CON_bline, ONLY:  BL_,     &
        RScMin, RScMax,           &  !^CMP IF SC
        RIhMin, RIhMax,           &
+       ROhMin, ROhMax,           &
        BL_init_foot_points,      &  ! Initialize footpoint array
        BL_get_bounds,            &  ! Provides RScMin/Max and/or RIhMin/Max
        BL_n_particle            ,&  ! Number of "points" in a given line in SP
@@ -51,14 +58,18 @@ module CON_couple_mh_sp
   public::couple_ih_sp
   public::couple_sc_sp              !^CMP IF SC
 
-  type(RouterType),save,private::RouterIhBl    ! IH (MHD data) => SP
+  type(RouterType),save,private::RouterIhBl        ! IH (MHD data) => SP
   type(RouterType),save,private::RouterLineIhBl    ! IH (Particle coords)=>SP
   !^CMP IF SC BEGIN
   type(RouterType),save,private::RouterScBl        ! SC MHD data => BL
   type(RouterType),save,private::RouterLineScBl    ! SC (Particle coords)=>BL
   !^CMP END SC
+  !^CMP IF OH BEGIN
+  type(RouterType),save,private::RouterOhBl        ! OH MHD data => BL
+  type(RouterType),save,private::RouterLineOhBl    ! OH (Particle coords)=>BL
+  !^CMP END OH
 
-  ! Three-dimensional grids in SC and IH,
+  ! Three-dimensional grids in SC, IH and OH.
   ! three-component coordinate vector
   integer, parameter :: nDim = 3
 
