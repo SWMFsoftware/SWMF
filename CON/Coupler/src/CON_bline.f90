@@ -39,8 +39,12 @@ module CON_bline
   logical, public :: UseBLine_C(MaxComp)=.false. ! To switch coupler for PT/SP
 
   ! The rest is available on the BL_ processors
-  ! Boundaries of coupled domains in SC and IH
-  real,    public :: RScMin = 0.0, RScMax = 0.0, RIhMin = 0.0, RIhMax = 0.0
+  ! Boundaries of coupled domains in SC
+  real,    public :: RScMin = 0.0, RScMax = 0.0
+  ! Boundaries of coupled domains in IH
+  real,    public :: RIhMin = 0.0, RIhMax = 0.0
+  ! Boundaries of coupled domains in OH
+  real,    public :: ROhMin = 0.0, ROhMax = 0.0
   integer, public :: Lower_=0, Upper_=-1
 
   ! Total number of lines on given PE
