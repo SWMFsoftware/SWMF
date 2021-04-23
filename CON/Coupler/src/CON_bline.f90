@@ -38,7 +38,7 @@ module CON_bline
   Character(len=3):: TypeCoordSystemBl  = ''     ! Coord system of the Bl Model
   logical, public :: UseBLine_C(MaxComp)=.false. ! To switch coupler for PT/SP
   ! Logical to determine, if a particular MH component is coupled to BL
-  logical, public :: IsSource4BL_C(MaxComp) = .false. 
+  logical, public :: IsSource4BL_C(MaxComp) = .false.
   ! Boundaries of coupled domains in SC
   real,    public :: RScMin = 1000.0, RScMax = 0.0
   ! Boundaries of coupled domains in IH
