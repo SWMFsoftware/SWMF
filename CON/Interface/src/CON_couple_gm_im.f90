@@ -293,7 +293,7 @@ contains
       real, allocatable :: SatPos_DII(:,:,:)
 
       ! Buffer for scalar Kp
-      real :: BufferKp
+      real :: BufferKp, BufferAe
 
       ! Buffer for satellite names
       character(len=100), allocatable:: NameSat_I(:)
@@ -308,7 +308,7 @@ contains
 
       ! Number of variables in Buffer_IIV indexed by Lon, Lat
       ! x, y, B, densities and pressures at the min B surface
-      nVarBmin = nRhoPCoupled + 3
+      nVarBmin = nRhoPCoupled + 5
 
       NameVar = 'x:y:bmin:I_I:S_I:R_I:B_I:rho:p'
 
@@ -329,16 +329,17 @@ contains
       ! Only GM root returns useful info but all processors should be called
       ! so they can deallocate ray tracing
       if(is_proc0(GM_)) call GM_get_for_im_crcm( &
-           Buffer_IIV, BufferKp, iSize, jSize, nDensityGM, nVarBmin, &
+           Buffer_IIV, BufferKp, BufferAe, iSize, jSize, nDensityGM, nVarBmin, &
            BufferLine_VI, nVarLine, nPointLine, BufferSolarWind_V, NameVar)
 
       call transfer_real_array(GM_, IM_, size(Buffer_IIV), Buffer_IIV)
       call transfer_real_array(GM_, IM_, size(BufferLine_VI), BufferLine_VI)
       call transfer_real_array(GM_, IM_, size(BufferSolarWind_V), BufferSolarWind_V)
       call transfer_real(GM_,IM_, BufferKp)
+      call transfer_real(GM_,IM_, BufferAe)
 
       if(is_proc(IM_)) call IM_put_from_gm_crcm(&
-           Buffer_IIV, BufferKp, iSize, jSize, nVarBmin, &
+           Buffer_IIV, BufferKp, BufferAe, iSize, jSize, nVarBmin, &
            BufferLine_VI, nVarLine, nPointLine, NameVar, &
            BufferSolarWind_V, tSimulation)
 

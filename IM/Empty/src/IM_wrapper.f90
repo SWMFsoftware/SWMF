@@ -200,12 +200,12 @@ contains
 
   !===========================================================================
 
-  subroutine IM_put_from_gm_crcm(Integral_IIV, BufferKp, iSizeIn, jSizeIn,&
+  subroutine IM_put_from_gm_crcm(Integral_IIV, BufferKp, BufferAe, iSizeIn, jSizeIn,&
        nIntegralIn, BufferLine_VI, nVarLine, nPointLine, NameVar, &
        SolarWind_V, tSimulation)
 
     integer, intent(in) :: iSizeIn, jSizeIn, nIntegralIn
-    real,    intent(in) :: Integral_IIV(iSizeIn,jSizeIn,nIntegralIn), BufferKp
+    real,    intent(in) :: Integral_IIV(iSizeIn,jSizeIn,nIntegralIn), BufferKp,BufferAe
     integer, intent(in) :: nVarLine, nPointLine
     real,    intent(in) :: BufferLine_VI(nVarLine,nPointLine)
     real,    intent(in) :: SolarWind_V(8)
