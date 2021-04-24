@@ -218,32 +218,37 @@ contains
              iError = 34
              RETURN
           end if
-          call read_var('ROhMin', RIhMin)
-          call read_var('ROhMax', RIhMax)
+          call read_var('ROhMin', ROhMin)
+          call read_var('ROhMax', ROhMax)
           IsSource4BL_C(OH_) = .true.
        case default
           if(is_proc0()) write(*,*) NameSub//&
                ' SWMF_ERROR for NameMaster: '// &
-               'SC or IH are only allowed as MFLAMPA sources'
+               'SC, IH and OH are only allowed as MFLAMPA sources'
           iError = 34
           RETURN
        end select
     end do
     if(.not.is_proc(BL_))RETURN
-    RMin = min(RScMin, RIhMin); RMax = max(RIhMax, ROhMax)
     if(IsSource4BL_C(SC_))then
        Lower_ = SC_
+       RMin   = RScMin
     elseif(IsSource4BL_C(IH_))then
        Lower_ = IH_
+       RMin   = RIhMin
     else
        Lower_ = OH_
+       RMin   = ROhMin
     end if
     if(IsSource4BL_C(OH_))then
        Upper_ = OH_
+       RMax   = ROhMax
     elseif(IsSource4BL_C(IH_))then
        Upper_ = IH_
+       RMax   = RIhMax
     else
        Upper_ = SC_
+       RMax   = RScMax
     end if
     select  case(BL_)
     case(PT_)
