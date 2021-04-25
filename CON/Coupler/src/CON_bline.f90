@@ -144,117 +144,137 @@ module CON_bline
 
 contains
   !============================================================================
-  subroutine BL_read_param(iError)
+  subroutine BL_read_param(NameCommand,iError)
     use CON_coupler, ONLY: use_comp, i_comp, SP_, PT_, SC_, IH_, OH_, &
-         i_proc, n_proc, is_proc
+         i_proc, n_proc, is_proc, Couple_CC
     use ModReadParam, ONLY: read_var
-
-    integer, intent(inout) :: iError
-    integer :: nSource, iSource, iComp
+    character(len=*), intent(in) :: NameCommand
+    integer, intent(inout)       :: iError
+    integer :: nSource, iSource, iComp, DnCouple
+    real    :: DtCouple
+    logical :: DoThis
     character(len=2) :: NameComp = ''
     character(len=*), parameter:: NameSub = 'BL_read_param'
     !--------------------------------------------------------------------------
-    call read_var('NameTarget', NameCompBl)
-    BL_ = i_comp(NameCompBl)
-    if(.not.use_comp(BL_)) then
-       if(is_proc0()) write(*,*) NameSub//&
-            ' SWMF_ERROR for NameMaster: '// &
-            NameComp//' is OFF or not registered, not MFLAMPA target'
-       iError = 34
-       RETURN
-    end if
-    if(.not.(BL_ == PT_.or.BL_==SP_))then
-       if(is_proc0()) write(*,*) NameSub//&
-            ' SWMF_ERROR for NameMaster: '// &
-            'SP or PT can be BLine target, but '//NameComp//' cannot'
-       iError = 34
-       RETURN
-    end if
-    UseBLine_C = .false.; UseBLine_C(BL_) = .true.
-    if(is_proc(BL_))then
-       iProc = i_proc(BL_); nProc = n_proc(BL_)
-    end if
-    call read_var('nSource', nSource)
-    if(nSource==0)RETURN ! Uncoupled SP
-    if(nSource>3)then
-       if(is_proc0()) write(*,*) NameSub//&
-            ' SWMF_ERROR for NameMaster: '// &
-            'there can be only not more than 3 source components in MFLAMPA'
-       iError = 34
-       RETURN
-    end if
-    IsSource4BL_C = .false.
-    do iSource = 1, nSource
-       call read_var('NameSource', NameComp)
-       iComp = i_comp(NameComp)
-       select case(iComp)
-       case(SC_)
-          if(.not.use_comp(SC_)) then
-             if(is_proc0()) write(*,*) NameSub//&
-                  ' SWMF_ERROR for NameMaster: '// &
-                  ' SC  needed in MFLAMPA is OFF or not registered'
-             iError = 34
-             RETURN
-          end if
-          call read_var('RScMin', RScMin)
-          call read_var('RScMax', RScMax)
-          IsSource4BL_C(SC_) = .true.
-       case(IH_)
-          if(.not.use_comp(IH_)) then
-             if(is_proc0()) write(*,*) NameSub//&
-                  ' SWMF_ERROR for NameMaster: '// &
-                  ' IH  needed in MFLAMPA is OFF or not registered'
-             iError = 34
-             RETURN
-          end if
-          call read_var('RIhMin', RIhMin)
-          call read_var('RIhMax', RIhMax)
-          IsSource4BL_C(IH_) = .true.
-       case(OH_)
-          if(.not.use_comp(OH_)) then
-             if(is_proc0()) write(*,*) NameSub//&
-                  ' SWMF_ERROR for NameMaster: '// &
-                  ' OH  needed in MFLAMPA is OFF or not registered'
-             iError = 34
-             RETURN
-          end if
-          call read_var('ROhMin', ROhMin)
-          call read_var('ROhMax', ROhMax)
-          IsSource4BL_C(OH_) = .true.
-       case default
+    select case(NameCommand)
+    case("#FIELDLINE")
+       call read_var('NameTarget', NameCompBl)
+       BL_ = i_comp(NameCompBl)
+       if(.not.use_comp(BL_)) then
           if(is_proc0()) write(*,*) NameSub//&
                ' SWMF_ERROR for NameMaster: '// &
-               'SC, IH and OH are only allowed as MFLAMPA sources'
+               NameComp//' is OFF or not registered, not MFLAMPA target'
           iError = 34
           RETURN
+       end if
+       if(.not.(BL_ == PT_.or.BL_==SP_))then
+          if(is_proc0()) write(*,*) NameSub//&
+               ' SWMF_ERROR for NameMaster: '// &
+               'SP or PT can be BLine target, but '//NameComp//' cannot'
+          iError = 34
+          RETURN
+       end if
+       UseBLine_C = .false.; UseBLine_C(BL_) = .true.
+       if(is_proc(BL_))then
+          iProc = i_proc(BL_); nProc = n_proc(BL_)
+       end if
+       call read_var('nSource', nSource)
+       if(nSource==0)RETURN ! Uncoupled SP
+       if(nSource>3)then
+          if(is_proc0()) write(*,*) NameSub//&
+               ' SWMF_ERROR for NameMaster: '// &
+               'there can be only not more than 3 source components in MFLAMPA'
+          iError = 34
+          RETURN
+       end if
+       IsSource4BL_C = .false.
+       do iSource = 1, nSource
+          call read_var('NameSource', NameComp)
+          iComp = i_comp(NameComp)
+          select case(iComp)
+          case(SC_)
+             if(.not.use_comp(SC_)) then
+                if(is_proc0()) write(*,*) NameSub//&
+                     ' SWMF_ERROR for NameMaster: '// &
+                     ' SC  needed in MFLAMPA is OFF or not registered'
+                iError = 34
+                RETURN
+             end if
+             call read_var('RScMin', RScMin)
+             call read_var('RScMax', RScMax)
+             IsSource4BL_C(SC_) = .true.
+          case(IH_)
+             if(.not.use_comp(IH_)) then
+                if(is_proc0()) write(*,*) NameSub//&
+                     ' SWMF_ERROR for NameMaster: '// &
+                     ' IH  needed in MFLAMPA is OFF or not registered'
+                iError = 34
+                RETURN
+             end if
+             call read_var('RIhMin', RIhMin)
+             call read_var('RIhMax', RIhMax)
+             IsSource4BL_C(IH_) = .true.
+          case(OH_)
+             if(.not.use_comp(OH_)) then
+                if(is_proc0()) write(*,*) NameSub//&
+                     ' SWMF_ERROR for NameMaster: '// &
+                     ' OH  needed in MFLAMPA is OFF or not registered'
+                iError = 34
+                RETURN
+             end if
+             call read_var('ROhMin', ROhMin)
+             call read_var('ROhMax', ROhMax)
+             IsSource4BL_C(OH_) = .true.
+          case default
+             if(is_proc0()) write(*,*) NameSub//&
+                  ' SWMF_ERROR for NameMaster: '// &
+                  'SC, IH and OH are only allowed as MFLAMPA sources'
+             iError = 34
+             RETURN
+          end select
+       end do
+       if(.not.is_proc(BL_))RETURN
+       if(IsSource4BL_C(SC_))then
+          Lower_ = SC_
+          RMin   = RScMin
+       elseif(IsSource4BL_C(IH_))then
+          Lower_ = IH_
+          RMin   = RIhMin
+       else
+          Lower_ = OH_
+          RMin   = ROhMin
+       end if
+       if(IsSource4BL_C(OH_))then
+          Upper_ = OH_
+          RMax   = ROhMax
+       elseif(IsSource4BL_C(IH_))then
+          Upper_ = IH_
+          RMax   = RIhMax
+       else
+          Upper_ = SC_
+          RMax   = RScMax
+       end if
+       select  case(BL_)
+       case(PT_)
+          NameMHData = 'PT/plots/MH_data'
+       case(SP_)
+          NameMHData = 'SP/IO2/MH_data'
        end select
-    end do
-    if(.not.is_proc(BL_))RETURN
-    if(IsSource4BL_C(SC_))then
-       Lower_ = SC_
-       RMin   = RScMin
-    elseif(IsSource4BL_C(IH_))then
-       Lower_ = IH_
-       RMin   = RIhMin
-    else
-       Lower_ = OH_
-       RMin   = ROhMin
-    end if
-    if(IsSource4BL_C(OH_))then
-       Upper_ = OH_
-       RMax   = ROhMax
-    elseif(IsSource4BL_C(IH_))then
-       Upper_ = IH_
-       RMax   = RIhMax
-    else
-       Upper_ = SC_
-       RMax   = RScMax
-    end if
-    select  case(BL_)
-    case(PT_)
-       NameMHData = 'PT/plots/MH_data'
-    case(SP_)
-       NameMHData = 'SP/IO2/MH_data'
+    case("#COUPLEFIELDLINE")
+       call read_var('DnCouple', DnCouple)
+       call read_var('DtCouple', DtCouple)
+       DoThis = DnCouple > 0 .or. DtCouple > 0.0
+       where(IsSource4BL_C (:))
+          Couple_CC(:, BL_)%Dn     = DnCouple
+          Couple_CC(:, BL_)%Dt     = DtCouple
+          Couple_CC(:, BL_)%DoThis = DoThis
+       end where
+    case default
+       if(is_proc0()) write(*,*) NameSub//&
+            ' SWMF_ERROR for NameMaster: '// &
+            'Unknown command '//NameCommand
+       iError = 34
+       RETURN
     end select
   end subroutine BL_read_param
   !============================================================================

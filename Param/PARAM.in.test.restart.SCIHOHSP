@@ -444,23 +444,10 @@ IH			NameTarget
 -1			DnCouple
 1.0			DtCouple
 
-#COUPLE1
-SC			NameSource
-SP			NameTarget
+#COUPLEFIELDLINE
 -1			DnCouple
 1.0			DtCouple
 
-#COUPLE1
-IH			NameSource
-SP			NameTarget
--1			DnCouple
-1.0			DtCouple
-
-#COUPLE1
-OH			NameSource
-SP			NameTarget
--1			DnCouple
-1.0			DtCouple
 
 #STOP
 -1			MaxIter

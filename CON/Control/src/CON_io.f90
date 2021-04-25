@@ -446,8 +446,8 @@ contains
              call read_var('nNext21', Couple_CC(iComp2,iComp1) % nNext)
              call read_var('tNext21', Couple_CC(iComp2,iComp1) % tNext)
           end if
-       case('#FIELDLINE')
-          call BL_read_param(iErrorSWMF)
+       case("#FIELDLINE","#COUPLEFIELDLINE")
+          call BL_read_param(NameCommand, iErrorSWMF)
           if(iErrorSWMF/=0)RETURN
 
        case("#COUPLE1TIGHT", "#COUPLE2TIGHT")

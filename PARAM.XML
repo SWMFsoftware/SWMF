@@ -1110,6 +1110,25 @@ coupled to SP or PT particle-treated components.
 
 </command>
 
+<command name="COUPLEFIELDLINE" multiple="T">
+	<parameter name="DnCouple"   type="integer" min="-1" default="-1"   />
+	<parameter name="DtCouple"   type="real"    min="-1" default="-1.0" />
+
+
+#COUPLEFIELDLINE
+-1			DnCouple
+10.0			DtCouple
+
+For all components coupled via 'field lines' via command '#FIELDLINE' 
+the DnCouple variable determines the frequency of couplings in terms
+of the number of time steps nStep for steady state runs, while DtCouple
+defines the frequency in terms of the simulation time tSimulation in
+seconds for time-accurate runs. Setting both frequencies to a negative value
+means that there is no coupling.
+
+The default is no coupling.
+</command>
+
 </commandgroup>
 
 <commandgroup name="RESTART CONTROL">
