@@ -320,9 +320,9 @@ contains
            GridSource           = OH_Grid          ,&
            GridTarget           = BL_Grid          ,&
            nMappedPointIndex    = nAux             ,&
-           Router               = RouterIhBl        )
+           Router               = RouterOhBl        )
       ! Set local GD on the Particle_I structure
-      call init_router(OH_LineGrid, BL_Grid, RouterLineIhBl)
+      call init_router(OH_LineGrid, BL_Grid, RouterLineOhBl)
       if(.not.RouterOhBl%IsProc)RETURN
       ! Router to send particles is initialized.
       if(.not.DoExtract)RETURN
@@ -352,7 +352,7 @@ contains
       !
       if(is_proc(OH_))then
          nLength = nlength_buffer_source(RouterOhBl)
-         call IH_extract_line(Xyz_DI  = RouterOhBl%               &
+         call OH_extract_line(Xyz_DI  = RouterOhBl%               &
               BufferSource_II(1:nDim,1:nLength)                  ,&
               iTraceMode              = Upper_                   ,&
               iIndex_II               = nint(RouterOhBl%          &
