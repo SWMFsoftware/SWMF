@@ -1070,6 +1070,7 @@ the coupling time.
     <parameter name="NameSource" type="string" length="2" input="select">
       <option name="SC" />
       <option name="IH" />
+      <option name="OH" />
     </parameter> 
     <if expr="$NameSource =~ /SC/">
       <parameter name="RScMin"   type="real"    min="0" default="0" />
@@ -1078,6 +1079,10 @@ the coupling time.
     <if expr="$NameSource =~ /IH/">
       <parameter name="RIhMin"   type="real"    min="0" default="0" />
       <parameter name="RIhMax"   type="real"    min="0" default="0" />
+    </if>
+     <if expr="$NameSource =~ /OH/">
+      <parameter name="ROhMin"   type="real"    min="0" default="0" />
+      <parameter name="ROhMax"   type="real"    min="0" default="0" />
     </if>
   </for>
 
@@ -1090,12 +1095,17 @@ SC			NameSource
 21			RScMax
 IH			NameSource
 19.7			RIhMin
-230			RIhMax
+230.0			RIhMax
+OH			NameSource
+220.0			RIhMin
+1500.0			RIhMax
+                   
 
 The NameSource and NameTarget variables contain the two-character 
 component ID-s for the source and target components coupled via
-MFLAMPA. RScMin and RScMax radii for SC componet and
-RIhMin and RIhMax for IH components bound the domains in SC and IH
+MFLAMPA. RScMin and RScMax radii for SC componet, and
+RIhMin and RIhMax for IH component, and ROhMin and ROhMax for
+OH component  bound the domains in SC, IH, and  OH corrrespondingly,
 coupled to SP or PT particle-treated components.
 
 </command>
