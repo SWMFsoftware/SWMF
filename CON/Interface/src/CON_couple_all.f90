@@ -19,7 +19,7 @@ module CON_couple_all
        nVarBuffer, nVarBuffer_CC, &
        iVarSource_V, iVarSource_VCC, &
        iVarTarget_V, iVarTarget_VCC
-  use CON_bline, ONLY: UseBLine_C
+  use CON_bline, ONLY: UseBLine_C, IsSource4BL_C
   !^CMP IF GM BEGIN
   use CON_couple_ee_gm        !^CMP IF EE
   use CON_couple_ih_gm        !^CMP IF IH
@@ -101,12 +101,14 @@ contains
     if(use_comp(SC_).and.use_comp(EE_))call couple_ee_sc_init  !^CMP IF EE
     !                                                     ^CMP END SC
     if(UseBLine_C(SP_).and.(&                             !^CMP IF SP BEGIN
-         use_comp(IH_).or.&                               !^CMP IF IH
-         use_comp(SC_).or.&                               !^CMP IF SC
+         IsSource4Bl_C(OH_).or.&                          !^CMP IF OH
+         IsSource4Bl_C(IH_).or.&                          !^CMP IF IH
+         IsSource4Bl_C(SC_).or.&                          !^CMP IF SC
          .false.))call couple_mh_sp_init                  !^CMP END SP
     if(UseBLine_C(PT_).and.(&                             !^CMP IF PT BEGIN
-         use_comp(IH_).or.&                               !^CMP IF IH
-         use_comp(SC_).or.&                               !^CMP IF SC
+         IsSource4Bl_C(OH_).or.&                          !^CMP IF OH
+         IsSource4Bl_C(IH_).or.&                          !^CMP IF IH
+         IsSource4Bl_C(SC_).or.&                          !^CMP IF SC
          .false.))then
        call couple_mh_sp_init
     else
@@ -224,8 +226,14 @@ contains
        select case(iCompTarget)               !^CMP IF OH BEGIN
        case(IH_)                                   !^CMP IF IH
           call couple_oh_ih(TimeSimulation)        !^CMP IF IH
+      case(SP_)                                    !^CMP IF SP
+          call couple_oh_sp(TimeSimulation)        !^CMP IF SP
        case(PT_)				   !^CMP IF PT
-       	  call couple_oh_pt(TimeSimulation)	   !^CMP IF PT
+          if(UseBLine_C(PT_))then
+             call couple_oh_sp(TimeSimulation)
+          else
+             call couple_oh_pt(TimeSimulation)
+          end if                                   !^CMP IF PT
        case default
           call error
        end select                                  !^CMP END OH
