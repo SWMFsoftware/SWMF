@@ -1065,7 +1065,7 @@ the coupling time.
     <option name="SP" />
     <option name="PT" />
   </parameter>
-  <parameter name="nSource"   type="integer" min="0" max="2"   />
+  <parameter name="nSource"   type="integer" min="0" max="3"   />
   <for from="1" to="$nSource">
     <parameter name="NameSource" type="string" length="2" input="select">
       <option name="SC" />
