@@ -16,6 +16,24 @@ module CON_bline
 
   PRIVATE ! Except
 
+  !=====The following public members are available at all PEs ================
+  type(GridType),      public :: BL_Grid          ! Grid descriptor (global)
+  type(LocalGridType), public :: BL_LocalGrid     ! Grid descriptor (local)
+  integer, public :: BL_ =-1         ! ID of the target model (SP_, PT_)
+  character(len=2):: NameCompBl = '' ! Name of the target model ('SP', 'PT'...)
+  Character(len=3):: TypeCoordSystemBl  = ''     ! Coord system of the Bl Model
+  logical, public :: UseBLine_C(MaxComp)=.false. ! To switch coupler for PT/SP
+  ! Logical to determine, if a particular MH component is coupled to BL
+  logical, public :: IsSource4BL_C(MaxComp) = .false.
+  ! Boundaries of coupled domains in SC
+  real,    public :: RScMin = 1000.0, RScMax = 0.0
+  ! Boundaries of coupled domains in IH
+  real,    public :: RIhMin = 1000.0, RIhMax = 0.0
+  ! Boundaries of coupled domains in OH
+  real,    public :: ROhMin = 1000.0, ROhMax = 0.0
+  ! The unit of length ratios and transformation matrrix
+  real,    public :: MhToBl_DD(3,3), UnitBl2UnitMh, UnitMh2UnitBl
+  !===== The rest is available on the BL_ processors =========================
   public :: BL_read_param
   public :: BL_set_grid
   public :: BL_init
@@ -30,29 +48,13 @@ module CON_bline
   public :: BL_put_line               ! points rMin < R < rMax
   public :: BL_set_line_foot_b
   public :: save_mhd
-  type(GridType),      public :: BL_Grid          ! Grid descriptor (global)
-  type(LocalGridType), public :: BL_LocalGrid     ! Grid descriptor (local)
-  ! The following public members are available at all PEs
-  integer, public :: BL_ =-1         ! ID of the target model (SP_, PT_)
-  character(len=2):: NameCompBl = '' ! Name of the target model ('SP', 'PT'...)
-  Character(len=3):: TypeCoordSystemBl  = ''     ! Coord system of the Bl Model
-  logical, public :: UseBLine_C(MaxComp)=.false. ! To switch coupler for PT/SP
-  ! Logical to determine, if a particular MH component is coupled to BL
-  logical, public :: IsSource4BL_C(MaxComp) = .false.
-  ! Boundaries of coupled domains in SC
-  real,    public :: RScMin = 1000.0, RScMax = 0.0
-  ! Boundaries of coupled domains in IH
-  real,    public :: RIhMin = 1000.0, RIhMax = 0.0
-  ! Boundaries of coupled domains in OH
-  real,    public :: ROhMin = 1000.0, ROhMax = 0.0
-
-  ! The rest is available on the BL_ processors
-  integer, public :: Lower_=0, Upper_=-1
+  ! Store IDs of the lower and upper model
+  integer, public  :: Lower_=0, Upper_=-1
 
   ! Total number of lines on given PE
   integer, public  :: nLine = -1 ! = ((iProc +1)*nLineAll)/nProc - iLineAll0
 
-  ! Offset of B lines
+  ! Offset of B lines (per line)
   integer, allocatable, public :: iOffset_B(:)
 
   ! Number of variables in the state vector and the identifications
@@ -526,22 +528,19 @@ contains
     use CON_router, ONLY: IndexPtrType, WeightPtrType
     use ModConst,   ONLY: cProtonMass
     integer,intent(in)::nPartial,iPutStart,nVar
-    type(IndexPtrType),intent(in)::Put
-    type(WeightPtrType),intent(in)::W
-    logical,intent(in)::DoAdd
-    real,dimension(nVar),intent(in)::Buff_I
+    type(IndexPtrType), intent(in):: Put
+    type(WeightPtrType),intent(in):: W
+    logical,            intent(in):: DoAdd
+    real,               intent(in):: Buff_I(nVar)
     integer:: iRho, iP, iMx, iMz, iBx, iBz, iWave1, iWave2
     integer:: i, iLine
     integer:: iPartial
-    real:: Weight
-    real:: R, Aux
-
-    character(len=100):: StringError
-
-    ! check consistency of DoCoupleVar_V
+    real   :: Weight
+    real   :: R, Aux
 
     character(len=*), parameter:: NameSub = 'BL_put_from_mh'
     !--------------------------------------------------------------------------
+    ! check consistency of DoCoupleVar_V
     if(.not. DoCoupleVar_V(Density_) .and. &
          (DoCoupleVar_V(Pressure_) .or. DoCoupleVar_V(Momentum_)))&
          call CON_Stop(NameSub//': pressure or momentum is coupled,'&

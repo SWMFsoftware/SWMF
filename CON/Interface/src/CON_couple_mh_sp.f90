@@ -44,6 +44,8 @@ module CON_couple_mh_sp
        RScMin, RScMax,           &  !^CMP IF SC
        RIhMin, RIhMax,           &
        ROhMin, ROhMax,           &  !^CMP IF OH
+       UnitBl2UnitMh,            &  ! The unit of length ratios
+       UnitMh2UnitBl, MhToBl_DD, &  ! and transformation matrix
        IsSource4BL_C,            &
        BL_init_foot_points,      &  ! Initialize footpoint array
        BL_get_bounds,            &  ! Provides RScMin/Max and/or RIhMin/Max
@@ -82,11 +84,6 @@ module CON_couple_mh_sp
 
   ! Misc
   integer :: nLength, iError
-
-  ! Transformation matrices and the unit of length ratios
-  real    :: ScToBl_DD(3,3), UnitBl2UnitSc, UnitSc2UnitBl !^CMP IF SC
-  real    :: IhToBl_DD(3,3), UnitBl2UnitIh, UnitIh2UnitBl
-  real    :: OhToBl_DD(3,3), UnitBl2UnitOh, UnitOh2UnitBl !^CMP IF OH
 
   logical::DoTest,DoTestMe
   character(LEN=*),parameter::NameSub='couple_mh_sp'
@@ -135,6 +132,17 @@ contains
     end select
   end subroutine BL_adjust_lines
   !============================================================================
+  subroutine transform_matrix_and_coef(tNow, MH_)
+    real,    intent(in) :: tNow
+    integer, intent(in) ::  MH_
+    !--------------------------------------------------------------------------
+    ! Transformation matrix and coefficients
+    UnitBl2UnitMh = Grid_C(BL_)%UnitX/Grid_C(MH_)%UnitX
+    UnitMh2UnitBl = 1/UnitBl2UnitMh
+    MhToBl_DD=transform_matrix(tNow,&
+         Grid_C(MH_)%TypeCoord, Grid_C(BL_)%TypeCoord)
+  end subroutine transform_matrix_and_coef
+  !============================================================================
   subroutine couple_mh_sp_init
     use CON_physics, ONLY: get_time
     use ModConst
@@ -168,9 +176,6 @@ contains
       if(.not.IsReady) call CON_stop(&
            "SC component not ready for "//NameSub//" correct PARAM.in")
       call set_couple_var_info(SC_, BL_)
-      UnitBl2UnitSc = Grid_C(BL_)%UnitX/Grid_C(SC_)%UnitX
-      UnitSc2UnitBl = 1/UnitBl2UnitSc
-
       ! Initialize coupler from SC (source )to BL (target)
       ! Data will be copied from SC to BL, however, the points
       ! in which the data shuld be provided will be sent from BL to
@@ -195,8 +200,7 @@ contains
       end if
       call SC_synchronize_refinement(RouterScBl%iProc0Source,&
            RouterScBl%iCommUnion)
-      ScToBl_DD=transform_matrix(tNow,&
-           Grid_C(SC_)%TypeCoord, Grid_C(BL_)%TypeCoord)
+      call  transform_matrix_and_coef(tNow, SC_)
       ! use router intended for sending MHD data  (SC => BL)
       ! to send the particle coordinates backward (BL=>SC).
 
@@ -217,7 +221,7 @@ contains
               iTraceMode = Lower_                           ,&
               iIndex_II  = nint(RouterScBl% BufferSource_II( &
               nDim+1:nDim+nAux,1:nLength))                  ,&
-              RSoftBoundary = RScMax*UnitBl2UnitSc)
+              RSoftBoundary = RScMax*UnitBl2UnitMh)
          !
          ! Now in SC are the parts of lines from the inner
          ! boundary of SC to RScMax + 1 Point above
@@ -239,9 +243,6 @@ contains
       if(.not.IsReady) call CON_stop(&
            "IH component not ready for "//NameSub//" correct PARAM.in")
       call set_couple_var_info(IH_, BL_)
-      UnitBl2UnitIh = Grid_C(BL_)%UnitX/Grid_C(IH_)%UnitX
-      UnitIh2UnitBl = 1/UnitBl2UnitIh
-
       ! Initialize coupler from IH (source )to BL (target)
       ! Data will be copied from IH to BL, however, the points
       ! in which the data shuld be provided will be sent from BL to
@@ -268,8 +269,7 @@ contains
       end if
       call IH_synchronize_refinement(RouterIhBl%iProc0Source,&
            RouterIhBl%iCommUnion)
-      IhToBl_DD = transform_matrix(tNow,&
-           Grid_C(IH_)%TypeCoord, Grid_C(BL_)%TypeCoord)
+      call  transform_matrix_and_coef(tNow, IH_)
       ! Put in place the origin points of the MF lines.
       call set_router(                                            &
            GridSource                 = IH_Grid                  ,&
@@ -289,7 +289,7 @@ contains
               iTraceMode              = Upper_                   ,&
               iIndex_II               = nint(RouterIhBl%          &
               BufferSource_II(nDim+1:nDim+nAux,1:nLength))       ,&
-              RSoftBoundary           = RIhMax*UnitBl2UnitIh)
+              RSoftBoundary           = RIhMax*UnitBl2UnitMh)
          !
          ! Now in IH are the parts of lines from RScMax + 1 point above
          ! to RIhMax + 1 Point above
@@ -307,8 +307,6 @@ contains
       if(.not.IsReady) call CON_stop(&
            "OH component not ready for "//NameSub//" correct PARAM.in")
       call set_couple_var_info(OH_, BL_)
-      UnitBl2UnitOh = Grid_C(BL_)%UnitX/Grid_C(OH_)%UnitX
-      UnitOh2UnitBl = 1/UnitBl2UnitOh
 
       ! Initialize coupler from OH (source )to BL (target)
       ! Data will be copied from OH to BL, however, the points
@@ -336,8 +334,7 @@ contains
       end if
       call OH_synchronize_refinement(RouterOhBl%iProc0Source,&
            RouterOhBl%iCommUnion)
-      OhToBl_DD = transform_matrix(tNow,&
-           Grid_C(OH_)%TypeCoord, Grid_C(BL_)%TypeCoord)
+      call  transform_matrix_and_coef(tNow, OH_)
       ! Put in place the origin points of the MF lines.
       call set_router(                                            &
            GridSource                 = OH_Grid                  ,&
@@ -348,7 +345,7 @@ contains
            mapping                    = mapping_sp_to_OH         ,&
            interpolate                = interpolation_amr_gc)
       !
-      ! Now in OH are 1 point above RRIhMax per each line
+      ! Now in OH-semi-router is 1 point above RRIhMax per each line
       !
       if(is_proc(OH_))then
          nLength = nlength_buffer_source(RouterOhBl)
@@ -357,7 +354,7 @@ contains
               iTraceMode              = Upper_                   ,&
               iIndex_II               = nint(RouterOhBl%          &
               BufferSource_II(nDim+1:nDim+nAux,1:nLength))       ,&
-              RSoftBoundary           = ROhMax*UnitBl2UnitOh)
+              RSoftBoundary           = ROhMax*UnitBl2UnitMh)
          !
          ! Now in OH are the parts of lines from RIHMax + 1 point above
          ! to ROhMax + 1 Point above
@@ -387,8 +384,7 @@ contains
     ! Coordinates for all particles are nullified. Those which are
     ! not sent (or lost) keep to be zeroed and may be thus found.
     !
-    ScToBl_DD = transform_matrix(tNow,&
-         Grid_C(SC_)%TypeCoord, Grid_C(BL_)%TypeCoord)
+    call  transform_matrix_and_coef(tNow, SC_)
     call SC_synchronize_refinement(RouterScBl%iProc0Source,&
          RouterScBl%iCommUnion)
     if(.not.DoInit) call BL_put_lines_from_sc
@@ -449,7 +445,7 @@ contains
     real                :: XyzTemp_D(nDim)
     !--------------------------------------------------------------------------
     IsInterfacePoint = .true.
-    XyzTemp_D = matmul(XyzIn_D, ScToBl_DD)*UnitBl2UnitSc
+    XyzTemp_D = matmul(XyzIn_D, MhToBl_DD)*UnitBl2UnitMh
     call SC_xyz_to_coord(XyzTemp_D, CoordOut_D)
   end subroutine mapping_sp_to_sc
   !============================================================================
@@ -481,8 +477,8 @@ contains
     iVarBx = iVar_V(BxCouple_)   ; iVarBz = iVar_V(BzCouple_)
     iVarMx = iVar_V(RhoUxCouple_); iVarMz = iVar_V(RhoUzCouple_)
     ! perform transformation before returning
-    State_V(iVarBx:iVarBz) = matmul(ScToBl_DD, State_V(iVarBx:iVarBz))
-    State_V(iVarMx:iVarMz) = matmul(ScToBl_DD, State_V(iVarMx:iVarMz))
+    State_V(iVarBx:iVarBz) = matmul(MhToBl_DD, State_V(iVarBx:iVarBz))
+    State_V(iVarMx:iVarMz) = matmul(MhToBl_DD, State_V(iVarMx:iVarMz))
   end subroutine SC_get_for_sp_and_transform
   !============================================================================
   subroutine SC_get_coord_for_sp_and_transform(&
@@ -494,7 +490,7 @@ contains
     !--------------------------------------------------------------------------
     call SC_get_particle_coords(Get%iCB_II(1,iGetStart), State_V)
     ! coord transformation
-    State_V = matmul(ScToBl_DD, State_V)*UnitSc2UnitBl
+    State_V = matmul(MhToBl_DD, State_V)*UnitMh2UnitBl
   end subroutine SC_get_coord_for_sp_and_transform
   !============================================================================
   !!^CMP END SC
@@ -510,8 +506,7 @@ contains
        call BL_get_bounds(rMinIn = RIhMin, rMaxIn = RIhMax, &
             rBufferLoIn = RScMax)
     end if
-    IhToBl_DD = transform_matrix(tNow,&
-         Grid_C(IH_)%TypeCoord, Grid_C(BL_)%TypeCoord)
+    call  transform_matrix_and_coef(tNow, IH_)
     call IH_synchronize_refinement(RouterIhBl%iProc0Source,&
          RouterIhBl%iCommUnion)
     if(.not.DoInit) call BL_put_lines_from_ih
@@ -554,7 +549,7 @@ contains
       real   :: Xyz_D(3), Coord_D(3), RScMax2
 
       !------------------------------------------------------------------------
-      iParticleNew = 0; RScMax2 = (RScMax*UnitBl2UnitIh)**2
+      iParticleNew = 0; RScMax2 = (RScMax*UnitBl2UnitMh)**2
       do iParticle = 1, nLength
          Coord_D = RouterIhBl%BufferSource_II(1:nDim, iParticle)
          call IH_coord_to_xyz(Coord_D, Xyz_D)
@@ -592,7 +587,7 @@ contains
     real                :: XyzTemp_D(nDim)
     !--------------------------------------------------------------------------
     IsInterfacePoint = .true.
-    XyzTemp_D = matmul(XyzIn_D, IhToBl_DD)*UnitBl2UnitIh
+    XyzTemp_D = matmul(XyzIn_D, MhToBl_DD)*UnitBl2UnitMh
     call IH_xyz_to_coord(XyzTemp_D, CoordOut_D)
   end subroutine mapping_sp_to_ih
   !============================================================================
@@ -636,8 +631,8 @@ contains
     iVarBx = iVar_V(BxCouple_);   iVarBz = iVar_V(BzCouple_)
     iVarMx = iVar_V(RhoUxCouple_);iVarMz = iVar_V(RhoUzCouple_)
     ! perform transformation before returning
-    State_V(iVarBx:iVarBz) = matmul(IhToBl_DD,State_V(iVarBx:iVarBz))
-    State_V(iVarMx:iVarMz) = matmul(IhToBl_DD,State_V(iVarMx:iVarMz))
+    State_V(iVarBx:iVarBz) = matmul(MhToBl_DD,State_V(iVarBx:iVarBz))
+    State_V(iVarMx:iVarMz) = matmul(MhToBl_DD,State_V(iVarMx:iVarMz))
   end subroutine IH_get_for_sp_and_transform
   !============================================================================
   subroutine IH_get_coord_for_sp_and_transform(&
@@ -649,7 +644,7 @@ contains
     !--------------------------------------------------------------------------
     call IH_get_particle_coords(Get%iCB_II(1, iGetStart), State_V)
     ! perform transformation before returning
-    State_V = matmul(IhToBl_DD, State_V)*UnitIh2UnitBl
+    State_V = matmul(MhToBl_DD, State_V)*UnitMh2UnitBl
   end subroutine IH_get_coord_for_sp_and_transform
   !============================================================================
   subroutine couple_oh_sp(DataInputTime)
@@ -664,8 +659,7 @@ contains
        call BL_get_bounds(rMinIn = ROhMin, rMaxIn = ROhMax, &
             rBufferLoIn = RIhMax)
     end if
-    OhToBl_DD=transform_matrix(tNow,&
-         Grid_C(OH_)%TypeCoord, Grid_C(BL_)%TypeCoord)
+    call  transform_matrix_and_coef(tNow, OH_)
     call OH_synchronize_refinement(RouterOhBl%iProc0Source,&
          RouterOhBl%iCommUnion)
     if(.not.DoInit) call BL_put_lines_from_oh
@@ -706,7 +700,7 @@ contains
       integer:: iParticle, iParticleNew
       real   :: Xyz_D(3), Coord_D(3), RIhMax2
       !------------------------------------------------------------------------
-      iParticleNew = 0; RIhMax2 = (RIhMax*UnitBl2UnitOh)**2
+      iParticleNew = 0; RIhMax2 = (RIhMax*UnitBl2UnitMh)**2
       do iParticle = 1, nLength
          Coord_D = RouterOhBl%BufferSource_II(1:nDim, iParticle)
          call OH_coord_to_xyz(Coord_D, Xyz_D)
@@ -744,7 +738,7 @@ contains
     real                :: XyzTemp_D(nDim)
     !--------------------------------------------------------------------------
     IsInterfacePoint = .true.
-    XyzTemp_D = matmul(XyzIn_D, OhToBl_DD)*UnitBl2UnitOh
+    XyzTemp_D = matmul(XyzIn_D, MhToBl_DD)*UnitBl2UnitMh
     call OH_xyz_to_coord(XyzTemp_D, CoordOut_D)
   end subroutine mapping_sp_to_oh
   !============================================================================
@@ -777,8 +771,8 @@ contains
     iVarBx = iVar_V(BxCouple_)   ; iVarBz = iVar_V(BzCouple_)
     iVarMx = iVar_V(RhoUxCouple_); iVarMz = iVar_V(RhoUzCouple_)
     ! perform transformation before returning
-    State_V(iVarBx:iVarBz) = matmul(OhToBl_DD, State_V(iVarBx:iVarBz))
-    State_V(iVarMx:iVarMz) = matmul(OhToBl_DD, State_V(iVarMx:iVarMz))
+    State_V(iVarBx:iVarBz) = matmul(MhToBl_DD, State_V(iVarBx:iVarBz))
+    State_V(iVarMx:iVarMz) = matmul(MhToBl_DD, State_V(iVarMx:iVarMz))
   end subroutine OH_get_for_sp_and_transform
   !============================================================================
   subroutine OH_get_coord_for_sp_and_transform(&
@@ -790,8 +784,8 @@ contains
     !--------------------------------------------------------------------------
     call OH_get_particle_coords(Get%iCB_II(1, iGetStart), State_V)
     ! perform transformation before returning
-    State_V = matmul(OhToBl_DD, State_V)*UnitOh2UnitBl
+    State_V = matmul(MhToBl_DD, State_V)*UnitMh2UnitBl
   end subroutine OH_get_coord_for_sp_and_transform
   !============================================================================
 end module CON_couple_mh_sp
-!==============================================================================
+!=======================================================================
