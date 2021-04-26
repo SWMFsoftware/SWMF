@@ -540,14 +540,14 @@ contains
     iRho  = iVar_V(RhoCouple_)  ! Reusable
     State_V = 0.0 ; State_V(Rho_) = Buff_I(iRho)/cProtonMass ! a. m. u. per m3
     ! Copy from buffer in a proper order
-    if(DoCoupleVar_V(BField_))State_V(Bx_:Bz_) =     &      
+    if(DoCoupleVar_V(BField_))State_V(Bx_:Bz_) =     &
          Buff_I( iVar_V(BxCouple_):iVar_V(BzCouple_))        ! Tesla
     if(DoCoupleVar_V(Momentum_))State_V(Ux_:Uz_) =   &
          Buff_I(iVar_V(RhoUxCouple_):iVar_V(RhoUxCouple_))/Buff_I(iRho)  ! m/s
     if(DoCoupleVar_V(Pressure_))State_V(T_) =        &
          Buff_I(iVar_V(PCouple_))*(cProtonMass/Buff_I(iRho))*EnergySi2Io ! K
     if(DoCoupleVar_V(Wave_))State_V(Wave1_:Wave2_) = &
-         Buff_I(iVar_V(WaveFirstCouple_):iVar_V(WaveLastCouple_))        ! J/m3 
+         Buff_I(iVar_V(WaveFirstCouple_):iVar_V(WaveLastCouple_))        ! J/m3
     ! cell and line indices
     i      = Put%iCB_II(1, iPutStart)
     iLine = Put%iCB_II(4, iPutStart)
