@@ -532,64 +532,42 @@ contains
     type(WeightPtrType),intent(in):: W
     logical,            intent(in):: DoAdd
     real,               intent(in):: Buff_I(nVar)
-    integer:: iRho, iP, iMx, iMz, iBx, iBz, iWave1, iWave2
-    integer:: i, iLine
-    integer:: iPartial
-    real   :: Weight
-    real   :: R, Aux
+    integer:: i, iLine, iRho
+    real   :: Weight,  R, Aux, State_V(Rho_:Wave2_), Xyz_D(X_:Z_)
 
     character(len=*), parameter:: NameSub = 'BL_put_from_mh'
     !--------------------------------------------------------------------------
-    ! check consistency of DoCoupleVar_V
-    if(.not. DoCoupleVar_V(Density_) .and. &
-         (DoCoupleVar_V(Pressure_) .or. DoCoupleVar_V(Momentum_)))&
-         call CON_Stop(NameSub//': pressure or momentum is coupled,'&
-         //' but density is not')
-    ! indices of variables in the buffer
-    iRho  = iVar_V(RhoCouple_)
-    iP    = iVar_V(PCouple_)
-    iMx   = iVar_V(RhoUxCouple_)
-    iMz   = iVar_V(RhoUzCouple_)
-    iBx   = iVar_V(BxCouple_)
-    iBz   = iVar_V(BzCouple_)
-    iWave1= iVar_V(WaveFirstCouple_)
-    iWave2= iVar_V(WaveLastCouple_)
-    Aux = 0
-    if(DoAdd)Aux = 1.0
-    do iPartial = 0, nPartial-1
-       ! cell and line indices
-       i      = Put%iCB_II(1, iPutStart + iPartial)
-       iLine = Put%iCB_II(4, iPutStart + iPartial)
-       ! interpolation weight
-       Weight = W%Weight_I(   iPutStart + iPartial)
-       R = norm2(MHData_VIB(X_:Z_,i,iLine))
-       if(R >= rInterfaceMin .and. R < rBufferLo)then
-          Aux = 1.0
-          Weight = Weight * (0.50 + 0.50*tanh(2*(2*R - &
-               RBufferLo - RInterfaceMin)/(RBufferLo - RInterfaceMin)))
-       end if
-       if(R >= rBufferUp .and. R < rInterfaceMax)then
-          Weight = Weight * (0.50 - 0.50*tanh(2*(2*R - &
-               RInterfaceMax - RBufferUp)/(RInterfaceMax - RBufferUp)))
-       end if
-       ! put the data
-       if(DoCoupleVar_V(Density_))&
-            MHData_VIB(Rho_,i,iLine) = Aux*MHData_VIB(Rho_,i,iLine) &
-            + Buff_I(iRho)/cProtonMass*Weight
-       if(DoCoupleVar_V(Pressure_))&
-            MHData_VIB(T_,i,iLine) = Aux*MHData_VIB(T_,i,iLine) + &
-            Buff_I(iP)*(cProtonMass/Buff_I(iRho))*EnergySi2Io*Weight
-       if(DoCoupleVar_V(Momentum_))&
-            MHData_VIB(Ux_:Uz_,i,iLine) = Aux*MHData_VIB(Ux_:Uz_,i,iLine) + &
-            Buff_I(iMx:iMz) / Buff_I(iRho) * Weight
-       if(DoCoupleVar_V(BField_))&
-            MHData_VIB(Bx_:Bz_,i,iLine) = Aux*MHData_VIB(Bx_:Bz_,i,iLine) + &
-            Buff_I(iBx:iBz) * Weight
-       if(DoCoupleVar_V(Wave_))&
-            MHData_VIB(Wave1_:Wave2_,i,iLine) = &
-            Aux*MHData_VIB(Wave1_:Wave2_,i,iLine) + &
-            Buff_I(iWave1:iWave2)*Weight
-    end do
+    iRho  = iVar_V(RhoCouple_)  ! Reusable
+    State_V = 0.0 ; State_V(Rho_) = Buff_I(iRho)/cProtonMass ! a. m. u. per m3
+    ! Copy from buffer in a proper order
+    if(DoCoupleVar_V(BField_))State_V(Bx_:Bz_) =     &      
+         Buff_I( iVar_V(BxCouple_):iVar_V(BzCouple_))        ! Tesla
+    if(DoCoupleVar_V(Momentum_))State_V(Ux_:Uz_) =   &
+         Buff_I(iVar_V(RhoUxCouple_):iVar_V(RhoUxCouple_))/Buff_I(iRho)  ! m/s
+    if(DoCoupleVar_V(Pressure_))State_V(T_) =        &
+         Buff_I(iVar_V(PCouple_))*(cProtonMass/Buff_I(iRho))*EnergySi2Io ! K
+    if(DoCoupleVar_V(Wave_))State_V(Wave1_:Wave2_) = &
+         Buff_I(iVar_V(WaveFirstCouple_):iVar_V(WaveLastCouple_))        ! J/m3 
+    ! cell and line indices
+    i      = Put%iCB_II(1, iPutStart)
+    iLine = Put%iCB_II(4, iPutStart)
+    ! Location:
+    Xyz_D = MHData_VIB(X_:Z_,i,iLine)
+    ! interpolation weight: if the point is within the buffer the state vector
+    ! is interpolated between those in the components
+    Aux = 0; if(DoAdd)Aux = 1.0; Weight = 1.0
+    R = norm2(Xyz_D)
+    if(R >= rInterfaceMin .and. R < rBufferLo)then
+       Aux = 1.0
+       Weight = Weight * (0.50 + 0.50*tanh(2*(2*R - &
+            RBufferLo - RInterfaceMin)/(RBufferLo - RInterfaceMin)))
+    elseif(R >= rBufferUp .and. R < rInterfaceMax)then
+       Weight = Weight * (0.50 - 0.50*tanh(2*(2*R - &
+            RInterfaceMax - RBufferUp)/(RInterfaceMax - RBufferUp)))
+    end if
+    ! put the data
+    MHData_VIB(Rho_:Wave2_,i,iLine) = Aux*MHData_VIB(Rho_:Wave2_,i,iLine) &
+         + State_V*Weight
   end subroutine BL_put_from_mh
   !============================================================================
   subroutine BL_interface_point_coords(nDim, Xyz_D, &
