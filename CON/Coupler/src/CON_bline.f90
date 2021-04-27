@@ -49,7 +49,7 @@ module CON_bline
   public :: BL_put_line               ! points rMin < R < rMax
   public :: BL_set_line_foot_b
   public :: save_mhd
-  
+
   real,    public  :: TimeBl = -1.0   ! Time of the model! Time of the model
   real             :: UnitXBl         ! Unit of scale (usually RSun)
   ! Store IDs of the lower and upper model
@@ -523,9 +523,9 @@ contains
     integer:: i, iLine, iRho
     real   :: Weight,  R, Aux, State_V(Rho_:Wave2_), Xyz_D(X_:Z_)
 
+    ! cell and line indices
     character(len=*), parameter:: NameSub = 'BL_put_from_mh'
     !--------------------------------------------------------------------------
-    ! cell and line indices
     i      = Put%iCB_II(1, iPutStart)
     iLine = Put%iCB_II(4, iPutStart)
     ! Location:
@@ -543,7 +543,7 @@ contains
          Buff_I(iVar_V(PCouple_))*(cProtonMass/Buff_I(iRho))*EnergySi2Io ! K
     if(DoCoupleVar_V(Wave_))State_V(Wave1_:Wave2_) = &
          Buff_I(iVar_V(WaveFirstCouple_):iVar_V(WaveLastCouple_))        ! J/m3
- 
+
     ! interpolation weight: if the point is within the buffer the state vector
     ! is interpolated between those in the components
     Aux = 0; if(DoAdd)Aux = 1.0; Weight = 1.0; R = norm2(Xyz_D)
