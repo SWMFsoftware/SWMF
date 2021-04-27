@@ -40,15 +40,16 @@ module CON_couple_mh_sp
        PT_put_coupling_param    ,&  ! Set time and interaface bounds
        PT_adjust_lines              ! Process if needed the updated mf lines
   !^CMP END PT
-  use CON_bline, ONLY:  BL_,     &
-       RScMin, RScMax,           &  !^CMP IF SC
-       RIhMin, RIhMax,           &
-       ROhMin, ROhMax,           &  !^CMP IF OH
-       UnitBl2UnitMh,            &  ! The unit of length ratios
-       UnitMh2UnitBl, MhToBl_DD, &  ! and transformation matrix
-       IsSource4BL_C,            &
-       BL_init_foot_points,      &  ! Initialize footpoint array
-       BL_get_bounds,            &  ! Provides RScMin/Max and/or RIhMin/Max
+  use CON_bline, ONLY:  BL_     ,&  ! SP_ or PT_
+       RScMin, RScMax           ,&  !^CMP IF SC
+       RIhMin, RIhMax           ,&
+       ROhMin, ROhMax           ,&  !^CMP IF OH
+       UnitBl2UnitMh            ,&  ! The unit of length ratios
+       UnitMh2UnitBl, MhToBl_DD ,&  ! and transformation matrix
+       TimeBl, TypeCoordMh      ,&  ! local time; coord system of source
+       IsSource4BL_C            ,&  ! list of used MH models
+       BL_init_foot_points      ,&  ! Initialize footpoint array
+       BL_get_bounds            ,&  ! Provides RScMin/Max and/or RIhMin/Max
        BL_n_particle            ,&  ! Number of "points" in a given line in SP
        BL_put_from_mh           ,&  ! Put MHD info from SC or IH to SP
        BL_interface_point_coords,&  ! Check if the point is within interface
@@ -137,10 +138,11 @@ contains
     integer, intent(in) ::  MH_
     ! Transformation matrix and coefficients
     !--------------------------------------------------------------------------
+    TimeBl = tNow
     UnitBl2UnitMh = Grid_C(BL_)%UnitX/Grid_C(MH_)%UnitX
     UnitMh2UnitBl = 1/UnitBl2UnitMh
-    MhToBl_DD=transform_matrix(tNow,&
-         Grid_C(MH_)%TypeCoord, Grid_C(BL_)%TypeCoord)
+    TypeCoordMh   = Grid_C(MH_)%TypeCoord
+    MhToBl_DD  = transform_matrix(TimeBl, TypeCoordMh, Grid_C(BL_)%TypeCoord)
   end subroutine transform_matrix_and_coef
   !============================================================================
   subroutine couple_mh_sp_init
@@ -407,7 +409,7 @@ contains
          interpolate            = interpolation_amr_gc)
     call couple_comp(RouterScBl                            ,&
          nVar                   = nVarBuffer               ,&
-         fill_buffer = SC_get_for_sp_and_transform         ,&
+         fill_buffer = SC_get_for_mh                       ,&
          apply_buffer           = BL_put_from_mh)
     !
     ! The MHD data within the heliocentric distances RScMin<R<RScMax
@@ -463,24 +465,6 @@ contains
     CoordOut_D = coord_grid_d(BL_Grid, iIndex_I(1),[iIndex_I(2),1,1])
   end subroutine mapping_line_sc_to_sp
   !============================================================================
-  subroutine SC_get_for_sp_and_transform(&
-       nPartial, iGetStart, Get, w, State_V, nVar)
-    integer,            intent(in):: nPartial, iGetStart, nVar
-    type(IndexPtrType), intent(in):: Get
-    type(WeightPtrType),intent(in):: w
-    real,              intent(out):: State_V(nVar)
-    integer:: iVarBx, iVarBz, iVarMx, iVarMz
-    !--------------------------------------------------------------------------
-    ! get buffer with variables
-    call SC_get_for_mh(nPartial, iGetStart, Get, w, State_V, nVar)
-    ! indices of variables
-    iVarBx = iVar_V(BxCouple_)   ; iVarBz = iVar_V(BzCouple_)
-    iVarMx = iVar_V(RhoUxCouple_); iVarMz = iVar_V(RhoUzCouple_)
-    ! perform transformation before returning
-    State_V(iVarBx:iVarBz) = matmul(MhToBl_DD, State_V(iVarBx:iVarBz))
-    State_V(iVarMx:iVarMz) = matmul(MhToBl_DD, State_V(iVarMx:iVarMz))
-  end subroutine SC_get_for_sp_and_transform
-  !============================================================================
   subroutine SC_get_coord_for_sp_and_transform(&
        nPartial, iGetStart, Get, w, State_V, nVar)
     integer,            intent(in):: nPartial, iGetStart, nVar
@@ -527,7 +511,7 @@ contains
          interpolate                = interpolation_amr_gc)
     call couple_comp(                 RouterIhBl               ,&
          nVar                       = nVarBuffer               ,&
-         fill_buffer              = IH_get_for_sp_and_transform,&
+         fill_buffer                = IH_get_for_mh,            &
          apply_buffer               = BL_put_from_mh)
     ! By the way get coords for particles in IH from the router buffer
     if(is_proc(IH_))then
@@ -618,23 +602,6 @@ contains
     CoordOut_D = coord_grid_d(BL_Grid, iIndex_I(1), [iIndex_I(2),1,1])
   end subroutine mapping_line_ih_to_sp
   !============================================================================
-  subroutine IH_get_for_sp_and_transform(&
-       nPartial, iGetStart, Get, w, State_V, nVar)
-    integer,            intent(in):: nPartial, iGetStart, nVar
-    type(IndexPtrType), intent(in):: Get
-    type(WeightPtrType),intent(in):: w
-    real,              intent(out):: State_V(nVar)
-    integer:: iVarBx, iVarBz, iVarMx, iVarMz
-    !--------------------------------------------------------------------------
-    call IH_get_for_mh(nPartial, iGetStart, Get, w, State_V, nVar)
-    ! indices of variables
-    iVarBx = iVar_V(BxCouple_);   iVarBz = iVar_V(BzCouple_)
-    iVarMx = iVar_V(RhoUxCouple_);iVarMz = iVar_V(RhoUzCouple_)
-    ! perform transformation before returning
-    State_V(iVarBx:iVarBz) = matmul(MhToBl_DD,State_V(iVarBx:iVarBz))
-    State_V(iVarMx:iVarMz) = matmul(MhToBl_DD,State_V(iVarMx:iVarMz))
-  end subroutine IH_get_for_sp_and_transform
-  !============================================================================
   subroutine IH_get_coord_for_sp_and_transform(&
        nPartial, iGetStart, Get, w, State_V, nVar)
     integer,            intent(in):: nPartial, iGetStart, nVar
@@ -680,12 +647,12 @@ contains
          interpolate                = interpolation_amr_gc)
     call couple_comp(                 RouterOhBl               ,&
          nVar                       = nVarBuffer               ,&
-         fill_buffer              = OH_get_for_sp_and_transform,&
+         fill_buffer                = OH_get_for_mh            ,&
          apply_buffer               = BL_put_from_mh)
     ! By the way get coords for particles in OH from the router buffer
     if(is_proc(OH_))then
        nLength = nlength_buffer_source(RouterOhBl)
-       call sort_out_ih_particles
+       if(IsSource4Bl_C(IH_))call sort_out_ih_particles
        call OH_put_particles(Xyz_DI =  RouterOhBl%              &
             BufferSource_II(1:nDim, 1:nLength)                 ,&
             iIndex_II               = nint(RouterOhBl%          &
@@ -757,23 +724,6 @@ contains
     ! program in the router coud figure out where it should be put in BL
     CoordOut_D = coord_grid_d(BL_Grid, iIndex_I(1), [iIndex_I(2),1,1])
   end subroutine mapping_line_oh_to_sp
-  !============================================================================
-  subroutine OH_get_for_sp_and_transform(&
-       nPartial, iGetStart, Get, w, State_V, nVar)
-    integer,            intent(in)::nPartial, iGetStart, nVar
-    type(IndexPtrType), intent(in)::Get
-    type(WeightPtrType),intent(in)::w
-    real,              intent(out)::State_V(nVar)
-    integer:: iVarBx, iVarBz, iVarMx, iVarMz
-    !--------------------------------------------------------------------------
-    call OH_get_for_mh(nPartial, iGetStart, Get, w, State_V, nVar)
-    ! indices of variables
-    iVarBx = iVar_V(BxCouple_)   ; iVarBz = iVar_V(BzCouple_)
-    iVarMx = iVar_V(RhoUxCouple_); iVarMz = iVar_V(RhoUzCouple_)
-    ! perform transformation before returning
-    State_V(iVarBx:iVarBz) = matmul(MhToBl_DD, State_V(iVarBx:iVarBz))
-    State_V(iVarMx:iVarMz) = matmul(MhToBl_DD, State_V(iVarMx:iVarMz))
-  end subroutine OH_get_for_sp_and_transform
   !============================================================================
   subroutine OH_get_coord_for_sp_and_transform(&
        nPartial, iGetStart, Get, w, State_V, nVar)

@@ -21,7 +21,8 @@ module CON_bline
   type(LocalGridType), public :: BL_LocalGrid     ! Grid descriptor (local)
   integer, public :: BL_ =-1         ! ID of the target model (SP_, PT_)
   character(len=2):: NameCompBl = '' ! Name of the target model ('SP', 'PT'...)
-  Character(len=3):: TypeCoordSystemBl  = ''     ! Coord system of the Bl Model
+  character(len=3)         :: TypeCoordBl  = '' ! Coord system of the Bl Model
+  Character(len=3), public :: TypeCoordMh  = '' ! Coord system of the Mh Model
   logical, public :: UseBLine_C(MaxComp)=.false. ! To switch coupler for PT/SP
   ! Logical to determine, if a particular MH component is coupled to BL
   logical, public :: IsSource4BL_C(MaxComp) = .false.
@@ -48,6 +49,8 @@ module CON_bline
   public :: BL_put_line               ! points rMin < R < rMax
   public :: BL_set_line_foot_b
   public :: save_mhd
+  ! Time of the model
+  real,    public  :: TimeBl = -1.0
   ! Store IDs of the lower and upper model
   integer, public  :: Lower_=0, Upper_=-1
 
@@ -452,7 +455,7 @@ contains
          UnitX        = UnitX)
     call set_standard_grid_descriptor(BL_, Grid=BL_Grid)
     if(.not.is_proc(BL_))RETURN
-    TypeCoordSystemBl = TypeCoordSystem
+    TypeCoordBl = TypeCoordSystem
     call set_local_gd(iProc = i_proc(), Grid=BL_Grid, LocalGrid=BL_LocalGrid)
     if(present(EnergySi2IoIn))EnergySi2Io = EnergySi2IoIn
   contains
@@ -553,6 +556,9 @@ contains
     iLine = Put%iCB_II(4, iPutStart)
     ! Location:
     Xyz_D = MHData_VIB(X_:Z_,i,iLine)
+    ! perform vector transformation from the source model to the BL one.
+    State_V(Bx_:Bz_) = matmul(MhToBl_DD, State_V(Bx_:Bz_))
+    State_V(Ux_:Uz_) = matmul(MhToBl_DD, State_V(Ux_:Uz_))
     ! interpolation weight: if the point is within the buffer the state vector
     ! is interpolated between those in the components
     Aux = 0; if(DoAdd)Aux = 1.0; Weight = 1.0
@@ -999,7 +1005,7 @@ contains
     ! Write ouput files themselves
     StringHeader = &
          'MFLAMPA: data along a field line; '//&
-         'Coordindate system: '//trim(TypeCoordSystemBl)//'; '
+         'Coordindate system: '//trim(TypeCoordBl)//'; '
     do iLine = 1, nLine
        call make_file_name(Time,   &
             iLine         = iLine, &
