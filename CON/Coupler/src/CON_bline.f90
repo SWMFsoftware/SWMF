@@ -546,7 +546,7 @@ contains
     if(DoCoupleVar_V(BField_))State_V(Bx_:Bz_) =     &
          Buff_I( iVar_V(BxCouple_):iVar_V(BzCouple_))        ! Tesla
     if(DoCoupleVar_V(Momentum_))State_V(Ux_:Uz_) =   &
-         Buff_I(iVar_V(RhoUxCouple_):iVar_V(RhoUxCouple_))/Buff_I(iRho)  ! m/s
+         Buff_I(iVar_V(RhoUxCouple_):iVar_V(RhoUzCouple_))/Buff_I(iRho)  ! m/s
     if(DoCoupleVar_V(Pressure_))State_V(T_) =        &
          Buff_I(iVar_V(PCouple_))*(cProtonMass/Buff_I(iRho))*EnergySi2Io ! K
     if(DoCoupleVar_V(Wave_))State_V(Wave1_:Wave2_) = &
