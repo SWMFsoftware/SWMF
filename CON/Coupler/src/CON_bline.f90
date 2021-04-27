@@ -49,17 +49,15 @@ module CON_bline
   public :: BL_put_line               ! points rMin < R < rMax
   public :: BL_set_line_foot_b
   public :: save_mhd
-  ! Time of the model
-  real,    public  :: TimeBl = -1.0
+  
+  real,    public  :: TimeBl = -1.0   ! Time of the model! Time of the model
+  real             :: UnitXBl         ! Unit of scale (usually RSun)
   ! Store IDs of the lower and upper model
   integer, public  :: Lower_=0, Upper_=-1
-
   ! Total number of lines on given PE
   integer, public  :: nLine = -1 ! = ((iProc +1)*nLineAll)/nProc - iLineAll0
-
   ! Offset of B lines (per line)
   integer, allocatable, public :: iOffset_B(:)
-
   ! Number of variables in the state vector and the identifications
   integer, public, parameter ::  nDim = 3, nMHData = 13,      &
        LagrID_     = 0, & ! Lagrangian id           ^saved/   ^set to 0
@@ -77,7 +75,6 @@ module CON_bline
        Wave1_      =12, & !                                   |coupler
        Wave2_      =13, & ! Alfven wave turbulence            v
        R_          =14    ! Heliocentric distance
-
   ! variable names
   character(len=10), public, parameter:: NameVar_V(LagrID_:nMHData)&
         = ['LagrID    ', &
@@ -94,7 +91,6 @@ module CON_bline
        'Bz        ', &
        'Wave1     ', &
        'Wave2     ']
-
   character(len=61) :: NamePlotVar = ''
   character(len=16) :: NameMHData = ''
   character(len=*), parameter:: NameExtension='.out'
@@ -357,27 +353,20 @@ contains
     !
     ! Parameters of the grid of the bline origin points at the origin surface
     ! at R = ROrigin
-
     real, intent(in)  :: ROrigin, LonMin, LonMax, LatMin, LatMax
 
     ! line (line) number  and corresponing lon-lat indexes
     integer           :: iLat, iLon, iLine
     !
     ! Sell size on the origin surface, per line
-
     real              ::  DLon, DLat
     !--------------------------------------------------------------------------
     !
-    ! angular grid's step
-    !
-    DLon = (LonMax - LonMin)/nLon
-    !
-    ! angular grid's step
-    !
-    DLat = (LatMax - LatMin)/nLat
+    ! angular grid's steps
+    DLon = (LonMax - LonMin)/nLon;  DLat = (LatMax - LatMin)/nLat
+    nVertex_B(1:nLine) = 1   ! One origin point per line
     do iLine = 1, nLine
        call BL_iblock_to_lon_lat(iLine, iLon, iLat)
-       nVertex_B(iLine) = 1
        call rlonlat_to_xyz([ROrigin, LonMin + (iLon - 0.5)*DLon, &
             LatMin + (iLat - 0.5)*DLat], MHData_VIB(X_:Z_,1,iLine))
     end do
@@ -402,11 +391,9 @@ contains
   subroutine BL_set_grid(TypeCoordSystem, UnitX, EnergySi2IoIn)
     use CON_coupler, ONLY: set_coord_system, is_proc, &
          init_decomposition, get_root_decomposition, bcast_decomposition
-
     character(len=3), intent(in)    :: TypeCoordSystem
     real,    intent(in)             :: UnitX
     real,    optional,   intent(in) :: EnergySi2IoIn
-
     !
     ! Proc_ and Block_ number, for a given node:
     !
@@ -416,7 +403,6 @@ contains
     !
     ! They is the first index values for
     ! the following array
-
     integer, allocatable, target :: iGridGlobal_IA(:,:)
 
     character(len=*), parameter:: NameVarCouple =&
@@ -426,10 +412,7 @@ contains
     if(IsInitialized)RETURN
     IsInitialized = .true.
     ! Initialize 3D grid with NON-TREE structure
-    call init_decomposition(&
-         GridID_ = BL_,&
-         CompID_ = BL_,&
-         nDim    = nDim)
+    call init_decomposition(GridID_ = BL_, CompID_ = BL_, nDim = nDim)
     ! Construct decomposition
 
     if(is_proc0(BL_))then
@@ -448,13 +431,14 @@ contains
     ! Coordinate system is Heliographic Inertial Coordinate System (HGI)
     ! with length measured in solar radii
     call set_coord_system(&
-         GridID_      = BL_, &
+         GridID_      = BL_            , &
          TypeCoord    = TypeCoordSystem, &
-         TypeGeometry = 'cartesian', &
-         NameVar      = NameVarCouple, &
+         TypeGeometry = 'cartesian'    , &
+         NameVar      = NameVarCouple  , &
          UnitX        = UnitX)
     call set_standard_grid_descriptor(BL_, Grid=BL_Grid)
     if(.not.is_proc(BL_))RETURN
+    UnitXBl = UnitX
     TypeCoordBl = TypeCoordSystem
     call set_local_gd(iProc = i_proc(), Grid=BL_Grid, LocalGrid=BL_LocalGrid)
     if(present(EnergySi2IoIn))EnergySi2Io = EnergySi2IoIn
@@ -522,6 +506,7 @@ contains
   end function BL_n_particle
   !============================================================================
   subroutine BL_put_from_mh(nPartial,iPutStart,Put,W,DoAdd,Buff_I,nVar)
+    use CON_axes,    ONLY: transform_velocity
     use CON_coupler, ONLY: &
          iVar_V, DoCoupleVar_V, &
          Density_, RhoCouple_, Pressure_, PCouple_, &
@@ -540,29 +525,28 @@ contains
 
     character(len=*), parameter:: NameSub = 'BL_put_from_mh'
     !--------------------------------------------------------------------------
-    iRho  = iVar_V(RhoCouple_)  ! Reusable
-    State_V = 0.0 ; State_V(Rho_) = Buff_I(iRho)/cProtonMass ! a. m. u. per m3
-    ! Copy from buffer in a proper order
-    if(DoCoupleVar_V(BField_))State_V(Bx_:Bz_) =     &
-         Buff_I( iVar_V(BxCouple_):iVar_V(BzCouple_))        ! Tesla
-    if(DoCoupleVar_V(Momentum_))State_V(Ux_:Uz_) =   &
-         Buff_I(iVar_V(RhoUxCouple_):iVar_V(RhoUzCouple_))/Buff_I(iRho)  ! m/s
-    if(DoCoupleVar_V(Pressure_))State_V(T_) =        &
-         Buff_I(iVar_V(PCouple_))*(cProtonMass/Buff_I(iRho))*EnergySi2Io ! K
-    if(DoCoupleVar_V(Wave_))State_V(Wave1_:Wave2_) = &
-         Buff_I(iVar_V(WaveFirstCouple_):iVar_V(WaveLastCouple_))        ! J/m3
     ! cell and line indices
     i      = Put%iCB_II(1, iPutStart)
     iLine = Put%iCB_II(4, iPutStart)
     ! Location:
     Xyz_D = MHData_VIB(X_:Z_,i,iLine)
-    ! perform vector transformation from the source model to the BL one.
-    State_V(Bx_:Bz_) = matmul(MhToBl_DD, State_V(Bx_:Bz_))
-    State_V(Ux_:Uz_) = matmul(MhToBl_DD, State_V(Ux_:Uz_))
+    iRho  = iVar_V(RhoCouple_)  ! Reusable
+    ! Copy from buffer in a proper order
+    State_V = 0.0 ; State_V(Rho_) = Buff_I(iRho)/cProtonMass ! a. m. u. per m3
+    ! perform vector transformation from the source model to the BL one
+    if(DoCoupleVar_V(BField_))State_V(Bx_:Bz_) =     &
+          matmul(MhToBl_DD, Buff_I( iVar_V(BxCouple_):iVar_V(BzCouple_)))! T
+    if(DoCoupleVar_V(Momentum_))State_V(Ux_:Uz_) = transform_velocity(TimeBl,&
+         Buff_I(iVar_V(RhoUxCouple_):iVar_V(RhoUzCouple_))/Buff_I(iRho),&! m/s
+         Xyz_D*UnitXBl, TypeCoordMh, TypeCoordBl)
+    if(DoCoupleVar_V(Pressure_))State_V(T_) =        &
+         Buff_I(iVar_V(PCouple_))*(cProtonMass/Buff_I(iRho))*EnergySi2Io ! K
+    if(DoCoupleVar_V(Wave_))State_V(Wave1_:Wave2_) = &
+         Buff_I(iVar_V(WaveFirstCouple_):iVar_V(WaveLastCouple_))        ! J/m3
+ 
     ! interpolation weight: if the point is within the buffer the state vector
     ! is interpolated between those in the components
-    Aux = 0; if(DoAdd)Aux = 1.0; Weight = 1.0
-    R = norm2(Xyz_D)
+    Aux = 0; if(DoAdd)Aux = 1.0; Weight = 1.0; R = norm2(Xyz_D)
     if(R >= rInterfaceMin .and. R < rBufferLo)then
        Aux = 1.0
        Weight = Weight * (0.50 + 0.50*tanh(2*(2*R - &
