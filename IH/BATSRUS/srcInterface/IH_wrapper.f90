@@ -41,6 +41,10 @@ module IH_wrapper
   public:: IH_save_global_buffer
   public:: IH_match_ibc
 
+  ! Coupling with OH
+  real, public :: Oh2Ih_DD(3,3)
+  real, public :: TimeOhIhCoupling
+
   ! Point coupling
   public:: IH_get_grid_info
   public:: IH_find_points
@@ -989,9 +993,9 @@ contains
   end subroutine IH_get_for_global_buffer
   !============================================================================
 
-  subroutine IH_get_for_mh(nPartial,iGetStart,Get,W,State_V,nVar)
+  subroutine IH_get_for_mh(nPartial, iGetStart, Get, W, Buff_V, nVarIn)
 
-    use IH_ModAdvance, ONLY: State_VGB, UseElectronPressure
+    use IH_ModAdvance, ONLY: State_VGB, UseElectronPressure, nVar
     use IH_ModB0,      ONLY: B0_DGB
     use IH_ModPhysics, ONLY: No2Si_V, UnitRho_, UnitP_, UnitRhoU_, UnitB_
     use IH_ModPhysics, ONLY: UnitEnergyDens_
@@ -1008,90 +1012,24 @@ contains
          CollisionlessHeatFlux_, ChargeStateFirstCouple_, &
          ChargeStateLastCouple_, ChargeState_
 
-    integer,intent(in)              ::nPartial,iGetStart,nVar
-    type(IndexPtrType),intent(in)   ::Get
-    type(WeightPtrType),intent(in)  ::W
-    real,dimension(nVar),intent(out)::State_V
+    integer,            intent(in)  :: nPartial, iGetStart, nVarIn
+    type(IndexPtrType), intent(in)  :: Get
+    type(WeightPtrType),intent(in)  :: W
+    real,               intent(out) :: Buff_V(nVarIn)
 
     integer   :: iGet, i, j, k, iBlock
-    real      :: Weight
-    integer   :: &
-         iRhoCouple,              &
-         iRhoUxCouple,            &
-         iRhoUzCouple,            &
-         iPCouple,                &
-         iPeCouple,               &
-         iPparCouple,             &
-         iBxCouple,               &
-         iBzCouple,               &
-         iWaveFirstCouple,        &
-         iWaveLastCouple,         &
-         iChargeStateFirstCouple, &
-         iChargeStateLastCouple,  &
-         iEhotCouple
+    real      :: Weight, State_V(nVar)
 
-    ! 'Safety' parameter, to keep the coupler toolkit unchanged
-    ! Useless, to my mind.
     character(len=*), parameter:: NameSub = 'IH_get_for_mh'
     !--------------------------------------------------------------------------
-    ! get variable indices in buffer
-    iRhoCouple       = iVar_V(RhoCouple_)
-    iRhoUxCouple     = iVar_V(RhoUxCouple_)
-    iRhoUzCouple     = iVar_V(RhoUzCouple_)
-    iPCouple         = iVar_V(PCouple_)
-    iPeCouple        = iVar_V(PeCouple_)
-    iPparCouple      = iVar_V(PparCouple_)
-    iBxCouple        = iVar_V(BxCouple_)
-    iBzCouple        = iVar_V(BzCouple_)
-    iWaveFirstCouple = iVar_V(WaveFirstCouple_)
-    iWaveLastCouple  = iVar_V(WaveLastCouple_)
-    iChargeStateFirstCouple = iVar_V(ChargeStateFirstCouple_)
-    iChargeStateLastCouple  = iVar_V(ChargeStateLastCouple_)
-    iEhotCouple      = iVar_V(EhotCouple_)
-
     i      = Get%iCB_II(1,iGetStart)
     j      = Get%iCB_II(2,iGetStart)
     k      = Get%iCB_II(3,iGetStart)
     iBlock = Get%iCB_II(4,iGetStart)
     Weight = W%Weight_I(iGetStart)
-
-    State_V(iRhoCouple)= State_VGB(rho_,i,j,k,iBlock)*Weight
-    if(DoCoupleVar_V(Momentum_))State_V(iRhoUxCouple:iRhoUzCouple) = &
-         State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock)*Weight
-
-    if(DoCoupleVar_V(Bfield_)) then
-       if(UseB0)then
-          State_V(iBxCouple:iBzCouple) = &
-               (State_VGB(Bx_:Bz_,i,j,k,iBlock)+ B0_DGB(:,i,j,k,iBlock))*Weight
-       else
-          State_V(iBxCouple:iBzCouple) = &
-               State_VGB(Bx_:Bz_,i,j,k,iBlock)*Weight
-       end if
-    end if
-
-    if(DoCoupleVar_V(Wave_)) &
-         State_V(iWaveFirstCouple:iWaveLastCouple) = &
-         State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)*Weight
-
-    if(DoCoupleVar_V(ChargeState_)) &
-         State_V(iChargeStateFirstCouple:iChargeStateLastCouple) = &
-         State_VGB(ChargeStateFirst_:ChargeStateLast_,i,j,k,iBlock)*Weight
-
-    State_V(iPCouple)  = State_VGB(p_,i,j,k,iBlock) *Weight
-
-    if(DoCoupleVar_V(ElectronPressure_))then
-       State_V(iPeCouple) = &
-            State_VGB(Pe_,i,j,k,iBlock)*Weight
-    else if(UseElectronPressure)then
-       State_V(iPCouple) = &
-            State_V(iPCouple) + State_VGB(Pe_,i,j,k,iBlock)*Weight
-    end if
-
-    if(DoCoupleVar_V(AnisoPressure_)) State_V(iPparCouple) = &
-         State_VGB(Ppar_,i,j,k,iBlock)*Weight
-
-    if(DoCoupleVar_V(CollisionlessHeatFlux_)) State_V(iEhotCouple) = &
-         State_VGB(Ehot_,i,j,k,iBlock)*Weight
+    State_V = State_VGB(:,i,j,k,iBlock)*Weight
+    if(UseB0)State_V(Bx_:Bz_) = State_V(Bx_:Bz_) + &
+         B0_DGB(:,i,j,k,iBlock)*Weight
 
     do iGet=iGetStart+1,iGetStart+nPartial-1
        i      = Get%iCB_II(1,iGet)
@@ -1099,89 +1037,36 @@ contains
        k      = Get%iCB_II(3,iGet)
        iBlock = Get%iCB_II(4,iGet)
        Weight = W%Weight_I(iGet)
-
-       State_V(iRhoCouple) = &
-            State_V(iRhoCouple) + &
-            State_VGB(rho_,i,j,k,iBlock)*Weight
-        if(DoCoupleVar_V(Momentum_))State_V(iRhoUxCouple:iRhoUzCouple) = &
-            State_V(iRhoUxCouple:iRhoUzCouple) + &
-            State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock) *Weight
-       if(DoCoupleVar_V(Bfield_)) then
-          if(UseB0)then
-             State_V(iBxCouple:iBzCouple) = &
-                  State_V(iBxCouple:iBzCouple) + &
-                  (State_VGB(Bx_:Bz_,i,j,k,iBlock) + &
-                  B0_DGB(:,i,j,k,iBlock))*Weight
-          else
-             State_V(iBxCouple:iBzCouple) = &
-                  State_V(iBxCouple:iBzCouple) + &
-                  State_VGB(Bx_:Bz_,i,j,k,iBlock)*Weight
-          end if
-       end if
-
-       if(DoCoupleVar_V(Wave_)) &
-            State_V(iWaveFirstCouple:iWaveLastCouple) = &
-            State_V(iWaveFirstCouple:iWaveLastCouple) + &
-            State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)*Weight
-
-       if(DoCoupleVar_V(ChargeState_)) &
-            State_V(iChargeStateFirstCouple:iChargeStateLastCouple) = &
-            State_V(iChargeStateFirstCouple:iChargeStateLastCouple) + &
-            State_VGB(ChargeStateFirst_:ChargeStateLast_,i,j,k,iBlock)*Weight
-
-       if(DoCoupleVar_V(AnisoPressure_)) State_V(iPparCouple) = &
-            State_V(iPparCouple) + &
-            State_VGB(Ppar_,i,j,k,iBlock)*Weight
-
-       if(DoCoupleVar_V(CollisionlessHeatFlux_)) State_V(iEhotCouple) = &
-            State_V(iEhotCouple) + &
-            State_VGB(Ehot_,i,j,k,iBlock)*Weight
-
-       if(DoCoupleVar_V(ElectronPressure_))then
-          State_V(iPeCouple) = State_V(iPeCouple) + &
-               State_VGB(Pe_,i,j,k,iBlock)*Weight
-          State_V(iPCouple) = State_V(iPCouple) + &
-               State_VGB(p_,i,j,k,iBlock) *Weight
-
-       else if(UseElectronPressure)then
-          State_V(iPCouple) = State_V(iPCouple) &
-               + (State_VGB(p_,i,j,k,iBlock) + &
-               State_VGB(Pe_,i,j,k,iBlock))*Weight
-       else
-          State_V(iPCouple) = State_V(iPCouple) + &
-               State_VGB(p_,i,j,k,iBlock) *Weight
-       end if
+       State_V = State_V + State_VGB(:,i,j,k,iBlock)*Weight
+       if(UseB0)State_V(Bx_:Bz_) = State_V(Bx_:Bz_) + &
+            B0_DGB(:,i,j,k,iBlock)*Weight
     end do
-
-    ! Convert to SI units
-    State_V(iRhoCouple) = &
-         State_V(iRhoCouple) * No2Si_V(UnitRho_)
-    if(DoCoupleVar_V(Momentum_))State_V(iRhoUxCouple:iRhoUzCouple)= &
-         State_V(iRhoUxCouple:iRhoUzCouple) *No2Si_V(UnitRhoU_)
-    State_V(iPCouple) = State_V(iPCouple) * No2Si_V(UnitP_)
-
-    if(DoCoupleVar_V(Bfield_)) State_V(iBxCouple:iBzCouple) = &
-         State_V(iBxCouple:iBzCouple)*No2Si_V(UnitB_)
-
-    if(DoCoupleVar_V(Wave_)) &
-         State_V(iWaveFirstCouple:iWaveLastCouple) = &
-         State_V(iWaveFirstCouple:iWaveLastCouple) &
-         * No2Si_V(UnitEnergyDens_)
-
-    if(DoCoupleVar_V(ChargeState_)) &
-         State_V(iChargeStateFirstCouple:iChargeStateLastCouple) = &
-         State_V(iChargeStateFirstCouple:iChargeStateLastCouple) &
-         * No2Si_V(UnitRho_)
-
-    if(DoCoupleVar_V(ElectronPressure_)) State_V(iPeCouple) = &
-         State_V(iPeCouple)*No2Si_V(UnitP_)
-
-    if(DoCoupleVar_V(AnisoPressure_))State_V(iPparCouple) = &
-         State_V(iPparCouple)*No2Si_V(UnitP_)
-
-    if(DoCoupleVar_V(CollisionlessHeatFlux_))State_V(iEhotCouple) = &
-         State_V(iEhotCouple)*No2Si_V(UnitEnergyDens_)
-
+    Buff_V = 0.0
+    ! Put variables into a buffer, convert to SI units
+    Buff_V(iVar_V(RhoCouple_)) = State_V(Rho_)*No2Si_V(UnitRho_)
+    if(DoCoupleVar_V(Momentum_)) Buff_V(iVar_V(RhoUxCouple_):                &
+         iVar_V(RhoUzCouple_)) = State_V(rhoUx_:rhoUz_)*No2Si_V(UnitRhoU_)
+    if(DoCoupleVar_V(Bfield_)) Buff_V(iVar_V(BxCouple_):iVar_V(BzCouple_)) = &
+         State_V(Bx_:Bz_)*No2Si_V(UnitB_)
+    if(DoCoupleVar_V(Wave_)) Buff_V(iVar_V(WaveFirstCouple_):                &
+         iVar_V(WaveLastCouple_)) = State_V(WaveFirst_:WaveLast_)*           &
+         No2Si_V(UnitEnergyDens_)
+    if(DoCoupleVar_V(ChargeState_)) Buff_V(iVar_V(ChargeStateFirstCouple_):  &
+         iVar_V(ChargeStateLastCouple_)) = &
+         State_V(ChargeStateFirst_:ChargeStateLast_)*No2Si_V(UnitRho_)
+    if(DoCoupleVar_V(AnisoPressure_)) Buff_V(iVar_V(PparCouple_)) =          &
+         State_V(Ppar_)*No2Si_V(UnitP_)
+    if(DoCoupleVar_V(CollisionlessHeatFlux_)) Buff_V(iVar_V(EhotCouple_)) =  &
+         State_V(Ehot_)*No2Si_V(UnitEnergyDens_)
+    if(DoCoupleVar_V(ElectronPressure_))then
+       Buff_V(iVar_V(PeCouple_)) = State_V(Pe_)*No2Si_V(UnitP_)
+       Buff_V(iVar_V(PCouple_ )) = State_V(P_ )*No2Si_V(UnitP_)
+    elseif(UseElectronPressure)then
+       Buff_V(iVar_V(PCouple_ )) = &
+            (State_V(Pe_) + State_V(P_))*No2Si_V(UnitP_)
+    else
+       Buff_V(iVar_V(PCouple_ )) = State_V(P_)*No2Si_V(UnitP_)
+    end if
   end subroutine IH_get_for_mh
   !============================================================================
 
