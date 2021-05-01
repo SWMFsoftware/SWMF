@@ -112,10 +112,6 @@ T			UseBody
 28.0			BodyNDim  (/cc)
 25000.0			BodyTDim  (K)
 
-#TIMESTEPPING
-1			nStage
-0.80			CflExpl
-
 #OUTERBOUNDARY
 outflow			TypeBc1
 vary			TypeBc2
@@ -143,6 +139,15 @@ T			DoReadAgain
 #SCHEME
 1			nOrder
 Sokolov			TypeFlux
+
+#NONCONSERVATIVE
+T			UseNonConservative
+
+#CONSERVATIVECRITERIA
+1			nConservCrit
+parabola		TypeConservCrit
+ 5.0			xParabolaConserv
+15.0			yParabolaConserv
 
 #SAVELOGNAME
 F			UseLogNameStep
@@ -355,15 +360,6 @@ F			DoCoupleOnTime
 0.5			DtUpdateB0
 
 #BEGIN_COMP GM ---------------------------------------------------------------
-
-#NONCONSERVATIVE
-T			UseNonConservative
-
-#CONSERVATIVECRITERIA
-1			nConservCrit
-parabola		TypeConservCrit
- 5.0			xParabolaConserv
-15.0			yParabolaConserv
 
 ! Setting 1
 #IMCOUPLING

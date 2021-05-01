@@ -163,6 +163,14 @@ GM/Param/TESTSUITE/Inputfiles/IMF_NSturning_1nT.dat		NameSolarWindFile
 1			nOrder
 Rusanov			TypeFlux
 
+#NONCONSERVATIVE
+T			UseNonConservative
+
+#CONSERVATIVECRITERIA
+1			nConservCrit
+r			TypeConservCrit
+6.			rConserv
+
 #SAVEPLOT
 2			nPlotFile
 y=0 VAR idl		StringPlot

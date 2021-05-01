@@ -107,10 +107,6 @@ T			UseBody
 #MULTIFLUIDIM
 T			DoMultiFluidIMCoupling
 
-#TIMESTEPPING
-1			nStage
-0.8			CflExpl
-
 #OUTERBOUNDARY
 outflow			TypeBc1
 vary			TypeBc2
@@ -140,6 +136,15 @@ T			DoReadAgain
 #SCHEME
 1			nOrder
 Sokolov			TypeFlux
+
+#NONCONSERVATIVE
+T			UseNonConservative
+
+#CONSERVATIVECRITERIA
+1			nConservCrit
+parabola		TypeConservCrit
+ 5.0			xParabolaConserv
+15.0			yParabolaConserv
 
 #SAVELOGNAME
 F			UseLogNameStep
@@ -334,15 +339,6 @@ F			DoCoupleOnTime
 T			DoCheckTimeStep
 2			DnCheckTimeStep
 1e-6			TimeStepMin
-
-#NONCONSERVATIVE
-T			UseNonConservative
-
-#CONSERVATIVECRITERIA
-1			nConservCrit
-parabola		TypeConservCrit
- 5.0			xParabolaConserv
-15.0			yParabolaConserv
 
 ! Setting 1
 #IMCOUPLING

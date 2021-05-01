@@ -148,6 +148,15 @@ T			DoReadAgain
 1			nOrder
 Rusanov			TypeFlux
 
+#NONCONSERVATIVE
+T			UseNonConservative
+
+#CONSERVATIVECRITERIA
+1			nConservCrit
+parabola		TypeConservCrit
+ 5.0			xParabolaConserv
+15.0			yParabolaConserv
+
 #SAVELOGNAME
 F			UseLogNameStep
 T			UseLogNameDateTime
@@ -341,15 +350,6 @@ F			DoCoupleOnTime
 T			DoCheckTimeStep
 2			DnCheckTimeStep
 1e-6			TimeStepMin
-
-#NONCONSERVATIVE
-T			UseNonConservative
-
-#CONSERVATIVECRITERIA
-1			nConservCrit
-parabola		TypeConservCrit
- 5.0			xParabolaConserv
-15.0			yParabolaConserv
 
 ! Setting 1
 #IMCOUPLING
