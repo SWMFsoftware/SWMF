@@ -515,7 +515,7 @@ test_swpc_restart:
 	cd ${TESTDIR}; ./INTERPOLATE.exe < INTERPOLATE.in
 
 test_swpc_check:
-	-@(${DIFFNUM} -b -r=1e-5 -a=1e-8 \
+	-@(${DIFFNUM} -b -r=1e-5 -a=2e-8 \
 		${TESTDIR}/GM/IO2/log_e20140410-000200.log \
 		Param/SWPC/TestOutput/log_e20140410-000200.log \
 		> test_swpc_rcm_gm.diff)
