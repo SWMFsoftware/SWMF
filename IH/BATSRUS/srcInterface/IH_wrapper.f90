@@ -395,7 +395,13 @@ contains
     !--------------------------------------------------------------------------
     DoTest=.false.;DoTestMe=.false.
     ! Here we should set the IH (MH) grid descriptor
-    if(done_dd_init(IH_))RETURN
+    if(done_dd_init(IH_))then
+       ! The coord system may be reset
+       if(is_proc0(IH_)) Grid_C(IH_)%TypeCoord = TypeCoordSystem
+       call MPI_bcast(Grid_C(IH_)%TypeCoord, 3, MPI_CHARACTER, &
+            i_proc0(IH_), i_comm(), iError)
+       RETURN
+    end if
     call init_decomposition(&
          GridID_=IH_,&
          CompID_=IH_,&
