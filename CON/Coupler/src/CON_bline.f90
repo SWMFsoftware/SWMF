@@ -32,8 +32,8 @@ module CON_bline
   real,    public :: RIhMin = 1000.0, RIhMax = 0.0
   ! Boundaries of coupled domains in OH
   real,    public :: ROhMin = 1000.0, ROhMax = 0.0
-  ! The unit of length ratios and transformation matrrix
-  real,    public :: MhToBl_DD(3,3), UnitBl2UnitMh, UnitMh2UnitBl
+  ! Transformation matrrix
+  real,    public :: MhToBl_DD(3,3)
   !===== The rest is available on the BL_ processors =========================
   public :: BL_read_param
   public :: BL_set_grid
@@ -532,6 +532,7 @@ contains
     Xyz_D = MHData_VIB(X_:Z_,i,iLine)
     iRho  = iVar_V(RhoCouple_)  ! Reusable
     ! Copy from buffer in a proper order
+    ! Convert state variable in buffer to normalized units.
     State_V = 0.0 ; State_V(Rho_) = Buff_I(iRho)/cProtonMass ! a. m. u. per m3
     ! perform vector transformation from the source model to the BL one
     if(DoCoupleVar_V(BField_))State_V(Bx_:Bz_) =     &

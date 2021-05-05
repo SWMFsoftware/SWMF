@@ -44,8 +44,7 @@ module CON_couple_mh_sp
        RScMin, RScMax           ,&  !^CMP IF SC
        RIhMin, RIhMax           ,&
        ROhMin, ROhMax           ,&  !^CMP IF OH
-       UnitBl2UnitMh            ,&  ! The unit of length ratios
-       UnitMh2UnitBl, MhToBl_DD ,&  ! and transformation matrix
+       MhToBl_DD                ,&  ! transformation matrix
        TimeBl, TypeCoordMh      ,&  ! local time; coord system of source
        IsSource4BL_C            ,&  ! list of used MH models
        BL_init_foot_points      ,&  ! Initialize footpoint array
@@ -78,6 +77,8 @@ module CON_couple_mh_sp
   ! Three-dimensional grids in SC, IH and OH.
   ! three-component coordinate vector
   integer, parameter :: nDim = 3
+  ! Rescaling coefficients
+  real,    public    :: UnitBl2UnitMh, UnitMh2UnitBl
 
   ! We send: (1) the global index of the magnetic field line
   ! and (2) the particle number along the magnetic field line
