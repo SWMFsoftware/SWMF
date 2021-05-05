@@ -614,7 +614,7 @@ test_swpc_multiion_check:
 		${TESTDIR}/IE/ionosphere/IE_t140410_000200.log \
 		Param/SWPC/TestOutputMultiIon/IE_t140410_000200.log \
 		> test_swpc_multiion_ie.diff)
-	-@(${DIFFNUM} -b -r=1e-4 -a=5e-5 \
+	-@(${DIFFNUM} -b -r=2e-4 -a=5e-5 \
 		${TESTDIR}/IE/ionosphere/it140410_000300_000.idl \
 		Param/SWPC/TestOutputMultiIon/it140410_000300_000.idl.gz \
 		>> test_swpc_multiion_ie.diff)
