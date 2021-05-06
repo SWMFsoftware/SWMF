@@ -646,9 +646,6 @@ contains
     use IH_domain_decomposition, ONLY: is_proc
     use IH_ModBuffer,            ONLY: BuffR_, nRBuff, nLonBuff, nLatBuff,&
          BufferMin_D, BufferMax_D
-    ! spherical buffer coupling
-    use IH_ModBuffer,      ONLY: TypeCoordSource
-    use CON_coupler,       ONLY: iCompSourceCouple,  Grid_C
 
     integer, intent(out)    :: nR, nLon, nLat
     real, intent(out)       :: BufferMinMax_DI(3,2)
@@ -672,7 +669,6 @@ contains
        write(*,*) 'BufferMin_D: ',BufferMin_D
        write(*,*) 'BufferMax_D: ',BufferMax_D
     end if
-    TypeCoordSource = Grid_C(iCompSourceCouple) % TypeCoord
   end subroutine IH_set_buffer_grid_get_info
   !============================================================================
   subroutine IH_save_global_buffer(nVarCouple, nR, nLon, nLat, BufferIn_VG)
@@ -697,12 +693,15 @@ contains
     use IH_ModMultiFluid, ONLY: IsFullyCoupledFluid
     use IH_ModPhysics,    ONLY: No2Si_V, Si2No_V, UnitRho_, UnitB_, UnitX_
     use IH_ModPhysics,    ONLY: UnitRhoU_, UnitEnergyDens_, UnitP_
+    use IH_ModBuffer,      ONLY: TypeCoordSource
+    use CON_coupler,       ONLY: iCompSourceCouple,  Grid_C
     integer,intent(in) :: nVarCouple, nR, nLon, nLat
     real,intent(in)    :: BufferIn_VG(nVarCouple,nR,nLon,nLat)
 
     ! Convert from SI units to normalized units
     character(len=*), parameter:: NameSub = 'IH_save_global_buffer'
     !--------------------------------------------------------------------------
+    TypeCoordSource = Grid_C(iCompSourceCouple) % TypeCoord
     BufferState_VG(Rho_,:,1:nLon,1:nLat) = &
          BufferIn_VG(iVar_V(RhoCouple_),:,1:nLon,1:nLat)&
          *Si2No_V(UnitRho_)
