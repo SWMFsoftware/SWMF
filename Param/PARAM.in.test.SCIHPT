@@ -219,10 +219,10 @@ T			UseParticles
 -1			SpaceStepMin
 -1			SpaceStepMax
 import			InitMode
-radius			OrderMode
-T			UseCorrection
-1.25
--1
+T                       UseBRAlignment
+0.7                     ConBRAngleMax
+F                       UseBUAlignment
+
 
 #SAVEINITIAL
 T			DoSaveInitial
@@ -330,8 +330,9 @@ T			UseParticles
 -1			SpaceStepMin
 -1			SpaceStepMax
 import			InitMode
-radius			OrderMode
-F			UseCorrection
+F                       UseBRAlignment
+F                       UseBUAlignment
+
 
 #SAVEPLOT
 1			nPlotFile
