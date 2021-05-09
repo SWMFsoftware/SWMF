@@ -273,11 +273,9 @@ T			UseParticles
 -1			SpaceStepMin
 -1			SpaceStepMax
 import			InitMode
-radius			OrderMode
-T			UseCorrection
-1.25
--1
-
+T                       UseBRAlignment
+0.7                     ConBRAngleMax
+F                       UseBUAlignment
 
 #END_COMP SC -----------------------------------------------------------------
 
@@ -452,8 +450,8 @@ T			UseParticles
 -1			SpaceStepMin
 -1			SpaceStepMax
 import			InitMode
-radius			OrderMode
-F			UseCorrection
+F                       UseBRAlignment
+F                       UseBUAlignment
 
 #END_COMP IH -----------------------------------------------------------------
 
@@ -615,8 +613,8 @@ T			UseParticles
 -1			SpaceStepMin
 -1			SpaceStepMax
 import			InitMode
-radius			OrderMode
-F			UseCorrection
+F                       UseBRAlignment
+F                       UseBUAlignment
 
 #END_COMP OH -----------------------------------------------------------------
 
