@@ -6,7 +6,7 @@ IH  0 -1  1		CompMap
 SP  0 -1  2		CompMap
 
 #DESCRIPTION
-Param/PARAM.in.test.SCIH_threadbc: create steady state solar corona with Threaded-Field-Lines		StringDescription
+Param/PARAM.in.test.SCIH_long: Threaded-Field-Lines		StringDescription
 
 #TIMEACCURATE
 F			IsTimeAccurate

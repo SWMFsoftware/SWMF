@@ -7,7 +7,7 @@ OH  0 -1  1		CompMap
 SP  0 -1  2		CompMap
 
 #DESCRIPTION
-Param/PARAM.in.test.SCIHSP: Input file for testing SC-IH-SP model for SEPs, includes Threaded-Field-Line		StringDescription
+Param/PARAM.in.test.restart.SCIHOHSP: restart SC-IH-OH-SP		StringDescription
 
 #TIMEACCURATE
 T			IsTimeAccurate
