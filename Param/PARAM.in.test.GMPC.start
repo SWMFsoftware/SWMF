@@ -31,6 +31,9 @@ F			DoCoupleOnTime
 
 #BEGIN_COMP GM ---------------------------------------------------------------
 
+#IMPLICITENERGY
+F			UseImplicitEnergy
+
 #GRIDGEOMETRY
 rotatedcartesian		TypeGeometry
 
