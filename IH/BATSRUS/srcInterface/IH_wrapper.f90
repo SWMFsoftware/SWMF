@@ -29,21 +29,22 @@ module IH_wrapper
   public:: IH_synchronize_refinement
   public:: IH_get_for_mh
   public:: IH_put_from_mh
+  public:: IH_is_coupled_block
+  public:: IH_interface_point_coords
   public:: IH_n_particle
+  Character(len=3),    public :: TypeCoordSource    ! Coords of coupled model
+  real,                public :: SourceToIH_DD(3,3) ! Transformation matrrix
+  real,                public :: TimeMhToIH = -1.0  ! Time of coupling
 
-  type(GridType), public :: IH_Grid     ! Grid (MHD data)
-  type(GridType), public :: IH_LineGrid ! Global GD for lines
-  type(LocalGridType), public :: IH_LocalGrid     ! Local GD (MHD data)
-  type(LocalGridType), public :: IH_LocalLineGrid ! Local GD for lines)
+  type(GridType),      public :: IH_Grid            ! Grid (MHD data)
+  type(GridType),      public :: IH_LineGrid        ! Global GD for lines
+  type(LocalGridType), public :: IH_LocalGrid       ! Local GD (MHD data)
+  type(LocalGridType), public :: IH_LocalLineGrid   ! Local GD for lines)
 
   ! Coupling with SC
   public:: IH_set_buffer_grid_get_info
   public:: IH_save_global_buffer
   public:: IH_match_ibc
-
-  ! Coupling with OH
-  real, public :: Oh2Ih_DD(3,3)
-  real, public :: TimeOhIhCoupling
 
   ! Point coupling
   public:: IH_get_grid_info
@@ -402,6 +403,7 @@ contains
             i_proc0(IH_), i_comm(), iError)
        RETURN
     end if
+
     call init_decomposition(&
          GridID_=IH_,&
          CompID_=IH_,&
@@ -467,8 +469,7 @@ contains
          GridID_=IH_,&
          LocalDomain=MH_Domain)
     if(is_proc0(IH_))IH_nG = nG
-    call MPI_bcast(IH_nG, 1, MPI_INTEGER,&
-         i_proc0(IH_), i_comm(), iError)
+    call MPI_bcast(IH_nG, 1, MPI_INTEGER, i_proc0(IH_), i_comm(), iError)
     call set_standard_grid_descriptor(IH_,  & ! CompID_
          IH_nG,                             & ! Gcn
          CellCentered_,                     & ! Grid type
@@ -476,29 +477,26 @@ contains
     if(is_proc(IH_))call set_local_gd(iProc = i_proc(),   &
            Grid = IH_Grid, LocalGrid = IH_LocalGrid)
     if(is_proc0(IH_))UseParticleLine = UseParticles
-    call MPI_bcast(UseParticleLine,1,MPI_LOGICAL,&
-         i_proc0(IH_),i_comm(),iError)
+    call MPI_bcast(UseParticleLine, 1, MPI_LOGICAL,&
+         i_proc0(IH_), i_comm(), iError)
     if(UseParticleLine)then
-       call init_decomposition_dd(&
-       MH_LineDecomposition, IH_, nDim=1)
+       call init_decomposition_dd(MH_LineDecomposition, IH_, nDim=1)
        if(is_proc0(IH_))then
           nParticle = Particle_I(KindReg_)%nParticleMax
-          call get_root_decomposition_dd(&
-               MH_LineDecomposition, &
-               [n_proc(IH_)],      &
-               [0.50],              &
-               ! factors are converted separately to prevent
-               ! integer overflow
+          call get_root_decomposition_dd(MH_LineDecomposition, &
+               [n_proc(IH_)],        &  ! One "block" per processor
+               [0.50],               &  ! "Coordinate" is a global point number
+               ! factors are converted separately to prevent integer overflow
                [real(n_proc(IH_))*real(nParticle) + 0.50], &
-               [nParticle])
+               [nParticle])             ! nParticle cells per "block" (proc)
        end if
        call bcast_decomposition_dd(MH_LineDecomposition)
-       if(DoTest.and.is_proc0(IH_))call show_domain_decomp(&
+       if(DoTest.and.is_proc0(IH_))call show_domain_decomp(    &
             MH_LineDecomposition)
        ! Set local GD on the Particle_I structure
        call set_standard_grid_descriptor(MH_LineDecomposition, &
             Grid=IH_LineGrid)
-       if(is_proc(IH_))call set_local_gd(iProc = i_proc(),   &
+       if(is_proc(IH_))call set_local_gd(iProc = i_proc(),     &
            Grid = IH_LineGrid, LocalGrid = IH_LocalLineGrid)
     end if
   end subroutine IH_set_grid
@@ -646,6 +644,9 @@ contains
     use IH_domain_decomposition, ONLY: is_proc
     use IH_ModBuffer,            ONLY: BuffR_, nRBuff, nLonBuff, nLatBuff,&
          BufferMin_D, BufferMax_D
+    ! spherical buffer coupling
+    use IH_ModBuffer,      ONLY: TypeCoordSource
+    use CON_coupler,       ONLY: iCompSourceCouple,  Grid_C
 
     integer, intent(out)    :: nR, nLon, nLat
     real, intent(out)       :: BufferMinMax_DI(3,2)
@@ -669,6 +670,7 @@ contains
        write(*,*) 'BufferMin_D: ',BufferMin_D
        write(*,*) 'BufferMax_D: ',BufferMax_D
     end if
+    TypeCoordSource = Grid_C(iCompSourceCouple) % TypeCoord
   end subroutine IH_set_buffer_grid_get_info
   !============================================================================
   subroutine IH_save_global_buffer(nVarCouple, nR, nLon, nLat, BufferIn_VG)
@@ -693,15 +695,12 @@ contains
     use IH_ModMultiFluid, ONLY: IsFullyCoupledFluid
     use IH_ModPhysics,    ONLY: No2Si_V, Si2No_V, UnitRho_, UnitB_, UnitX_
     use IH_ModPhysics,    ONLY: UnitRhoU_, UnitEnergyDens_, UnitP_
-    use IH_ModBuffer,      ONLY: TypeCoordSource
-    use CON_coupler,       ONLY: iCompSourceCouple,  Grid_C
     integer,intent(in) :: nVarCouple, nR, nLon, nLat
     real,intent(in)    :: BufferIn_VG(nVarCouple,nR,nLon,nLat)
 
     ! Convert from SI units to normalized units
     character(len=*), parameter:: NameSub = 'IH_save_global_buffer'
     !--------------------------------------------------------------------------
-    TypeCoordSource = Grid_C(iCompSourceCouple) % TypeCoord
     BufferState_VG(Rho_,:,1:nLon,1:nLat) = &
          BufferIn_VG(iVar_V(RhoCouple_),:,1:nLon,1:nLat)&
          *Si2No_V(UnitRho_)
@@ -997,7 +996,60 @@ contains
     end do; end do; end do
   end subroutine IH_get_for_global_buffer
   !============================================================================
+  logical function IH_is_coupled_block(iBlock)
+    use IH_ModMain,     ONLY: TypeCellBcInt_I
+    use IH_ModParallel, ONLY: NOBLK, NeiLev
+    use IH_ModGeometry, ONLY: far_field_BCs_BLK
+    use IH_ModCellBoundary, ONLY: CoupledBC_
 
+    integer, intent(in) :: iBlock
+    character(len=*), parameter:: NameSub = 'IH_is_coupled_block'
+    !--------------------------------------------------------------------------
+    if(.not.far_field_BCs_BLK(iBlock)) then
+       IH_is_coupled_block = .false.
+       RETURN
+    end if
+    ! If block is near external boundary at which the BC type is 'Coupled'
+    IH_is_coupled_block = any(Neilev(1:6, iBlock) == NOBLK &
+          .and. TypeCellBcInt_I(1:6) == CoupledBC_)
+  end function IH_is_coupled_block
+  !============================================================================
+  subroutine IH_interface_point_coords(nDim, Xyz_D, nIndex, iIndex_I, &
+       IsInterfacePoint)
+    ! XYZ for the points beyond the boundary at which the BC 'coupled' is set
+    use IH_ModMain,     ONLY: TypeCellBcInt_I
+    use IH_ModParallel, ONLY: NOBLK, NeiLev
+    use IH_BATL_lib,    ONLY: nIJK_D, coord_to_xyz
+    use IH_ModCellBoundary, ONLY: CoupledBC_
+    integer,intent(in)   :: nDim
+    real,   intent(inout):: Xyz_D(nDim)
+    integer,intent(in)   :: nIndex
+    integer,intent(inout):: iIndex_I(nIndex)
+    logical,intent(out)  :: IsInterfacePoint
+
+    logical :: IsRightCoupledBoundary_D(nDim)
+    logical :: IsLeftCoupledBoundary_D(nDim)
+    real    :: Coord_D(nDim)
+    integer :: iBlock, iCell_D(nDim)
+    character(len=*), parameter:: NameSub = 'IH_interface_point_coords'
+    !--------------------------------------------------------------------------
+    iCell_D = iIndex_I(1:nDim); iBlock    = iIndex_I(4)
+    ! Check whether the point is in the ghost cell
+    IsInterfacePoint = .not.(any(iCell_D < 1).or.any(iCell_D > nIJK_D))
+    if(.not.IsInterfacePoint)RETURN
+    ! Check, which boundaries are coupled
+    IsLeftCoupledBoundary_D = Neilev(1:5:2, iBlock) == NOBLK &
+         .and. TypeCellBcInt_I(1:5:2) == CoupledBC_
+    IsRightCoupledBoundary_D = Neilev(2:6:2, iBlock) == NOBLK &
+         .and. TypeCellBcInt_I(2:6:2) == CoupledBC_
+    ! Check if the point is beyond one of these boundaries
+    IsInterfacePoint = any(IsLeftCoupledBoundary_D.and.iCell_D < 1).or.&
+         any(IsRightCoupledBoundary_D.and.iCell_D > nIJK_D)
+    if(.not.IsInterfacePoint)RETURN
+    ! Fix coordinates to be used in mapping
+    Coord_D =  Xyz_D; call coord_to_xyz(CoorD_D, Xyz_D)
+  end subroutine IH_interface_point_coords
+  !============================================================================
   subroutine IH_get_for_mh(nPartial, iGetStart, Get, W, Buff_V, nVarIn)
 
     use IH_ModAdvance, ONLY: State_VGB, UseElectronPressure, nVar
@@ -1093,7 +1145,6 @@ contains
          UseInputInGenCoord=.true.)
   end subroutine IH_extract_line
   !============================================================================
-
   subroutine IH_put_particles(Xyz_DI, iIndex_II)
     use IH_BATL_lib, ONLY: nDim, put_particles
     use IH_ModParticleFieldLine, ONLY: KindReg_
@@ -1131,18 +1182,14 @@ contains
   end subroutine IH_get_particle_coords
   !============================================================================
   ! ROUTINE: IH_put_from_mh - transform and put the data got from MH
-  subroutine IH_put_from_mh(nPartial,&
-       iPutStart,&
-       Put,&
-       Weight,&
-       DoAdd,&
-       StateSI_V,&
-       nVar)
+  subroutine IH_put_from_mh(nPartial, iPutStart, Put, Weight, DoAdd,&
+       Buff_V, nVarIn)
+    use CON_axes,      ONLY: transform_velocity
     use CON_router,    ONLY: IndexPtrType, WeightPtrType
     use CON_coupler,   ONLY: iVar_V, DoCoupleVar_V, &
          RhoCouple_, RhoUxCouple_, RhoUzCouple_, &
-         PCouple_, BxCouple_, BzCouple_, PeCouple_, EhotCouple_, &
-         PparCouple_, WaveFirstCouple_, WaveLastCouple_, &
+         PCouple_, BxCouple_, BzCouple_, PeCouple_, EhotCouple_,   &
+         PparCouple_, WaveFirstCouple_, WaveLastCouple_, Momentum_,&
          Bfield_, Wave_, ElectronPressure_, AnisoPressure_, &
          CollisionlessHeatFlux_, ChargeStateFirstCouple_, &
          ChargeStateLastCouple_, ChargeState_
@@ -1150,17 +1197,18 @@ contains
          UseAnisoPressure
     use IH_ModB0,         ONLY: B0_DGB
     use IH_ModPhysics,    ONLY: Si2No_V, UnitRho_, UnitP_, UnitRhoU_, UnitB_, &
-         UnitEnergyDens_
-    use IH_ModMain,       ONLY: UseB0
+         UnitEnergyDens_, UnitX_, No2Si_V
+    use IH_ModMain,       ONLY: UseB0, TypeCoordSystem
     use IH_ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, Bx_, Bz_, P_, &
          WaveFirst_, WaveLast_, Pe_, Ppar_, Ehot_, ChargeStateFirst_, &
-         ChargeStateLast_
+         ChargeStateLast_, nVar
+    use IH_ModGeometry,   ONLY: Xyz_DGB
 
-    integer,intent(in)::nPartial,iPutStart,nVar
-    type(IndexPtrType),intent(in)::Put
-    type(WeightPtrType),intent(in)::Weight
-    logical,intent(in)::DoAdd
-    real,dimension(nVar),intent(in)::StateSI_V
+    integer,             intent(in) :: nPartial, iPutStart, nVarIn
+    type(IndexPtrType),  intent(in) :: Put
+    type(WeightPtrType), intent(in) :: Weight
+    logical,             intent(in) :: DoAdd
+    real,                intent(in) :: Buff_V(nVarIn)
 
     ! revision history:
     ! 18JUL03     I.Sokolov <igorsok@umich.edu> - intial prototype/code
@@ -1173,170 +1221,62 @@ contains
     !                                           Handle anisotropic pressure.
     !
 
-    real,dimension(nVar)::State_V
-    integer             :: i, j, k, iBlock
-    integer   :: &
-         iRhoCouple,              &
-         iRhoUxCouple,            &
-         iRhoUzCouple,            &
-         iPCouple,                &
-         iPeCouple,               &
-         iPparCouple,             &
-         iBxCouple,               &
-         iBzCouple,               &
-         iWaveFirstCouple,        &
-         iWaveLastCouple,         &
-         iChargeStateFirstCouple, &
-         iChargeStateLastCouple,  &
-         iEhotCouple
+    real                :: State_V(nVar), Xyz_D(3)
+    integer             :: i, j, k, iBlock, iRho
+
 
     character(len=*), parameter:: NameSub = 'IH_put_from_mh'
     !--------------------------------------------------------------------------
-    ! get variable indices in buffer
-    iRhoCouple       = iVar_V(RhoCouple_)
-    iRhoUxCouple     = iVar_V(RhoUxCouple_)
-    iRhoUzCouple     = iVar_V(RhoUzCouple_)
-    iPCouple         = iVar_V(PCouple_)
-    iPeCouple        = iVar_V(PeCouple_)
-    iPparCouple      = iVar_V(PparCouple_)
-    iBxCouple        = iVar_V(BxCouple_)
-    iBzCouple        = iVar_V(BzCouple_)
-    iWaveFirstCouple = iVar_V(WaveFirstCouple_)
-    iWaveLastCouple  = iVar_V(WaveLastCouple_)
-    iChargeStateFirstCouple = iVar_V(ChargeStateFirstCouple_)
-    iChargeStateLastCouple  = iVar_V(ChargeStateLastCouple_)
-    iEhotCouple      = iVar_V(EhotCouple_)
-
-    ! Convert state variable in buffer to nirmalized units.
-    State_V(iRhoCouple) = StateSI_V(iRhoCouple) * Si2No_V(UnitRho_)
-
-    State_V(iRhoUxCouple:iRhoUzCouple) = &
-         StateSI_V(iRhoUxCouple:iRhoUzCouple) * Si2No_V(UnitRhoU_)
-
-    State_V(iPCouple) = StateSI_V(iPCouple) * Si2No_V(UnitP_)
-
-    if(DoCoupleVar_V(Bfield_)) State_V(iBxCouple:iBzCouple) = &
-         StateSI_V(iBxCouple:iBzCouple)* Si2No_V(UnitB_)
-
-    if(DoCoupleVar_V(Wave_)) &
-         State_V(iWaveFirstCouple:iWaveLastCouple) = &
-         StateSI_V(iWaveFirstCouple:iWaveLastCouple) &
-         * Si2No_V(UnitEnergyDens_)
-
-    if(DoCoupleVar_V(ChargeState_)) &
-         State_V(iChargeStateFirstCouple:iChargeStateLastCouple) = &
-         StateSI_V(iChargeStateFirstCouple:iChargeStateLastCouple) &
-         * Si2No_V(UnitRho_)
-
-    if(DoCoupleVar_V(ElectronPressure_))State_V(iPeCouple) = &
-         StateSI_V(iPeCouple)*Si2No_V(UnitP_)
-
-    if(DoCoupleVar_V(AnisoPressure_)) State_V(iPparCouple) = &
-         StateSI_V(iPparCouple)*Si2No_V(UnitP_)
-
-    if(DoCoupleVar_V(CollisionlessHeatFlux_)) State_V(iEhotCouple) = &
-         StateSI_V(iEhotCouple)*Si2No_V(UnitEnergyDens_)
-
     i      = Put%iCB_II(1,iPutStart)
     j      = Put%iCB_II(2,iPutStart)
     k      = Put%iCB_II(3,iPutStart)
     iBlock = Put%iCB_II(4,iPutStart)
-
-    if(DoAdd)then
-       State_VGB(rho_,i,j,k,iBlock) = &
-            State_VGB(rho_,i,j,k,iBlock) + &
-            State_V(iRhoCouple)
-
-       State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock) = &
-            State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock) + &
-            State_V(iRhoUxCouple:iRhoUzCouple)
-
-       if (DoCoupleVar_V(Bfield_)) State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
-            State_VGB(Bx_:Bz_,i,j,k,iBlock) + &
-            State_V(iBxCouple:iBzCouple)
-
-       if(DoCoupleVar_V(Wave_)) &
-            State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) = &
-            State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) + &
-            State_V(iWaveFirstCouple:iWaveLastCouple)
-
-       if(DoCoupleVar_V(ChargeState_)) &
-            State_VGB(ChargeStateFirst_:ChargeStateLast_,i,j,k,iBlock) = &
-            State_VGB(ChargeStateFirst_:ChargeStateLast_,i,j,k,iBlock) + &
-            State_V(iChargeStateFirstCouple:iChargeStateLastCouple)
-
-       if(DoCoupleVar_V(ElectronPressure_))then
-          State_VGB(Pe_,i,j,k,iBlock) = &
-               State_VGB(Pe_,i,j,k,iBlock) + State_V(iPeCouple)
-          State_VGB(p_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock) &
-               + State_V(iPCouple)
-       else if(UseElectronPressure)then
-          State_VGB(Pe_,i,j,k,iBlock) = State_VGB(Pe_,i,j,k,iBlock) &
-               + 0.5*State_V(iPCouple)
-          ! correct pressure state variable
-          State_VGB(p_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock) &
-               + 0.5*State_V(iPCouple)
-       else
-          State_VGB(p_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock) &
-               +State_V(iPCouple)
-       end if
-
-       if(DoCoupleVar_V(AnisoPressure_))then
-          State_VGB(Ppar_,i,j,k,iBlock) = &
-               State_VGB(Ppar_,i,j,k,iBlock) + State_V(iPparCouple)
-       else if(UseAnisoPressure)then
-          State_VGB(Ppar_,i,j,k,iBlock) = State_VGB(Ppar_,i,j,k,iBlock) &
-               + State_V(iPCouple)
-       end if
-
-       if(DoCoupleVar_V(CollisionlessHeatFlux_))then
-          State_VGB(Ehot_,i,j,k,iBlock) = &
-               State_VGB(Ehot_,i,j,k,iBlock) + State_V(iEhotCouple)
-       endif
-
+     ! Location:
+    Xyz_D  = Xyz_DGB(:,i,j,k,iBlock)
+    iRho   = iVar_V(RhoCouple_)    ! Reusable
+    ! Copy from buffer in a proper order
+    ! Convert state variable in buffer to normalized units.
+    State_V = 0.0 ; State_V(Rho_) = Buff_V(iRho)*Si2No_V(UnitRho_)
+    ! perform vector transformation from the source model to the IH one
+    if(DoCoupleVar_V(BField_))State_V(Bx_:Bz_) =  matmul(SourceToIH_DD,     &
+        Buff_V( iVar_V(BxCouple_):iVar_V(BzCouple_)))*Si2No_V(UnitB_)
+    if(DoCoupleVar_V(Momentum_))State_V(rhoUx_:rhoUz_) = transform_velocity(&
+         TimeMhToIH, Buff_V(iVar_V(RhoUxCouple_):iVar_V(RhoUzCouple_))/     &
+         Buff_V(iRho), Xyz_D*No2Si_V(UnitX_),                               &
+         TypeCoordSource, TypeCoordSystem)*Buff_V(iRho)*Si2No_V(UnitRhoU_) 
+    if(DoCoupleVar_V(Wave_)) State_V(WaveFirst_:WaveLast_) =      &
+         Buff_V(iVar_V(WaveFirstCouple_):iVar_V(WaveLastCouple_)) &
+         *Si2No_V(UnitEnergyDens_)
+    if(DoCoupleVar_V(CollisionlessHeatFlux_)) State_V(Ehot_) =    &
+         Buff_V(iVar_V(EhotCouple_))*Si2No_V(UnitEnergyDens_)
+    if(DoCoupleVar_V(ChargeState_)) &
+         State_V(ChargeStateFirst_:ChargeStateLast_) = Buff_V(           &
+         iVar_V(ChargeStateFirstCouple_):iVar_V(ChargeStateLastCouple_)) &
+         *Si2No_V(UnitRho_)
+    if(DoCoupleVar_V(ElectronPressure_))then
+       State_V(Pe_) = Buff_V(iVar_V(PeCouple_))*Si2No_V(UnitP_)
+       State_V(p_ ) = Buff_V(iVar_V(PCouple_ ))*Si2No_V(UnitP_)
+    elseif(UseElectronPressure)then
+       State_V(p_ ) = 0.5*Buff_V(iVar_V(PCouple_))*Si2No_V(UnitP_)
+       State_V(Pe_) = State_V(p_)
     else
-
-       State_VGB(rho_,i,j,k,iBlock)= State_V(iRhoCouple)
-       State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock) = &
-            State_V(iRhoUxCouple:iRhoUzCouple)
-
-       if(DoCoupleVar_V(Bfield_)) then
-          if(UseB0)then
-             State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
-                  State_V(iBxCouple:iBzCouple) - &
-                  B0_DGB(:,i,j,k,iBlock)
-          else
-             State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
-                  State_V(iBxCouple:iBzCouple)
-          end if
-       end if
-
-       if(DoCoupleVar_V(Wave_))State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) = &
-            State_V(iWaveFirstCouple:iWaveLastCouple)
-
-       if(DoCoupleVar_V(ChargeState_))&
-            State_VGB(ChargeStateFirst_:ChargeStateLast_,i,j,k,iBlock) = &
-            State_V(iChargeStateFirstCouple:iChargeStateLastCouple)
-
-       State_VGB(p_,i,j,k,iBlock) = State_V(iPCouple)
-       if(DoCoupleVar_V(AnisoPressure_))then
-          State_VGB(Ppar_,i,j,k,iBlock) = State_V(iPparCouple)
-       else if(UseAnisoPressure)then
-          State_VGB(Ppar_,i,j,k,iBlock) = State_V(iPCouple)
-       end if
-
-       if(DoCoupleVar_V(CollisionlessHeatFlux_))then
-          State_VGB(Ehot_,i,j,k,iBlock) = State_V(iEhotCouple)
-       endif
-
-       if(DoCoupleVar_V(ElectronPressure_))then
-          State_VGB(Pe_,i,j,k,iBlock) = State_V(iPeCouple)
-       else if(UseElectronPressure)then
-          State_VGB(Pe_,i,j,k,iBlock) = 0.5*State_V(iPCouple)
-          State_VGB(p_,i,j,k,iBlock) = 0.5*State_V(iPCouple)
-       end if
+       State_V(p_)  = Buff_V(iVar_V(PCouple_))*Si2No_V(UnitP_)
     end if
-
+    if(DoCoupleVar_V(AnisoPressure_))then
+       State_V(Ppar_) = Buff_V(iVar_V(PparCouple_))*Si2No_V(UnitP_)
+    else if(UseAnisoPressure)then
+       State_V(Ppar_) = State_V(p_)
+    end if
+    !
+    ! Assign the local state vector
+    if(DoAdd)then
+       State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,k,iBlock) + State_V
+    else
+       State_VGB(:,i,j,k,iBlock) = State_V
+       ! Full magnetic field in the buffer. Subtract B0, if used
+       if(UseB0) State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
+            State_VGB(Bx_:Bz_,i,j,k,iBlock)  - B0_DGB(:,i,j,k,iBlock)
+    end if
   end subroutine IH_put_from_mh
   !============================================================================
 

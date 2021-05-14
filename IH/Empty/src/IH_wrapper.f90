@@ -26,11 +26,18 @@ module IH_wrapper
   public:: IH_get_for_mh
   public:: IH_get_for_mh_with_xyz
   public:: IH_put_from_mh
+  public:: IH_is_coupled_block
+  public:: IH_interface_point_coords
   public:: IH_n_particle
-  type(GridType), public :: IH_Grid     ! Grid (MHD data)
-  type(GridType), public :: IH_LineGrid ! Global GD for lines
-  type(LocalGridType), public :: IH_LocalGrid     ! Local GD (MHD data)
-  type(LocalGridType), public :: IH_LocalLineGrid ! Local GD for lines)
+  Character(len=3),    public :: TypeCoordSource    ! Coords of coupled model
+  real,                public :: SourceToIH_DD(3,3) ! Transformation matrrix
+  real,                public :: TimeMhToIH = -1.0  ! Time of coupling
+
+  type(GridType),      public :: IH_Grid            ! Grid (MHD data)
+  type(GridType),      public :: IH_LineGrid        ! Global GD for lines
+  type(LocalGridType), public :: IH_LocalGrid       ! Local GD (MHD data)
+  type(LocalGridType), public :: IH_LocalLineGrid   ! Local GD for lines)
+
 
   ! Coupling with SC
   public:: IH_set_buffer_grid_get_info
@@ -204,6 +211,25 @@ contains
     call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
 
   end subroutine IH_get_for_gm
+  !============================================================================
+  logical function IH_is_coupled_block(iBlock)
+    integer, intent(in) :: iBlock
+    character(len=*), parameter:: NameSub = 'IH_is_coupled_block'
+    !--------------------------------------------------------------------------
+    call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
+  end function IH_is_coupled_block
+  !============================================================================
+  subroutine IH_interface_point_coords(nDim, Xyz_D, nIndex, iIndex_I, &
+       IsInterfacePoint)
+    integer,intent(in)   :: nDim
+    real,   intent(inout):: Xyz_D(nDim)
+    integer,intent(in)   :: nIndex
+    integer,intent(inout):: iIndex_I(nIndex)
+    logical,intent(out)  :: IsInterfacePoint
+    character(len=*), parameter:: NameSub = 'IH_interface_point_coords'
+    !--------------------------------------------------------------------------
+    call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
+  end subroutine IH_interface_point_coords
   !============================================================================
   subroutine IH_get_for_mh(&
        nPartial,iGetStart,Get,W,State_V,nVar)
