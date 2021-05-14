@@ -33,7 +33,6 @@ module CON_couple_ih_sc
        IH_get_for_mh,                    &
        IH_synchronize_refinement,        &
        IH_Grid
-       
 
   implicit none
   private ! except
