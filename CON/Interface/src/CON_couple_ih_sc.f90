@@ -17,12 +17,23 @@ module CON_couple_ih_sc
   use CON_transfer_data, ONLY: transfer_real_array, transfer_integer
 
   use SC_wrapper, ONLY:                  &
-       SC_get_for_global_buffer
+       SC_get_for_global_buffer,         &
+       SC_put_from_mh,                   &
+       SC_is_coupled_block,              &
+       TimeMhToSC, SourceToSC_DD,        &
+       TypeCoordSource,                  &
+       SC_synchronize_refinement,        &
+       SC_interface_point_coords,        &
+       SC_Grid, SC_LocalGrid
 
   use IH_wrapper, ONLY:                  &
        IH_match_ibc,                     &
        IH_set_buffer_grid_get_info,      &
-       IH_save_global_buffer
+       IH_save_global_buffer,            &
+       IH_get_for_mh,                    &
+       IH_synchronize_refinement,        &
+       IH_Grid
+       
 
   implicit none
   private ! except
