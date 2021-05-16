@@ -33,7 +33,7 @@ module CON_bline
   ! Boundaries of coupled domains in OH
   real,    public :: ROhMin = 1000.0, ROhMax = 0.0
   ! Transformation matrrix
-  real,    public :: BlToMh_DD(3,3)
+  real,    public :: BlMh_DD(3,3)
   !===== The rest is available on the BL_ processors =========================
   public :: BL_read_param
   public :: BL_set_grid
@@ -536,10 +536,14 @@ contains
     State_V = 0.0 ; State_V(Rho_) = Buff_I(iRho)/cProtonMass ! a. m. u. per m3
     ! perform vector transformation from the source model to the BL one
     if(DoCoupleVar_V(BField_))State_V(Bx_:Bz_) =     &
-          matmul(BlToMh_DD, Buff_I( iVar_V(BxCouple_):iVar_V(BzCouple_)))! T
-    if(DoCoupleVar_V(Momentum_))State_V(Ux_:Uz_) = transform_velocity(TimeBl,&
-         Buff_I(iVar_V(RhoUxCouple_):iVar_V(RhoUzCouple_))/Buff_I(iRho),&! m/s
-         XyzBl_D*UnitXBl, TypeCoordMh, TypeCoordBl)
+         matmul(BlMh_DD, Buff_I( iVar_V(BxCouple_):iVar_V(BzCouple_)))! Tesla
+    if(DoCoupleVar_V(Momentum_))State_V(Ux_:Uz_) =               &! in BL model
+         transform_velocity(TimeSim = TimeBl                    ,&! s
+         v1_D = Buff_I(iVar_V(RhoUxCouple_):iVar_V(RhoUzCouple_))&! in MH Model
+         /Buff_I(iRho)                                          ,&! in m/s
+         Xyz1_D = matmul(XyzBl_D, BlMh_DD)*UnitXBl              ,&! in MH Model
+         NameCoord1 = TypeCoordMh                               ,&! in MH Model
+         NameCoord2 = TypeCoordBl)                                ! in BL model
     if(DoCoupleVar_V(Pressure_))State_V(T_) =        &
          Buff_I(iVar_V(PCouple_))*(cProtonMass/Buff_I(iRho))*EnergySi2Io ! K
     if(DoCoupleVar_V(Wave_))State_V(Wave1_:Wave2_) = &

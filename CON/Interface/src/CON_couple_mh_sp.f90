@@ -44,7 +44,7 @@ module CON_couple_mh_sp
        RScMin, RScMax           ,&  !^CMP IF SC
        RIhMin, RIhMax           ,&
        ROhMin, ROhMax           ,&  !^CMP IF OH
-       BlToMh_DD                ,&  ! transformation matrix
+       BlMh_DD                  ,&  ! transformation matrix
        TimeBl, TypeCoordMh      ,&  ! local time; coord system of source
        IsSource4BL_C            ,&  ! list of used MH models
        BL_init_foot_points      ,&  ! Initialize footpoint array
@@ -143,7 +143,7 @@ contains
     UnitBl2UnitMh = Grid_C(BL_)%UnitX/Grid_C(MH_)%UnitX
     UnitMh2UnitBl = 1/UnitBl2UnitMh
     TypeCoordMh   = Grid_C(MH_)%TypeCoord
-    BlToMh_DD  = transform_matrix(TimeSim = TimeBl, &
+    BlMh_DD       = transform_matrix(TimeSim = TimeBl, &
          TypeCoordIn = TypeCoordMh, TypeCoordOut = Grid_C(BL_)%TypeCoord)
   end subroutine transform_matrix_and_coef
   !============================================================================
@@ -449,7 +449,7 @@ contains
     real                :: XyzSc_D(nDim)
     !--------------------------------------------------------------------------
     IsInterfacePoint = .true.
-    XyzSc_D = matmul(XyzBl_D, BlToMh_DD)*UnitBl2UnitMh
+    XyzSc_D = matmul(XyzBl_D, BlMh_DD)*UnitBl2UnitMh
     call SC_xyz_to_coord(XyzSc_D, CoordSc_D)
   end subroutine mapping_sp_to_sc
   !============================================================================
@@ -477,7 +477,7 @@ contains
     !--------------------------------------------------------------------------
     call SC_get_particle_coords(Get%iCB_II(1,iGetStart), XyzSc_D)
     ! coord transformation
-    XyzBl_D = matmul(BlToMh_DD, XyzSc_D)*UnitMh2UnitBl
+    XyzBl_D = matmul(BlMh_DD, XyzSc_D)*UnitMh2UnitBl
   end subroutine SC_get_coord_for_sp_and_transform
   !============================================================================
   !!^CMP END SC
@@ -574,7 +574,7 @@ contains
     real                :: XyzIh_D(nDim)
     !--------------------------------------------------------------------------
     IsInterfacePoint = .true.
-    XyzIh_D = matmul(XyzBl_D, BlToMh_DD)*UnitBl2UnitMh
+    XyzIh_D = matmul(XyzBl_D, BlMh_DD)*UnitBl2UnitMh
     call IH_xyz_to_coord(XyzIh_D, CoordIh_D)
   end subroutine mapping_sp_to_ih
   !============================================================================
@@ -615,7 +615,7 @@ contains
     !--------------------------------------------------------------------------
     call IH_get_particle_coords(Get%iCB_II(1, iGetStart), XyzIh_D)
     ! perform transformation before returning
-    XyzBl_D = matmul(BlToMh_DD, XyzIh_D)*UnitMh2UnitBl
+    XyzBl_D = matmul(BlMh_DD, XyzIh_D)*UnitMh2UnitBl
   end subroutine IH_get_coord_for_sp_and_transform
   !============================================================================
   subroutine couple_oh_sp(DataInputTime)
@@ -709,7 +709,7 @@ contains
     real                :: XyzOh_D(nDim)
     !--------------------------------------------------------------------------
     IsInterfacePoint = .true.
-    XyzOh_D = matmul(XyzBl_D, BlToMh_DD)*UnitBl2UnitMh
+    XyzOh_D = matmul(XyzBl_D, BlMh_DD)*UnitBl2UnitMh
     call OH_xyz_to_coord(XyzOh_D, CoordOh_D)
   end subroutine mapping_sp_to_oh
   !============================================================================
@@ -739,7 +739,7 @@ contains
     !--------------------------------------------------------------------------
     call OH_get_particle_coords(Get%iCB_II(1, iGetStart), XyzOh_D)
     ! perform transformation before returning
-    XyzBl_D = matmul(BlToMh_DD, XyzOh_D)*UnitMh2UnitBl
+    XyzBl_D = matmul(BlMh_DD, XyzOh_D)*UnitMh2UnitBl
   end subroutine OH_get_coord_for_sp_and_transform
   !============================================================================
 end module CON_couple_mh_sp
