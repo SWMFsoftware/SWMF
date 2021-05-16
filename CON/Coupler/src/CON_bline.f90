@@ -33,7 +33,7 @@ module CON_bline
   ! Boundaries of coupled domains in OH
   real,    public :: ROhMin = 1000.0, ROhMax = 0.0
   ! Transformation matrrix
-  real,    public :: MhToBl_DD(3,3)
+  real,    public :: BlToMh_DD(3,3)
   !===== The rest is available on the BL_ processors =========================
   public :: BL_read_param
   public :: BL_set_grid
@@ -521,7 +521,7 @@ contains
     logical,            intent(in):: DoAdd
     real,               intent(in):: Buff_I(nVar)
     integer:: i, iLine, iRho
-    real   :: Weight,  R, Aux, State_V(Rho_:Wave2_), Xyz_D(X_:Z_)
+    real   :: Weight,  R, Aux, State_V(Rho_:Wave2_), XyzBl_D(X_:Z_)
 
     ! cell and line indices
     character(len=*), parameter:: NameSub = 'BL_put_from_mh'
@@ -529,17 +529,17 @@ contains
     i      = Put%iCB_II(1, iPutStart)
     iLine = Put%iCB_II(4, iPutStart)
     ! Location:
-    Xyz_D = MHData_VIB(X_:Z_,i,iLine)
+    XyzBl_D = MHData_VIB(X_:Z_,i,iLine)
     iRho  = iVar_V(RhoCouple_)  ! Reusable
     ! Copy from buffer in a proper order
     ! Convert state variable in buffer to normalized units.
     State_V = 0.0 ; State_V(Rho_) = Buff_I(iRho)/cProtonMass ! a. m. u. per m3
     ! perform vector transformation from the source model to the BL one
     if(DoCoupleVar_V(BField_))State_V(Bx_:Bz_) =     &
-          matmul(MhToBl_DD, Buff_I( iVar_V(BxCouple_):iVar_V(BzCouple_)))! T
+          matmul(BlToMh_DD, Buff_I( iVar_V(BxCouple_):iVar_V(BzCouple_)))! T
     if(DoCoupleVar_V(Momentum_))State_V(Ux_:Uz_) = transform_velocity(TimeBl,&
          Buff_I(iVar_V(RhoUxCouple_):iVar_V(RhoUzCouple_))/Buff_I(iRho),&! m/s
-         Xyz_D*UnitXBl, TypeCoordMh, TypeCoordBl)
+         XyzBl_D*UnitXBl, TypeCoordMh, TypeCoordBl)
     if(DoCoupleVar_V(Pressure_))State_V(T_) =        &
          Buff_I(iVar_V(PCouple_))*(cProtonMass/Buff_I(iRho))*EnergySi2Io ! K
     if(DoCoupleVar_V(Wave_))State_V(Wave1_:Wave2_) = &
@@ -547,7 +547,7 @@ contains
 
     ! interpolation weight: if the point is within the buffer the state vector
     ! is interpolated between those in the components
-    Aux = 0; if(DoAdd)Aux = 1.0; Weight = 1.0; R = norm2(Xyz_D)
+    Aux = 0; if(DoAdd)Aux = 1.0; Weight = 1.0; R = norm2(XyzBl_D)
     if(R >= rInterfaceMin .and. R < rBufferLo)then
        Aux = 1.0
        Weight = Weight * (0.50 + 0.50*tanh(2*(2*R - &

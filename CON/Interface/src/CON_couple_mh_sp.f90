@@ -44,7 +44,7 @@ module CON_couple_mh_sp
        RScMin, RScMax           ,&  !^CMP IF SC
        RIhMin, RIhMax           ,&
        ROhMin, ROhMax           ,&  !^CMP IF OH
-       MhToBl_DD                ,&  ! transformation matrix
+       BlToMh_DD                ,&  ! transformation matrix
        TimeBl, TypeCoordMh      ,&  ! local time; coord system of source
        IsSource4BL_C            ,&  ! list of used MH models
        BL_init_foot_points      ,&  ! Initialize footpoint array
@@ -143,7 +143,8 @@ contains
     UnitBl2UnitMh = Grid_C(BL_)%UnitX/Grid_C(MH_)%UnitX
     UnitMh2UnitBl = 1/UnitBl2UnitMh
     TypeCoordMh   = Grid_C(MH_)%TypeCoord
-    MhToBl_DD  = transform_matrix(TimeBl, TypeCoordMh, Grid_C(BL_)%TypeCoord)
+    BlToMh_DD  = transform_matrix(TimeSim = TimeBl, &
+         TypeCoordIn = TypeCoordMh, TypeCoordOut = Grid_C(BL_)%TypeCoord)
   end subroutine transform_matrix_and_coef
   !============================================================================
   subroutine couple_mh_sp_init
@@ -439,17 +440,17 @@ contains
          apply_buffer               = BL_put_line)
   end subroutine BL_put_lines_from_sc
   !============================================================================
-  subroutine mapping_sp_to_sc(nDimIn, XyzIn_D, nDimOut,     &
-       CoordOut_D, IsInterfacePoint)
+  subroutine mapping_sp_to_sc(nDimIn, XyzBl_D, nDimOut,     &
+       CoordSc_D, IsInterfacePoint)
     integer, intent(in) :: nDimIn, nDimOut
-    real,    intent(in) :: XyzIn_D(nDimIn)
-    real,    intent(out):: CoordOut_D(nDimOut)
+    real,    intent(in) :: XyzBl_D(nDimIn)
+    real,    intent(out):: CoordSc_D(nDimOut)
     logical, intent(out):: IsInterfacePoint
-    real                :: XyzTemp_D(nDim)
+    real                :: XyzSc_D(nDim)
     !--------------------------------------------------------------------------
     IsInterfacePoint = .true.
-    XyzTemp_D = matmul(XyzIn_D, MhToBl_DD)*UnitBl2UnitMh
-    call SC_xyz_to_coord(XyzTemp_D, CoordOut_D)
+    XyzSc_D = matmul(XyzBl_D, BlToMh_DD)*UnitBl2UnitMh
+    call SC_xyz_to_coord(XyzSc_D, CoordSc_D)
   end subroutine mapping_sp_to_sc
   !============================================================================
   subroutine mapping_line_sc_to_sp(nDimIn, XyzIn_D, nDimOut, &
@@ -467,15 +468,16 @@ contains
   end subroutine mapping_line_sc_to_sp
   !============================================================================
   subroutine SC_get_coord_for_sp_and_transform(&
-       nPartial, iGetStart, Get, w, State_V, nVar)
-    integer,            intent(in):: nPartial, iGetStart, nVar
+       nPartial, iGetStart, Get, w, XyzBl_D, nDimOut)
+    integer,            intent(in):: nPartial, iGetStart, nDimOut
     type(IndexPtrType), intent(in):: Get
     type(WeightPtrType),intent(in):: w
-    real,              intent(out):: State_V(nVar)
+    real,              intent(out):: XyzBl_D(nDimOut)
+    real :: XyzSc_D(nDim)
     !--------------------------------------------------------------------------
-    call SC_get_particle_coords(Get%iCB_II(1,iGetStart), State_V)
+    call SC_get_particle_coords(Get%iCB_II(1,iGetStart), XyzSc_D)
     ! coord transformation
-    State_V = matmul(MhToBl_DD, State_V)*UnitMh2UnitBl
+    XyzBl_D = matmul(BlToMh_DD, XyzSc_D)*UnitMh2UnitBl
   end subroutine SC_get_coord_for_sp_and_transform
   !============================================================================
   !!^CMP END SC
@@ -563,17 +565,17 @@ contains
          apply_buffer= BL_put_line)
   end subroutine BL_put_lines_from_ih
   !============================================================================
-  subroutine mapping_sp_to_ih(nDimIn, XyzIn_D, nDimOut, CoordOut_D, &
+  subroutine mapping_sp_to_ih(nDimIn, XyzBl_D, nDimOut, CoordIh_D, &
        IsInterfacePoint)
     integer, intent(in) :: nDimIn, nDimOut
-    real,    intent(in) :: XyzIn_D(nDimIn)
-    real,    intent(out):: CoordOut_D(nDimOut)
+    real,    intent(in) :: XyzBl_D(nDimIn)
+    real,    intent(out):: CoordIh_D(nDimOut)
     logical, intent(out):: IsInterfacePoint
-    real                :: XyzTemp_D(nDim)
+    real                :: XyzIh_D(nDim)
     !--------------------------------------------------------------------------
     IsInterfacePoint = .true.
-    XyzTemp_D = matmul(XyzIn_D, MhToBl_DD)*UnitBl2UnitMh
-    call IH_xyz_to_coord(XyzTemp_D, CoordOut_D)
+    XyzIh_D = matmul(XyzBl_D, BlToMh_DD)*UnitBl2UnitMh
+    call IH_xyz_to_coord(XyzIh_D, CoordIh_D)
   end subroutine mapping_sp_to_ih
   !============================================================================
   subroutine i_particle(nDim, Xyz_D, nIndex, iIndex_I, IsInterfacePoint)
@@ -604,15 +606,16 @@ contains
   end subroutine mapping_line_ih_to_sp
   !============================================================================
   subroutine IH_get_coord_for_sp_and_transform(&
-       nPartial, iGetStart, Get, w, State_V, nVar)
-    integer,            intent(in):: nPartial, iGetStart, nVar
+       nPartial, iGetStart, Get, w, XyzBl_D, nDimOut)
+    integer,            intent(in):: nPartial, iGetStart, nDimOut
     type(IndexPtrType), intent(in):: Get
     type(WeightPtrType),intent(in):: w
-    real,              intent(out):: State_V(nVar)
+    real,              intent(out):: XyzBl_D(nDimOut)
+    real :: XyzIh_D(nDim)
     !--------------------------------------------------------------------------
-    call IH_get_particle_coords(Get%iCB_II(1, iGetStart), State_V)
+    call IH_get_particle_coords(Get%iCB_II(1, iGetStart), XyzIh_D)
     ! perform transformation before returning
-    State_V = matmul(MhToBl_DD, State_V)*UnitMh2UnitBl
+    XyzBl_D = matmul(BlToMh_DD, XyzIh_D)*UnitMh2UnitBl
   end subroutine IH_get_coord_for_sp_and_transform
   !============================================================================
   subroutine couple_oh_sp(DataInputTime)
@@ -697,17 +700,17 @@ contains
          apply_buffer= BL_put_line)
   end subroutine BL_put_lines_from_oh
   !============================================================================
-  subroutine mapping_sp_to_oh(nDimIn, XyzIn_D, nDimOut, CoordOut_D, &
+  subroutine mapping_sp_to_oh(nDimIn, XyzBl_D, nDimOut, CoordOh_D, &
        IsInterfacePoint)
     integer, intent(in) :: nDimIn, nDimOut
-    real,    intent(in) :: XyzIn_D(nDimIn)
-    real,    intent(out):: CoordOut_D(nDimOut)
+    real,    intent(in) :: XyzBl_D(nDimIn)
+    real,    intent(out):: CoordOh_D(nDimOut)
     logical, intent(out):: IsInterfacePoint
-    real                :: XyzTemp_D(nDim)
+    real                :: XyzOh_D(nDim)
     !--------------------------------------------------------------------------
     IsInterfacePoint = .true.
-    XyzTemp_D = matmul(XyzIn_D, MhToBl_DD)*UnitBl2UnitMh
-    call OH_xyz_to_coord(XyzTemp_D, CoordOut_D)
+    XyzOh_D = matmul(XyzBl_D, BlToMh_DD)*UnitBl2UnitMh
+    call OH_xyz_to_coord(XyzOh_D, CoordOh_D)
   end subroutine mapping_sp_to_oh
   !============================================================================
   subroutine mapping_line_oh_to_sp(nDimIn, XyzIn_D, &
@@ -727,15 +730,16 @@ contains
   end subroutine mapping_line_oh_to_sp
   !============================================================================
   subroutine OH_get_coord_for_sp_and_transform(&
-       nPartial, iGetStart, Get, w, State_V, nVar)
-    integer,            intent(in):: nPartial, iGetStart, nVar
+       nPartial, iGetStart, Get, w, XyzBl_D, nDimOut)
+    integer,            intent(in):: nPartial, iGetStart, nDimOut
     type(IndexPtrType), intent(in):: Get
     type(WeightPtrType),intent(in):: w
-    real,              intent(out):: State_V(nVar)
+    real,              intent(out):: XyzBl_D(nDimOut)
+    real :: XyzOh_D(nDim)
     !--------------------------------------------------------------------------
-    call OH_get_particle_coords(Get%iCB_II(1, iGetStart), State_V)
+    call OH_get_particle_coords(Get%iCB_II(1, iGetStart), XyzOh_D)
     ! perform transformation before returning
-    State_V = matmul(MhToBl_DD, State_V)*UnitMh2UnitBl
+    XyzBl_D = matmul(BlToMh_DD, XyzOh_D)*UnitMh2UnitBl
   end subroutine OH_get_coord_for_sp_and_transform
   !============================================================================
 end module CON_couple_mh_sp
