@@ -1649,7 +1649,6 @@ contains
     use IH_ModB0,        ONLY: B0_DGB
     use IH_ModAdvance,   ONLY: State_VGB, Bx_, Bz_
     use IH_ModMultiFluid, ONLY: nIonFluid
-    use IH_ModEnergy,    ONLY: calc_energy
     use CON_coupler,     ONLY: Grid_C, EE_, iVarTarget_V
     use ModNumConst,     ONLY: cPi, cTwoPi
 
@@ -1715,7 +1714,6 @@ contains
              end do
              if(UseB0) State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
                   State_VGB(Bx_:Bz_,i,j,k,iBlock) - B0_DGB(:,i,j,k,iBlock)
-             call calc_energy(i,i,j,j,k,k,iBlock,1,nIonFluid)
           else
              ! Provide position to EE
              Pos_DI(:,iPoint) = Xyz_DGB(:,i,j,k,iBlock)*No2Si_V(UnitX_)

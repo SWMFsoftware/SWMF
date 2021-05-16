@@ -413,7 +413,6 @@ contains
     use EE_ModB0,        ONLY: B0_DGB
     use EE_ModAdvance,   ONLY: State_VGB, Bx_, Bz_
     use EE_ModMultiFluid,ONLY: nIonFluid
-    use EE_ModEnergy,    ONLY: calc_energy
     use CON_coupler,     ONLY: Grid_C, SC_, nVarBuffer, iVarTarget_V
     character(len=*), intent(inout):: NameVar ! List of variables
     integer,          intent(inout):: nVar    ! Number of variables in Data_VI
@@ -467,7 +466,6 @@ contains
              !     .not. DoCoupleVar_V(ElectronPressure_)then
              if(UseB0) State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
                   State_VGB(Bx_:Bz_,i,j,k,iBlock) - B0_DGB(:,i,j,k,iBlock)
-             call calc_energy(i,i,j,j,k,k,iBlock,1,nIonFluid)
           else
              ! Provide position to SC
              Pos_DI(:,iPoint) = Xyz_DGB(:,i,j,k,iBlock)*No2Si_V(UnitX_)
