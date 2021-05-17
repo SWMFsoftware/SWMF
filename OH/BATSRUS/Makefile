@@ -28,7 +28,8 @@ rundir: check_src
 		ln -s ${BINDIR}/PostIDL.exe .; \
 		ln -s ${BINDIR}/PostSPH.exe .; \
 		cp    ${DIR}/share/Scripts/pIDL .; \
-		cp    ${DIR}/GM/BATSRUS/Scripts/TEC/pTEC .
+		cp    ${DIR}/GM/BATSRUS/Scripts/TEC/pTEC .; \
+		ln -s ${DIR}/GM/BATSRUS/Param/OUTERHELIO Param
 
 clean:  
 	@(if([ -f src/Makefile ]); then \
