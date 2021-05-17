@@ -220,9 +220,9 @@ T			UseParticles
 -1			SpaceStepMin
 -1			SpaceStepMax
 import			InitMode
-T                       UseBRAlignment
-0.7                     ConBRAngleMax
-F                       UseBUAlignment
+T			UseBRAlignment
+0.7			CosBRAngleMax
+F			UseBUAlignment
 
 
 #END_COMP SC -----------------------------------------------------------------
@@ -300,8 +300,8 @@ T			UseParticles
 -1			SpaceStepMin
 -1			SpaceStepMax
 import			InitMode
-F                       UseBRAlignment
-F                       UseBUAlignment
+F			UseBRAlignment
+F			UseBUAlignment
 
 #SAVEPLOT
 1			nPlotFile
@@ -402,8 +402,8 @@ T			UseParticles
 -1			SpaceStepMin
 -1			SpaceStepMax
 import			InitMode
-F                       UseBRAlignment
-F                       UseBUAlignment
+F			UseBRAlignment
+F			UseBUAlignment
 
 #END_COMP OH -----------------------------------------------------------------
 
