@@ -83,7 +83,7 @@ y=0 MHD idl		StringPlot
 #LOOKUPTABLE
 ChargeExchange		NameTable
 load			NameCommand
-../GM/BATSRUS/Param/OUTERHELIO/ExchangeRate.dat		NameFile
+OH/Param/ExchangeRate.dat		NameFile
 ascii			TypeFile
 
 #UNIFORMSTATE
