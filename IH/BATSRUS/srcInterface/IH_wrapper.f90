@@ -1141,7 +1141,7 @@ contains
     ! set the soft boundary
          RSoftBoundaryBats = RSoftBoundary
     ! extract field lines starting at input points
-    call extract_particle_line(Xyz_DI,iTraceMode,iIndex_II,&
+    call extract_particle_line(Xyz_DI, iTraceMode, iIndex_II,&
          UseInputInGenCoord=.true.)
   end subroutine IH_extract_line
   !============================================================================
