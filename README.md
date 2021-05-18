@@ -12,7 +12,7 @@ Obtain SWMF
 
 Get the source code from Git or from the tar balls.
 
-The minimim requirement is the SWMF repository. 
+The minimum requirement is the SWMF repository. 
 
 You may also need the `SWMF_data` repository that contains large data
 files.  It can be put into the home directory or into the SWMF directory.
