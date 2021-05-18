@@ -377,12 +377,9 @@ contains
     integer, intent(in) :: iBlockIn
     integer, intent(out):: iLonOut
     integer, intent(out):: iLatOut
-
     integer :: iLineAll
     !--------------------------------------------------------------------------
-    !
     ! Get node number from line number
-    !
     iLineAll = iBlockIn + iLineAll0
     iLatOut = 1 + (iLineAll - 1)/nLon
     iLonOut = iLineAll - nLon*(iLatOut - 1)
@@ -505,38 +502,36 @@ contains
     BL_n_particle = nVertex_B(  iBlockLocal)
   end function BL_n_particle
   !============================================================================
-  subroutine BL_put_from_mh(nPartial,iPutStart,Put,W,DoAdd,Buff_I,nVar)
+  ! Put MHD data in a single point
+  subroutine BL_put_from_mh(nPartial, iPutStart, Put, W, DoAdd, Buff_I, nVar)
     use CON_axes,    ONLY: transform_velocity
-    use CON_coupler, ONLY: &
-         iVar_V, DoCoupleVar_V, &
-         Density_, RhoCouple_, Pressure_, PCouple_, &
-         Momentum_, RhoUxCouple_, RhoUzCouple_, &
-         BField_, BxCouple_, BzCouple_, &
+    use CON_coupler, ONLY: iVar_V, DoCoupleVar_V   ,&
+         Density_, RhoCouple_, Pressure_, PCouple_ ,&
+         Momentum_, RhoUxCouple_, RhoUzCouple_     ,&
+         BField_, BxCouple_, BzCouple_             ,&
          Wave_, WaveFirstCouple_, WaveLastCouple_
-    use CON_router, ONLY: IndexPtrType, WeightPtrType
-    use ModConst,   ONLY: cProtonMass
-    integer,intent(in)::nPartial,iPutStart,nVar
+    use CON_router,  ONLY: IndexPtrType, WeightPtrType
+    use ModConst,    ONLY: cProtonMass
+    integer,intent(in)            :: nPartial, iPutStart, nVar
     type(IndexPtrType), intent(in):: Put
     type(WeightPtrType),intent(in):: W
     logical,            intent(in):: DoAdd
     real,               intent(in):: Buff_I(nVar)
     integer:: i, iLine, iRho
     real   :: Weight,  R, Aux, State_V(Rho_:Wave2_), XyzBl_D(X_:Z_)
-
     ! cell and line indices
     character(len=*), parameter:: NameSub = 'BL_put_from_mh'
     !--------------------------------------------------------------------------
-    i      = Put%iCB_II(1, iPutStart)
-    iLine = Put%iCB_II(4, iPutStart)
+    i       = Put%iCB_II(1, iPutStart)
+    iLine   = Put%iCB_II(4, iPutStart)
     ! Location:
     XyzBl_D = MHData_VIB(X_:Z_,i,iLine)
-    iRho  = iVar_V(RhoCouple_)  ! Reusable
-    ! Copy from buffer in a proper order
-    ! Convert state variable in buffer to normalized units.
+    iRho    = iVar_V(RhoCouple_)
+    ! Copy state variables from buffer. Convert  units if needed.
     State_V = 0.0 ; State_V(Rho_) = Buff_I(iRho)/cProtonMass ! a. m. u. per m3
     ! perform vector transformation from the source model to the BL one
     if(DoCoupleVar_V(BField_))State_V(Bx_:Bz_) =     &
-         matmul(BlMh_DD, Buff_I( iVar_V(BxCouple_):iVar_V(BzCouple_)))! Tesla
+         matmul(BlMh_DD, Buff_I(iVar_V(BxCouple_):iVar_V(BzCouple_))) ! Tesla
     if(DoCoupleVar_V(Momentum_))State_V(Ux_:Uz_) =               &! in BL model
          transform_velocity(TimeSim = TimeBl                    ,&! s
          v1_D = Buff_I(iVar_V(RhoUxCouple_):iVar_V(RhoUzCouple_))&! in MH Model
@@ -548,16 +543,15 @@ contains
          Buff_I(iVar_V(PCouple_))*(cProtonMass/Buff_I(iRho))*EnergySi2Io ! K
     if(DoCoupleVar_V(Wave_))State_V(Wave1_:Wave2_) = &
          Buff_I(iVar_V(WaveFirstCouple_):iVar_V(WaveLastCouple_))        ! J/m3
-
-    ! interpolation weight: if the point is within the buffer the state vector
+    ! interpolation weight: if the point is within the buffer, the state vector
     ! is interpolated between those in the components
     Aux = 0; if(DoAdd)Aux = 1.0; Weight = 1.0; R = norm2(XyzBl_D)
     if(R >= rInterfaceMin .and. R < rBufferLo)then
        Aux = 1.0
-       Weight = Weight * (0.50 + 0.50*tanh(2*(2*R - &
+       Weight = Weight*(0.50 + 0.50*tanh(2*(2*R - &
             RBufferLo - RInterfaceMin)/(RBufferLo - RInterfaceMin)))
     elseif(R >= rBufferUp .and. R < rInterfaceMax)then
-       Weight = Weight * (0.50 - 0.50*tanh(2*(2*R - &
+       Weight = Weight*(0.50 - 0.50*tanh(2*(2*R - &
             RInterfaceMax - RBufferUp)/(RInterfaceMax - RBufferUp)))
     end if
     ! put the data
@@ -567,55 +561,49 @@ contains
   !============================================================================
   subroutine BL_interface_point_coords(nDim, Xyz_D, &
        nIndex, iIndex_I, IsInterfacePoint)
-    ! interface points (request), which needed to be communicated
-    ! to other components to perform field line extraction and
-    ! perform further coupling with SP:
-    ! the framework tries to determine Xyz_D of such points,
-    ! SP changes them to the correct values
+    ! interface points, which need to be communicated to other components to
+    ! perform field line  extraction and further coupling with SP
     integer,intent(in)   :: nDim
     real,   intent(inout):: Xyz_D(nDim)
     integer,intent(in)   :: nIndex
     integer,intent(inout):: iIndex_I(nIndex)
     logical,intent(out)  :: IsInterfacePoint
-    integer:: iVertex, iLine
-    real:: R2
+    integer  :: iVertex, iLine
+    real   :: R
     character(len=*), parameter:: NameSub = 'BL_interface_point_coords'
     !--------------------------------------------------------------------------
     iVertex = iIndex_I(1); iLine    = iIndex_I(4)
-    ! Check whether the particle is within interface bounds
-    R2 = sum(MHData_VIB(X_:Z_,iVertex,iLine)**2)
-    IsInterfacePoint = &
-         R2 >= rInterfaceMin**2 .and. R2 < rInterfaceMax**2
     ! Fix coordinates to be used in mapping
-    if(IsInterfacePoint)&
-         Xyz_D = MHData_VIB(X_:Z_, iVertex, iLine)
+    Xyz_D = MHData_VIB(X_:Z_, iVertex, iLine)
+    ! Check whether the particle is within interface bounds
+    R = norm2(Xyz_D)
+    IsInterfacePoint = R >= rInterfaceMin .and. R < rInterfaceMax
   end subroutine BL_interface_point_coords
   !============================================================================
   subroutine BL_put_line(nPartial, iPutStart, Put,&
-       Weight, DoAdd, Coord_D, nVar)
+       Weight, DoAdd, XyzBl_D, nDimBl)
     use CON_router, ONLY: IndexPtrType, WeightPtrType
-    integer, intent(in) :: nPartial, iPutStart, nVar
+    integer, intent(in) :: nPartial, iPutStart, nDimBl
     type(IndexPtrType), intent(in) :: Put
     type(WeightPtrType),intent(in) :: Weight
     logical,            intent(in) :: DoAdd
-    real,               intent(in) :: Coord_D(nVar) ! nVar=nDim
+    real,               intent(in) :: XyzBl_D(nDimBl)
 
     ! indices of the particle
-    integer:: iLine, iVertex
+    integer :: iLine, iVertex
     ! Misc
-    real :: R2
+    real :: R
     character(len=*), parameter:: NameSub = 'BL_put_line'
     !--------------------------------------------------------------------------
     iLine    = Put%iCB_II(4,iPutStart)
-    iVertex = Put%iCB_II(1,iPutStart) + iOffset_B(iLine)
-    R2 = sum(Coord_D(1:nDim)**2)
-    if(R2<RMin**2.or.R2>=RMax**2)then
+    iVertex  = Put%iCB_II(1,iPutStart) + iOffset_B(iLine)
+    R = norm2(XyzBl_D)
+    if(R < RMin .or. R >= RMax)then
        ! Sort out particles left the SP domain
        MHData_VIB(X_:Z_,iVertex, iLine) = 0.0
     else
-       ! store passed particles
-       ! put coordinates
-       MHData_VIB(X_:Z_,iVertex, iLine) = Coord_D(1:nDim)
+       ! store passed particles coordinates
+       MHData_VIB(X_:Z_,iVertex,iLine) = XyzBl_D
        nVertex_B(iLine) = MAX(nVertex_B(iLine), iVertex)
     end if
   end subroutine BL_put_line
@@ -633,8 +621,8 @@ contains
           ! Offset particle arrays
           iEnd   = nVertex_B(iLine)
           iOffset = 1 - iBegin
-          MHData_VIB(LagrID_:Z_, 1:iEnd+iOffset, iLine) = &
-               MHData_VIB(LagrID_:Z_, iBegin:iEnd, iLine)
+          MHData_VIB(LagrID_:Z_,1:iEnd+iOffset,iLine) = &
+               MHData_VIB(LagrID_:Z_,iBegin:iEnd,iLine)
           nVertex_B(iLine) = nVertex_B(iLine) + iOffset
        end if
        call BL_set_line_foot_b(iLine)
