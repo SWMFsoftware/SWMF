@@ -5,6 +5,8 @@ my $nDay = ($n or $nday or 7);
 
 use strict;
 
+push @INC, '.';
+
 my $SiteDir = `pwd`; chop($SiteDir);
 
 # Conditions for merging into stable branch
