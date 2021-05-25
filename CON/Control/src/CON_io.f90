@@ -20,6 +20,7 @@ module CON_io
   use CON_variables
   use ModUtilities, ONLY: DoFlush, flush_unit, fix_dir_name, make_dir, &
        split_string, open_file, close_file
+  use ModLookupTable, ONLY: read_lookup_table_param
 
   implicit none
 
@@ -143,9 +144,15 @@ contains
     ! Names, indexes and logicals for components
     integer :: lComp, iComp, iComp1, iComp2, nName, iCouple, iError
     logical :: UseComp
-    character (len=lNameComp) :: NameComp, NameComp1, NameComp2
-    character (len=lNameComp) :: NameSourceTarget_I(2)
-    character (len=lStringLine) :: NameSourceTarget, StringLayout
+    character(len=lNameComp) :: NameComp, NameComp1, NameComp2
+    character(len=lNameComp) :: NameSourceTarget_I(2)
+    character(len=lStringLine) :: NameSourceTarget, StringLayout
+
+    ! Lookup table related parameters
+    character(len=lStringLine) :: StringCompTable
+    integer:: nCompTable
+    character(len=3), allocatable:: NameCompTable_I(:)
+    
     character(len=*), parameter:: NameSub = 'read_inputs'
     !--------------------------------------------------------------------------
     if(is_proc0())write(*,'(a,i3)')NameSub//': iSession=',iSession
@@ -357,6 +364,18 @@ contains
           call read_var('DnShowProgressShort', DnShowProgressShort)
           call read_var('DnShowProgressLong',  DnShowProgressLong)
 
+       case("#LOOKUPTABLE")
+
+          call read_var('StringCompTable', StringCompTable, IsUpperCase=.true.)
+          call split_string(StringCompTable, NameCompTable_I, nCompTable)
+          do iComp = 1, nCompTable
+             if(is_proc(NameCompTable_I(iComp)))then
+                call read_lookup_table_param
+                EXIT
+             end if
+          end do
+          if(allocated(NameCompTable_I)) deallocate(NameCompTable_I)
+          
        case("#COMPONENT")
 
           call read_var('NameComp', NameComp)
