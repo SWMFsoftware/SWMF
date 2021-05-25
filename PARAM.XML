@@ -1129,6 +1129,62 @@ means that there is no coupling.
 The default is no coupling.
 </command>
 
+<command name="LOOKUPTABLE" multiple="T">
+  <parameter name="StringCompTable" type="string" length="100"/>
+    <parameter name="NameTable" type="string" length="$lLine"/>
+  <parameter name="NameCommand" type="string" case="lower" input="select">
+    <option name="load" default="T"/>
+    <option name="use"/>
+    <option name="use param"/>
+    <option name="save"/>
+    <option name="save param"/>
+    <option name="make"/>
+    <option name="make param"/>
+    <option name="param"/>
+  </parameter>
+  <parameter name="NameFile" type="string" length="$lLine"
+	     if="$NameCommand =~ /load|save|use/" />
+  <parameter name="TypeFile" type="string" input="select"
+	     if="$NameCommand ne 'param'">
+    <option name="real8"/>
+    <option name="real4" default="T"/>
+    <option name="ascii"/>
+  </parameter>
+  <if expr="$NameCommand =~ /param/">
+    <parameter name="NameTableParam" type="string" length="$lLine"/>
+    <for from="1" to="count_split($NameTableParam)">
+      <parameter name="TableParam" type="real"/>
+    </for>
+  </if>
+  <if expr="$NameCommand =~ /make|save|use/">
+    <parameter name="StringDescription" type="string" length="$lLine"/>
+    <parameter name="NameVar"           type="string" length="$lLine"/>
+    <parameter name="nIndex"            type="integer" min="1"/>
+    <for name="i" from="1" to="$nIndex">
+      <parameter name="nIndex$i" type="integer" min="2"/>
+      <parameter name="Index${i}Min" type="real"/>
+      <parameter name="Index${i}Max" type="real"/>
+    </for>
+  </if>
+
+#LOOKUPTABLE
+PT GM			StringCompTable
+ChargeExchange		NameTable
+load			NameCommand
+OH/Param/ER.dat		NameFile
+ascii			TypeFile
+
+The first parameters contains a space separated list of comoponents
+that need this particular lookup table. "CON" refers to the control
+module, so all processors read in the lookup table.
+The example shows loading the ExchangeRate lookup table for two
+components GM and PT from an ASCII file OH/Param/ExchangeRate.dat. 
+For more complete description, see the #LOOKUPTABLE command description
+in GM/BATSRUS/PARAM.XML.
+
+This command can occur multiple times. By default no lookup tables are used.
+</command>
+
 </commandgroup>
 
 <commandgroup name="RESTART CONTROL">
