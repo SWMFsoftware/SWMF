@@ -1,11 +1,10 @@
 !  Copyright (C) 2002 Regents of the University of Michigan,
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!
-!
-!
-! Input and output methods used by CON
+
 module CON_io
+
+  ! Input and output methods used by CON
 
   use ModIoUnit, ONLY: StdOut_, UnitTmp_, io_unit_new
   use CON_world
@@ -367,6 +366,7 @@ contains
        case("#LOOKUPTABLE")
 
           call read_var('StringCompTable', StringCompTable, IsUpperCase=.true.)
+          allocate(NameCompTable_I(nComp))
           call split_string(StringCompTable, NameCompTable_I, nCompTable)
           do iComp = 1, nCompTable
              if(is_proc(NameCompTable_I(iComp)))then
@@ -374,7 +374,7 @@ contains
                 EXIT
              end if
           end do
-          if(allocated(NameCompTable_I)) deallocate(NameCompTable_I)
+          deallocate(NameCompTable_I)
 
        case("#COMPONENT")
 
