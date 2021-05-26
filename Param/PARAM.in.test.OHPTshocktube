@@ -5,6 +5,13 @@ PT 1  2  1		CompMap runs on 1 or 2 PE-s
 #DESCRIPTION
 Param/PARAM.in.test.OHPTshocktube: Couple single-ion OH with PT		StringDescription
 
+#LOOKUPTABLE
+PT			StringCompTable
+ChargeExchange		NameTable
+load			NameCommand
+OH/Param/ExchangeRate.dat		NameFile
+ascii			TypeFile
+
 #TIMEACCURATE
 T			IsTimeAccurate
 
@@ -79,12 +86,6 @@ y=0 MHD idl		StringPlot
 
 #USERSWITCH
 +init +Sexpl		StringSwitch
-
-#LOOKUPTABLE
-ChargeExchange		NameTable
-load			NameCommand
-OH/Param/ExchangeRate.dat		NameFile
-ascii			TypeFile
 
 #UNIFORMSTATE
 0.01			StateVar Rho
