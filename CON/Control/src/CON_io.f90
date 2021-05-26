@@ -152,7 +152,7 @@ contains
     character(len=lStringLine) :: StringCompTable
     integer:: nCompTable
     character(len=3), allocatable:: NameCompTable_I(:)
-    
+
     character(len=*), parameter:: NameSub = 'read_inputs'
     !--------------------------------------------------------------------------
     if(is_proc0())write(*,'(a,i3)')NameSub//': iSession=',iSession
@@ -375,7 +375,7 @@ contains
              end if
           end do
           if(allocated(NameCompTable_I)) deallocate(NameCompTable_I)
-          
+
        case("#COMPONENT")
 
           call read_var('NameComp', NameComp)
