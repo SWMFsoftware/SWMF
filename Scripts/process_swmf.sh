@@ -4,38 +4,38 @@
 #  For more information, see http://csem.engin.umich.edu/tools/swmf
 cd $HOME/Sites
 
-# Create directory for new tests
-mkdir -p SWMF_TEST_RESULTS/`date +%Y/%m/%d`
-
 # Remove code from yesterday as well as various logs
-rm -rf SWMF_yesterday code.diff manual.log manual.err fortran.err
+rm -rf SWMF_yesterday code.diff manual.log manual.err fortran.err \
+    process_swmf.log
+
+# Create directory for new tests
+mkdir -p SWMF_TEST_RESULTS/`date +%Y/%m/%d` >& ~/Sites/process_swmf.log
 
 if(-d SWMF)then
     # Move the previous SWMF repository out of the way
     cd SWMF
     # uninstall now to remove the manuals created yesterday
-    ./Config.pl -uninstall
-    # There were created after clone during install and normally kept after uninstall
-    rm -rf gitinfo.txt PC/ALTOR/srcBATL_orig UA/GITM2/srcData GM/BATSRUS/src/ModUser.f90.safe \
-	    share/Python/swmfpy
+    ./Config.pl -uninstall >>& ~/Sites/process_swmf.log
+    # These were created after clone during install and normally kept after uninstall
+    rm -rf gitinfo.txt PC/ALTOR/srcBATL_orig UA/GITM2/srcData GM/BATSRUS/src/ModUser.f90.safe
     cd ..
     mv SWMF SWMF_yesterday
 endif
 
 # Get current version of SWMF+BATL and make it unreadable for the web
-gitclone SWMF
-cd SWMF; Config.pl -clone
-gitclone BATL
-cd BATL; Config.pl -clone
+gitclone SWMF >> ~/Sites/process_swmf.log
+cd SWMF; Config.pl -clone >>& ~/Sites/process_swmf.log
+gitclone BATL >> ~/Sites/process_swmf.log
+cd BATL; Config.pl -clone >>& ~/Sites/process_swmf.log
 cd $HOME/Sites
-chmod -R go-r SWMF
+chmod -R go-r SWMF >>& ~/Sites/process_swmf.log
 
 # Create diff file excluding .git directories
-touch code.diff
 if(-d SWMF_yesterday)then
     # Compare the current SWMF with yesterday's version
     diff -r -x .git SWMF SWMF_yesterday >& code.diff
 endif
+touch code.diff
 
 # Create manuals
 cd ~/Sites/SWMF
@@ -61,4 +61,4 @@ grep -v logo_small.png manual.log | grep -C10 Error > manual.err
 cd ~/Sites/SWMF
 make FORMATF90 > ~/Sites/fortran.err
 # commit and push formatted code
-gitall "commit -m FormatFortran . ; git push"
+gitall "commit -m FormatFortran .; git push"
