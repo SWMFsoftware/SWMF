@@ -5,6 +5,13 @@ PT 1  2 1		CompMap runs on 1 PE
 #DESCRIPTION
 Param/PARAM.in.test.restart.OHPT: Restart single-ion OH and PT		StringDescription
 
+#LOOKUPTABLE
+PT			StringCompTable
+ChargeExchange		NameTable
+load			NameCommand
+OH/Param/ExchangeRate.dat		NameFile
+ascii			TypeFile
+
 #TIMEACCURATE
 F  			IsTimeAccurate
 
