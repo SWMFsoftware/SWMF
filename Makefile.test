@@ -1305,7 +1305,7 @@ test14_1d_check:
 		> test14_1d_ohpt.diff)
 	-(${DIFFNUM} -b -r=1e-3 \
                 ${TESTDIR}/RESULTS/PT/amps.dat \
-                output/test14_1d/ampsMC.dat \
+                output/test14_1d/amps.dat_np${NAMPS} \
 		>> test14_1d_ohpt.diff)	
 	ls -l test14_1d_ohpt.diff
 
