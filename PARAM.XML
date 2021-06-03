@@ -1149,6 +1149,7 @@ The default is no coupling.
     <option name="real8"/>
     <option name="real4" default="T"/>
     <option name="ascii"/>
+    <option name="log/sat"/>
   </parameter>
   <if expr="$NameCommand =~ /param/">
     <parameter name="NameTableParam" type="string" length="$lLine"/>
