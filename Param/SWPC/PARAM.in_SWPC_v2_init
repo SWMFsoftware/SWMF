@@ -40,13 +40,6 @@ IE			NameComp2
 10			DnCouple
 -1.0			DtCouple
 
-#LOOKUPTABLE
-IE			StringComp
-F107			NameTable
-load			NameCommand
-Param/f107.txt		NameFile
-log			TypeFile
-
 #BEGIN_COMP GM ---------------------------------------------------------------
 
 #GRIDBLOCKALL

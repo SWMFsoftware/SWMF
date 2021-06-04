@@ -90,15 +90,7 @@ F			DoCoupleOnTime
 #UPDATEB0
 0.5			DtUpdateB0
 
-#LOOKUPTABLE
-IE			StringComp
-F107			NameTable
-load			NameCommand
-Param/f107.txt		NameFile
-log			TypeFile
-
 #BEGIN_COMP GM ---------------------------------------------------------------
-
 
 #INCLUDE
 GM/restartIN/restart.H
