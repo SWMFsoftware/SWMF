@@ -1,0 +1,35 @@
+#
+# This job script should be executed from bin/test_swmf_nvidia
+#
+# set the number of CPU-s by changing select: nProc = select*mpiprocs
+#PBS -N SWMF_nvidia
+
+#PBS -q v100@pbspl4
+#PBS -l select=1:ncpus=18:ngpus=1:model=sky_gpu
+
+#PBS -l walltime=6:00:00
+
+#PBS -j oe
+#PBS -m e
+#PBS -r n
+
+# Specify group if necessary g26135 
+#PBS -W group_list=s6176
+
+# cd into the run directory
+cd /u/gtoth1/Tmp_nvidia/SWMF
+
+# Load nvidia compilers
+module purge; module use -a /nasa/nvidia/hpc_sdk/modulefiles
+module load nvhpc/20.9
+module list
+
+# Use NVIDIA compilers under mpicc and mpicxx
+setenv MPICC_CC nvc
+setenv MPICXX_CXX nvc++
+
+# try suppressing some warning messages
+setenv MPI_WARN_ON_FORK 0
+
+# Try running all tests without OpenMP
+make -j test NP=8 OPENMP=-noopenmp >>& test_swmf.log
