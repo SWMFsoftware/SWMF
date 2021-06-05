@@ -47,8 +47,8 @@ source .cshrc
 #cd $HOME
 
 # Create a temporary directory for the tests
-mkdir -p /nobackup/gtoth1/Tmp_pgi
-cd /nobackup/gtoth1/Tmp_pgi
+mkdir -p /nobackup/gtoth1/Tmp_nvidia
+cd /nobackup/gtoth1/Tmp_nvidia
 
 # Remove the previous test directories if necessary
 rm -rf SWMF BATL HYPRE
@@ -58,7 +58,8 @@ gitclone SWMF
 
 # Install part of the code. CIMI2 does not work with pgf90
 cd SWMF
-./Config.pl -install=BATSRUS,RCM2,Ridley_serial,RBE,FLEKS,PWOM -compiler=pgf90,pgccmpicxx -O1 >& test_swmf.log
+./Config.pl -install=BATSRUS,RCM2,Ridley_serial,RBE,FLEKS,PWOM -compiler=nvfortran,nvc -O1 >& test_swmf.log
+perl -i -pe 's/(^\t\-\@\(\$\{MAKE\} test_share)/#$$1/' Makefile.test
 
 # Clone libraries now, because they cannot be cloned from compute nodes
 gitclone AMREX util/AMREX
@@ -66,10 +67,10 @@ gitclone AMREX util/AMREX
 
 #gitclone BATL # BATL tests do not work with pgf90
 #cd BATL
-#./Config.pl -install -compiler=pgf90,pgccmpicxx -O1 >>& ../test_swmf.log
-#cd /nobackup/gtoth1/Tmp_pgi
+#./Config.pl -install -compiler=nvfortran,nvc -O1 >>& ../test_swmf.log
+#cd /nobackup/gtoth1/Tmp_nvidia
 
 #
 # Submit job
 #
-/PBS/bin/qsub /u/gtoth1/bin/test_swmf_pgi.job
+ssh pbspl4 /PBS/bin/qsub /u/gtoth1/bin/test_swmf_nvidia.job
