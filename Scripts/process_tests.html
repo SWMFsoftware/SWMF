@@ -58,7 +58,7 @@ the results per year, month and day.
       <td>nagfor,gcc_mpicc</td>
       <td>NAGFOR v6.2(6210) with gcc 9.3<br>-debug -O0</td>
       <td>mpich-3.2.1</td>
-      <td>NP=2, NTHREAD=1</td>
+      <td>NP=4, NTHREAD=1</td>
   </tr>
   <tr>
       <td><b>mesh</b></td>
@@ -66,7 +66,7 @@ the results per year, month and day.
       <td>nagfor,gcc_mpicc</td>
       <td>NAGFOR 6.2 (6210) with gcc 9.3</td>
       <td>mpich-3.2.1</td>
-      <td>NP=4, NTHREAD=2</td>
+      <td>NP=2, NTHREAD=2</td>
   </tr>
   <tr>
       <td><b>pleiades</b></td>
@@ -78,13 +78,13 @@ the results per year, month and day.
       <td><font color=RED>MPICC_CC=icc, MPICXX_CXX=icpc</font></td>
   </tr>
   <tr>
-      <td><b>pleiades</b></td>
+      <td><b>nvidia</b></td>
       <td>Skylake CPU, V100 GPU</td>
-      <td>pgf90,pgccmpicxx</td>
-      <td>purge, comp-pgi<br>-O1</td>
-      <td>mpi-hpe</td>
+      <td>nvfortran,nvc</td>
+      <td>purge, use -a /nasa/nvidia/hpc_sdk/modulefiles<br>-O1</td>
+      <td>nvhpc/20.9</td>
       <td>NP=8, NTHREAD=1, OpenACC</td>
-      <td><font color=RED>MPICC_CC=pgcc, MPICXX_CXX=pgc++</font></td>
+      <td><font color=RED>MPICC_CC=nvc, MPICXX_CXX=nvc++</font></td>
   </tr>
 </table>
 <hr>
