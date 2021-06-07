@@ -997,7 +997,7 @@ contains
   end subroutine IH_get_for_global_buffer
   !============================================================================
   logical function IH_is_coupled_block(iBlock)
-    use IH_ModMain,     ONLY: TypeCellBcInt_I
+    use IH_ModMain,     ONLY: iTypeCellBc_I
     use IH_ModParallel, ONLY: NOBLK, NeiLev
     use IH_ModGeometry, ONLY: far_field_BCs_BLK
     use IH_ModCellBoundary, ONLY: CoupledBC_
@@ -1011,13 +1011,13 @@ contains
     end if
     ! If block is near external boundary at which the BC type is 'Coupled'
     IH_is_coupled_block = any(Neilev(1:6, iBlock) == NOBLK &
-          .and. TypeCellBcInt_I(1:6) == CoupledBC_)
+          .and. iTypeCellBc_I(1:6) == CoupledBC_)
   end function IH_is_coupled_block
   !============================================================================
   subroutine IH_interface_point_coords(nDim, Xyz_D, nIndex, iIndex_I, &
        IsInterfacePoint)
     ! XYZ for the points beyond the boundary at which the BC 'coupled' is set
-    use IH_ModMain,     ONLY: TypeCellBcInt_I
+    use IH_ModMain,     ONLY: iTypeCellBc_I
     use IH_ModParallel, ONLY: NOBLK, NeiLev
     use IH_BATL_lib,    ONLY: nIJK_D, coord_to_xyz
     use IH_ModCellBoundary, ONLY: CoupledBC_
@@ -1039,9 +1039,9 @@ contains
     if(.not.IsInterfacePoint)RETURN
     ! Check, which boundaries are coupled
     IsLeftCoupledBoundary_D = Neilev(1:5:2, iBlock) == NOBLK &
-         .and. TypeCellBcInt_I(1:5:2) == CoupledBC_
+         .and. iTypeCellBc_I(1:5:2) == CoupledBC_
     IsRightCoupledBoundary_D = Neilev(2:6:2, iBlock) == NOBLK &
-         .and. TypeCellBcInt_I(2:6:2) == CoupledBC_
+         .and. iTypeCellBc_I(2:6:2) == CoupledBC_
     ! Check if the point is beyond one of these boundaries
     IsInterfacePoint = any(IsLeftCoupledBoundary_D.and.iCell_D < 1).or.&
          any(IsRightCoupledBoundary_D.and.iCell_D > nIJK_D)
