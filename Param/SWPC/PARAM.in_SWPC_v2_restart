@@ -128,12 +128,6 @@ T			DoReadAgain
 #INCLUDE
 SATELLITES.in
 
-#MAGPERTURBINTEGRAL
-T			UseSurfaceIntegral
-T			UseFastFacIntegral
-MAG			TypeCoordIndex
-MAG			TypeCoordFacGrid
-
 #MAGNETOMETER
 magin_GEM.dat		NameMagInputFile
 single			TypeFileOut
