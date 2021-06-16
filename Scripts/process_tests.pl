@@ -28,7 +28,7 @@ my %WeightMachine = (
 # Describe machine in the Html table
 my %HtmlMachine = (
     "pleiades"     => "ifort<br>pleiades",
-    "pgi"          => "pgf90<br>pleiades",
+    "pgi"          => "nvfortran<br>pleiades",
     "gfortran"     => "gfortran<br>optimized",
     "grid"         => "nagfor<br>debug",
     "mesh"         => "nagfor<br>optimized",
