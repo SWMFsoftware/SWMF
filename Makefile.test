@@ -28,6 +28,7 @@ test_help:
 	@(if [ -d SP/MFLAMPA ]; then echo "    test_sp                    (run SP/MFLAMPA test)"; fi)
 	@(if [ -d IM/RCM2    ]; then echo "    test_swpc                  (run GM-IE-IM/RCM2 test as used by SWPC)"; fi)
 	@(if [ -d IM/RCM2    ]; then echo "    test_swpc_build            (create SWPC_build and run test_swpc)"; fi)
+	@(if [ -d IM/RCM2    ]; then echo "    test_swpc_gpu              (run GM-IE-IM/RCM2 test on GPU)"; fi)
 	@(if [ -d IM/RCM2    ]; then echo "    test_swpc_multiion         (run multiion GM-IE-IM/RCM2 SWPC test)"; fi)
 	@(if [ -d IM/RCM2    ]; then echo "    test_swpc_multispecies     (run multispecies GM-IE-IM/RCM2 SWPC test)"; fi)
 	@(if [ -d IM/CIMI2   ]; then echo "    test_swpc_cimi             (run anisotropic GM-IE-IM/CIMI2 SWPC test)"; fi)
@@ -68,6 +69,8 @@ test:
 test_swmf:
 	-@(if [ -d PS/DGCPM   ]; then ${MAKE} test_ps TESTDIR=run_test_ps; fi)
 	-@(if [ -d SP/MFLAMPA ]; then ${MAKE} test_sp TESTDIR=run_test_sp; fi)
+	-@(if [ -d IM/RCM2    ]; then ${MAKE} test_swpc_gpu TESTDIR=run_test_swpc_gpu; fi)
+	-@(if [ -d IM/RCM2    ]; then ./Config.pl -noacc; fi)
 	-@(if [ -d IM/RCM2    ]; then ${MAKE} test_swpc TESTDIR=run_test_swpc; fi)
 	-@(if [ -d IM/RCM2    ]; then ${MAKE} test_swpc_multiion TESTDIR=run_test_swpc_multiion; fi)
 	-@(if [ -d IM/RCM2    ]; then ${MAKE} test_swpc_multispecies TESTDIR=run_test_swpc_multispecies; fi)
@@ -452,9 +455,9 @@ test2_check:
 		> test02_im_rcm_multi.diff)
 	ls -l test02_*.diff
 
-### test_swpc_build and test_swpc: GM+IE+IM+RB ###
+### test_swpc_build ###
 
-# Configure with 3 components: GM, IE, IM. Remove unused component versions.
+# Configre with 4 components: GM+IE+IM+RB. Remove unused models.
 # Run test_swpc in the reduced SWMF build SWPC_build.
 
 BUILD=SWPC_build
@@ -465,6 +468,8 @@ test_swpc_build:
 	cd ${BUILD}; ./Config.pl -install \
 	   	     	-compiler=${FORTRAN_COMPILER_NAME},${C_COMPILER_NAME}
 	cd ${BUILD}; make test_swpc
+
+### test_swpc: GM+IE+IM+RB ###
 
 test_swpc:
 	@echo "test_swpc_compile..." > test_swpc_rcm_gm.diff
@@ -549,6 +554,78 @@ test_swpc_check:
 		Param/SWPC/TestOutput/RB_20140410_000300_e.fls.gz \
 		> test_swpc_rcm_rb.diff)
 	ls -l test_swpc_rcm_??.diff
+
+### test_swpc_gpu: GM+IE+IM and GM runs on GPU or in GPU compatible mode ###
+
+test_swpc_gpu:
+	@echo "test_swpc_gpu_compile..." > test_swpc_gpu_gm.diff
+	@echo "test_swpc_gpu_compile..." > test_swpc_gpu_ie.diff
+	${MAKE} test_swpc_gpu_compile
+	@echo "test_swpc_gpu_rundir..." >> test_swpc_gpu_gm.diff
+	@echo "test_swpc_gpu_rundir..." >> test_swpc_gpu_ie.diff
+	${MAKE} test_swpc_gpu_rundir
+	@echo "test_swpc_gpu_run..." >> test_swpc_gpu_gm.diff
+	@echo "test_swpc_gpu_run..." >> test_swpc_gpu_ie.diff
+	${MAKE} test_swpc_gpu_run NP=2
+	@echo "test_swpc_gpu_restart..." >> test_swpc_gpu_gm.diff
+	@echo "test_swpc_gpu_restart..." >> test_swpc_gpu_ie.diff
+	${MAKE} test_swpc_gpu_restart
+	@echo "test_swpc_gpu_check..." >> test_swpc_gpu_gm.diff
+	@echo "test_swpc_gpu_check..." >> test_swpc_gpu_ie.diff
+	${MAKE} test_swpc_gpu_check
+
+test_swpc_gpu_compile:
+	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2
+	./Config.pl -o=GM:u=Default,e=Mhd,ng=2,g=8,8,8,IE:g=91,181
+	${MAKE} SWMF
+	make PIDL
+
+test_swpc_gpu_rundir:
+	rm -rf ${TESTDIR}
+	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
+	cp Param/SWPC/PARAM.in_*gpu* Param/SWPC/SATELLITES.in Param/SWPC/*.dat ${TESTDIR}/
+	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in_SWPC_gpu_init
+	perl -pi -e 'if(/MaxIter|MaxBlock/){s/700/70/; s/1500/200/; s/5000/350/}; s/#BORIS/BORIS/' \
+	     ${TESTDIR}/PARAM.in_SWPC_gpu_init
+	cp ${TESTDIR}/PARAM.in_SWPC_gpu_init ${TESTDIR}/PARAM.in
+
+test_swpc_gpu_run:
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./Restart.pl -i SWMF_RESTART.20140410_000200
+
+test_swpc_gpu_restart:
+	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in_SWPC_gpu_restart
+	perl -pi -e 's/#BORIS/BORIS/' ${TESTDIR}/PARAM.in_SWPC_gpu_restart
+	cd ${TESTDIR}; cp PARAM.in_SWPC_gpu_restart PARAM.in
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_restart
+	cd ${TESTDIR}; ./PostProc.pl -noptec
+
+test_swpc_gpu_check:
+	-@(${DIFFNUM} -b -r=1e-5 -a=2e-8 \
+		${TESTDIR}/GM/IO2/log_e20140410-000200.log \
+		Param/SWPC/TestOutputGPU/log_e20140410-000200.log \
+		> test_swpc_gpu_gm.diff)
+	-@(${DIFFNUM} -b -r=2e-4 -a=1e-5 \
+		${TESTDIR}/GM/IO2/magnetometers_e20140410-000200.mag \
+		Param/SWPC/TestOutputGPU/magnetometers_e20140410-000200.mag \
+		>> test_swpc_gpu_gm.diff)
+	-@(${DIFFNUM} -b -r=2e-4 -a=1e-4 \
+		${TESTDIR}/GM/IO2/mag_grid_e20140410-000300.out \
+		Param/SWPC/TestOutputGPU/mag_grid_e20140410-000300.out.gz \
+		>> test_swpc_gpu_gm.diff)
+	-@(${DIFFNUM} -b -r=1e-5 -a=1e-8 \
+		${TESTDIR}/GM/IO2/geoindex_e20140410-000200.log \
+		Param/SWPC/TestOutputGPU/geoindex_e20140410-000200.log \
+		>> test_swpc_gpu_gm.diff)
+	-@(${DIFFNUM} -b -r=1e-5 \
+		${TESTDIR}/IE/ionosphere/IE_t140410_000200.log \
+		Param/SWPC/TestOutputGPU/IE_t140410_000200.log \
+		> test_swpc_gpu_ie.diff)
+	-@(${DIFFNUM} -b -r=1e-4 -a=6e-5 \
+		${TESTDIR}/IE/ionosphere/it140410_000300_000.idl \
+		Param/SWPC/TestOutputGPU/it140410_000300_000.idl.gz \
+		>> test_swpc_gpu_ie.diff)
+	ls -l test_swpc_gpu_??.diff
 
 ### test_swpc_multiion: GM+IE+IM ###
 
