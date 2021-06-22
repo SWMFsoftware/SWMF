@@ -81,7 +81,6 @@ GM/restartIN/restart.H
 #NSTEP
 10			nStep
 
-
 #OUTERBOUNDARY
 outflow			TypeBc1
 vary			TypeBc2
@@ -220,25 +219,13 @@ lcb nul tec		StringPlot  !last closed field line plots
 
 #SCHEME
 2			nOrder
-Sokolov			TypeFlux
+Linde			TypeFlux
 mc3			TypeLimiter
 1.2			LimiterBeta
 
 #BORIS
 T			UseBorisCorrection
 0.01			BorisClightFactor
-
-#REGION
-borisregion		NameRegion
-sphere tapered		StringShape
--4.0			xPosition
-0.0			yPosition
-0.0			zPosition
-14.0			Radius
-2.0			Taper
-
-#BORISREGION
-borisregion		NameBorisRegion
 
 #TIMESTEPPING
 1			nStage
