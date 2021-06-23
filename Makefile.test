@@ -57,7 +57,7 @@ test_help:
 
 test:
 	@rm -f *.diff
-	-@(${MAKE} test_share_library)
+#_library)
 	-@(${MAKE} test_util)
 	-@(${MAKE} test_comp)
 	-@(${MAKE} test_swmf)
@@ -560,7 +560,7 @@ test_swpc_check:
 test_swpc_gpu:
 	@echo "test_swpc_gpu_compile..." > test_swpc_gpu_gm.diff
 	@echo "test_swpc_gpu_compile..." > test_swpc_gpu_ie.diff
-	${MAKE} test_swpc_gpu_compile
+	#${MAKE} test_swpc_gpu_compile
 	@echo "test_swpc_gpu_rundir..." >> test_swpc_gpu_gm.diff
 	@echo "test_swpc_gpu_rundir..." >> test_swpc_gpu_ie.diff
 	${MAKE} test_swpc_gpu_rundir
@@ -569,7 +569,7 @@ test_swpc_gpu:
 	${MAKE} test_swpc_gpu_run NP=2
 	@echo "test_swpc_gpu_restart..." >> test_swpc_gpu_gm.diff
 	@echo "test_swpc_gpu_restart..." >> test_swpc_gpu_ie.diff
-	${MAKE} test_swpc_gpu_restart
+	${MAKE} test_swpc_gpu_restart NP=2
 	@echo "test_swpc_gpu_check..." >> test_swpc_gpu_gm.diff
 	@echo "test_swpc_gpu_check..." >> test_swpc_gpu_ie.diff
 	${MAKE} test_swpc_gpu_check
