@@ -560,7 +560,7 @@ test_swpc_check:
 test_swpc_gpu:
 	@echo "test_swpc_gpu_compile..." > test_swpc_gpu_gm.diff
 	@echo "test_swpc_gpu_compile..." > test_swpc_gpu_ie.diff
-	#${MAKE} test_swpc_gpu_compile
+	${MAKE} test_swpc_gpu_compile
 	@echo "test_swpc_gpu_rundir..." >> test_swpc_gpu_gm.diff
 	@echo "test_swpc_gpu_rundir..." >> test_swpc_gpu_ie.diff
 	${MAKE} test_swpc_gpu_rundir
