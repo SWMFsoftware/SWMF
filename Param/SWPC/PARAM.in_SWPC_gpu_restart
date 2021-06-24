@@ -82,7 +82,7 @@ GM/restartIN/restart.H
 10			nStep
 
 #OUTERBOUNDARY
-outflow			TypeBc1
+float			TypeBc1
 vary			TypeBc2
 float			TypeBc3
 float			TypeBc4
