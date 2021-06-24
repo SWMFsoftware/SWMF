@@ -57,7 +57,7 @@ test_help:
 
 test:
 	@rm -f *.diff
-#_library)
+	-@(${MAKE} test_share_library)
 	-@(${MAKE} test_util)
 	-@(${MAKE} test_comp)
 	-@(${MAKE} test_swmf)
