@@ -476,7 +476,7 @@ z=0 VAR idl		StringPlot
 
 #SATELLITE
 1			nSatellite
-VAR trajrange		StringSatellite
+VAR HGI trajrange	StringSatellite
 1			DnOutput
 -1.0			DtOutput [sec]
 IH/TRAJECTORY/earth.dat		NameTrajectoryFile

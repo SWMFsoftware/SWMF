@@ -27,6 +27,10 @@ IMPORTANT:
 Use the user CHROMOBC command to increase the inner boundary number
 density so that the run does not fail for solar maximum
 
+When using the rotated frame, SATELLITE command should include 
+a TypeCoordPlot string. REMOVE THE ROTATEHGI/HGR commands if you
+want to use the true HGI/HGR coordinate systems.
+
 Begin session: 1
 
 #DESCRIPTION
@@ -55,6 +59,12 @@ F			IsTimeAccurate
 T			DoSaveRestart
 5			DnSaveRestart
 -1.0			DtSaveRestart
+
+#ROTATEHGR
+-1.			dLongitudeHgr
+
+#ROTATEHGI
+-1.			dLongitudeHgi
 
 #TEST
 init_axes		StringTest
@@ -522,12 +532,12 @@ z=0 VAR idl		StringPlot
 {MHD} b1x b1y b1z		NameVars
 {default} 		NamePars
 
-SATELLITE
+#SATELLITE
 1			nSatellite
-VAR trajrange		StringSatellite
+VAR HGC trajrange		StringSatellite
 5			DnOutput
 -1.0			DtOutput [sec]
-earth.dat		NameTrajectoryFile
+IH/TRAJECTORY/earth.dat		NameTrajectoryFile
 -5 d			StringStartTimeTraj
 5 d			StringEndTimeTraj
 1 h			StringDtTraj
