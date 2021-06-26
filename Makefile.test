@@ -57,7 +57,7 @@ test_help:
 
 test:
 	@rm -f *.diff
-	-@(${MAKE} test_share_library)
+#_library)
 	-@(${MAKE} test_util)
 	-@(${MAKE} test_comp)
 	-@(${MAKE} test_swmf)
@@ -591,14 +591,14 @@ test_swpc_gpu_rundir:
 	cp ${TESTDIR}/PARAM.in_SWPC_gpu_init ${TESTDIR}/PARAM.in
 
 test_swpc_gpu_run:
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe | tee runlog
 	cd ${TESTDIR}; ./Restart.pl -i SWMF_RESTART.20140410_000200
 
 test_swpc_gpu_restart:
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in_SWPC_gpu_restart
 	perl -pi -e 's/#BORIS/BORIS/' ${TESTDIR}/PARAM.in_SWPC_gpu_restart
 	cd ${TESTDIR}; cp PARAM.in_SWPC_gpu_restart PARAM.in
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_restart
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe | tee runlog_restart
 	cd ${TESTDIR}; ./PostProc.pl -noptec
 
 test_swpc_gpu_check:
