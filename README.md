@@ -14,12 +14,18 @@ Get the source code from Git or from the tar balls.
 
 The minimum requirement is the SWMF repository. 
 
-You may also need the `SWMF_data` repository that contains large data
-files.  It can be put into the home directory or into the SWMF directory.
+You may also need the open-source `SWMF_data` repository that that contains
+large data files and can be downloaded into your home directory (or into
+the SWMF directory):
+
+```bash
+cd
+git clone https://gitlab.umich.edu/SWMF_software/SWMF_data --depth=1
+```
 
 Some data files used by the Center for Radiative Shock Hydrodynamics
-(CRASH) are in the `CRASH_data` repository.  If needed, it has to be
-placed into the home directory.
+(CRASH) are in the `CRASH_data` repository that is available to registered
+users.  If needed, it has to be placed into the home directory. 
 
 Getting the open-source MSTEM-QUDA/SWMF from GitHub
 ----------------------------------------------------------------
@@ -41,48 +47,18 @@ Read the
 about registering, passwordless access, mail notifications, and
 defining the "gitlabclone" (or gitclone) alias/function.
 
-Check out the SWMF distribution
+Clone the SWMF distribution
 
 ```bash
 cd {where_you_want_to_have_the_swmf}
 gitlabclone SWMF
 ```
 
-Check out the `SWMF_data` distribution into the home directory if needed
-
-```bash
-cd
-gitlabclone SWMF_data
-```
-
-Check out the `CRASH_data` distribution into the home directory if needed
+Clone the `CRASH_data` distribution into the home directory if needed
 
 ```bash
 cd
 gitlabclone CRASH_data
-```
-
-### Opening tar balls
-
-Open SWMF tar ball
-
-```bash
-cd {where_you_want_to_have_the_swmf}
-tar -xzf {path_to_file}/SWMF_v{version_number}.tgz
-```
-
-If needed, open the `SWMF_data` tar ball into the home directory
-
-```bash
-cd
-tar -xzf {path_to_file}/SWMF_data.tgz
-```
-
-If needed, open the `CRASH_data` tar ball into the home directory
-
-```bash
-cd
-tar -xzf {path_to_file}/CRASH_data.tgz
 ```
 
 Install SWMF
@@ -125,14 +101,16 @@ For machines with no MPI library, use
 
 This will only allow serial execution, of course.
 
-The ifort compiler (and possibly others too) use the stack for temporary arrays,
-so the stack size should be large. For csh/tcsh add the following to .cshrc: 
+The ifort compiler (and possibly others too) use the stack for temporary
+arrays, so the stack size should be large. For csh/tcsh add the following
+to .cshrc: 
 
 ```bash
 unlimit stacksize
 ```
 
-For bash/ksh add the following to .bashrc or equivalent initialization file:
+For bash/ksh/zsh add the following to .bashrc or equivalent initialization
+file:
 
 ```bash
 ulimit -s unlimited
@@ -150,7 +128,7 @@ To create the PDF manuals type
 make PDF
 ```
 
-in the SWMF directory. The manuals will be in the doc/ directory.
+in the SWMF directory. The manuals will be in the doc/ directories.
 
 Cleaning the documentation
 
@@ -215,6 +193,6 @@ For example, to run test1 without MPI on a single core use
 make -j test1 MPIRUN=
 ```
 
-Copyright (C) 2002 Regents of the University of Michigan, portions
-used with permission. For more information, see http://csem.engin.umich.edu/tools/swmf
-
+Copyright (C) 2002 Regents of the University of Michigan,
+portions used with permission.
+For more information, see http://csem.engin.umich.edu/tools/swmf
