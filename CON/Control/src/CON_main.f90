@@ -1,9 +1,10 @@
-! !  Copyright (C) 2002 Regents of the University of Michigan,
+!  Copyright (C) 2002 Regents of the University of Michigan,
 !  portions used with permission
-! !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!           SWMF: Space Weather Modeling Framework          |
-!                   University of Michigan                  |
+!  For more information, see http://csem.engin.umich.edu/tools/swmf
+
 module CON_main
+
+  ! Main code of the Space Weather Modeling Framework performing a simulation
 
   use CON_world
   use CON_comp_param
