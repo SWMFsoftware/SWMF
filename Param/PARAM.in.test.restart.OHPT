@@ -2,6 +2,9 @@
 OH 0 -1 1		CompMap runs on all PE-s
 PT 1  2 1		CompMap runs on 1 PE
 
+#INCLUDE
+RESTART.in
+
 #DESCRIPTION
 Param/PARAM.in.test.restart.OHPT: Restart single-ion OH and PT		StringDescription
 
@@ -14,9 +17,6 @@ ascii			TypeFile
 
 #TIMEACCURATE
 F  			IsTimeAccurate
-
-#INCLUDE
-RESTART.in
 
 #BEGIN_COMP PT ---------------------------------------------------------------
 
