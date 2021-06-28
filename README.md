@@ -10,11 +10,11 @@ the instructions below.
 Obtain SWMF
 -----------
 
-Get the source code from Git or from the tar balls.
+Get the source code from GitLab or GitHub.
 
-The minimum requirement is the SWMF repository. 
+The minimum requirement is the `SWMF` repository. 
 
-You may also need the open-source `SWMF_data` repository that that contains
+You may also need the open-source `SWMF_data` repository that contains
 large data files and can be downloaded into your home directory (or into
 the SWMF directory):
 
@@ -45,20 +45,20 @@ Getting the full SWMF from UM GitLab (requires access)
 Read the
 [GitLab instructions](http://herot.engin.umich.edu/~gtoth/SWMF/doc/GitLab_instructions.pdf)
 about registering, passwordless access, mail notifications, and
-defining the "gitlabclone" (or gitclone) alias/function.
+using the [gitclone](https://gitlab.umich.edu/swmf_software/share/-/blob/master/Scripts/gitclone) script.
 
 Clone the SWMF distribution
 
 ```bash
 cd {where_you_want_to_have_the_swmf}
-gitlabclone SWMF
+gitclone SWMF
 ```
 
 Clone the `CRASH_data` distribution into the home directory if needed
 
 ```bash
 cd
-gitlabclone CRASH_data
+gitclone CRASH_data
 ```
 
 Install SWMF
@@ -170,7 +170,7 @@ make -j test
 ```
 
 in the main directory. The -j flag allows parallel compilation.  This
-requires a machine where mpirun is available.  The tests run on 2 CPU
+requires a machine where mpiexec is available.  The tests run on 2 CPU
 cores by default.  The results of the tests are summarized in
 `test_swmf.res` Successful passing of the test is indicated by empty
 *.diff* files.
