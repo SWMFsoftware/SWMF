@@ -771,7 +771,7 @@ contains
        end if
     end do
 
-    if(IsFirstRead)call timing_step(0)
+    if(IsFirstRead)call timing_step(nStep)
     call timing_depth(nDepthTiming)
     call timing_report_style(TypeTimingReport)
 
