@@ -250,8 +250,11 @@ contains
 
     end if
 
-    if(DoTestMe)write(*,*)NameSub,' tSimulation_C=',tSimulation_C(1:nComp)
-
+    if(DoTestMe)then
+       write(*,*)NameSub,' nIteration, nStep=', nIteration, nStep
+       write(*,*)NameSub,' tSimulation_C=',tSimulation_C(1:nComp)
+    end if
+    
     TIMELOOP: do
 
        if(DoTestMe)write(*,*)NameSub,&
@@ -306,7 +309,7 @@ contains
           nIterationCheck  = nIteration
           tSimulationCheck = tSimulation
        end if
-       ! For a new step, the restart fiels have not been saved.
+       ! For a new step, the restart files have not been saved.
        IsRestartSaved = .false.
 
        ! Advance step number and iteration (in current run)
