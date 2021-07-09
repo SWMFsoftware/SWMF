@@ -465,7 +465,7 @@ The default value is lVerbose=1.
 <command name="TIMING">
 	<parameter name="UseTiming" type="logical" default="T" />
 	<if expr="$UseTiming">
-		<parameter name="Frequency" type="integer" input="select">
+		<parameter name="DnTiming" type="integer" input="select">
 			<option name="none"              value="-3" />
 			<option name="final only"        value="-2" 
 								default="T" />
@@ -501,7 +501,7 @@ If UseTiming=.true., the execution is timed by the TIMING utility.\\
 If UseTiming=.false., the execution is not timed.\\
 
 \noindent
-The Dntiming parameter determines the frequency of timing reports:\\
+The DnTiming parameter determines the frequency of timing reports:\\
 If DnTiming is positive, a timing report is produced every DnTiming steps.\\
 If DnTiming is -1, a timing report is shown at the end of each session.\\
 If DnTiming is -2, a timing report is shown at the end of the whole run.\\
