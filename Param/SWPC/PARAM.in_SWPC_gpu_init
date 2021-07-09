@@ -8,7 +8,7 @@ IM  1 1 1		CompMap PE 1
 T			UseTiming
 -1			DnTiming  ! every session
 -1			nDepthTiming
-tree			TypeTimingReport
+cumu			TypeTimingReport
 
 #DESCRIPTION
 Param/SWPC/PARAM.in_SWPC_gpu_restart: start Geospace on GPU		StringDescription
