@@ -226,7 +226,7 @@ contains
        select case(iCompTarget)               !^CMP IF OH BEGIN
        case(IH_)                                   !^CMP IF IH
           call couple_oh_ih(TimeSimulation)        !^CMP IF IH
-      case(SP_)                                    !^CMP IF SP
+       case(SP_)                                   !^CMP IF SP
           call couple_oh_sp(TimeSimulation)        !^CMP IF SP
        case(PT_)				   !^CMP IF PT
           if(UseBLine_C(PT_))then
@@ -322,7 +322,9 @@ contains
             ' SWMF_ERROR: no coupling implemented from source '// &
             NameComp_I(iCompSource))
     end select
-    call timing_stop(NameComp_I(iCompSource)//'_'//NameComp_I(iCompTarget)//'_couple')
+    call timing_stop(NameComp_I(iCompSource)// &
+         '_'//NameComp_I(iCompTarget)//'_couple')
+
     if(DoTest)write(*,*)NameSub,': finished coupling iProc=',i_proc(),' ',&
          NameComp_I(iCompSource),' --> ',NameComp_I(iCompTarget)
 
