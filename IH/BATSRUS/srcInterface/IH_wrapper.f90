@@ -1129,7 +1129,6 @@ contains
 
   subroutine IH_extract_line(Xyz_DI, iTraceMode, &
        iIndex_II, RSoftBoundary)
-    use IH_BATL_lib, ONLY: nDim
     use IH_ModParticleFieldLine, &
          ONLY: extract_particle_line, RSoftBoundaryBats=>RSoftBoundary
     real,             intent(in) :: Xyz_DI(:,:)
