@@ -118,7 +118,7 @@ module CON_coupler
   integer, public :: nVarCouple, nVarCouple_CC(MaxComp,MaxComp)
 
   ! no. of state variable groups for which coupling is implemented
-  integer, parameter, public     :: nCoupleVarGroup = 12
+  integer, parameter, public     :: nCoupleVarGroup = 13
 
   ! named indices for variable groups for coupling
   integer, parameter, public :: &
@@ -133,14 +133,15 @@ module CON_coupler
        MultiSpecie_           =  9, &
        Material_              = 10, &
        ChargeState_           = 11, &
-       CollisionlessHeatFlux_ = 12
+       CollisionlessHeatFlux_ = 12, &
+       ChGL_                  = 13
 
   logical, public :: &
        DoCoupleVar_V(nCoupleVarGroup) = .false. , &
        DoCoupleVar_VCC(nCoupleVarGroup,MaxComp,MaxComp) = .false.
 
   ! number of variable types known to the coupler
-  integer, parameter, public  :: nVarIndexCouple = 15
+  integer, parameter, public  :: nVarIndexCouple = 16
 
   ! Fixed indices for mapping actual variable indices
   integer, parameter,public :: &
@@ -158,7 +159,8 @@ module CON_coupler
        MaterialLastCouple_     = 12, &
        ChargeStateFirstCouple_ = 13, &
        ChargeStateLastCouple_  = 14, &
-       EhotCouple_             = 15
+       EhotCouple_             = 15, &
+       ChGLCouple_             = 16
 
   ! vector storing the actual values of variable indices inside a
   ! coupled component
