@@ -717,7 +717,8 @@ contains
 
        case('Pe')
           DoCoupleVar_V(ElectronPressure_) = any(NameVarTarget_V=='Pe')
-
+       case('Sign')
+          DoCoupleVar_V(ChGL_) = any(NameVarTarget_V=='Sign')
        case('Ppar')
           DoCoupleVar_V(AnisoPressure_) = any(NameVarTarget_V=='Ppar')
 
@@ -931,6 +932,11 @@ contains
        iVar_V(EhotCouple_) = nVarCouple
     end if
 
+    if(DoCoupleVar_V(ChGL_))then
+       nVarCouple = nVarCouple + 1
+       iVar_V(ChGLCouple_) = nVarCouple
+    end if
+
     if (nVarCouple >  nVarSource) then
        write(*,*) 'SWMF Error: # of coupled variables exceeds nVarSource'
        call CON_stop(NameSub//' error in calculating nVarCouple')
@@ -1001,6 +1007,7 @@ contains
        write(*,*) 'ChargeStates:   ', DoCoupleVar_V(ChargeState_)
        write(*,*) 'Fluids:         ', DoCoupleVar_V(MultiFluid_)
        write(*,*) 'Species:        ', DoCoupleVar_V(MultiSpecie_)
+       write(*,*) 'SignB:          ', DoCoupleVar_V(ChGL_)
        write(*,*) '---------------------------------------------'
     end if
     if(DoTestMe) then
@@ -1018,6 +1025,7 @@ contains
        write(*,*) 'WaveLast: ', iVar_V(WaveLastCouple_)
        write(*,*) 'ChargeStateFirst: ',iVar_V(ChargeStateFirstCouple_)
        write(*,*) 'ChargeStateLast: ',iVar_V(ChargeStateLastCouple_)
+       write(*,*) 'SignB:           ', iVar_V(ChGLCouple_)
        write(*,*) 'nVarCouple: ',nVarCouple
        write(*,*) '---------------------------------------------'
 
