@@ -1,8 +1,8 @@
 Name Root Last Stride nThread
-#COMPONENTMAP		For up to 2 CPU cores + 1 GPU
-GM  0 0 1		CompMap root PE+GPU
-IE  1 1 1  		CompMap PEs 0 and 1
-IM  1 1 1		CompMap PE 1
+#COMPONENTMAP
+GM  0 -2 1		CompMap root PE+GPU or 0..last-1 PEs
+IE -1 -1 1  		CompMap last PE
+IM -1 -1 1		CompMap last PE 
 
 #TIMING
 T			UseTiming
@@ -41,7 +41,7 @@ IE			NameComp2
 fast			TypeUpdate
 
 #GRIDBLOCKALL
-3500			MaxBlock
+5000			MaxBlock
 
 #GRID
 1			nRootBlock1
@@ -56,7 +56,7 @@ fast			TypeUpdate
 
 ! Maximum resolution initially
 #GRIDRESOLUTION
-0.25			Resolution
+1/8			Resolution
 initial			StringShape
 
 ! Minimum resolution in the computational domain
@@ -95,7 +95,6 @@ box			StringShape
  20.0			xMaxBox
  22.0			yMaxBox
  10.0			zMaxBox
-
 
 #GRIDRESOLUTION
 1/8			Resolution
@@ -348,7 +347,7 @@ GEO			TypeCoordPlot
 
 #BORIS
 T			UseBorisCorrection
-0.02			BorisClightFactor
+0.01			BorisClightFactor
 
 #TIMESTEPPING
 1			nStage
