@@ -1,0 +1,3756 @@
+Git repo=git@gitlab.umich.edu:swmf_software/SWMF
+  GIT REFERENCES HAVE NOT BEEN OBTAINED!
+
+#=============================================================================#
+# ID  Version                                       nproc proc0 stride nthread#
+#-----------------------------------------------------------------------------#
+# CON SWMF by Univ. of Michigan          version 2.40   100     0     1     1 #
+#-----------------------------------------------------------------------------#
+# GM  BATSRUS (Univ. of Michigan)        version 9.90    99     0     1     1 #
+# IE  Serial Potential Solver (Ridley)   version 1.10     1    99     1     1 #
+# IM  RCM (De Zeeuw-Sazykin)             version 2.00     1    99     1     1 #
+#-----------------------------------------------------------------------------#
+# RB  Radiation Belt Environment, M. Fok version 1.00    not registered #
+#=============================================================================#
+read_inputs: iSession=  1
+read_file: read and broadcast nLine= 401 lines of text
+
+#COMPONENTMAP
+GM  0 -2 1		CompMap root PE+GPU or 0..last-1 PEs
+IE -1 -1 1  		CompMap last PE
+IM -1 -1 1		CompMap last PE
+
+
+#TIMING
+T			UseTiming
+-1			DnTiming  ! every session
+-1			nDepthTiming
+cumu			TypeTimingReport
+
+#DESCRIPTION
+Param/SWPC/PARAM.in_SWPC_gpu_restart: start Geospace on GPU		StringDescription
+
+#TIMEACCURATE
+F			IsTimeAccurate		DoTimeAccurate
+
+#STARTTIME
+2014			iYear
+04			iMonth
+10			iDay
+00			iHour
+00			iMinute
+00			iSecond
+0.0			FracSecond
+
+#COMPONENT
+IM			NameComp
+F			UseComp
+
+#COUPLE2
+GM			NameComp1		NameSource
+IE			NameComp2		NameTarget
+10			DnCouple
+-1.0			DtCouple
+
+#BEGIN_COMP GM ---------------------------------------------------------------
+ GM_set_parameters: READ iSession =           1  iLine=          38  nLine =
+         206
+GM:
+GM:#UPDATE
+GM:fast			TypeUpdate
+GM:
+GM:#GRIDBLOCKALL
+GM:5000			MaxBlock
+GM:
+GM:#GRID
+GM:1			nRootBlock1		nRootBlockX
+GM:1			nRootBlock2		nRootBlockY
+GM:1			nRootBlock3		nRootBlockZ
+GM:-224.			xMin
+GM: 32.			xMax
+GM:-128.			yMin
+GM: 128.			yMax
+GM:-128.			zMin
+GM: 128.			zMax
+GM:
+GM:#GRIDRESOLUTION
+GM:1/8			Resolution		AreaResolution
+GM:initial			StringShape
+GM:
+GM:#GRIDRESOLUTION
+GM:8.0			Resolution		AreaResolution
+GM:all			StringShape
+GM:
+GM:#GRIDRESOLUTION
+GM:1.0			Resolution		AreaResolution
+GM:box			StringShape
+GM:-100.0			xMinBox		XyzMinBox
+GM: -16.0			yMinBox		XyzMinBox
+GM: -16.0			zMinBox		XyzMinBox
+GM:  22.0			xMaxBox		XyzMaxBox
+GM:  16.0			yMaxBox		XyzMaxBox
+GM:  16.0			zMaxBox		XyzMaxBox
+GM:
+GM:#GRIDRESOLUTION
+GM:1/4			Resolution		AreaResolution
+GM:box			StringShape
+GM:-20.0			xMinBox		XyzMinBox
+GM:-8.0			yMinBox		XyzMinBox
+GM:-8.0			zMinBox		XyzMinBox
+GM: 8.0			xMaxBox		XyzMaxBox
+GM: 8.0			yMaxBox		XyzMaxBox
+GM: 8.0			zMaxBox		XyzMaxBox
+GM:
+GM:#GRIDRESOLUTION
+GM:1/2			Resolution		AreaResolution
+GM:box			StringShape
+GM:-32.0			xMinBox		XyzMinBox
+GM:-22.0			yMinBox		XyzMinBox
+GM:-10.0			zMinBox		XyzMinBox
+GM: 20.0			xMaxBox		XyzMaxBox
+GM: 22.0			yMaxBox		XyzMaxBox
+GM: 10.0			zMaxBox		XyzMaxBox
+GM:
+GM:#GRIDRESOLUTION
+GM:1/8			Resolution		AreaResolution
+GM:shell0			StringShape
+GM:2.5			RadiusInner
+GM:3.5			Radius
+GM:
+GM:#BODY
+GM:T			UseBody
+GM:2.5			rBody     (in planet radius)
+GM:3.0			rCurrents (in planet radius)
+GM:28.0			BodyNDim  (/cc)
+GM:25000.0			BodyTDim  (K)
+GM:
+GM:#OUTERBOUNDARY
+GM:float			TypeBc1		TypeCellBc
+GM:vary			TypeBc2		TypeCellBc
+GM:float			TypeBc3		TypeCellBc
+GM:float			TypeBc4		TypeCellBc
+GM:float			TypeBc5		TypeCellBc
+GM:float			TypeBc6		TypeCellBc
+GM:
+GM:#INNERBOUNDARY
+GM:ionosphere		TypeBcBody		TypeBcInner
+GM:
+GM:#CPCPBOUNDARY
+GM:T			UseCpcpBc  (rest is read if true)
+GM:28.0			Rho0Cpcp   [amu/cc]
+GM:0.1			RhoPerCpcp [amu/cc / keV]
+GM:
+GM:#SOLARWINDFILE
+GM:T			UseSolarWindFile
+GM:IMF.dat			NameSolarWindFile
+GM:
+GM:#SCHEME
+GM:1			nOrder
+GM:Linde			TypeFlux
+GM:
+GM:#NONCONSERVATIVE
+GM:T			UseNonConservative
+GM:
+GM:#CONSERVATIVECRITERIA
+GM:1			nConservCrit
+GM:parabola		TypeConservCrit
+GM: 5.0			xParabolaConserv
+GM:15.0			yParabolaConserv
+GM:
+GM:#SAVELOGNAME
+GM:F			UseLogNameStep		IsLogName_n
+GM:T			UseLogNameDateTime		IsLogName_e
+GM:
+GM:#SAVEPLOTNAME
+GM:F			UsePlotNameStep		IsPlotName_n
+GM:F			UsePlotNameTime		IsPlotName_t
+GM:T			UsePlotNameDateTime		IsPlotName_e
+GM:
+GM:#PLOTFILENAME
+GM:date			NameMaxTimeUnit
+GM:
+GM:#SAVELOGFILE
+GM:T			DoSaveLogfile
+GM:VAR step date		StringLog
+GM:-1			DnSaveLogfile
+GM:30.0			DtSaveLogfile
+GM:dt rho mx my mz p bx by bz pmin pmax dst_sm dstflx		NameLogVars		log_vars
+GM:3.0			StringLogRadii		log_R_str
+GM:
+GM:#SAVEPLOT
+GM:2			nPlotFile
+GM:y=0 MHD idl		StringPlot
+GM:2500			DnSavePlot
+GM:-1.			DtSavePlot
+GM:-1.			DxSavePlot
+GM:z=0 MHD idl		StringPlot
+GM:2500			DnSavePlot
+GM:-1.			DtSavePlot
+GM:-1.			DxSavePlot
+GM:
+GM:#SATELLITE
+GM:1			nSatellite
+ IE_set_param: READ iSession =           1  iLine=         209  nLine =
+         234
+IE:
+IE:#IONOSPHERE
+IE:5			iConductanceModel
+IE:F			UseFullCurrent
+IE:F			UseFakeRegion2
+IE:-1.0			F107Flux		F10.7 Flux
+IE:1.0			StarLightPedConductance
+IE:0.25			PolarCapPedConductance
+IE:
+IE:#BOUNDARY
+IE:10.0			LatBoundary
+IE:
+IE:#AURORALOVAL
+IE:T			UseOval (rest of parameters read if true)
+IE:T			UseOvalShift
+IE:F			UseSubOvalConductance
+IE:T			UseAdvancedOval
+IE:F			DoFitCircle (read if UseAdvancedOval is true)
+IE:
+IE:#SAVEPLOT
+IE:1			nPlotFile
+GM:MHD time date		StringSatellite
+GM:-1			DnOutput
+GM:30.0			DtOutput
+GM:sat01.dat		NameTrajectoryFile
+GM:
+GM:#MAGNETOMETER
+GM:magin_GEM.dat		NameMagInputFile
+GM:single			TypeFileOut		TypeMagFileOut
+GM:-1			DnOutput
+GM:1 min			DtOutput		DtOutput  6.00000000E+01
+GM:
+GM:#GEOMAGINDICES
+GM:180			nSizeKpWindow [min]		nKpWindow
+GM:1 min			DtOutput      [sec]		DtOutput  6.00000000E+01
+GM:
+GM:#MAGNETOMETERGRID
+GM:ascii			TypeFileMagGrid
+GM:GEO			TypeCoordMagGrid
+GM:72			nLonMagGrid
+GM:69			nLatMagGrid
+GM:0.			LonMinMagGrid
+GM:360.			LonMaxMagGrid
+GM:-85.			LatMinMagGrid
+GM:85.			LatMaxMagGrid
+GM:-1			DnSaveMagGrid
+GM:1 min			DtSaveMagGrid		DtSaveMagGrid  6.00000000E+01
+#END_COMP GM -----------------------------------------------------------------
+
+#BEGIN_COMP IE ---------------------------------------------------------------
+#END_COMP IE -----------------------------------------------------------------
+
+#STOP
+700			MaxIter		MaxIteration
+-1.			TimeMax		tSimulationMax
+
+#RUN ##########################################################################
+ GM_set_parameters: CHECK iSession =           1
+IE:min idl			StringPlot
+IE:100			DnSavePlot
+IE:-1.0			DtSavePlot
+ IE_set_param: CHECK iSession =           1
+  
+ The code is configured with nG=           2  ghost cell layers.
+ The selected scheme requires nGUsed=           1  layers!
+GM:init_mod_advance allocated arrays
+GM:init_mod_geometry allocated arrays
+GM:init_mod_nodes allocated arrays
+IE: 
+IE:  Ionosphere Solution Parameters
+IE:  ------------------------------
+IE: 
+IE: Ionospheric grids   :    91 x   181
+IE: Height of ionosphere:   110.0 km
+IE: Conductance model   : Realistic oval
+IE: UseCMEEFitting      :  F
+IE: NameHalFile         : cond_hal_coeffs.dat
+IE: NamePedFile         : cond_ped_coeffs.dat
+IE:  ------------------------------
+IE: 
+GM:init_mod_field_trace allocated arrays
+GM: check_mag_input_file reading: magin_GEM.dat
+GM:Magnetometer Coordinates=GEO
+GM: read_mag_input_file reading: magin_GEM.dat
+GM: read_solar_wind_file reading IMF.dat
+GM: read_solar_wind_file read            8  points from IMF.dat
+GM: read_satellite_input_files reading: sat01.dat
+check_optimize_param checking parameters...
+ ----- Starting Session            1  ------
+ 
+GM: BATSRUS: Block Adaptive Tree Solar-Wind Roe Upwind Scheme
+GM:          for 3D Heliospheric Flows
+GM: University of Michigan, 1995-2017
+ 
+GM: EQUATIONS:     MHD
+GM: EQUATION FILE: ModEquationMhd.f90
+GM: USER MODULE:   DEFAULT EMPTY ROUTINES 1.00
+GM: USER FILE:     src/ModUserDefault.f90
+ 
+GM: BATS_setup starting initial refinement level, nBlockAll =           1
+           1
+GM: BATS_setup starting initial refinement level, nBlockAll =           2
+           8
+GM: BATS_setup starting initial refinement level, nBlockAll =           3
+          64
+GM: BATS_setup starting initial refinement level, nBlockAll =           4
+         148
+GM: BATS_setup starting initial refinement level, nBlockAll =           5
+         288
+GM: BATS_setup starting initial refinement level, nBlockAll =           6
+         792
+GM: BATS_setup starting initial refinement level, nBlockAll =           7
+        2556
+GM: BATS_setup starting initial refinement level, nBlockAll =           8
+        3340
+GM:     total blocks =         3788
+GM: 
+GM:    Begin Numerical Simulation
+GM:    --------------------------
+GM: 
+GM: 
+GM:    Planetary Parameters
+GM:    --------------------
+GM: 
+GM:          Name:           EARTH  
+GM:          Radius:           6.37800E+06
+GM:          Mass:             5.97600E+24
+GM:          Rotation Period:  8.61641E+04
+GM:          Rot. Tilt [deg]:  2.35000E+01
+GM:          Orbit Period:     3.15569E+07
+GM:          Iono Height:      1.10000E+05
+GM: 
+GM:    Physical Parameters
+GM:    -------------------
+GM: 
+GM:          I/O Unit type: PLANETARY            Normalization: PLANETARY
+GM: 
+GM:          Gamma:         1.66666667
+GM: 
+GM:          rBody:         2.50000E+00, rPlanet:     6.37800E+06
+GM:          BodyNDim:      2.80000E+01, BodyTDim:    2.50000E+04
+GM:          BdpDim:       -2.98793E+04, Tilt [deg]: -4.59242E+00
+GM:          Corotation is used
+GM: 
+GM:          UseBody2: .false.
+GM: 
+GM:          ClightFactor:  1.00000E+00, Clight:      4.70038E+01
+GM: 
+GM: 
+GM:          SW_n_dim   [/cc  ]:    1.216000E+01,  SW_n:     1.216000E+01
+GM:          SW_Rho_dim [Mp/cc]:    1.216000E+01,  SW_Rho:   1.216000E+01
+GM:          SW_Ux_dim  [km/s ]:   -1.284410E+03,  SW_Ux:   -2.013813E-01
+GM:          SW_Uy_dim  [km/s ]:   -2.925000E+01,  SW_Uy:   -4.586077E-03
+GM:          SW_Uz_dim  [km/s ]:    4.281000E+01,  SW_Uz:    6.712135E-03
+GM:          SW_p_dim   [nPa  ]:    5.618737E-01,  SW_p:     8.258051E-03
+GM:          SW_Bx_dim  [nT   ]:    3.320000E+00,  SW_Bx:    1.135410E-02
+GM:          SW_By_dim  [nT   ]:   -1.430000E+00,  SW_By:   -4.890469E-03
+GM:          SW_Bz_dim  [nT   ]:   -4.800000E+00,  SW_Bz:   -1.641556E-02
+GM:          SW_T_dim   [K    ]:  3346615.200000
+GM: 
+GM:    MHD Numerical Solution Parameters
+GM:    ---------------------------------
+GM: 
+GM:          iTypeUpdate=3
+GM:          1st-order scheme
+GM:          Linde flux function
+GM:          Steady state calculation
+GM:          Explicit time stepping
+GM:              nStage: 1
+GM:              Cfl:    0.80
+GM: 
+GM:    Other Runtime Parameters
+GM:    ------------------------
+GM: 
+GM: Available processors: nProc =           99
+GM: Available threads   : nThread =            1
+GM: 
+GM: After initial grid setup:
+GM:   nBlockMax and MaxBlock      =           51          51
+GM:   Total number of blocks used =         3788
+GM:   Total number of cells       =      1939456
+GM:   Total number of true cells  =      1905904
+GM:   Min and max AMR levels      =            2           8
+GM:   Min and max cell size in x/r=   0.125000000000000     
+   8.00000000000000     
+GM: 
+GM: root blocks:        1       1       1
+GM: nIJK_D:             8       8       8
+GM: x:            -2.24000000E+02  3.20000000E+01
+GM: y:            -1.28000000E+02  1.28000000E+02
+GM: z:            -1.28000000E+02  1.28000000E+02
+GM: 
+ world_used finished with iProc0Used=           0  nProcUsed=         100
+ IE:    loading Param/f107.txt
+-------------------------------------------------------------------------------
+SORTED TIMING at step       0 IE on PE   99
+name                       sec   percent     #iter    #calls
+-------------------------------------------------------------------------------
+SWMF                      0.43    100.00         1         1
+-------------------------------------------------------------------------------
+SETUP                     0.43    100.00         1         1
+IE_GM_couple              0.19     44.52         1         1
+GM_IE_couple              0.04      8.72         1         1
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+SORTED TIMING at step       0 GM on PE    0
+name                       sec   percent     #iter    #calls
+-------------------------------------------------------------------------------
+SWMF                      0.30    100.00         1         1
+-------------------------------------------------------------------------------
+SETUP                     0.30    100.00         1         1
+IE_GM_couple              0.19     65.27         1         1
+GM_IE_couple              0.04     12.38         1         1
+exch_msgs                 0.02      6.05         1         2
+batl_pass                 0.02      5.72         1         3
+load_balance              0.02      5.43         1         1
+local_mp_pass             0.01      1.83         1         6
+wait_pass                 0.00      1.57         1         6
+part1_pass                0.00      1.14         1        12
+buffer_to_state           0.00      0.37         1         6
+-------------------------------------------------------------------------------
+ Resetting timing counters after setup.
+Progress:      10 steps,  0.000000E+00 s simulation time,      0.24 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   277.139     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   305.206     kV
+Progress:      20 steps,  0.000000E+00 s simulation time,      0.64 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   347.108     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   392.899     kV
+Progress:      30 steps,  0.000000E+00 s simulation time,      1.05 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   219.639     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   256.207     kV
+Progress:      40 steps,  0.000000E+00 s simulation time,      1.45 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   121.427     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   143.132     kV
+Progress:      50 steps,  0.000000E+00 s simulation time,      1.86 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   78.6759     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   93.1766     kV
+Progress:      60 steps,  0.000000E+00 s simulation time,      2.27 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   58.7345     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   66.3422     kV
+Progress:      70 steps,  0.000000E+00 s simulation time,      2.68 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   50.1179     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   57.4480     kV
+Progress:      80 steps,  0.000000E+00 s simulation time,      3.08 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   63.7746     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   73.0045     kV
+Progress:      90 steps,  0.000000E+00 s simulation time,      3.48 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   91.3412     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   109.000     kV
+Progress:     100 steps,  0.000000E+00 s simulation time,      3.89 s CPU time, Date: 20140410_000000
+-------------------------------------------------------------------------------
+TIMING TREE of depth 2 from step       0 to     100 GM on PE    0
+name                  #iter  #calls      sec   s/iter   s/call  percent
+-------------------------------------------------------------------------------
+SWMF                      1       1     3.89    3.889    3.889   100.00
+-------------------------------------------------------------------------------
+GM_run                  100     100     2.21    0.022    0.022    56.72
+GM_IE_couple              9       9     0.27    0.030    0.030     6.96
+IE_GM_couple              9       9     1.41    0.157    0.157    36.27
+#others                                 0.00    0.002              0.04
+-------------------------------------------------------------------------------
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   112.791     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   134.634     kV
+Progress:     110 steps,  0.000000E+00 s simulation time,      4.28 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   135.132     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   158.089     kV
+Progress:     120 steps,  0.000000E+00 s simulation time,      4.67 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   156.545     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   183.369     kV
+Progress:     130 steps,  0.000000E+00 s simulation time,      5.07 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   170.782     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   201.677     kV
+Progress:     140 steps,  0.000000E+00 s simulation time,      5.47 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   183.265     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   213.758     kV
+Progress:     150 steps,  0.000000E+00 s simulation time,      5.87 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   185.623     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   212.310     kV
+Progress:     160 steps,  0.000000E+00 s simulation time,      6.27 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   189.392     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   215.464     kV
+Progress:     170 steps,  0.000000E+00 s simulation time,      6.67 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   196.332     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   222.528     kV
+Progress:     180 steps,  0.000000E+00 s simulation time,      7.06 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   200.024     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   225.949     kV
+Progress:     190 steps,  0.000000E+00 s simulation time,      7.45 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   206.094     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   236.410     kV
+Progress:     200 steps,  0.000000E+00 s simulation time,      7.84 s CPU time, Date: 20140410_000000
+-------------------------------------------------------------------------------
+TIMING TREE of depth 2 from step       0 to     200 GM on PE    0
+name                  #iter  #calls      sec   s/iter   s/call  percent
+-------------------------------------------------------------------------------
+SWMF                      1       1     7.84    7.839    7.839   100.00
+-------------------------------------------------------------------------------
+GM_run                  200     200     4.39    0.022    0.022    56.03
+GM_IE_couple             19      19     0.57    0.030    0.030     7.28
+IE_GM_couple             19      19     2.87    0.151    0.151    36.65
+#others                                 0.00    0.003              0.04
+-------------------------------------------------------------------------------
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   208.365     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   237.778     kV
+Progress:     210 steps,  0.000000E+00 s simulation time,      8.23 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   208.660     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   239.297     kV
+Progress:     220 steps,  0.000000E+00 s simulation time,      8.61 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   205.967     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   237.600     kV
+Progress:     230 steps,  0.000000E+00 s simulation time,      9.01 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   202.624     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   233.394     kV
+Progress:     240 steps,  0.000000E+00 s simulation time,      9.39 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   196.436     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   226.954     kV
+Progress:     250 steps,  0.000000E+00 s simulation time,      9.78 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   188.935     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   217.356     kV
+Progress:     260 steps,  0.000000E+00 s simulation time,     10.16 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   181.509     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   209.641     kV
+Progress:     270 steps,  0.000000E+00 s simulation time,     10.55 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   175.986     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   203.682     kV
+Progress:     280 steps,  0.000000E+00 s simulation time,     10.94 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   170.460     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   196.214     kV
+Progress:     290 steps,  0.000000E+00 s simulation time,     11.33 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   164.909     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   189.883     kV
+Progress:     300 steps,  0.000000E+00 s simulation time,     11.73 s CPU time, Date: 20140410_000000
+-------------------------------------------------------------------------------
+TIMING TREE of depth 2 from step       0 to     300 GM on PE    0
+name                  #iter  #calls      sec   s/iter   s/call  percent
+-------------------------------------------------------------------------------
+SWMF                      1       1    11.73   11.728   11.728   100.00
+-------------------------------------------------------------------------------
+GM_run                  300     300     6.58    0.022    0.022    56.09
+GM_IE_couple             29      29     0.87    0.030    0.030     7.42
+IE_GM_couple             29      29     4.27    0.147    0.147    36.45
+#others                                 0.00    0.005              0.04
+-------------------------------------------------------------------------------
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   160.387     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   183.198     kV
+Progress:     310 steps,  0.000000E+00 s simulation time,     12.12 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   157.110     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   179.869     kV
+Progress:     320 steps,  0.000000E+00 s simulation time,     12.52 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   155.245     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   177.451     kV
+Progress:     330 steps,  0.000000E+00 s simulation time,     12.90 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   153.985     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   175.304     kV
+Progress:     340 steps,  0.000000E+00 s simulation time,     13.29 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   153.167     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   173.677     kV
+Progress:     350 steps,  0.000000E+00 s simulation time,     13.68 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   152.543     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   172.199     kV
+Progress:     360 steps,  0.000000E+00 s simulation time,     14.06 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   152.665     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   171.577     kV
+Progress:     370 steps,  0.000000E+00 s simulation time,     14.45 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   153.097     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   172.042     kV
+Progress:     380 steps,  0.000000E+00 s simulation time,     14.83 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   154.094     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   172.848     kV
+Progress:     390 steps,  0.000000E+00 s simulation time,     15.21 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   155.095     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   174.048     kV
+Progress:     400 steps,  0.000000E+00 s simulation time,     15.60 s CPU time, Date: 20140410_000000
+-------------------------------------------------------------------------------
+TIMING TREE of depth 2 from step       0 to     400 GM on PE    0
+name                  #iter  #calls      sec   s/iter   s/call  percent
+-------------------------------------------------------------------------------
+SWMF                      1       1    15.60   15.596   15.596   100.00
+-------------------------------------------------------------------------------
+GM_run                  400     400     8.76    0.022    0.022    56.15
+GM_IE_couple             39      39     1.17    0.030    0.030     7.50
+IE_GM_couple             39      39     5.66    0.145    0.145    36.31
+#others                                 0.01    0.006              0.04
+-------------------------------------------------------------------------------
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   156.437     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   175.394     kV
+Progress:     410 steps,  0.000000E+00 s simulation time,     15.99 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   157.893     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   176.849     kV
+Progress:     420 steps,  0.000000E+00 s simulation time,     16.38 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   159.825     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   179.294     kV
+Progress:     430 steps,  0.000000E+00 s simulation time,     16.77 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   161.912     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   182.003     kV
+Progress:     440 steps,  0.000000E+00 s simulation time,     17.16 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   163.783     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   184.834     kV
+Progress:     450 steps,  0.000000E+00 s simulation time,     17.54 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   165.877     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   187.240     kV
+Progress:     460 steps,  0.000000E+00 s simulation time,     17.93 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   167.828     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   189.764     kV
+Progress:     470 steps,  0.000000E+00 s simulation time,     18.32 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   169.319     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   191.954     kV
+Progress:     480 steps,  0.000000E+00 s simulation time,     18.70 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   170.714     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   193.609     kV
+Progress:     490 steps,  0.000000E+00 s simulation time,     19.08 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   171.959     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   195.104     kV
+Progress:     500 steps,  0.000000E+00 s simulation time,     19.46 s CPU time, Date: 20140410_000000
+-------------------------------------------------------------------------------
+TIMING TREE of depth 2 from step       0 to     500 GM on PE    0
+name                  #iter  #calls      sec   s/iter   s/call  percent
+-------------------------------------------------------------------------------
+SWMF                      1       1    19.46   19.460   19.460   100.00
+-------------------------------------------------------------------------------
+GM_run                  500     500    10.94    0.022    0.022    56.24
+GM_IE_couple             49      49     1.47    0.030    0.030     7.54
+IE_GM_couple             49      49     7.04    0.144    0.144    36.18
+#others                                 0.01    0.008              0.04
+-------------------------------------------------------------------------------
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   173.056     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   196.122     kV
+Progress:     510 steps,  0.000000E+00 s simulation time,     19.83 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   173.977     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   197.137     kV
+Progress:     520 steps,  0.000000E+00 s simulation time,     20.22 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   174.730     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   197.832     kV
+Progress:     530 steps,  0.000000E+00 s simulation time,     20.60 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   175.482     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   198.394     kV
+Progress:     540 steps,  0.000000E+00 s simulation time,     20.98 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   175.938     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   198.707     kV
+Progress:     550 steps,  0.000000E+00 s simulation time,     21.35 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   176.285     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   198.904     kV
+Progress:     560 steps,  0.000000E+00 s simulation time,     21.73 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   176.530     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   199.413     kV
+Progress:     570 steps,  0.000000E+00 s simulation time,     22.10 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   176.712     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   199.430     kV
+Progress:     580 steps,  0.000000E+00 s simulation time,     22.47 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   176.771     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   199.434     kV
+Progress:     590 steps,  0.000000E+00 s simulation time,     22.84 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   176.860     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   199.406     kV
+Progress:     600 steps,  0.000000E+00 s simulation time,     23.22 s CPU time, Date: 20140410_000000
+-------------------------------------------------------------------------------
+TIMING TREE of depth 2 from step       0 to     600 GM on PE    0
+name                  #iter  #calls      sec   s/iter   s/call  percent
+-------------------------------------------------------------------------------
+SWMF                      1       1    23.22   23.216   23.216   100.00
+-------------------------------------------------------------------------------
+GM_run                  600     600    13.12    0.022    0.022    56.52
+GM_IE_couple             59      59     1.77    0.030    0.030     7.61
+IE_GM_couple             59      59     8.32    0.141    0.141    35.83
+#others                                 0.01    0.009              0.04
+-------------------------------------------------------------------------------
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   176.984     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   199.279     kV
+Progress:     610 steps,  0.000000E+00 s simulation time,     23.59 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   177.037     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   199.197     kV
+Progress:     620 steps,  0.000000E+00 s simulation time,     23.96 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   177.235     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   199.221     kV
+Progress:     630 steps,  0.000000E+00 s simulation time,     24.34 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   177.442     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   199.446     kV
+Progress:     640 steps,  0.000000E+00 s simulation time,     24.72 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   177.274     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   199.831     kV
+Progress:     650 steps,  0.000000E+00 s simulation time,     25.10 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   177.711     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   199.396     kV
+Progress:     660 steps,  0.000000E+00 s simulation time,     25.49 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   178.207     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   199.989     kV
+Progress:     670 steps,  0.000000E+00 s simulation time,     25.87 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   178.777     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   200.579     kV
+Progress:     680 steps,  0.000000E+00 s simulation time,     26.25 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   179.404     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   201.254     kV
+Progress:     690 steps,  0.000000E+00 s simulation time,     26.63 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   180.065     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   202.028     kV
+Progress:     700 steps,  0.000000E+00 s simulation time,     27.01 s CPU time, Date: 20140410_000000
+-------------------------------------------------------------------------------
+TIMING TREE of depth 2 from step       0 to     700 GM on PE    0
+name                  #iter  #calls      sec   s/iter   s/call  percent
+-------------------------------------------------------------------------------
+SWMF                      1       1    27.01   27.013   27.013   100.00
+-------------------------------------------------------------------------------
+GM_run                  700     700    15.30    0.022    0.022    56.65
+GM_IE_couple             69      69     2.07    0.030    0.030     7.65
+IE_GM_couple             69      69     9.63    0.140    0.140    35.66
+#others                                 0.01    0.011              0.04
+-------------------------------------------------------------------------------
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   180.739     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   202.787     kV
+-------------------------------------------------------------------------------
+SORTED TIMING from step       0 to     700 IE on PE   99
+name                       sec   percent     #iter    #calls
+-------------------------------------------------------------------------------
+SWMF                     27.17    100.00         1         1
+-------------------------------------------------------------------------------
+GM_IE_couple             17.55     64.60        70        70
+IE_GM_couple              9.62     35.40        70        70
+iono_solve                7.66     28.18        70       140
+-------------------------------------------------------------------------------
+ IE_set_param: CHECK iSession =           2
+ ----- End of Session              1  ------
+-------------------------------------------------------------------------------
+SORTED TIMING from step       0 to     700 GM on PE    0
+name                       sec   percent     #iter    #calls
+-------------------------------------------------------------------------------
+SWMF                     27.17    100.00         1         1
+-------------------------------------------------------------------------------
+GM_run                   15.30     56.33       700       700
+advance                  15.30     56.32       700       700
+-------------------------------------------------------------------------------
+advance_explicit         10.66     39.22       700       700
+IE_GM_couple              9.76     35.92        70        70
+exch_msgs                 4.63     17.05       700       700
+batl_pass                 4.51     16.60       700       700
+GM_IE_couple              2.10      7.71        70        70
+wait_pass                 1.64      6.05       700      1400
+local_mp_pass             1.62      5.95       700      1400
+part1_pass                0.77      2.84       700      2800
+barrier-expl1             0.44      1.63       700       700
+barrier-expl2             0.39      1.42       700       700
+buffer_to_state           0.29      1.07       700      1400
+cell_bc                   0.12      0.45       700       700
+advect_all_points         0.00      0.01       700       700
+-------------------------------------------------------------------------------
+read_inputs: iSession=  2
+
+#BEGIN_COMP GM ---------------------------------------------------------------
+ GM_set_parameters: READ iSession =           2  iLine=         243  nLine =
+         254
+GM:
+GM:#SCHEME
+GM:2			nOrder
+GM:Linde			TypeFlux
+GM:mc3			TypeLimiter
+GM:1.2			LimiterBeta
+GM:
+GM:#TIMESTEPPING
+GM:2			nStage
+GM:0.6			CflExpl
+#END_COMP GM -----------------------------------------------------------------
+
+#STOP
+1500			MaxIter		MaxIteration
+-1.			TimeMax		tSimulationMax
+
+#RUN ##########################################################################
+ GM_set_parameters: CHECK iSession =           2
+  
+check_optimize_param checking parameters...
+ ----- Starting Session            2  ------
+ world_used finished with iProc0Used=           0  nProcUsed=         100
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   180.739     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   202.787     kV
+Progress:     710 steps,  0.000000E+00 s simulation time,     27.83 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   185.438     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   208.286     kV
+Progress:     720 steps,  0.000000E+00 s simulation time,     28.59 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   194.126     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   218.101     kV
+Progress:     730 steps,  0.000000E+00 s simulation time,     29.35 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   197.522     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   221.731     kV
+Progress:     740 steps,  0.000000E+00 s simulation time,     30.10 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   198.677     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   223.687     kV
+Progress:     750 steps,  0.000000E+00 s simulation time,     30.85 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   199.823     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   225.151     kV
+Progress:     760 steps,  0.000000E+00 s simulation time,     31.60 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   201.570     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   226.775     kV
+Progress:     770 steps,  0.000000E+00 s simulation time,     32.36 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   202.829     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   228.545     kV
+Progress:     780 steps,  0.000000E+00 s simulation time,     33.12 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   203.988     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   230.841     kV
+Progress:     790 steps,  0.000000E+00 s simulation time,     33.87 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   205.978     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   232.392     kV
+Progress:     800 steps,  0.000000E+00 s simulation time,     34.62 s CPU time, Date: 20140410_000000
+-------------------------------------------------------------------------------
+TIMING TREE of depth 2 from step     700 to     800 GM on PE    0
+name                  #iter  #calls      sec   s/iter   s/call  percent
+-------------------------------------------------------------------------------
+SWMF                      1       1     7.45    7.454    7.454   100.00
+-------------------------------------------------------------------------------
+GM_run                  100     100     5.85    0.059    0.059    78.55
+GM_IE_couple             10      10     0.30    0.030    0.030     4.04
+IE_GM_couple             10      10     1.28    0.128    0.128    17.22
+exch_msgs                 1       1     0.01    0.007    0.007     0.10
+-------------------------------------------------------------------------------
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   207.139     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   233.853     kV
+Progress:     810 steps,  0.000000E+00 s simulation time,     35.37 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   208.871     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   236.104     kV
+Progress:     820 steps,  0.000000E+00 s simulation time,     36.12 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   210.425     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   237.324     kV
+Progress:     830 steps,  0.000000E+00 s simulation time,     36.88 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   211.264     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   237.939     kV
+Progress:     840 steps,  0.000000E+00 s simulation time,     37.63 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   211.313     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   238.993     kV
+Progress:     850 steps,  0.000000E+00 s simulation time,     38.39 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   211.030     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   240.019     kV
+Progress:     860 steps,  0.000000E+00 s simulation time,     39.15 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   211.297     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   241.625     kV
+Progress:     870 steps,  0.000000E+00 s simulation time,     39.90 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   211.786     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   241.088     kV
+Progress:     880 steps,  0.000000E+00 s simulation time,     40.66 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   212.358     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   240.641     kV
+Progress:     890 steps,  0.000000E+00 s simulation time,     41.42 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   211.675     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   239.705     kV
+Progress:     900 steps,  0.000000E+00 s simulation time,     42.17 s CPU time, Date: 20140410_000000
+-------------------------------------------------------------------------------
+TIMING TREE of depth 2 from step     700 to     900 GM on PE    0
+name                  #iter  #calls      sec   s/iter   s/call  percent
+-------------------------------------------------------------------------------
+SWMF                      1       1    15.01   15.006   15.006   100.00
+-------------------------------------------------------------------------------
+GM_run                  200     200    11.73    0.059    0.059    78.19
+GM_IE_couple             20      20     0.60    0.030    0.030     4.00
+IE_GM_couple             20      20     2.66    0.133    0.133    17.71
+exch_msgs                 1       1     0.01    0.007    0.007     0.05
+-------------------------------------------------------------------------------
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   210.642     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   238.103     kV
+Progress:     910 steps,  0.000000E+00 s simulation time,     42.93 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   210.198     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   237.290     kV
+Progress:     920 steps,  0.000000E+00 s simulation time,     43.68 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   209.426     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   236.535     kV
+Progress:     930 steps,  0.000000E+00 s simulation time,     44.44 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   208.633     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   236.893     kV
+Progress:     940 steps,  0.000000E+00 s simulation time,     45.19 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   207.682     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   235.951     kV
+Progress:     950 steps,  0.000000E+00 s simulation time,     45.95 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   207.558     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   234.699     kV
+Progress:     960 steps,  0.000000E+00 s simulation time,     46.71 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   206.689     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   233.285     kV
+Progress:     970 steps,  0.000000E+00 s simulation time,     47.46 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   205.655     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   232.467     kV
+Progress:     980 steps,  0.000000E+00 s simulation time,     48.21 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   205.041     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   233.143     kV
+Progress:     990 steps,  0.000000E+00 s simulation time,     49.03 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   205.187     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   232.754     kV
+Progress:    1000 steps,  0.000000E+00 s simulation time,     49.78 s CPU time, Date: 20140410_000000
+-------------------------------------------------------------------------------
+TIMING TREE of depth 2 from step     700 to    1000 GM on PE    0
+name                  #iter  #calls      sec   s/iter   s/call  percent
+-------------------------------------------------------------------------------
+SWMF                      1       1    22.61   22.612   22.612   100.00
+-------------------------------------------------------------------------------
+GM_run                  300     300    17.62    0.059    0.059    77.91
+GM_IE_couple             30      30     0.90    0.030    0.030     3.97
+IE_GM_couple             30      30     4.08    0.136    0.136    18.04
+exch_msgs                 1       1     0.01    0.007    0.007     0.03
+-------------------------------------------------------------------------------
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   204.648     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   232.012     kV
+Progress:    1010 steps,  0.000000E+00 s simulation time,     50.53 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   203.666     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   231.463     kV
+Progress:    1020 steps,  0.000000E+00 s simulation time,     51.29 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   202.908     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   230.746     kV
+Progress:    1030 steps,  0.000000E+00 s simulation time,     52.04 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   202.623     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   230.179     kV
+Progress:    1040 steps,  0.000000E+00 s simulation time,     52.80 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   202.402     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   230.299     kV
+Progress:    1050 steps,  0.000000E+00 s simulation time,     53.55 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   202.570     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   230.932     kV
+Progress:    1060 steps,  0.000000E+00 s simulation time,     54.30 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   202.784     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   231.437     kV
+Progress:    1070 steps,  0.000000E+00 s simulation time,     55.05 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   202.932     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   231.692     kV
+Progress:    1080 steps,  0.000000E+00 s simulation time,     55.80 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   203.399     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   232.709     kV
+Progress:    1090 steps,  0.000000E+00 s simulation time,     56.55 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   203.655     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   234.224     kV
+Progress:    1100 steps,  0.000000E+00 s simulation time,     57.30 s CPU time, Date: 20140410_000000
+-------------------------------------------------------------------------------
+TIMING TREE of depth 2 from step     700 to    1100 GM on PE    0
+name                  #iter  #calls      sec   s/iter   s/call  percent
+-------------------------------------------------------------------------------
+SWMF                      1       1    30.13   30.132   30.132   100.00
+-------------------------------------------------------------------------------
+GM_run                  400     400    23.50    0.059    0.059    77.98
+GM_IE_couple             40      40     1.20    0.030    0.030     3.97
+IE_GM_couple             40      40     5.42    0.135    0.135    17.98
+exch_msgs                 1       1     0.01    0.007    0.007     0.02
+-------------------------------------------------------------------------------
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   204.241     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   235.641     kV
+Progress:    1110 steps,  0.000000E+00 s simulation time,     58.06 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   204.748     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   237.052     kV
+Progress:    1120 steps,  0.000000E+00 s simulation time,     58.81 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   205.310     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   238.460     kV
+Progress:    1130 steps,  0.000000E+00 s simulation time,     59.56 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   205.838     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   238.512     kV
+Progress:    1140 steps,  0.000000E+00 s simulation time,     60.30 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   206.755     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   239.060     kV
+Progress:    1150 steps,  0.000000E+00 s simulation time,     61.05 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   207.345     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   239.412     kV
+Progress:    1160 steps,  0.000000E+00 s simulation time,     61.80 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   207.886     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   240.100     kV
+Progress:    1170 steps,  0.000000E+00 s simulation time,     62.55 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   208.494     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   240.671     kV
+Progress:    1180 steps,  0.000000E+00 s simulation time,     63.31 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   208.695     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   241.575     kV
+Progress:    1190 steps,  0.000000E+00 s simulation time,     64.06 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   209.251     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   242.289     kV
+Progress:    1200 steps,  0.000000E+00 s simulation time,     64.81 s CPU time, Date: 20140410_000000
+-------------------------------------------------------------------------------
+TIMING TREE of depth 2 from step     700 to    1200 GM on PE    0
+name                  #iter  #calls      sec   s/iter   s/call  percent
+-------------------------------------------------------------------------------
+SWMF                      1       1    37.64   37.644   37.644   100.00
+-------------------------------------------------------------------------------
+GM_run                  500     500    29.38    0.059    0.059    78.04
+GM_IE_couple             50      50     1.50    0.030    0.030     3.98
+IE_GM_couple             50      50     6.75    0.135    0.135    17.93
+exch_msgs                 1       1     0.01    0.007    0.007     0.02
+-------------------------------------------------------------------------------
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   209.265     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   242.373     kV
+Progress:    1210 steps,  0.000000E+00 s simulation time,     65.56 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   208.760     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   242.554     kV
+Progress:    1220 steps,  0.000000E+00 s simulation time,     66.31 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   208.923     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   242.517     kV
+Progress:    1230 steps,  0.000000E+00 s simulation time,     67.05 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   209.341     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   242.866     kV
+Progress:    1240 steps,  0.000000E+00 s simulation time,     67.79 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   209.550     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   244.207     kV
+Progress:    1250 steps,  0.000000E+00 s simulation time,     68.54 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   210.120     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   244.421     kV
+Progress:    1260 steps,  0.000000E+00 s simulation time,     69.30 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   210.478     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   244.169     kV
+Progress:    1270 steps,  0.000000E+00 s simulation time,     70.04 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   210.771     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   244.129     kV
+Progress:    1280 steps,  0.000000E+00 s simulation time,     70.78 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   212.374     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   244.227     kV
+Progress:    1290 steps,  0.000000E+00 s simulation time,     71.54 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   212.293     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   243.831     kV
+Progress:    1300 steps,  0.000000E+00 s simulation time,     72.28 s CPU time, Date: 20140410_000000
+-------------------------------------------------------------------------------
+TIMING TREE of depth 2 from step     700 to    1300 GM on PE    0
+name                  #iter  #calls      sec   s/iter   s/call  percent
+-------------------------------------------------------------------------------
+SWMF                      1       1    45.11   45.112   45.112   100.00
+-------------------------------------------------------------------------------
+GM_run                  600     600    35.26    0.059    0.059    78.17
+GM_IE_couple             60      60     1.80    0.030    0.030     3.98
+IE_GM_couple             60      60     8.03    0.134    0.134    17.80
+exch_msgs                 1       1     0.01    0.007    0.007     0.02
+-------------------------------------------------------------------------------
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   212.400     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   243.640     kV
+Progress:    1310 steps,  0.000000E+00 s simulation time,     73.02 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   212.584     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   243.560     kV
+Progress:    1320 steps,  0.000000E+00 s simulation time,     73.77 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   212.506     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   243.378     kV
+Progress:    1330 steps,  0.000000E+00 s simulation time,     74.51 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   212.372     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   242.990     kV
+Progress:    1340 steps,  0.000000E+00 s simulation time,     75.26 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   212.159     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   242.922     kV
+Progress:    1350 steps,  0.000000E+00 s simulation time,     76.00 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   211.983     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   243.115     kV
+Progress:    1360 steps,  0.000000E+00 s simulation time,     76.75 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   211.719     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   242.733     kV
+Progress:    1370 steps,  0.000000E+00 s simulation time,     77.49 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   211.251     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   242.421     kV
+Progress:    1380 steps,  0.000000E+00 s simulation time,     78.24 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   210.843     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   242.381     kV
+Progress:    1390 steps,  0.000000E+00 s simulation time,     78.99 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   210.822     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   241.933     kV
+Progress:    1400 steps,  0.000000E+00 s simulation time,     79.73 s CPU time, Date: 20140410_000000
+-------------------------------------------------------------------------------
+TIMING TREE of depth 2 from step     700 to    1400 GM on PE    0
+name                  #iter  #calls      sec   s/iter   s/call  percent
+-------------------------------------------------------------------------------
+SWMF                      1       1    52.57   52.566   52.566   100.00
+-------------------------------------------------------------------------------
+GM_run                  700     700    41.14    0.059    0.059    78.27
+GM_IE_couple             70      70     2.10    0.030    0.030     3.99
+IE_GM_couple             70      70     9.30    0.133    0.133    17.70
+exch_msgs                 1       1     0.01    0.007    0.007     0.01
+-------------------------------------------------------------------------------
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   210.662     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   241.657     kV
+Progress:    1410 steps,  0.000000E+00 s simulation time,     80.48 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   210.538     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   241.479     kV
+Progress:    1420 steps,  0.000000E+00 s simulation time,     81.23 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   210.390     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   240.382     kV
+Progress:    1430 steps,  0.000000E+00 s simulation time,     81.98 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   210.258     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   240.617     kV
+Progress:    1440 steps,  0.000000E+00 s simulation time,     82.73 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   209.865     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   240.862     kV
+Progress:    1450 steps,  0.000000E+00 s simulation time,     83.49 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   210.104     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   240.759     kV
+Progress:    1460 steps,  0.000000E+00 s simulation time,     84.24 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   209.860     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   240.864     kV
+Progress:    1470 steps,  0.000000E+00 s simulation time,     84.98 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   209.883     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   240.944     kV
+Progress:    1480 steps,  0.000000E+00 s simulation time,     85.73 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   209.842     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   241.171     kV
+Progress:    1490 steps,  0.000000E+00 s simulation time,     86.48 s CPU time, Date: 20140410_000000
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   210.022     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   241.173     kV
+Progress:    1500 steps,  0.000000E+00 s simulation time,     87.23 s CPU time, Date: 20140410_000000
+-------------------------------------------------------------------------------
+TIMING TREE of depth 2 from step     700 to    1500 GM on PE    0
+name                  #iter  #calls      sec   s/iter   s/call  percent
+-------------------------------------------------------------------------------
+SWMF                      1       1    60.06   60.058   60.058   100.00
+-------------------------------------------------------------------------------
+GM_run                  800     800    47.04    0.059    0.059    78.32
+GM_IE_couple             80      80     2.40    0.030    0.030     3.99
+IE_GM_couple             80      80    10.60    0.133    0.133    17.65
+exch_msgs                 1       1     0.01    0.007    0.007     0.01
+-------------------------------------------------------------------------------
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   210.132     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   241.021     kV
+-------------------------------------------------------------------------------
+SORTED TIMING from step     700 to    1500 IE on PE   99
+name                       sec   percent     #iter    #calls
+-------------------------------------------------------------------------------
+SWMF                     60.22    100.00         1         1
+-------------------------------------------------------------------------------
+GM_IE_couple             49.63     82.42        81        81
+IE_GM_couple             10.57     17.55        81        81
+iono_solve                8.24     13.69        81       162
+-------------------------------------------------------------------------------
+ IM_set_param: READ iSession =           3  iLine=         362  nLine =
+         374
+IM:
+IM:#COMPOSITION
+IM:FIXED			NameCompModel
+IM:0.8			FractionH
+IM:0.2			FractionO
+IM:
+IM:#DECAY
+IM:T 			UseDecay
+IM:10 hour			DecayTimescale		DecayTimescale  3.60000000E+04
+ IE_set_param: READ iSession =           3  iLine=         377  nLine =
+         384
+IE:
+IE:#SAVEPLOT
+IE:1			nPlotFile
+ ----- End of Session              2  ------
+-------------------------------------------------------------------------------
+SORTED TIMING from step     700 to    1500 GM on PE    0
+name                       sec   percent     #iter    #calls
+-------------------------------------------------------------------------------
+SWMF                     60.22    100.00         1         1
+-------------------------------------------------------------------------------
+GM_run                   47.04     78.11       800       800
+advance                  47.03     78.11       800       800
+-------------------------------------------------------------------------------
+advance_explicit         41.72     69.29       800       800
+IE_GM_couple             10.73     17.82        81        81
+exch_msgs                10.62     17.64      1601      1601
+batl_pass                10.33     17.16      1601      1601
+wait_pass                 3.74      6.21      1601      3202
+local_mp_pass             3.69      6.13      1601      3202
+GM_IE_couple              2.42      4.03        81        81
+barrier-expl2             1.93      3.21       800      1600
+part1_pass                1.81      3.01      1601      6404
+barrier-expl1             1.07      1.77       800      1600
+buffer_to_state           0.66      1.10      1601      3202
+cell_bc                   0.28      0.46      1601      1601
+advect_all_points         0.00      0.01       800       800
+init_pass                 0.00      0.00      1601      1601
+-------------------------------------------------------------------------------
+read_inputs: iSession=  3
+
+#TIMEACCURATE
+T			IsTimeAccurate		DoTimeAccurate
+
+#PROGRESS
+100			DnProgressShort		DnShowProgressShort
+1000			DnProgressLong		DnShowProgressLong
+
+#SAVERESTART
+T			DoSaveRestart
+-1			DnSaveRestart
+10 min			DtSaveRestart		DtSaveRestart  6.00000000E+02
+
+#COMPONENT
+IM			NameComp
+T			UseComp
+
+#COUPLEORDER
+5			nCouple
+IE GM			NameSourceTarget		NameSource NameTarget
+IE IM			NameSourceTarget		NameSource NameTarget
+GM IE			NameSourceTarget		NameSource NameTarget
+GM IM			NameSourceTarget		NameSource NameTarget
+IM GM			NameSourceTarget		NameSource NameTarget
+
+#COUPLE2
+GM			NameComp1		NameSource
+IE			NameComp2		NameTarget
+-1			DnCouple
+5.0			DtCouple
+
+#COUPLE2
+IM			NameComp1		NameSource
+GM			NameComp2		NameTarget
+-1			DnCouple
+10.0			DtCouple
+
+#COUPLE1
+IE			NameSource
+IM			NameTarget
+-1			DnCouple
+10.0			DtCouple
+
+#COUPLETIME
+GM			NameComp
+F			DoCoupleOnTime
+
+#UPDATEB0
+0.5			DtUpdateB0
+
+#BEGIN_COMP GM ---------------------------------------------------------------
+ GM_set_parameters: READ iSession =           3  iLine=         316  nLine =
+         359
+GM:
+GM:#IMCOUPLING
+GM:20.0			TauCoupleIm
+GM:T			DoImSatTrace
+GM:T			DoCoupleImPressure
+GM:T			DoCoupleImDensity
+GM:0.01			DensityCoupleFloor
+GM:F			DoFixPolarRegion
+GM:
+GM:#MINIMUMPRESSURE
+GM:1e-5			pMinDim [nPa]
+GM:
+GM:#SAVEPLOT
+GM:3			nPlotFile
+GM:y=0 MHD idl		StringPlot
+GM:-1			DnSavePlot
+GM:5 min			DtSavePlot		DtSavePlot  3.00000000E+02
+GM:-1.0			DxSavePlot
+GM:z=0 MHD idl		StringPlot
+GM:-1			DnSavePlot
+GM:5 min			DtSavePlot		DtSavePlot  3.00000000E+02
+GM:-1.0			DxSavePlot
+GM:shl MHD idl_ascii		StringPlot
+GM:-1			DnSavePlot
+GM:1 min			DtSavePlot		DtSavePlot  6.00000000E+01
+GM:GEO			TypeCoordPlot
+GM:6.6			rMin
+GM:6.6			rMax
+GM:0.			LonMin
+GM:360.			LonMax
+GM:10.			dLon
+GM:0.			LatMin
+GM:0.			LatMax
+GM:
+GM:#BORIS
+GM:T			UseBorisCorrection
+GM:0.01			BorisClightFactor
+GM:
+GM:#TIMESTEPPING
+GM:1			nStage
+GM:0.85			CflExpl
+#END_COMP GM -----------------------------------------------------------------
+
+#BEGIN_COMP IM ---------------------------------------------------------------
+#END_COMP IM -----------------------------------------------------------------
+
+#BEGIN_COMP IE ---------------------------------------------------------------
+#END_COMP IE -----------------------------------------------------------------
+
+#STOP
+-1			MaxIter		MaxIteration
+60.0			TimeMax		tSimulationMax
+
+#RUN ##########################################################################
+ GM_set_parameters: CHECK iSession =           3
+IE:aur idl			StringPlot
+IE:-1			DnSavePlot
+IE:1 min			DtSavePlot		DtSavePlot  6.00000000E+01
+ IE_set_param: CHECK iSession =           3
+ IM_set_param: CHECK iSession =           3
+  
+ GM_set_parameters: setting DoLimitMomentum=F
+check_optimize_param checking parameters...
+ ----- Starting Session            3  ------
+ ground_mag_perturb_fac allocated LineContrib_DII(3,        5029 ,         330 )
+ ground_mag_perturb_fac allocated InvDist2_DII(3,        5029 ,         330 )
+ ground_mag_perturb_fac: kp UseFastFacIntegral= T
+ ground_mag_perturb_fac: ae UseFastFacIntegral= T
+GM:saved ifile= 6 type=y=0_mhd              at n_step=   1500 time=   0:00:00 h:m:s
+GM:saved ifile= 7 type=z=0_mhd              at n_step=   1500 time=   0:00:00 h:m:s
+GM:saved ifile= 8 type=shl_mhd              at n_step=   1500 time=   0:00:00 h:m:s
+ ---------------------------------------------
+ set_couple_var_info:
+ Coupling GM to IM
+ nDensity(Source/Target/Couple):
+           1           3           1
+ nSpeed(Source/Target/Couple):
+           1           0           0
+ nP(Source/Target/Couple):
+           1           3           1
+ nPpar(Source/Target/Couple):
+           0           0           0
+ ---------------------------------------------
+ Coupling flags:
+ Magnetic field:  F
+ Pe:              F
+ Ppar:            F
+ Ehot:            F
+ Waves:           F
+ ChargeStates:    F
+ Fluids:          F
+ Species:         F
+ SignB:           F
+ ---------------------------------------------
+ world_used finished with iProc0Used=           0  nProcUsed=         100
+IM:  Ellipse size adjusted            7  times. size=   5.72089226507081     
+   7.35091890625000     
+ ground_mag_perturb_fac: stat UseFastFacIntegral= T
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   210.132     kV
+ ground_mag_perturb_fac: grid UseFastFacIntegral= T
+IE:iono_solver: Southern Cross Polar Cap Potential=   241.021     kV
+IM:  Ellipse size adjusted            7  times. size=   5.72089226507081     
+   7.35091890625000     
+IM:  Time            0 -           5  completed.
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   216.660     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   250.524     kV
+IM:  Ellipse size adjusted            7  times. size=   5.72089226507081     
+   7.35091890625000     
+IM:  Time            5 -          10  completed.
+Progress:    1600 steps,  7.627923E+00 s simulation time,     97.04 s CPU time, Date: 20140410_000007
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   218.026     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   249.766     kV
+IM:  Ellipse size adjusted            7  times. size=   5.71405750143060     
+   7.35091890625000     
+IM:  Time           10 -          15  completed.
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   220.084     kV
+Progress:    1700 steps,  1.523858E+01 s simulation time,    101.37 s CPU time, Date: 20140410_000015
+IE:iono_solver: Southern Cross Polar Cap Potential=   252.161     kV
+IM:  Ellipse size adjusted            7  times. size=   5.71405750143060     
+   7.35091890625000     
+IM:  Time           15 -          20  completed.
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   222.385     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   254.805     kV
+IM:  Ellipse size adjusted            7  times. size=   5.71217850041740     
+   7.35091890625000     
+IM:  Time           20 -          25  completed.
+Progress:    1800 steps,  2.292828E+01 s simulation time,    105.71 s CPU time, Date: 20140410_000022
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   225.728     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   259.036     kV
+IM:  Ellipse size adjusted            7  times. size=   5.71217850041740     
+   7.35091890625000     
+IM:  Time           25 -          30  completed.
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   226.841     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   260.331     kV
+IM:  Ellipse size adjusted            7  times. size=   5.70238564809604     
+   7.35091890625000     
+IM:  Time           30 -          35  completed.
+Progress:    1900 steps,  3.054150E+01 s simulation time,    110.05 s CPU time, Date: 20140410_000030
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   229.963     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   262.372     kV
+IM:  Ellipse size adjusted            7  times. size=   5.70238564809604     
+   7.35091890625000     
+IM:  Time           35 -          40  completed.
+Progress:    2000 steps,  3.823442E+01 s simulation time,    113.92 s CPU time, Date: 20140410_000038
+-------------------------------------------------------------------------------
+TIMING TREE of depth 2 from step    1500 to    2000 GM on PE    0
+name                  #iter  #calls      sec   s/iter   s/call  percent
+-------------------------------------------------------------------------------
+SWMF                      1       1    26.54   26.537   26.537   100.00
+-------------------------------------------------------------------------------
+GM_run                  493     493    23.27    0.047    0.047    87.69
+GM_IE_couple              8       8     0.25    0.031    0.031     0.95
+IE_GM_couple              8       8     0.10    0.012    0.012     0.36
+exch_msgs                 1       1     0.01    0.007    0.007     0.03
+save_logfile              1       1     0.01    0.014    0.014     0.05
+calc_kp                   1       1     0.10    0.100    0.100     0.38
+calc_ae                   1       1     0.01    0.013    0.013     0.05
+save_plot                 1       3     0.91    0.913    0.304     3.44
+save_satellite            1       1     0.01    0.006    0.006     0.02
+GM_IM_couple              4       4     0.17    0.043    0.043     0.64
+IM_GM_couple              4       4     1.68    0.421    0.421     6.35
+-------------------------------------------------------------------------------
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   230.511     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   263.559     kV
+IM:  Ellipse size adjusted            6  times. size=   5.67384545913098     
+   7.73780937500000     
+IM:  Time           40 -          45  completed.
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   229.635     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   261.893     kV
+IM:  Ellipse size adjusted            6  times. size=   5.67384545913098     
+   7.73780937500000     
+IM:  Time           45 -          50  completed.
+Progress:    2100 steps,  4.585069E+01 s simulation time,    118.24 s CPU time, Date: 20140410_000045
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+IE:iono_solver: F10.7=    131.87
+IE:iono_solver: Northern Cross Polar Cap Potential=   230.325     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   264.137     kV
+IM:  Ellipse size adjusted            6  times. size=   5.64191195193887     
+   7.73780937500000     
+IM:  Time           50 -          55  completed.
+Progress:    2200 steps,  5.354504E+01 s simulation time,    122.58 s CPU time, Date: 20140410_000053
+IE:iono_solver: F10.7=    131.88
+IE:iono_solver: Northern Cross Polar Cap Potential=   230.598     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   264.711     kV
+IM:  Ellipse size adjusted            6  times. size=   5.64191195193887     
+   7.73780937500000     
+IM:  Time           55 -          60  completed.
+GM:saved ifile= 8 type=shl_mhd              at n_step=   2274 time=   0:01:00 h:m:s
+-------------------------------------------------------------------------------
+SORTED TIMING from step    1500 to    1512 IM on PE   99
+name                       sec   percent     #iter    #calls
+-------------------------------------------------------------------------------
+SWMF                     38.65    100.00         1         1
+-------------------------------------------------------------------------------
+IE_GM_couple             31.70     82.02        13        13
+IM_run                    1.84      4.75        12        12
+IM_GM_couple              1.69      4.37         7         7
+IE_run                    1.55      4.01        12        12
+-------------------------------------------------------------------------------
+iono_solve                1.21      3.13        12        24
+GM_IE_couple              0.43      1.12        13        13
+GM_IM_couple              0.29      0.74         7         7
+IE_IM_couple              0.00      0.01         7         7
+-------------------------------------------------------------------------------
+ ----- End of Session              3  ------
+-------------------------------------------------------------------------------
+SORTED TIMING from step    1500 to    2285 GM on PE    0
+name                       sec   percent     #iter    #calls
+-------------------------------------------------------------------------------
+SWMF                     38.64    100.00         1         1
+-------------------------------------------------------------------------------
+GM_run                   35.08     90.78       774       774
+advance                  35.08     90.77       774       774
+-------------------------------------------------------------------------------
+advance_explicit         23.34     60.39       774       774
+exch_msgs                 5.54     14.33       782       902
+batl_pass                 5.45     14.10       797       917
+apply_im_pressure         2.81      7.28       774       774
+trace_field_grid          2.55      6.59         6         6
+trace_grid_fast           2.55      6.59         6         6
+ground_db_fac             2.51      6.49         6         6
+grid_magnetometer         2.44      6.31         1         1
+ground_slow_int           2.38      6.17         4         4
+local_mp_pass             1.97      5.10       797      1827
+wait_pass                 1.94      5.03       797      1827
+IM_GM_couple              1.69      4.37         7         7
+trace_iter                1.63      4.22         6         6
+barrier-expl2             1.18      3.04       774       774
+barrier                   1.03      2.67        12       885
+part1_pass                0.97      2.50       797      3654
+save_plot                 0.94      2.43         2         4
+trace_iter1               0.78      2.01         6       293
+trace_pass                0.61      1.58         6       293
+GM_IE_couple              0.41      1.06        13        13
+update_b0_fast            0.37      0.96       120       120
+buffer_to_state           0.35      0.90       797      1827
+GM_IM_couple              0.29      0.76         7         7
+integrate_field_from      0.29      0.75         7         7
+trace_check               0.24      0.63         6       293
+trace_grid_fast2          0.21      0.54         6         6
+calc_kp                   0.15      0.39         2         2
+cell_bc                   0.14      0.37       782       782
+IE_GM_couple              0.10      0.27        13        13
+ground_calc_fac           0.09      0.22         2         2
+calc_ie_mag_perturb       0.06      0.15         6         6
+trace_grid_fast1          0.05      0.13         6         6
+save_logfile              0.03      0.07         3         3
+barrier-expl1             0.02      0.05       774       774
+save_magnetometer         0.01      0.04         1         1
+calc_ae                   0.01      0.04         2         2
+pass_node                 0.01      0.03         6         6
+save_satellite            0.01      0.02         3         3
+advect_all_points         0.00      0.01       774       774
+integrate_domain          0.00      0.01         3         3
+trace_grid_fast3          0.00      0.01         6         6
+init_pass                 0.00      0.00       797       917
+-------------------------------------------------------------------------------
+read_inputs: iSession=  4
+
+#ENDTIME
+ IE_set_param: CHECK iSession =           4
+ IM_set_param: CHECK iSession =           4
+2014			iYear
+04			iMonth
+10			iDay
+00			iHour
+03			iMinute
+00			iSecond
+0.0			FracSecond
+ GM_set_parameters: CHECK iSession =           4
+  
+ GM_set_parameters: setting DoLimitMomentum=F
+check_optimize_param checking parameters...
+ ----- Starting Session            4  ------
+ world_used finished with iProc0Used=           0  nProcUsed=         100
+IE:iono_solver: F10.7=    131.88
+IE:iono_solver: Northern Cross Polar Cap Potential=   229.880     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   264.480     kV
+IE:iono_solver: F10.7=    131.88
+IE:iono_solver: Northern Cross Polar Cap Potential=   229.880     kV
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+IE:iono_solver: Southern Cross Polar Cap Potential=   264.480     kV
+IM:  Ellipse size adjusted            6  times. size=   5.62983211851143     
+   7.73780937500000     
+IM:  Time           60 -          65  completed.
+Progress:    2300 steps,  6.116586E+01 s simulation time,    127.25 s CPU time, Date: 20140410_000101
+IE:iono_solver: F10.7=    131.88
+IE:iono_solver: Northern Cross Polar Cap Potential=   230.563     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   261.555     kV
+IM:  Ellipse size adjusted            6  times. size=   5.62983211851143     
+   7.73780937500000     
+IM:  Time           65 -          70  completed.
+Progress:    2400 steps,  6.886057E+01 s simulation time,    131.12 s CPU time, Date: 20140410_000108
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+IE:iono_solver: F10.7=    131.88
+IE:iono_solver: Northern Cross Polar Cap Potential=   231.026     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   261.896     kV
+IM:  Ellipse size adjusted            5  times. size=   5.62100205039199     
+   8.14506250000000     
+IM:  Time           70 -          75  completed.
+IE:iono_solver: F10.7=    131.88
+IE:iono_solver: Northern Cross Polar Cap Potential=   231.198     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   261.275     kV
+IM:  Ellipse size adjusted            5  times. size=   5.62100205039199     
+   8.14506250000000     
+IM:  Time           75 -          80  completed.
+Progress:    2500 steps,  7.647718E+01 s simulation time,    135.44 s CPU time, Date: 20140410_000116
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+IE:iono_solver: F10.7=    131.88
+IE:iono_solver: Northern Cross Polar Cap Potential=   231.576     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   262.154     kV
+IM:  Ellipse size adjusted            5  times. size=   5.61515748282784     
+   8.14506250000000     
+IM:  Time           80 -          85  completed.
+Progress:    2600 steps,  8.417137E+01 s simulation time,    139.77 s CPU time, Date: 20140410_000124
+IE:iono_solver: F10.7=    131.88
+IE:iono_solver: Northern Cross Polar Cap Potential=   231.938     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   266.136     kV
+IM:  Ellipse size adjusted            5  times. size=   5.61515748282784     
+   8.14506250000000     
+IM:  Time           85 -          90  completed.
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+IE:iono_solver: F10.7=    131.88
+IE:iono_solver: Northern Cross Polar Cap Potential=   232.673     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   265.136     kV
+IM:  Ellipse size adjusted            6  times. size=   5.60912998735511     
+   7.73780937500000     
+IM:  Time           90 -          95  completed.
+Progress:    2700 steps,  9.178400E+01 s simulation time,    144.09 s CPU time, Date: 20140410_000131
+IE:iono_solver: F10.7=    131.88
+IE:iono_solver: Northern Cross Polar Cap Potential=   232.897     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   266.513     kV
+IM:  Ellipse size adjusted            6  times. size=   5.60912998735511     
+   7.73780937500000     
+IM:  Time           95 -         100  completed.
+Progress:    2800 steps,  9.946431E+01 s simulation time,    147.96 s CPU time, Date: 20140410_000139
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+IE:iono_solver: F10.7=    131.88
+IE:iono_solver: Northern Cross Polar Cap Potential=   233.966     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   265.398     kV
+IM:  Ellipse size adjusted            6  times. size=   5.60256489561209     
+   7.73780937500000     
+IM:  Time          100 -         105  completed.
+IE:iono_solver: F10.7=    131.88
+IE:iono_solver: Northern Cross Polar Cap Potential=   234.652     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   262.723     kV
+IM:  Ellipse size adjusted            6  times. size=   5.60256489561209     
+   7.73780937500000     
+IM:  Time          105 -         110  completed.
+Progress:    2900 steps,  1.070584E+02 s simulation time,    152.37 s CPU time, Date: 20140410_000147
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+IE:iono_solver: F10.7=    131.88
+IE:iono_solver: Northern Cross Polar Cap Potential=   234.985     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   262.272     kV
+IM:  Ellipse size adjusted            4  times. size=   5.59575679607438     
+   8.57375000000000     
+IM:  Time          110 -         115  completed.
+Progress:    3000 steps,  1.147229E+02 s simulation time,    156.70 s CPU time, Date: 20140410_000154
+-------------------------------------------------------------------------------
+TIMING TREE of depth 2 from step    2285 to    3000 GM on PE    0
+name                  #iter  #calls      sec   s/iter   s/call  percent
+-------------------------------------------------------------------------------
+SWMF                      1       1    30.67   30.672   30.672   100.00
+-------------------------------------------------------------------------------
+GM_run                  705     705    29.90    0.042    0.042    97.48
+GM_IE_couple             11      11     0.35    0.031    0.031     1.13
+IE_GM_couple             11      11     0.15    0.014    0.014     0.49
+exch_msgs                 1       1     0.01    0.007    0.007     0.02
+GM_IM_couple              6       6     0.25    0.041    0.041     0.81
+IM_GM_couple              6       6     0.01    0.002    0.002     0.04
+-------------------------------------------------------------------------------
+IE:iono_solver: F10.7=    131.88
+IE:iono_solver: Northern Cross Polar Cap Potential=   235.252     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   261.745     kV
+IM:  Ellipse size adjusted            4  times. size=   5.59575679607438     
+   8.57375000000000     
+IM:  Time          115 -         120  completed.
+GM:saved ifile= 8 type=shl_mhd              at n_step=   3048 time=   0:02:00 h:m:s
+IE:iono_solver: F10.7=    131.88
+IE:iono_solver: Northern Cross Polar Cap Potential=   236.440     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   262.512     kV
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+IM:  Ellipse size adjusted            5  times. size=   5.59094041601977     
+   8.14506250000000     
+IM:  Time          120 -         125  completed.
+Progress:    3100 steps,  1.223057E+02 s simulation time,    161.21 s CPU time, Date: 20140410_000202
+IE:iono_solver: F10.7=    131.88
+IE:iono_solver: Northern Cross Polar Cap Potential=   236.488     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   262.430     kV
+IM:  Ellipse size adjusted            5  times. size=   5.59094041601977     
+   8.14506250000000     
+IM:  Time          125 -         130  completed.
+Progress:    3200 steps,  1.299621E+02 s simulation time,    165.07 s CPU time, Date: 20140410_000209
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+IE:iono_solver: F10.7=    131.88
+IE:iono_solver: Northern Cross Polar Cap Potential=   236.281     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   262.229     kV
+IM:  Ellipse size adjusted            5  times. size=   5.58566124125370     
+   8.14506250000000     
+IM:  Time          130 -         135  completed.
+IE:iono_solver: F10.7=    131.88
+IE:iono_solver: Northern Cross Polar Cap Potential=   237.242     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   262.992     kV
+IM:  Ellipse size adjusted            5  times. size=   5.58566124125370     
+   8.14506250000000     
+IM:  Time          135 -         140  completed.
+Progress:    3300 steps,  1.375382E+02 s simulation time,    169.40 s CPU time, Date: 20140410_000217
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+IE:iono_solver: F10.7=    131.88
+IE:iono_solver: Northern Cross Polar Cap Potential=   237.610     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   263.569     kV
+IM:  Ellipse size adjusted            5  times. size=   5.58007016988502     
+   8.14506250000000     
+IM:  Time          140 -         145  completed.
+Progress:    3400 steps,  1.451126E+02 s simulation time,    173.71 s CPU time, Date: 20140410_000225
+IE:iono_solver: F10.7=    131.88
+IE:iono_solver: Northern Cross Polar Cap Potential=   238.081     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   263.407     kV
+IM:  Ellipse size adjusted            5  times. size=   5.58007016988502     
+   8.14506250000000     
+IM:  Time          145 -         150  completed.
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+IE:iono_solver: F10.7=    131.88
+IE:iono_solver: Northern Cross Polar Cap Potential=   238.735     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   264.059     kV
+IM:  Ellipse size adjusted            5  times. size=   5.57466336702963     
+   8.14506250000000     
+IM:  Time          150 -         155  completed.
+Progress:    3500 steps,  1.527633E+02 s simulation time,    178.06 s CPU time, Date: 20140410_000232
+IE:iono_solver: F10.7=    131.88
+IE:iono_solver: Northern Cross Polar Cap Potential=   239.415     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   264.072     kV
+IM:  Ellipse size adjusted            5  times. size=   5.57466336702963     
+   8.14506250000000     
+IM:  Time          155 -         160  completed.
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+IE:iono_solver: F10.7=    131.88
+IE:iono_solver: Northern Cross Polar Cap Potential=   239.998     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   263.556     kV
+IM:  Ellipse size adjusted            4  times. size=   5.56944206949267     
+   8.57375000000000     
+IM:  Time          160 -         165  completed.
+Progress:    3600 steps,  1.603367E+02 s simulation time,    182.36 s CPU time, Date: 20140410_000240
+IE:iono_solver: F10.7=    131.88
+IE:iono_solver: Northern Cross Polar Cap Potential=   240.352     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   266.965     kV
+IM:  Ellipse size adjusted            4  times. size=   5.56944206949267     
+   8.57375000000000     
+IM:  Time          165 -         170  completed.
+Progress:    3700 steps,  1.679882E+02 s simulation time,    186.21 s CPU time, Date: 20140410_000247
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+ trace_grid_fast starting
+IE:iono_solver: F10.7=    131.88
+IE:iono_solver: Northern Cross Polar Cap Potential=   240.675     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   267.298     kV
+IM:  Ellipse size adjusted            4  times. size=   5.56430370799609     
+   8.57375000000000     
+IM:  Time          170 -         175  completed.
+IE:iono_solver: F10.7=    131.88
+IE:iono_solver: Northern Cross Polar Cap Potential=   241.056     kV
+IE:iono_solver: Southern Cross Polar Cap Potential=   269.261     kV
+IM:  Ellipse size adjusted            4  times. size=   5.56430370799609     
+   8.57375000000000     
+Progress:    3800 steps,  1.755621E+02 s simulation time,    190.53 s CPU time, Date: 20140410_000255
+IM:  Time          175 -         180  completed.
+GM:saved ifile= 8 type=shl_mhd              at n_step=   3824 time=   0:03:00 h:m:s
+ 
+    Finished Numerical Simulation
+    -----------------------------
+   Simulated time =   1.80000E+02 s 
+    Simulated time =      3.000000 mins
+-------------------------------------------------------------------------------
+SORTED TIMING from step    2285 to    3858 GM on PE    0
+name                       sec   percent     #iter    #calls
+-------------------------------------------------------------------------------
+SWMF                     66.90    100.00         1         1
+-------------------------------------------------------------------------------
+GM_run                   65.34     97.68      1550      1550
+advance                  65.34     97.67      1550      1550
+-------------------------------------------------------------------------------
+advance_explicit         46.78     69.93      1550      1550
+exch_msgs                11.07     16.55      1564      1804
+batl_pass                10.88     16.26      1591      1831
+apply_im_pressure         5.50      8.22      1550      1550
+trace_field_grid          4.97      7.43        12        12
+trace_grid_fast           4.97      7.43        12        12
+local_mp_pass             3.93      5.87      1591      3649
+wait_pass                 3.89      5.81      1591      3649
+trace_iter                3.16      4.73        12        12
+barrier-expl2             2.41      3.61      1550      1550
+barrier                   1.99      2.98        24      1695
+part1_pass                1.93      2.88      1591      7298
+trace_iter1               1.52      2.27        12       561
+-------------------------------------------------------------------------------
+SORTED TIMING from step    1512 to    1536 IM on PE   99
+name                       sec   percent     #iter    #calls
+-------------------------------------------------------------------------------
+SWMF                     66.90    100.00         1         1
+-------------------------------------------------------------------------------
+IE_GM_couple             58.06     86.79        25        25
+IM_run                    4.20      6.28        24        24
+IE_run                    3.23      4.82        24        24
+-------------------------------------------------------------------------------
+iono_solve                2.51      3.76        25        50
+GM_IE_couple              0.84      1.26        25        25
+GM_IM_couple              0.53      0.79        13        13
+IM_GM_couple              0.02      0.03        13        13
+IE_IM_couple              0.01      0.01        13        13
+-------------------------------------------------------------------------------
+trace_pass                1.18      1.76        12       561
+GM_IE_couple              0.79      1.19        25        25
+update_b0_fast            0.74      1.11       240       240
+buffer_to_state           0.69      1.03      1591      3649
+GM_IM_couple              0.54      0.81        13        13
+integrate_field_from      0.53      0.79        13        13
+trace_check               0.47      0.71        12       561
+trace_grid_fast2          0.44      0.66        12        12
+ => Writing restart file for ionosphere.
+cell_bc                   0.29      0.43      1564      1564
+IE_GM_couple              0.17      0.26        25        25
+ground_db_fac             0.11      0.17         6         6
+grid_magnetometer         0.10      0.15         1         1
+calc_kp                   0.10      0.15         2         2
+trace_grid_fast1          0.10      0.15        12        12
+ground_calc_fac           0.08      0.13         2         2
+calc_ie_mag_perturb       0.06      0.08         6         6
+save_plot                 0.05      0.07         2         2
+barrier-expl1             0.04      0.06      1550      1550
+ground_fast_int           0.03      0.04         5         6
+IM_GM_couple              0.02      0.04        13        13
+save_logfile              0.02      0.04         4         4
+pass_node                 0.02      0.03        12        12
+save_magnetometer         0.01      0.01         1         1
+advect_all_points         0.01      0.01      1550      1550
+trace_grid_fast3          0.01      0.01        12        12
+integrate_domain          0.00      0.01         4         4
+init_pass                 0.00      0.00      1591      1831
+calc_ae                   0.00      0.00         2         2
+save_satellite            0.00      0.00         4         4
+-------------------------------------------------------------------------------
+ save_restart is called at nStep,tSimulation=           0
+  0.000000000000000E+000
+IM: IM_save_restart at TimeSimulation=  0.000000000000000E+000
+IM:   Saving Restart at T=00180s (00:03:00) 
+GM:saved ifile= 1 type=restart              at n_step=   3824 time=   0:03:00 h:m:s
+IM: IM_finalize at TimeSimulation=  0.000000000000000E+000
+-------------------------------------------------------------------------------
+SORTED TIMING from step       0 to    1536 IM on PE   99
+name                       sec   percent     #iter    #calls
+-------------------------------------------------------------------------------
+SWMF                    194.24    100.00         1         1
+-------------------------------------------------------------------------------
+IE_GM_couple            109.94     56.60       189       189
+GM_IE_couple             68.46     35.24       189       189
+iono_solve               19.62     10.10       188       376
+IM_run                    6.03      3.11        36        36
+IE_run                    4.78      2.46      1536      1536
+-------------------------------------------------------------------------------
+IM_GM_couple              1.71      0.88        20        20
+GM_IM_couple              0.81      0.42        20        20
+IE_IM_couple              0.01      0.00        20        20
+-------------------------------------------------------------------------------
+GM:saved ifile= 6 type=y=0_mhd              at n_step=   3824 time=   0:03:00 h:m:s
+GM:saved ifile= 7 type=z=0_mhd              at n_step=   3824 time=   0:03:00 h:m:s
+GM:clean_mod_advance deallocated arrays
+GM:clean_mod_raytrace deallocated arrays
+GM:clean_mod_geometry deallocated arrays
+GM:clean_mod_nodes deallocated arrays
+GM: Error report: no errors...
+ 
+    Finished Finalizing SWMF
+    ------------------------
+-------------------------------------------------------------------------------
+SORTED TIMING from step       0 to    3858 GM on PE    0
+name                       sec   percent     #iter    #calls
+-------------------------------------------------------------------------------
+SWMF                    194.94    100.00         1         1
+-------------------------------------------------------------------------------
+GM_run                  162.77     83.49      3824      3824
+advance                 162.76     83.49      3824      3824
+-------------------------------------------------------------------------------
+advance_explicit        122.49     62.83      3824      3824
+exch_msgs                31.87     16.35      4647      5007
+batl_pass                31.17     15.99      4689      5049
+IE_GM_couple             20.77     10.65       189       189
+wait_pass                11.21      5.75      4689     10078
+local_mp_pass            11.21      5.75      4689     10078
+apply_im_pressure         8.31      4.26      2324      2324
+trace_field_grid          7.52      3.86        18        18
+trace_grid_fast           7.52      3.86        18        18
+barrier-expl2             5.90      3.03      3824      4624
+GM_IE_couple              5.72      2.93       189       189
+part1_pass                5.48      2.81      4689     20156
+trace_iter                4.80      2.46        18        18
+grid_magnetometer         3.09      1.59         3         3
+barrier                   3.03      1.55        36      2580
+ground_db_fac             2.65      1.36        14        14
+ground_slow_int           2.38      1.22         4         4
+trace_iter1               2.29      1.18        18       854
+buffer_to_state           1.99      1.02      4689     10078
+trace_pass                1.78      0.92        18       854
+IM_GM_couple              1.71      0.88        20        20
+barrier-expl1             1.57      0.80      3824      4624
+save_plot                 1.37      0.70         5         8
+update_b0_fast            1.11      0.57       360       360
+GM_IM_couple              0.83      0.43        20        20
+cell_bc                   0.83      0.42      4647      4647
+integrate_field_from      0.82      0.42        20        20
+trace_check               0.72      0.37        18       854
+trace_grid_fast2          0.65      0.33        18        18
+write_restart_files       0.42      0.22         1         1
+calc_kp                   0.25      0.13         4         4
+ground_calc_fac           0.17      0.09         4         4
+calc_ie_mag_perturb       0.16      0.08        14        14
+trace_grid_fast1          0.15      0.08        18        18
+ground_fast_int           0.06      0.03         9        10
+save_logfile              0.05      0.03         7         7
+pass_node                 0.03      0.02        18        18
+save_magnetometer         0.03      0.01         3         3
+advect_all_points         0.02      0.01      3824      3824
+calc_ae                   0.02      0.01         4         4
+init_pass                 0.01      0.00      4689      5049
+trace_grid_fast3          0.01      0.00        18        18
+save_satellite            0.01      0.00         7         7
+integrate_domain          0.01      0.00         7         7
+calc_sphere_integrat      0.00      0.00         7         7
+-------------------------------------------------------------------------------
