@@ -1,7 +1,7 @@
 Name Root Last Stride nThread
 #COMPONENTMAP		For up to 2 CPU cores + 1 GPU
 GM  0 0 1		CompMap root PE+GPU
-IE  0 1 1  		CompMap PEs 0 and 1
+IE  1 1 1  		CompMap PEs 0 and 1
 IM  1 1 1		CompMap PE 1
 
 #TIMING
@@ -160,7 +160,7 @@ date			NameMaxTimeUnit
 T			DoSaveLogfile
 VAR step date		StringLog
 -1			DnSaveLogfile
-5.0			DtSaveLogfile
+30.0			DtSaveLogfile
 dt rho mx my mz p bx by bz pmin pmax dst_sm dstflx		NameLogVars
 3.0			StringLogRadii
 
@@ -380,6 +380,12 @@ aur idl			StringPlot
 1 min			DtSavePlot
 
 #END_COMP IE -----------------------------------------------------------------
+
+#STOP
+-1			MaxIter
+60.0			TimeMax
+
+#RUN ##########################################################################
 
 #ENDTIME
 2014			iYear
