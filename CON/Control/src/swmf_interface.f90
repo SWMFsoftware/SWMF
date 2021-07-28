@@ -149,7 +149,7 @@ subroutine SWMF_couple(NameFrom, NameTo, NameCoord, &
   use ModKind, ONLY: Real8_
   use CON_comp_param, ONLY: lNameComp, i_comp_name
   use CON_world,      ONLY: i_comm
-  use ModMpi
+  use ModMpiOrig
 
   use GM_wrapper, ONLY: GM_put_from_ih_buffer
 
