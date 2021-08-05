@@ -84,6 +84,12 @@ F			IsLogRadius
 T			UseCurlB0
 2.5			rCurrentFreeB0
 
+#B0MOMENTUMFLUX
+T			UseB0MomentumFlux
+
+#DIVFULLBSOURCE
+T			UseDivFullBSource
+
 #USERSWITCH
 +init +ic		StringSwitch
 

@@ -1,4 +1,4 @@
-Begin session: 1
+SCURBegin session: 1
 
 #COMPONENTMAP
 SC  0 -1  1		CompMap
@@ -135,6 +135,13 @@ F			IsLogRadius
 #USECURLB0
 T			UseCurlB0
 2.5			rCurrentFreeB0
+
+#B0MOMENTUMFLUX
+T			UseB0MomentumFlux
+
+#DIVFULLBSOURCE
+T			UseDivFullBSource
+
 
 #USERSWITCH
 +init +ic		StringSwitch
