@@ -1319,7 +1319,7 @@ test14:
 test14_compile:
 	./Config.pl -v=Empty,OH/BATSRUS,PT/AMPS
 	./Config.pl -o=OH:u=OuterHelio,e=Swh,ng=2,g=4,4,4
-	./Config.pl -o=PT:spice-path=nospice,spice-kernels=nospice,application=oh,amps-test=on 
+	./Config.pl -o=PT:spice-path=nospice,spice-kernels=nospice,application=oh,amps-test=on,no-signals 
 	${MAKE} SWMF
 	make PIDL
 
