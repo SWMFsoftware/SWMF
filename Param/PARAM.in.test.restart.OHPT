@@ -23,6 +23,20 @@ F  			IsTimeAccurate
 #RESTART
 T			isRestart
 
+
+#SAMPLING
+F			Particle data sampling
+
+
+#SAMPLING_LENGTH
+2			sampling length
+
+
+
+#SAMPLING_OUTPUT_CADENCE
+9			the cadence between starting sampled procedure for output AMPS' data file
+
+
 #END_COMP PT -----------------------------------------------------------------
 
 #BEGIN_COMP OH ---------------------------------------------------------------
