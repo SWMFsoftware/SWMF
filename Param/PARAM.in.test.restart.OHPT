@@ -29,12 +29,12 @@ F			Particle data sampling
 
 
 #SAMPLING_LENGTH
-2			sampling length
+2			SamplingLength
 
 
 
 #SAMPLING_OUTPUT_CADENCE
-9			the cadence between starting sampled procedure for output AMPS' data file
+9			SamplingOutputCadence 
 
 
 #END_COMP PT -----------------------------------------------------------------
