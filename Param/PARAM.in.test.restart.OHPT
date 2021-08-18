@@ -23,19 +23,14 @@ F  			IsTimeAccurate
 #RESTART
 T			isRestart
 
-
 #SAMPLING
-F			Particle data sampling
-
+F			SamplingMode data sampling
 
 #SAMPLING_LENGTH
 2			SamplingLength
 
-
-
 #SAMPLING_OUTPUT_CADENCE
-9			SamplingOutputCadence 
-
+9			SamplingOutputCadence
 
 #END_COMP PT -----------------------------------------------------------------
 
