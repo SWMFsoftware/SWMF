@@ -154,9 +154,10 @@ F			UseBody
 #HARMONICSFILE
 SC/Param/CR2077_GNG.dat		NameHarmonicsFile
 
-#USECURLB0
+#CURLB0
 T			UseCurlB0
 2.5			rCurrentFreeB0
+F			UseB0MomentumFlux
 
 #USERSWITCH
 +init +ic		StringSwitch

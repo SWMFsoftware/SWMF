@@ -127,14 +127,13 @@ F			IsLogRadius
 90			nLon
 90			nLat
 
-#USECURLB0
+#CURLB0
 T			UseCurlB0
 2.5			rCurrentFreeB0
-
-#B0MOMENTUMFLUX
 T			UseB0MomentumFlux
 
-#DIVFULLBSOURCE
+#B0SOURCE
+T			UseB0Source
 T			UseDivFullBSource
 
 #USERSWITCH

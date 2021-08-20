@@ -97,9 +97,10 @@ T			IsLogRadius^
 FACTORB0
 1.0			FactorB0 BrFactor^
 
-#USECURLB0
+#CURLB0
 T			UseCurlB0
 2.5			rCurrentFreeB0
+F			UseB0MomentumFlux
 
 #POYNTINGFLUX
 1.0e6			PoyntingFluxPerBSi [J/m^2/s/T]

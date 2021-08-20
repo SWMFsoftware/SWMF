@@ -65,7 +65,7 @@ periodic		TypeBc4
 float			TypeBc5
 float			TypeBc6
 
-#DIVBSOURCE
+#B0SOURCE
 F			UseB0Source
 
 #SCHEME

@@ -209,7 +209,7 @@ T			UseHallResist
 #TEST
 init_hall_resist		StringTest
 
-#DIVBSOURCE
+#B0SOURCE
 F			UseB0Source
 
 #SCHEME
