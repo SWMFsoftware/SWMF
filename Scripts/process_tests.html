@@ -35,7 +35,7 @@ the results per year, month and day.
 
 <table border=1>
   <tr>
-      <td>machine</td>
+      <td>description</td>
       <td>platform</td>
       <td>-compiler=</td>
       <td>compiler version and options</td>
@@ -44,7 +44,7 @@ the results per year, month and day.
       <td>Environment settings</td>
   </tr>
   <tr>
-      <td><b>gfortran</b></td>
+      <td><b>gfortran Mac</b></td>
       <td>iMac with quad-core Intel i7</td>
       <td>gfortran,gcc_mpicc</td>
       <td>gfortran 10.2</td>
@@ -53,24 +53,26 @@ the results per year, month and day.
       <td><font color=RED>OMPI_CXX=g++-mp-10, OMPI_CC=gcc-mp-10</font></td>
   </tr>
   <tr>
-      <td><b>grid</b></td>
+      <td><b>nagfor debug</b></td>
       <td>iMac with quad-core Intel i7</td>
       <td>nagfor,gcc_mpicc</td>
       <td>NAGFOR v6.2(6210) with gcc 9.3<br>-debug -O0</td>
       <td>mpich-3.2.1</td>
       <td>NP=4, NTHREAD=1</td>
+      <td></td>
   </tr>
   <tr>
-      <td><b>mesh</b></td>
+      <td><b>nagfor optimized</b></td>
       <td>iMac with quad-core Intel i7</td>
       <td>nagfor,gcc_mpicc</td>
       <td>NAGFOR 6.2 (6210) with gcc 9.3</td>
       <td>mpich-3.2.1</td>
       <td>NP=2, NTHREAD=2</td>
+      <td></td>
   </tr>
   <tr>
-      <td><b>pleiades</b></td>
-      <td>SGI ICE, Broadwell cores</td>
+      <td><b>ifort pleiades</b></td>
+      <td>SGI ICE</td>
       <td>ifortmpif90,iccmpicxx</td>
       <td>comp-intel/2016.2.181, gcc/6.2</td>
       <td>mpi-sgi/mpt.2.15r20</td>
@@ -78,13 +80,22 @@ the results per year, month and day.
       <td><font color=RED>MPICC_CC=icc, MPICXX_CXX=icpc</font></td>
   </tr>
   <tr>
-      <td><b>nvidia</b></td>
+      <td><b>nvidia pleiades</b></td>
       <td>Skylake CPU, V100 GPU</td>
       <td>nvfortran,nvc</td>
       <td>purge, use -a /nasa/nvidia/hpc_sdk/modulefiles<br>-O1</td>
       <td>nvhpc/20.9</td>
       <td>NP=8, NTHREAD=1, OpenACC</td>
       <td><font color=RED>MPICC_CC=nvc, MPICXX_CXX=nvc++</font></td>
+  </tr>
+  <tr>
+      <td><b>MSTEM-QUDA</b></td>
+      <td>SGI ICE</td>
+      <td>gfortran,gcc_mpicc</td>
+      <td>gcc/9.3</td>
+      <td>mpi-sgi/mpt</td>
+      <td>NP=8, NTHREAD=2</td>
+      <td></td>
   </tr>
 </table>
 <hr>
