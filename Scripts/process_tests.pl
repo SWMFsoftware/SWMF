@@ -20,6 +20,7 @@ my $merge_stable =   # command to merge master into stable branch
 my %WeightMachine = (
     "pleiades"     => "1.0",  # ifort pleiades
     "pgi"          => "0.0",  # pgif90 pleiades
+    "mstemgcc"     => "0.0",  # mstem-quda+gcc pleiades
     "gfortran"     => "1.0",  # gfortran optimized
     "grid"         => "1.0",  # nagfor debug
     "mesh"         => "1.0",  # nagfor optimized
@@ -29,13 +30,14 @@ my %WeightMachine = (
 my %HtmlMachine = (
     "pleiades"     => "ifort<br>pleiades",
     "pgi"          => "nvfortran<br>pleiades",
+    "mstemgcc"     => "MSTEM-QUDA<br>gfortran pleiades",
     "gfortran"     => "gfortran<br>optimized",
     "grid"         => "nagfor<br>debug",
     "mesh"         => "nagfor<br>optimized",
     );
 
-# List of platforms
-my @machines = sort keys %WeightMachine;
+# List of platforms in a logical order
+my @machines = ("gfortran", "grid", "mesh", "pleiades", "pgi", "mstemgcc");
 
 my $ERROR = "ERROR in process_tests.pl";
 
