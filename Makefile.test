@@ -2343,7 +2343,7 @@ test_chgl_run:
 	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS
 
 test_chgl_check:
-	-(${DIFFNUM} -b -r=1e-4 -a=1e-26 \
+	-(${DIFFNUM} -b -r=1e-5 -a=1e-26 \
 		${TESTDIR}/RESULTS/SC/log_n000000.log \
 		SC/BATSRUS/data/output/test_chgl/SC_log_n000000.log \
 		> test_chgl_sc.diff)
