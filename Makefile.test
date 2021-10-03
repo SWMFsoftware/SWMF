@@ -91,9 +91,9 @@ test_swmf:
 	-@(if [ -d SP/MFLAMPA ]; then ${MAKE} test19 TESTDIR=run_test19; fi)
 	./Config.pl -noamrex
 
- 	-@(if [ -d PT/AMPS    ]; then ${MAKE} test14 TESTDIR=run_test14; fi)
- 	-@(if [ -d PT/AMPS    ]; then ${MAKE} test14pui TESTDIR=run_test14pui; fi)
- 	-@(if [ -d PT/AMPS    ]; then ${MAKE} test14pui1d TESTDIR=run_test14pui1d; fi)
+	-@(if [ -d PT/AMPS    ]; then ${MAKE} test14 TESTDIR=run_test14; fi)
+	-@(if [ -d PT/AMPS    ]; then ${MAKE} test14pui TESTDIR=run_test14pui; fi)
+	-@(if [ -d PT/AMPS    ]; then ${MAKE} test14pui1d TESTDIR=run_test14pui1d; fi)
 
 # Setting BLESS=YES or Y will copy the solution into the reference solution
 BLESS=NO
