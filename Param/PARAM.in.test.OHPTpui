@@ -6,11 +6,11 @@ PT 1  2  1		CompMap runs on 1 or 2 PE-s
 Param/PARAM.in.test.OHPTpui: Couple multi-ion OH with PT		StringDescription
 
 #LOOKUPTABLE
-PT                      StringCompTable
-ChargeExchange          NameTable
-load                    NameCommand
-OH/Param/ExchangeRate.dat               NameFile
-ascii                   TypeFile
+PT			StringCompTable
+ChargeExchange		NameTable
+load			NameCommand
+OH/Param/ExchangeRate.dat		NameFile
+ascii			TypeFile
 
 #TIMEACCURATE
 F  			IsTimeAccurate
