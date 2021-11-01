@@ -1,33 +1,33 @@
 !  Copyright (C) 2002 Regents of the University of Michigan,
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!^CMP FILE IH
+!^CMP FILE SC
 !^CMP FILE GM
-module CON_couple_ih_gm
+module CON_couple_sc_gm
   ! This coupler uses the SWMF coupling toolkit.
-  ! Both the IH and GM grids use AMR.
-  ! IH is a source, GM is a target.
-  ! Typically IH uses the solar radius rSun as distance unit,
+  ! Both the SC and GM grids use AMR.
+  ! SC is a source, GM is a target.
+  ! Typically SC uses the solar radius rSun as distance unit,
   ! while GM uses the Earth's radius as distance unit.
   !
   ! The mapping is characterized by rotation matrices and/or
   ! translation vectors.
   ! In the particular case this is the position of the origin of
-  ! the GM frame of reference in the IH frame of refernce  and the
-  ! matrix which characterizes the rotation of the IH frame of
+  ! the GM frame of reference in the SC frame of refernce  and the
+  ! matrix which characterizes the rotation of the SC frame of
   ! reference with respect to GM:
   !
   ! $$
-  ! {\bf V}_{IH}={\bf A}_{IH,GM}\cdot{\bf V}_{GM},
-  ! {\bf V}_{GM}={\bf A}_{GM,IH}\cdot{\bf V}_{IH}
+  ! {\bf V}_{SC}={\bf A}_{SC,GM}\cdot{\bf V}_{GM},
+  ! {\bf V}_{GM}={\bf A}_{GM,SC}\cdot{\bf V}_{SC}
   ! $$
   use CON_coupler
   use CON_time, ONLY:TimeStart
   use ModConst
   use CON_axes, ONLY: transform_matrix, vPlanetHgi_D, XyzPlanetHgi_D
 
-  use IH_wrapper, ONLY: IH_synchronize_refinement, &
-       IH_get_for_gm
+  use SC_wrapper, ONLY: SC_synchronize_refinement, &
+       SC_get_for_gm
 
   use GM_wrapper, ONLY: GM_synchronize_refinement, &
        GM_put_from_mh, GM_is_right_boundary_d
@@ -39,10 +39,10 @@ module CON_couple_ih_gm
   private ! except
 
   !
-  public:: couple_ih_gm_init
-  public:: couple_ih_gm
+  public:: couple_sc_gm_init
+  public:: couple_sc_gm
 
-  real, public:: CouplingTimeIhGm
+  real, public:: CouplingTimeScGm
 
   ! revision history:
   ! 7/23/03 Sokolov I.V. <igorsok@umich.edu> - initial prototype
@@ -51,52 +51,52 @@ module CON_couple_ih_gm
   ! 6/22/05 G.Toth  - redo mapping and router to allow for relative motion
 
   ! To trace the possible changes in the grids and/or mapping
-  integer :: IH_iGridRealization=-2
+  integer :: SC_iGridRealization=-2
   integer :: GM_iGridRealization=-2
 
-  real, dimension(3)   :: XyzPlanetIh_D, vPlanetIh_D
-  real, dimension(3,3) :: GmToIh_DD, IhToGm_DD, HgiToIh_DD
+  real, dimension(3)   :: XyzPlanetSc_D, vPlanetSc_D
+  real, dimension(3,3) :: GmToSc_DD, ScToGm_DD, HgiToSc_DD
 
   ! Maximum time difference [s] without remap
-  ! The 600 s corresponds to about 0.1 degree rotation between IH and GM
+  ! The 600 s corresponds to about 0.1 degree rotation between SC and GM
   real :: dTimeMappingMax = 600.0
 
   type(RouterType)         :: Router
   type(GridType) :: GM_Grid
-  type(GridType) :: IH_Grid
+  type(GridType) :: SC_Grid
   type(LocalGridType)        :: GM_LocalGrid
 
   logical :: DoInitialize=.true., DoTest, DoTestMe
 
-  character(len=*), parameter :: NameMod='CON_couple_ih_gm'
+  character(len=*), parameter :: NameMod='CON_couple_sc_gm'
 
 contains
   !============================================================================
 
-  subroutine couple_ih_gm_init
+  subroutine couple_sc_gm_init
 
     !--------------------------------------------------------------------------
     if(.not.DoInitialize)RETURN
     DoInitialize=.false.
 
     call CON_set_do_test(NameMod,DoTest,DoTestMe)
-    if(DoTest)write(*,*)'couple_ih_gm_init iProc=',i_proc()
+    if(DoTest)write(*,*)'couple_sc_gm_init iProc=',i_proc()
 
     call init_coupler(              &
-         iCompSource=IH_,             & ! component index for source
+         iCompSource=SC_,             & ! component index for source
          iCompTarget=GM_,             & ! component index for target
          nGhostPointTarget=2,         & ! number of halo points in target
-         GridSource=IH_Grid,& ! OUT
+         GridSource=SC_Grid,& ! OUT
          GridTarget=GM_Grid,& ! OUT!-General coupler variables
          LocalGridTarget  =GM_LocalGrid,  & ! OUT!-optional
          Router=Router)                 ! OUT
-    IH_iGridRealization=-1
+    SC_iGridRealization=-1
     GM_iGridRealization=-1
     ! Initialize the coordinate transformation
 
-  end subroutine couple_ih_gm_init
+  end subroutine couple_sc_gm_init
   !============================================================================
-  subroutine couple_ih_gm(TimeCoupling)
+  subroutine couple_sc_gm(TimeCoupling)
     real,intent(in)::TimeCoupling
 
     ! Last coupling time
@@ -104,15 +104,15 @@ contains
 
     !--------------------------------------------------------------------------
     call CON_set_do_test(NameMod,DoTest,DoTestMe)
-    if(DoTest)write(*,*)'couple_ih_gm iProc=',i_proc()
+    if(DoTest)write(*,*)'couple_sc_gm iProc=',i_proc()
 
     ! Synchronize and broadcast domain decompostion (AMR may have changed it)
-    call IH_synchronize_refinement(Router%iProc0Source,Router%iCommUnion)
+    call SC_synchronize_refinement(Router%iProc0Source,Router%iCommUnion)
     call GM_synchronize_refinement(Router%iProc0Target,Router%iCommUnion)
 
-    CouplingTimeIhGm=TimeCoupling
+    CouplingTimeScGm=TimeCoupling
 
-    if(IH_iGridRealization/=i_realization(IH_).or.&
+    if(SC_iGridRealization/=i_realization(SC_).or.&
          GM_iGridRealization/=i_realization(GM_).or.&
          TimeCoupling - TimeCouplingLast > dTimeMappingMax)then
        if(GM_iGridRealization/=i_realization(GM_))then
@@ -122,38 +122,38 @@ contains
           call set_local_gd(i_proc(), GM_grid, GM_LocalGrid)
        end if
        ! Set the transformation matrices, compute the position and
-       ! orbital veloctiy of the Earth in IH at the coupling time.
+       ! orbital veloctiy of the Earth in SC at the coupling time.
 
-       GmToIh_DD  = transform_matrix(TimeCoupling , &
-            Grid_C(GM_) % TypeCoord, Grid_C(IH_) % TypeCoord)
-       IhToGm_DD  = transpose(GmToIh_DD)
+       GmToSc_DD  = transform_matrix(TimeCoupling , &
+            Grid_C(GM_) % TypeCoord, Grid_C(SC_) % TypeCoord)
+       ScToGm_DD  = transpose(GmToSc_DD)
 
-       HgiToIh_DD = transform_matrix(TimeCoupling, &
-            'HGI', Grid_C(IH_) % TypeCoord)
+       HgiToSc_DD = transform_matrix(TimeCoupling, &
+            'HGI', Grid_C(SC_) % TypeCoord)
 
-       ! Transform the Earth position in HGI to IH coordinates
-       ! and change distance units to that used in IH
+       ! Transform the Earth position in HGI to SC coordinates
+       ! and change distance units to that used in SC
 
-       XyzPlanetIh_D = matmul(HgiToIh_DD, XyzPlanetHgi_D)/Grid_C(IH_)%UnitX
+       XyzPlanetSc_D = matmul(HgiToSc_DD, XyzPlanetHgi_D)/Grid_C(SC_)%UnitX
 
-       ! Transform the Earth velocity from Hgi to IH coordinates
+       ! Transform the Earth velocity from Hgi to SC coordinates
 
-       vPlanetIh_D = matmul(HgiToIh_DD, vPlanetHgi_D)
+       vPlanetSc_D = matmul(HgiToSc_DD, vPlanetHgi_D)
 
-       if(DoTest)write(*,*)'couple_ih_gm call set_router iProc=',i_proc()
+       if(DoTest)write(*,*)'couple_sc_gm call set_router iProc=',i_proc()
 
-       if(DoTestMe)write(*,*)'couple_ih_gm_init XyzPlanetIh_D=',&
-            XyzPlanetIh_D
+       if(DoTestMe)write(*,*)'couple_sc_gm_init XyzPlanetSc_D=',&
+            XyzPlanetSc_D
        call set_router(&
-            GridSource=IH_Grid,&
+            GridSource=SC_Grid,&
             GridTarget=GM_LocalGrid,&
             Router=Router,&
             is_interface_block=GM_is_west_block,&
             interface_point_coords=GM_west_cells, &
-            mapping=map_gm_ih,&
+            mapping=map_gm_sc,&
             interpolate=interpolation_amr_gc)
 
-       IH_iGridRealization = i_realization(IH_)
+       SC_iGridRealization = i_realization(SC_)
        GM_iGridRealization = i_realization(GM_)
        TimeCouplingLast    = TimeCoupling
     end if
@@ -161,10 +161,10 @@ contains
     call couple_comp(&
          Router,&
          nVar=8,&
-         fill_buffer=IH_get_for_gm_and_transform,&
+         fill_buffer=SC_get_for_gm_and_transform,&
          apply_buffer=GM_put_from_mh)
 
-  end subroutine couple_ih_gm
+  end subroutine couple_sc_gm
   !============================================================================
   logical function GM_is_west_block(iBlockLocal)
 
@@ -201,25 +201,25 @@ contains
   end subroutine GM_west_cells
   !============================================================================
 
-  subroutine map_gm_ih(&
-       GM_nDim,GM_Xyz_D,IH_nDim,IH_Xyz_D,IsInterfacePoint)
+  subroutine map_gm_sc(&
+       GM_nDim,GM_Xyz_D,SC_nDim,SC_Xyz_D,IsInterfacePoint)
 
-    integer,intent(in)::GM_nDim,IH_nDim
+    integer,intent(in)::GM_nDim,SC_nDim
     real,dimension(GM_nDim),intent(in)::GM_Xyz_D
-    real,dimension(IH_nDim),intent(out)::IH_Xyz_D
+    real,dimension(SC_nDim),intent(out)::SC_Xyz_D
     logical,intent(out)::IsInterfacePoint
     ! In each mapping the corrdinates of the TARGET grid point (GM)
-    ! shoud be be transformed to the SOURCE (IH) generalized coords.
+    ! shoud be be transformed to the SOURCE (SC) generalized coords.
 
     !--------------------------------------------------------------------------
-    IH_Xyz_D = XyzPlanetIh_D + matmul(GmToIh_DD, GM_Xyz_D)*&
-         Grid_C(GM_)%UnitX/Grid_C(IH_)%UnitX
+    SC_Xyz_D = XyzPlanetSc_D + matmul(GmToSc_DD, GM_Xyz_D)*&
+         Grid_C(GM_)%UnitX/Grid_C(SC_)%UnitX
     IsInterfacePoint=.true.
 
-  end subroutine map_gm_ih
+  end subroutine map_gm_sc
   !============================================================================
 
-  subroutine IH_get_for_gm_and_transform(&
+  subroutine SC_get_for_gm_and_transform(&
        nPartial,iGetStart,Get,w,State_V,nVar)
 
     integer,intent(in)::nPartial,iGetStart,nVar
@@ -229,17 +229,17 @@ contains
 
     integer, parameter :: Rho_=1, RhoUx_=2, RhoUz_=4, Bx_=5, Bz_=7
     !--------------------------------------------------------------------------
-    call IH_get_for_gm(&
-         nPartial,iGetStart,Get,w,State_V,nVar,CouplingTimeIhGm)
+    call SC_get_for_gm(&
+         nPartial,iGetStart,Get,w,State_V,nVar,CouplingTimeScGm)
 
     State_V(RhoUx_:RhoUz_)=&
-         matmul(IhToGm_DD,State_V(RhoUx_:RhoUz_) &
-         - State_V(Rho_)*vPlanetIh_D )
-    State_V(Bx_:Bz_)=matmul(IhToGm_DD,State_V(Bx_:Bz_))
+         matmul(ScToGm_DD,State_V(RhoUx_:RhoUz_) &
+         - State_V(Rho_)*vPlanetSc_D )
+    State_V(Bx_:Bz_)=matmul(ScToGm_DD,State_V(Bx_:Bz_))
 
-  end subroutine IH_get_for_gm_and_transform
+  end subroutine SC_get_for_gm_and_transform
   !============================================================================
 
-end module CON_couple_ih_gm
+end module CON_couple_sc_gm
 !==============================================================================
 

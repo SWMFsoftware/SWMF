@@ -410,7 +410,7 @@ contains
 
   !==============================================================================
 
-  subroutine GM_put_from_ih(nPartial,iPutStart,Put,Weight,DoAdd,StateSI_V,&
+  subroutine GM_put_from_mh(nPartial,iPutStart,Put,Weight,DoAdd,StateSI_V,&
        nVar)
     integer,intent(in)::nPartial,iPutStart,nVar
     type(IndexPtrType),intent(in)::Put
@@ -423,7 +423,7 @@ contains
 
     call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
 
-  end subroutine GM_put_from_ih
+  end subroutine GM_put_from_mh
 
   !==============================================================================
 
