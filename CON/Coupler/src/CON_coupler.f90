@@ -56,7 +56,7 @@ module CON_coupler
 
   public :: MaxCouple           ! Maximum number of couplings
 
-  integer, parameter :: MaxCouple = 36
+  integer, parameter :: MaxCouple = 38
 
   public :: nCouple             ! Actual number of couplings
 
@@ -70,6 +70,8 @@ module CON_coupler
        EE_, GM_, &
        EE_, SC_, &
        SC_, EE_, &
+       SC_, GM_, &
+       GM_, SC_, &
        SC_, IH_, &
        SC_, PT_, &
        IH_, SC_, &

@@ -729,7 +729,7 @@ The default is DnRun = 1 for all the active components.
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 <command name="COUPLEORDER">
-	<parameter name="nCouple" type="integer" min="0" max="30" 
+	<parameter name="nCouple" type="integer" min="0" max="38" 
 		   default="10"/>
 	<for from="1" to="$nCouple">
 	    <parameter name="NameSourceTarget" type="string" length="5"/>
