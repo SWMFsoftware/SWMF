@@ -32,8 +32,10 @@ module IH_wrapper
   public:: IH_is_coupled_block
   public:: IH_interface_point_coords
   public:: IH_n_particle
+  ! Public variables to be set/reset by a coupler. Needed to transform
+  ! vector state variables obtained via the coupler.
   Character(len=3),    public :: TypeCoordSource    ! Coords of coupled model
-  real,                public :: SourceToIH_DD(3,3) ! Transformation matrrix
+  real,                public :: SourceToIH_DD(3,3) ! Transformation matrix
   real,                public :: TimeMhToIH = -1.0  ! Time of coupling
 
   type(GridType),      public :: IH_Grid            ! Grid (MHD data)
@@ -1061,7 +1063,8 @@ contains
   end subroutine IH_interface_point_coords
   !============================================================================
   subroutine IH_get_for_mh(nPartial, iGetStart, Get, W, Buff_V, nVarIn)
-
+    ! Put state variables to buffer for coupling toolkit, 
+    ! to send to other component via the coupling toolkit
     use IH_ModAdvance, ONLY: State_VGB, UseElectronPressure, nVar
     use IH_ModB0,      ONLY: B0_DGB
     use IH_ModPhysics, ONLY: No2Si_V, UnitRho_, UnitP_, UnitRhoU_, UnitB_,&
