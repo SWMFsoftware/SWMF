@@ -20,8 +20,8 @@ module CON_couple_ih_sc
        SC_get_for_global_buffer,         &
        SC_put_from_mh,                   &
        SC_is_coupled_block,              &
-       TimeMhToSC, SourceToSC_DD,        &
-       TypeCoordSource,                  &
+       TimeMhToSC, SourceToSC_DD,        & ! For 2-way coupling
+       TypeCoordIh=>TypeCoordSource,     & ! For 2-way coupling
        SC_synchronize_refinement,        &
        SC_interface_point_coords,        &
        SC_Grid, SC_LocalGrid
