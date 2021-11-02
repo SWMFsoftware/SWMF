@@ -76,6 +76,7 @@ test_swmf:
 	-@(if [ -d IM/RCM2    ]; then ${MAKE} test_swpc_multiion TESTDIR=run_test_swpc_multiion; fi)
 	-@(if [ -d IM/RCM2    ]; then ${MAKE} test_swpc_multispecies TESTDIR=run_test_swpc_multispecies; fi)
 	-@(if [ -d IM/CIMI2   ]; then ${MAKE} test_swpc_cimi TESTDIR=run_test_swpc_cimi; fi)
+	-@(if [ -d PW/PWOM    ]; then ${MAKE} test_swpc_pwom TESTDIR=run_test_swpc_pwom; fi)
 	-@(if [ -d PW/PWOM    ]; then ${MAKE} test1 TESTDIR=run_test01; fi)
 	-@(if [ -d IM/HEIDI   ]; then ${MAKE} test4 TESTDIR=run_test04; fi)
 	-@(if [ -d GM/BATSRUS/srcUserExtra ]; then ${MAKE} test5 TESTDIR=run_test05; fi)
