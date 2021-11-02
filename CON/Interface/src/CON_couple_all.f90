@@ -23,6 +23,7 @@ module CON_couple_all
   !^CMP IF GM BEGIN
   use CON_couple_ee_gm        !^CMP IF EE
   use CON_couple_ih_gm        !^CMP IF IH
+  use CON_couple_sc_gm        !^CMP IF SC
   use CON_couple_gm_ie        !^CMP IF IE
   use CON_couple_gm_im        !^CMP IF IM
   use CON_couple_gm_ps        !^CMP IF PS
@@ -82,6 +83,7 @@ contains
     if(use_comp(GM_).and.use_comp(PW_))call couple_gm_pw_init  !^CMP IF PW
     if(use_comp(GM_).and.use_comp(RB_))call couple_gm_rb_init  !^CMP IF RB
     if(use_comp(IH_).and.use_comp(GM_))call couple_ih_gm_init  !^CMP IF IH
+    if(use_comp(SC_).and.use_comp(GM_))call couple_sc_gm_init  !^CMP IF IH
     if(use_comp(GM_).and.use_comp(PT_))call couple_gm_pt_init  !^CMP IF PT
     if(use_comp(GM_).and.use_comp(PC_))call couple_gm_pc_init  !^CMP IF PC
     if(use_comp(EE_).and.use_comp(GM_))call couple_ee_gm_init  !^CMP IF EE
@@ -188,6 +190,8 @@ contains
        end select                             !^CMP END EE
     case(SC_)                                 !^CMP IF SC BEGIN
        select case(iCompTarget)
+       case(GM_)                              !^CMP IF GM
+          call couple_sc_gm(TimeSimulation)   !^CMP IF GM
        case(IH_)                              !^CMP IF IH
           call couple_sc_ih(TimeSimulation)   !^CMP IF IH
        case(SP_)                              !^CMP IF SP
