@@ -895,6 +895,7 @@ contains
           NameRestartOutDirComp = &
                trim(NameRestartOutDirNow)//NameComp_I(iComp)//'/'
           if(is_proc0(iComp)) call make_dir(NameRestartOutDirComp)
+          call MPI_barrier(i_comm(CON_), iError)
        end if
        call save_restart_comp(iComp, tSimulation)
     end do
