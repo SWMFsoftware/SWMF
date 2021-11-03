@@ -7,7 +7,7 @@ IM -2 -2  1		CompMap nProc-2 PE
 
 COMPONENTMAP		For nightly test
 GM  0 -1 -1 -1		CompMap 0:nProc-1 multithreaded
-PW  0 -1 -1 -1		CompMap all proc
+PW  0  3 -1 -1		CompMap 0:3 multithreaded
 IE -2 -1  1  		CompMap last 2 PE-s
 IM -2 -2  1		CompMap nProc-2 PE
 
