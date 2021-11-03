@@ -41,7 +41,7 @@ module IH_wrapper
   type(GridType),      public :: IH_Grid            ! Grid (MHD data)
   type(GridType),      public :: IH_LineGrid        ! Global GD for lines
   type(LocalGridType), public :: IH_LocalGrid       ! Local GD (MHD data)
-  type(LocalGridType), public :: IH_LocalLineGrid   ! Local GD for lines)
+  type(LocalGridType), public :: IH_LocalLineGrid   ! Local GD for lines
 
   ! Coupling with SC
   public:: IH_set_buffer_grid_get_info
