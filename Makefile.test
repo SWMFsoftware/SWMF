@@ -2407,7 +2407,7 @@ test_chgl_compile:
 test_chgl_rundir:
 	rm -rf ${TESTDIR}
 	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR} COMPDIR=SC,IH
-	cp SC/BATSRUS/data/input/PARAM.in.ChGL_short  ${TESTDIR}/PARAM.in
+	cp ${TESTDIR}/SC/Param/PARAM.in.ChGL_short  ${TESTDIR}/PARAM.in
 	cp SC/BATSRUS/data/input/Gong_ChGL.dat ${TESTDIR}/SC/.
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
 
