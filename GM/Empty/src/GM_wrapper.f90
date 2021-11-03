@@ -440,9 +440,23 @@ contains
     call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
 
   end subroutine GM_put_from_ih_buffer
+  !============================================================================
+  subroutine GM_get_for_global_buffer(&
+       nR, nLon, nLat, BufferMinMax_DI, Buffer_VG)
+    ! Buffer size and limits
+    integer,intent(in) :: nR, nLon, nLat
+    real, intent(in)   :: BufferMinMax_DI(3,2)
 
-  !==============================================================================
+    ! OUTPUT ARGUMENTS
+    ! State variables to be fiiled in all buffer grid points
+    real,dimension(nVarCouple, nR, nLon, nLat), intent(out):: &
+         Buffer_VG
+    character(len=*), parameter:: NameSub = 'GM_get_for_global_buffer'
+    !--------------------------------------------------------------------------
+    call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
 
+  end subroutine GM_get_for_global_buffer
+  !============================================================================
   subroutine GM_put_from_pw(Buffer_VI, nVar, nFieldLine, Name_V)
 
     implicit none

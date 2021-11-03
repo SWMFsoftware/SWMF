@@ -257,6 +257,8 @@ contains
           call couple_gm_pw(TimeSimulation)        !^CMP IF PW
        case(RB_)                                   !^CMP IF RB
           call couple_gm_rb(TimeSimulation)        !^CMP IF RB
+       case(SC_)                                   !^CMP IF SC
+          call couple_gm_sc(TimeSimulation)        !^CMP IF SC
        case default
           call error
        end select                             !^CMP END GM

@@ -22,15 +22,16 @@ module CON_couple_sc_gm
   ! {\bf V}_{GM}={\bf A}_{GM,SC}\cdot{\bf V}_{SC}
   ! $$
   use CON_coupler
+  use CON_transfer_data, ONLY: transfer_real_array, transfer_integer
   use CON_time, ONLY:TimeStart
   use ModConst
   use CON_axes, ONLY: transform_matrix, vPlanetHgi_D, XyzPlanetHgi_D
 
-  use SC_wrapper, ONLY: SC_synchronize_refinement, &
-       SC_get_for_gm
+  use SC_wrapper, ONLY: SC_synchronize_refinement, SC_get_for_gm, &
+       SC_save_global_buffer, SC_set_buffer_grid_get_info
 
-  use GM_wrapper, ONLY: GM_synchronize_refinement, &
-       GM_put_from_mh, GM_is_right_boundary_d
+  use GM_wrapper, ONLY: GM_synchronize_refinement, GM_put_from_mh, &
+       GM_is_right_boundary_d, GM_get_for_global_buffer
 
   implicit none
 
@@ -41,6 +42,7 @@ module CON_couple_sc_gm
   !
   public:: couple_sc_gm_init
   public:: couple_sc_gm
+  public:: couple_gm_sc
 
   real, public:: CouplingTimeScGm
 
@@ -67,6 +69,10 @@ module CON_couple_sc_gm
   type(LocalGridType)        :: GM_LocalGrid
 
   logical :: DoInitialize=.true., DoTest, DoTestMe
+  
+  ! Size and limits of the 3D spherical buffer grid
+  integer :: iSize, jSize, kSize
+  real    :: BufferMinMaxGm_DI(3,2)
 
   character(len=*), parameter :: NameMod='CON_couple_sc_gm'
 
@@ -92,7 +98,23 @@ contains
          Router=Router)                 ! OUT
     SC_iGridRealization=-1
     GM_iGridRealization=-1
-    ! Initialize the coordinate transformation
+    
+    ! Set buffer grid location and size in IH, and retrieve them for coupler
+    if(is_proc(SC_)) then
+       call SC_set_buffer_grid_get_info(iSize, jSize, kSize, BufferMinMaxGm_DI)
+
+       ! Convert units for radial coordinate  before passing to Gm
+       BufferMinMaxGm_DI(1,:) = BufferMinMaxGm_DI(1,:) &
+            *(Grid_C(SC_)%UnitX/Grid_C(Gm_)%UnitX)
+    end if
+
+    ! Pass buffer size
+    call transfer_integer(SC_, GM_, iSize, jSize, kSize, &
+         UseSourceRootOnly = .false.)
+
+    ! Pass buffer boundary info
+    call transfer_real_array(SC_, GM_, 6, BufferMinMaxGm_DI, &
+         UseSourceRootOnly = .false.)
 
   end subroutine couple_sc_gm_init
   !============================================================================
@@ -239,7 +261,45 @@ contains
 
   end subroutine SC_get_for_gm_and_transform
   !============================================================================
+ 
+  subroutine couple_gm_sc(TimeCoupling)
 
+    real, intent(in) :: TimeCoupling     ! simulation time at coupling
+
+    ! Couple between two components:
+    !    Generaal Magnetosphere (GM)  source
+    !    Solar Corona           (SC)  target
+    !
+    ! The GM component sends the state variables to a buffer grid.
+    ! SC uses the buffer grid to calculate the boundary condition on Body2.
+
+    ! Array to store state vector on all buffer grid points
+    real, allocatable :: Buffer_VIII(:,:,:,:)
+
+    logical :: DoTest, DoTestMe
+    character(len=*), parameter:: NameSub = 'couple_gm_sc'
+    !--------------------------------------------------------------------------
+    call CON_set_do_test(NameSub, DoTest, DoTestMe)
+    if(DoTest.and.is_proc0(GM_))&
+         write(*,'(a,es12.5)')NameSub//': starting, Time=', TimeCoupling
+    ! Transfer buffer grid from GM to SC to be used for inner boundary
+    allocate(Buffer_VIII(nVarCouple,iSize,jSize,kSize))
+    if(is_proc(GM_)) call GM_get_for_global_buffer(iSize, jSize, kSize, &
+         BufferMinMaxGm_DI, Buffer_VIII)
+
+    ! Add up Buffer on SC processors and transfer to IH
+    call transfer_real_array(GM_, SC_, size(Buffer_VIII), Buffer_VIII, &
+         UseSourceSum=.true.)
+
+    if(is_proc(SC_)) call SC_save_global_buffer( &
+         nVarCouple, iSize, jSize, kSize, Buffer_VIII)
+    deallocate(Buffer_VIII)
+
+    if(DoTest.and.is_proc0(GM_))&
+         write(*,'(a,es12.5)')NameSub//': finished, Time=', TimeCoupling
+
+  end subroutine couple_gm_sc
+  !============================================================================
 end module CON_couple_sc_gm
 !==============================================================================
 
