@@ -69,7 +69,7 @@ module CON_couple_sc_gm
   type(LocalGridType)        :: GM_LocalGrid
 
   logical :: DoInitialize=.true., DoTest, DoTestMe
-  
+
   ! Size and limits of the 3D spherical buffer grid
   integer :: iSize, jSize, kSize
   real    :: BufferMinMaxGm_DI(3,2)
@@ -98,7 +98,7 @@ contains
          Router=Router)                 ! OUT
     SC_iGridRealization=-1
     GM_iGridRealization=-1
-    
+
     ! Set buffer grid location and size in IH, and retrieve them for coupler
     if(is_proc(SC_)) then
        call SC_set_buffer_grid_get_info(iSize, jSize, kSize, BufferMinMaxGm_DI)
@@ -261,7 +261,7 @@ contains
 
   end subroutine SC_get_for_gm_and_transform
   !============================================================================
- 
+
   subroutine couple_gm_sc(TimeCoupling)
 
     real, intent(in) :: TimeCoupling     ! simulation time at coupling
