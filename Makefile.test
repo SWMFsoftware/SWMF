@@ -897,7 +897,7 @@ test_swpc_pwom_check:
 		${TESTDIR}/GM/IO2/magnetometers_e20140410-000200.mag \
 		Param/SWPC/TestOutputPwom/magnetometers_e20140410-000200.mag \
 		>> test_swpc_pwom_gm.diff)
-	-@(${DIFFNUM} -b -r=2e-4 -a=1e-5 \
+	-@(${DIFFNUM} -b -r=2e-4 -a=1e-4 \
 		${TESTDIR}/GM/IO2/mag_grid_e20140410-000300.out \
 		Param/SWPC/TestOutputPwom/mag_grid_e20140410-000300.out \
 		>> test_swpc_pwom_gm.diff)
