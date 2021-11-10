@@ -32,6 +32,8 @@ module CON_couple_ie_ua
   ! 08/25/2003 A.Ridley <ridley@umich.edu> - initial version as external
   !                                          subroutines
   ! 08/27/2003 G.Toth <gtoth@umich.edu>    - combined them into a module
+  ! 11/10/2021 Burleigh/Welling <dwelling@uta.edu>
+  !                                        - Re-implemented & updated coupling.
   !EOP
 
   ! Communicator and logicals to simplify message passing and execution
