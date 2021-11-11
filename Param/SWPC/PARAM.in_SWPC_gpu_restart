@@ -197,7 +197,7 @@ dt rho mx my mz p bx by bz pmin pmax dst_sm dstflx		NameLogVars
 3.0			StringLogRadii
 
 #SAVEPLOT
-4			nPlotFile
+2			nPlotFile
 y=0 MHD idl		StringPlot
 -1			DnSavePlot
 5 min			DtSavePlot
@@ -206,22 +206,6 @@ z=0 MHD idl		StringPlot
 -1			DnSavePlot
 5 min			DtSavePlot
 -1.0			DxSavePlot
-shl MHD idl_ascii		StringPlot
--1			DnSavePlot
-1 min			DtSavePlot
-GEO			TypeCoordPlot
-6.6			rMin
-6.6			rMax
-0.			LonMin
-360.			LonMax
-10.			dLon
-0.			LatMin
-0.			LatMax
-lcb nul tec		StringPlot  !last closed field line plots
--1  			DnSavePlot  !Tecplot (ONLY!)
-5 min			DtSavePlot
-5.			Radius
-36			nLon
 
 #SCHEME
 2			nOrder
