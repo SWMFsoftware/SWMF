@@ -588,7 +588,7 @@ test_swpc_gpu_rundir:
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/SWPC/PARAM.in_*gpu* Param/SWPC/SATELLITES.in Param/SWPC/*.dat ${TESTDIR}/
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in_SWPC_gpu_init
-	perl -pi -e 'if(/MaxIter|MaxBlock/){s/700/70/; s/1500/200/; s/5000/350/}; s/#BORIS/BORIS/' \
+	perl -pi -e 'if(/MaxIter|MaxBlock|Resolution/){s/700/70/; s/1500/200/; s/5000/350/; s/0\.125/2.0/}; s/#BORIS/BORIS/;' \
 	     ${TESTDIR}/PARAM.in_SWPC_gpu_init
 	cp ${TESTDIR}/PARAM.in_SWPC_gpu_init ${TESTDIR}/PARAM.in
 
