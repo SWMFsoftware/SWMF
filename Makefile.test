@@ -874,7 +874,7 @@ test_swpc_pwom_rundir:
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/SWPC/*.in* Param/SWPC/*.dat ${TESTDIR}/
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in_pwom_init
-	perl -pi -e 'if(/MaxIter|MaxBlock/){s/700/70/; s/1500/200/; s/5000/350/}; s/#BORIS/BORIS/; s/^\#(COMPONENTMAP.*production)/$$1/i; s/^(COMPONENTMAP.*nightly)/\#$$1/i' ${TESTDIR}/PARAM.in_pwom_init
+	perl -pi -e 'if(/MaxIter|MaxBlock|nTotalLine/){s/700/70/; s/1500/200/; s/5000/350/; s/252/4/;}; s/#BORIS/BORIS/; s/^\#(COMPONENTMAP.*production)/$$1/i; s/^(COMPONENTMAP.*nightly)/\#$$1/i' ${TESTDIR}/PARAM.in_pwom_init
 	cp ${TESTDIR}/PARAM.in_pwom_init ${TESTDIR}/PARAM.in
 
 test_swpc_pwom_run:

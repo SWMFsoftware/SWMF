@@ -459,7 +459,7 @@ aur idl			StringPlot
 F			UseCentrifugal
 
 #FIELDLINE
-4			nTotalLine
+252			nTotalLine
 
 #SAVEPLOT
 1 min			DtSavePlot
