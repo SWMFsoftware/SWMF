@@ -26,6 +26,9 @@ F			IsTimeAccurate
 00			iSecond
 0.0			FracSecond
 
+#STRICT
+F			UseStrict
+
 #COMPONENT
 IM			NameComp
 F			UseComp
@@ -290,6 +293,9 @@ T			DoCheckStop
 
 CPUTIMEMAX
 47.5 hour		CpuTimeMax [sec]
+
+#STRICT
+T			UseStrict
 
 #COMPONENT
 IM			NameComp
