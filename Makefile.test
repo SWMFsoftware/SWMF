@@ -883,7 +883,7 @@ test_swpc_pwom_run:
 
 test_swpc_pwom_restart:
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in_pwom_restart
-	perl -pi -e 's/#BORIS/BORIS/; s/^\#(COMPONENTMAP.*production)/$$1/i; s/^(COMPONENTMAP.*nightly)/\#$$1/i' ${TESTDIR}/PARAM.in_pwom_restart
+	perl -pi -e 's/252/4/; s/#BORIS/BORIS/; s/^\#(COMPONENTMAP.*production)/$$1/i; s/^(COMPONENTMAP.*nightly)/\#$$1/i' ${TESTDIR}/PARAM.in_pwom_restart
 	cd ${TESTDIR}; cp PARAM.in_pwom_restart PARAM.in
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_restart
 	cd ${TESTDIR}; ./PostProc.pl -noptec
