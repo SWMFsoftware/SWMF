@@ -238,19 +238,7 @@ mc3			TypeLimiter
 
 #BORIS
 T			UseBorisCorrection
-0.01			BorisClightFactor
-
-#REGION
-borisregion		NameRegion
-sphere tapered		StringShape
--4.0			xPosition
-0.0			yPosition
-0.0			zPosition
-14.0			Radius
-2.0			Taper
-
-#BORISREGION
-borisregion		NameBorisRegion
+0.02			BorisClightFactor
 
 #TIMESTEPPING
 1			nStage
@@ -314,6 +302,38 @@ F			UseCentrifugal
 
 #FIELDLINE
 252			nTotalLine
+
+#MSISPARAM
+180.			F107
+180.			F107A
+4			AP1
+4			AP2
+4			AP3
+4			AP4
+4			AP5
+4			AP6
+4			AP7
+
+#SCHEME
+Godunov			TypeSolver
+Godunov			TypeFlux
+0.05			DtVertical
+F			IsFullyImplicit
+F			IsPointImplicit
+F			IsPointImplicitAll
+
+#SE
+T			DoCoupleSE
+T			UseFeedbackFromSE
+F			IsVerboseSE
+60			DtGetSe	 120
+
+#SETPRECIP
+F			UseFixedPrecip
+100.0			PrecipEnergyMin[eV]
+1000.0			PreciptEnergyMax[eV]
+400.0			PrecipEnergyMean[eV]
+2.0			PrecipEnergyFlux[ergs/cm2/s]
 
 #SAVEPLOT
 1 min			DtSavePlot
