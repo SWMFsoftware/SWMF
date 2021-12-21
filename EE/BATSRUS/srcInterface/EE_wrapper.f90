@@ -355,7 +355,7 @@ contains
 
           if(iProcFound /= iProc)then
              write(*,*) NameSub,' ERROR: Xyz_D, iProcFound=', Xyz_D, iProcFound
-             call EE_stop_mpi(NameSub//' could not find position on this proc')
+             call CON_stop(NameSub//' could not find position on this proc')
           end if
 
           ! Store block and cell indexes and distances for interpolation

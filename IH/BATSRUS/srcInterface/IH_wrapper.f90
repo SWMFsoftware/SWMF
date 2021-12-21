@@ -9,6 +9,7 @@ module IH_wrapper
   use IH_ModBatsrusMethods,    ONLY: &
        BATS_init_session, BATS_setup, BATS_advance, BATS_save_files, &
        BATS_finalize
+  use IH_ModBatsrusUtility, ONLY: stop_mpi, error_report
 
   implicit none
   SAVE
@@ -172,7 +173,7 @@ contains
 
     call BATS_save_files('FINAL')
 
-    call IH_error_report('PRINT',0.,iError,.true.)
+    call error_report('PRINT',0.,iError,.true.)
 
   end subroutine IH_finalize
   !============================================================================
@@ -334,7 +335,7 @@ contains
 
           if(iProcFound /= iProc)then
              write(*,*) NameSub,' ERROR: Xyz_D, iProcFound=', Xyz_D, iProcFound
-             call IH_stop_mpi(NameSub//' could not find position on this proc')
+             call stop_mpi(NameSub//' could not find position on this proc')
           end if
 
           ! Store block and cell indexes and distances for interpolation
@@ -1620,7 +1621,7 @@ contains
 
           if(iProcFound /= iProc)then
              write(*,*) NameSub,' ERROR: Xyz_D, iProcFound=', Xyz_D, iProcFound
-             call IH_stop_mpi(NameSub//' could not find position on this proc')
+             call stop_mpi(NameSub//' could not find position on this proc')
           end if
 
           ! Store block and cell indexes and distances for interpolation
