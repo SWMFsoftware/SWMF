@@ -42,7 +42,7 @@ contains
     use EE_ModSetParameters, ONLY: set_parameters
     use EE_ModRestartFile, ONLY: NameRestartInDir, NameRestartOutDir
     use EE_ModMain, ONLY : CodeVersion, NameThisComp, &
-         time_accurate, time_simulation, StartTime, iStartTime_I
+         IsTimeAccurate, tSimulation, StartTime, iStartTime_I
     use ModTimeConvert, ONLY: time_real_to_int
 
     type(CompInfoType), intent(inout):: CompInfo   ! Information for this comp.
@@ -74,8 +74,8 @@ contains
        call set_parameters('READ')
     case('CHECK')
        call get_time( &
-            DoTimeAccurateOut = time_accurate, &
-            tSimulationOut=Time_Simulation, &
+            DoTimeAccurateOut = IsTimeAccurate, &
+            tSimulationOut=tSimulation, &
             tStartOut         = StartTime)
        call time_real_to_int(StartTime, iStartTime_I)
 
@@ -193,14 +193,14 @@ contains
 
   subroutine EE_finalize(TimeSimulation)
 
-    use EE_ModMain, ONLY: time_loop
+    use EE_ModMain, ONLY: IsTimeLoop
 
     real, intent(in) :: TimeSimulation   ! seconds from start time
 
     character(len=*), parameter :: NameSub='EE_finalize'
     !--------------------------------------------------------------------------
     ! We are not advancing in time any longer
-    time_loop = .false.
+    IsTimeLoop = .false.
 
     call BATS_save_files('FINAL')
 
@@ -224,7 +224,7 @@ contains
   subroutine EE_run(TimeSimulation, TimeSimulationLimit)
 
     use EE_BATL_lib, ONLY: iProc
-    use EE_ModMain,  ONLY: Time_Simulation
+    use EE_ModMain,  ONLY: tSimulation
 
     real, intent(inout):: TimeSimulation   ! current time of component
     real, intent(in):: TimeSimulationLimit ! simulation time not to be exceeded
@@ -238,16 +238,16 @@ contains
     if(DoTest)write(*,*)NameSub,' called with tSim, tSimLimit, iProc=',&
          TimeSimulation, TimeSimulationLimit, iProc
 
-    if(abs(Time_Simulation-TimeSimulation)>0.0001) then
+    if(abs(tSimulation-TimeSimulation)>0.0001) then
        write(*,*)NameSub, &
-            ' EE time=',Time_Simulation,' SWMF time=',TimeSimulation
+            ' EE time=',tSimulation,' SWMF time=',TimeSimulation
        call CON_stop(NameSub//': EE and SWMF simulation times differ')
     end if
 
     call BATS_advance(TimeSimulationLimit)
 
     ! Return time after the time step
-    TimeSimulation = Time_Simulation
+    TimeSimulation = tSimulation
 
   end subroutine EE_run
 

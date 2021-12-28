@@ -104,7 +104,7 @@ contains
     use IH_ModSetParameters, ONLY: set_parameters
     use IH_ModRestartFile, ONLY: NameRestartInDir, NameRestartOutDir
     use IH_ModMain, ONLY : CodeVersion, NameThisComp, &
-         time_accurate, time_simulation, StartTime, iStartTime_I
+         IsTimeAccurate, tSimulation, StartTime, iStartTime_I
     use CON_physics, ONLY: get_time
     use ModTimeConvert, ONLY: time_real_to_int
 
@@ -135,8 +135,8 @@ contains
        NameRestartOutDir(1:2)= NameThisComp
     case('READ','CHECK')
        call get_time( &
-            DoTimeAccurateOut = time_accurate, &
-            tSimulationOut=Time_Simulation, &
+            DoTimeAccurateOut = IsTimeAccurate, &
+            tSimulationOut=tSimulation, &
             tStartOut         = StartTime)
        call time_real_to_int(StartTime,iStartTime_I)
 
@@ -161,7 +161,7 @@ contains
 
   subroutine IH_finalize(TimeSimulation)
 
-    use IH_ModMain, ONLY: time_loop
+    use IH_ModMain, ONLY: IsTimeLoop
 
     real,     intent(in) :: TimeSimulation   ! seconds from start time
 
@@ -169,7 +169,7 @@ contains
     character(len=*), parameter:: NameSub = 'IH_finalize'
     !--------------------------------------------------------------------------
     ! We are not advancing in time any longer
-    time_loop = .false.
+    IsTimeLoop = .false.
 
     call BATS_save_files('FINAL')
 
@@ -192,7 +192,7 @@ contains
   subroutine IH_run(TimeSimulation,TimeSimulationLimit)
 
     use IH_BATL_lib, ONLY: iProc
-    use IH_ModMain, ONLY: Time_Simulation
+    use IH_ModMain, ONLY: tSimulation
 
     real, intent(inout):: TimeSimulation   ! current time of component
 
@@ -206,16 +206,16 @@ contains
     if(DoTest)write(*,*)NameSub,' called with tSim, tSimLimit, iProc=',&
          TimeSimulation, TimeSimulationLimit, iProc
 
-    if(abs(Time_Simulation-TimeSimulation)>0.0001) then
+    if(abs(tSimulation-TimeSimulation)>0.0001) then
        write(*,*)NameSub, &
-            ' IH time=',Time_Simulation,' SWMF time=',TimeSimulation
+            ' IH time=',tSimulation,' SWMF time=',TimeSimulation
        call CON_stop(NameSub//': IH and SWMF simulation times differ')
     end if
 
     call BATS_advance(TimeSimulationLimit)
 
     ! Return time after the time step
-    TimeSimulation = Time_Simulation
+    TimeSimulation = tSimulation
 
   end subroutine IH_run
   !============================================================================
