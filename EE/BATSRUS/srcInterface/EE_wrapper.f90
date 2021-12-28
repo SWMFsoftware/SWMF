@@ -407,7 +407,7 @@ contains
     use EE_BATL_lib,     ONLY: Xyz_DGB, nBlock, Unused_B, &
          MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
          CoordMin_D, CoordMax_D, CoordMin_DB, CellSize_DB
-    use EE_ModGeometry,  ONLY: far_field_bcs_blk, r_BLK
+    use EE_ModGeometry,  ONLY: IsBoundary_B, r_GB
     use EE_ModPhysics,   ONLY: No2Si_V, UnitX_, Si2No_V, iUnitCons_V
     use EE_ModMain,      ONLY: UseB0
     use EE_ModB0,        ONLY: B0_DGB
@@ -437,7 +437,7 @@ contains
     iPoint = 0
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
-       if(.not.far_field_bcs_blk(iBlock)) CYCLE
+       if(.not.IsBoundary_B(iBlock)) CYCLE
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
           ! Set generalized coordinate
           Coord_D = &
@@ -447,7 +447,7 @@ contains
           if(all(Coord_D > CoordMin_D) .and. all(Coord_D < CoordMax_D)) CYCLE
 
           ! Exclude points below the SC bottom boundary
-          if(r_BLK(i,j,k,iBlock) < rMinSc) CYCLE
+          if(r_GB(i,j,k,iBlock) < rMinSc) CYCLE
 
           ! Found a point to be set by SC
           iPoint = iPoint + 1

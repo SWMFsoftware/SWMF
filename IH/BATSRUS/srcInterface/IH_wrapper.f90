@@ -1012,13 +1012,13 @@ contains
   logical function IH_is_coupled_block(iBlock)
     use IH_ModMain,     ONLY: iTypeCellBc_I
     use IH_ModParallel, ONLY: NOBLK, NeiLev
-    use IH_ModGeometry, ONLY: far_field_BCs_BLK
+    use IH_ModGeometry, ONLY: IsBoundary_B
     use IH_ModCellBoundary, ONLY: CoupledBC_
 
     integer, intent(in) :: iBlock
     character(len=*), parameter:: NameSub = 'IH_is_coupled_block'
     !--------------------------------------------------------------------------
-    if(.not.far_field_BCs_BLK(iBlock)) then
+    if(.not.IsBoundary_B(iBlock)) then
        IH_is_coupled_block = .false.
        RETURN
     end if
@@ -1672,7 +1672,7 @@ contains
 
     use IH_BATL_lib,     ONLY: Xyz_DGB, nBlock, Unused_B, &
          IsRLonLat, nI, nJ, nK, CoordMin_DB, CellSize_DB
-    use IH_ModGeometry,  ONLY: r_BLK
+    use IH_ModGeometry,  ONLY: r_GB
     use IH_ModPhysics,   ONLY: No2Si_V, UnitX_, Si2No_V, iUnitCons_V
     use IH_ModMain,      ONLY: UseB0
     use IH_ModB0,        ONLY: B0_DGB
@@ -1718,7 +1718,7 @@ contains
                CoordMin_DB(:,iBlock) + ([i,j,k]-0.5)*CellSize_DB(:,iBlock)
 
           ! Overwrite first coordinate with true radius
-          Coord_D(1) = r_BLK(i,j,k,iBlock)
+          Coord_D(1) = r_GB(i,j,k,iBlock)
 
           ! Fix longitude if min longitude of EE is negative
           if(CoordMinEe_D(2) < 0.0 .and. Coord_D(2) > cPi) &
