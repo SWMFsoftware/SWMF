@@ -1465,7 +1465,7 @@ contains
          iTest, jTest, kTest, iBlockTest
     use IH_ModPhysics, ONLY: &
          No2Si_V, Si2No_V, UnitX_, UnitRho_, UnitN_, UnitRhoU_, UnitEnergyDens_, UnitT_
-    use IH_ModGeometry, ONLY: true_cell
+    use IH_ModGeometry, ONLY: Used_GB
     use IH_ModAdvance, ONLY: ExtraSource_ICB
 
     character(len=*), intent(inout):: NameVar  ! List of variables
@@ -1495,7 +1495,7 @@ contains
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             if(.not.true_cell(i,j,k,iBlock)) CYCLE
+             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
              nPoint = nPoint + 1
           end do; end do; end do
        end do
@@ -1508,7 +1508,7 @@ contains
           if(Unused_B(iBlock)) CYCLE
 
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             if(.not.true_cell(i,j,k,iBlock)) CYCLE
+             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
              iPoint = iPoint + 1
              Pos_DI(1:nDim,iPoint) = &
                   Xyz_DGB(1:nDim,i,j,k,iBlock)*No2Si_V(UnitX_)
@@ -1539,7 +1539,7 @@ contains
        if(Unused_B(iBlock)) CYCLE
 
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          if(.not.true_cell(i,j,k,iBlock)) CYCLE
+          if(.not.Used_GB(i,j,k,iBlock)) CYCLE
           iPoint = iPoint + 1
           if(iPoint_I(iPoint) < 0) &
                call CON_stop(NameSub//': IH point is outside of PT domain')
