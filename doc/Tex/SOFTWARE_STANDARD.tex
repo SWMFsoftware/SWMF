@@ -4,6 +4,10 @@
 \documentclass{article}
 \title{Software Development Standards for CSEM and CRASH}
 \author{Gabor Toth}
+
+\usepackage{color}
+\newcommand{\red}[1]{\textbf{#1}}
+
 \begin{document}
 
 \maketitle
@@ -1425,11 +1429,10 @@ science models, most of them are rather general and applicable to any
 
 Each variable name may consist of one or more {\it name parts}.
 All the parts must start with a capital letter and continue
-with lower case letters and numbers. There is only exception
-to this rule: if the first name part consists of a single 
-character, it should be lower case. We also allow the first name
-part to use lower case if it consists of a single letter followed
-by numbers.
+with lower case letters and numbers. There is only one exception
+to this rule: the first name part can also start with a lower
+case letter if it consists of a consists of a single 
+letter (possibly followed by numbers).
 
 In Fortran capitalization is ignored by the compiler, 
 so mistakes in the capitalization
@@ -1438,8 +1441,9 @@ consistent capitalization is essential to improve readability of the code.
 Examples of correct capitalizations:
 \begin{verbatim}
   b
+  B
   b0
-  B0
+  B0CrossU
   iMax
   rMin
   R2Min
@@ -1454,23 +1458,30 @@ beginning of the name parts.
 
 \subsubsection{Module names}
 
-Fortran 90 module names should start with the name part {\tt Mod}. 
-This can only be preceded by the component ID. For example
+There are two acceptable ways to name Fortran 90 modules. 
+
+1. The module names starts with the name part {\tt Mod}
+and it consists of capitalized name parts with no underscores.
+This can optionally be preceded by the component ID followed
+by an underscore. For example
 \begin{verbatim}
   ModMain
   ModRestartFile
   EE_ModCommonVariables
 \end{verbatim}
-Since the control module of the SWMF consists of almost exclusively 
-F90 modules (there are very few external subroutines or function), 
-as an exception we allow to drop the Mod part for the CON modules
-and the CON module names follow the rules of procedure names.
-For example we use
+
+2. Well written Fortran 90 codes consist exclusively of modules.
+Examples are the control module of the SWMF and the BATL library.
+In these codes the module name starts with an all-capital
+component/model/library identifier followed by all lower case
+name parts separated by underscores, similarly to procedure names.
+For example
 \begin{verbatim}
   CON_session
   CON_buffer_grid
+  BATL_tree
+  BATL_high_order
 \end{verbatim}
-instead of {\tt CON\_ModSession} and {\tt CON\_ModBufferGrid}.
 
 \subsubsection{Type names}
 
@@ -1503,6 +1514,7 @@ All integer variable names must start with one of the following name parts
   Dl               difference of length
   Dm               difference of index m
   Dn               difference of number of
+  Ijk              i, j and k indexes
   Min              minimum number of
   Max              maximum number of
   Int              generic integer
@@ -1561,21 +1573,24 @@ character(len=100)::  StringLogVar        ! variables saved into the log file
 \begin{tabular}{lll}
 name &   typical range                 &  meaning \\
 \hline \\
-A    & {\tt 1:MaxBlock*nProc}          &  blocks on all processors \\
-B    & {\tt 1:MaxBlock}                &  blocks on one processor \\
-C    & {\tt 1:nI,1:nJ,1:nK}            &  cell centers without ghost cells \\
-C    & {\tt 1:MaxComp}                 &  components of the SWMF \\
-D    & {\tt 1:nDim}                    &  dimensions (of the grid) \\
-E    & {\tt 1:2*nDim}                  &  edges (of a block) \\
-F    & {\tt 1:nI+1,1:nJ+1,1:nK+1}      &  faces (of cells) \\
-G & {\tt MinI:MaxI,MinJ:MaxJ,MinK:MaxK} & cell centers including ghost cells \\
-I    & {\tt ?:?}                       &  general index (none of the others) \\
-N    & {\tt 1:nI+1,1:nJ+1,1:nK+1}      &  nodes (of grid cells) \\
-P    & {\tt 1:nProc}                   &  processors \\
-V    & {\tt 1:nVar}                    &  (state/plot) variables \\
-X    & {\tt 1:nI+1,1:nJ,1:nK}          &  X faces (of grid cells) \\
-Y    & {\tt 1:nI,1:nJ+1,1:nK}          &  Y faces \\
-Z    & {\tt 1:nI,1:nJ,1:nK+1}          &  Z faces
+A    & {\tt 1:MaxBlock*nProc}          &  \red{A}ll blocks on all processors \\
+B    & {\tt 1:MaxBlock}                &  \red{B}locks on one processor \\
+C    & {\tt 1:nI,1:nJ,1:nK}            &  \red{C}ell centers without ghost cells \\
+C    & {\tt 1:MaxComp}                 &  \red{C}omponents of the SWMF \\
+D    & {\tt 1:nDim} or {1:MaxDim}      &  \red{D}imensions (of the grid) \\
+E    & {\tt 1:2*nDim}                  &  \red{E}dges (of a block) \\
+F    & {\tt 1:nI+1,1:nJ+1,1:nK+1}      &  \red{F}aces (of cells) \\
+G & {\tt MinI:MaxI,MinJ:MaxJ,MinK:MaxK} & \red{G}host and physical cells \\
+I    & {\tt ?:?}                       &  \red{I}ndex (none of the others) \\
+N    & {\tt 1:nI+1,1:nJ+1,1:nK+1}      &  \red{N}odes (of grid cells) \\
+P    & {\tt 1:nProc}                   &  \red{P}rocessors \\
+Q    & {\tt 1:4}                       &  \red{Q}uadrants for four finer neighbors\\
+S    & {\tt 1:2}                       &  \red{S}ides, two ends \\
+V    & {\tt 1:nVar}                    &  \red{V}ariables (state, plot...) \\
+W    & {\tt 1:nWave}                   &  \red{W}aves \\
+X    & {\tt 1:nI+1,1:nJ,1:nK}          &  \red{X} faces (of grid cells) \\
+Y    & {\tt 1:nI,1:nJ+1,1:nK}          &  \red{Y} faces \\
+Z    & {\tt 1:nI,1:nJ,1:nK+1}          &  \red{Z} faces
 \end{tabular}
 \end{center}
 \label{tab:index}
@@ -1638,13 +1653,15 @@ Examples of use:
 
 \subsubsection{Real type constants}
 
-We use {\tt c} as the first name part of real constants. Most
-of these are defined in the
+We use {\tt c} as the first name part of real constants.
+For convenience, fractions can be written as {\tt c3over5},
+which is an exception as the name parts are numbers. 
+Most of these constants are defined in the
 \begin{verbatim}
 share/Library/src/ModConst.f90
 share/Library/src/ModNumConst.f90
 \end{verbatim}
-module. Some examples
+modules. Some examples
 \begin{verbatim}
 real, parameter:: cPi              = 3.1415926535897932
 real, parameter:: cTwoPi           = 2*cPi
@@ -1652,6 +1669,7 @@ real, parameter:: cRadToDeg        = 180/cPi
 real, parameter:: cDegToRad        = cPi/180
 real, parameter:: cElectronCharge  = 1.6022E-19
 real, parameter:: cProtonMass      = 1.6726E-27
+real, parameter:: c7over120        = 7.0/120.0
 \end{verbatim}
 
 \subsubsection{Pointer variable names}
