@@ -389,7 +389,7 @@ contains
     use IH_ModGeometry,   ONLY: RadiusMin, RadiusMax
     use IH_BATL_geometry, ONLY: TypeGeometry, IsGenRadius, LogRGen_I
     use IH_BATL_lib, ONLY: CoordMin_D, CoordMax_D, Particle_I
-    use IH_ModParticleFieldLine, ONLY: KindReg_, &
+    use IH_ModParticleFieldLine, ONLY: iKindReg, &
          UseParticles
     logical:: DoTest,DoTestMe
     logical:: UseParticleLine = .false.
@@ -485,7 +485,7 @@ contains
     if(UseParticleLine)then
        call init_decomposition_dd(MH_LineDecomposition, IH_, nDim=1)
        if(is_proc0(IH_))then
-          nParticle = Particle_I(KindReg_)%nParticleMax
+          nParticle = Particle_I(iKindReg)%nParticleMax
           call get_root_decomposition_dd(MH_LineDecomposition, &
                [n_proc(IH_)],        &  ! One "block" per processor
                [0.50],               &  ! "Coordinate" is a global point number
@@ -1164,13 +1164,13 @@ contains
   !============================================================================
   subroutine IH_put_particles(Xyz_DI, iIndex_II)
     use IH_BATL_lib, ONLY: nDim, put_particles
-    use IH_ModParticleFieldLine, ONLY: KindReg_
+    use IH_ModParticleFieldLine, ONLY: iKindReg
     ! add particles with specified coordinates to the already existing lines
     real,    intent(in):: Xyz_DI(:,:)
     integer, intent(in):: iIndex_II(:,:)
     !--------------------------------------------------------------------------
     call put_particles(&
-         iKindParticle      = KindReg_ ,&
+         iKindParticle      = iKindReg ,&
          StateIn_VI         = Xyz_DI   ,&
          iIndexIn_II        = iIndex_II,&
          UseInputInGenCoord = .true.   ,&
@@ -1178,24 +1178,24 @@ contains
   end subroutine IH_put_particles
   !============================================================================
   subroutine IH_get_particle_indexes(iParticle, iIndex_I)
-    use IH_ModParticleFieldLine, ONLY: fl_, id_, KindReg_
+    use IH_ModParticleFieldLine, ONLY: fl_, id_, iKindReg
     use IH_BATL_particles, ONLY: Particle_I
     integer, intent(in) :: iParticle
     integer, intent(out):: iIndex_I(2)
     character(len=*), parameter:: NameSub = 'IH_get_particle_indexes'
     !--------------------------------------------------------------------------
-    iIndex_I(1) = Particle_I(KindReg_)%iIndex_II(fl_, iParticle)
-    iIndex_I(2) = Particle_I(KindReg_)%iIndex_II(id_, iParticle)
+    iIndex_I(1) = Particle_I(iKindReg)%iIndex_II(fl_, iParticle)
+    iIndex_I(2) = Particle_I(iKindReg)%iIndex_II(id_, iParticle)
   end subroutine IH_get_particle_indexes
   !============================================================================
   subroutine IH_get_particle_coords(iParticle, Xyz_D)
     use IH_BATL_lib, ONLY: nDim
-    use IH_ModParticleFieldLine, ONLY: KindReg_
+    use IH_ModParticleFieldLine, ONLY: iKindReg
     use IH_BATL_particles, ONLY: Particle_I
     integer, intent(in) :: iParticle
     real,    intent(out):: Xyz_D(nDim)
     !--------------------------------------------------------------------------
-    Xyz_D = Particle_I(KindReg_)%State_VI(1:nDim, iParticle)
+    Xyz_D = Particle_I(iKindReg)%State_VI(1:nDim, iParticle)
   end subroutine IH_get_particle_coords
   !============================================================================
   ! ROUTINE: IH_put_from_mh - transform and put the data got from MH
@@ -1821,11 +1821,11 @@ contains
   end subroutine IH_get_for_ee
   !============================================================================
   integer function IH_n_particle(iBlockLocal)
-    use IH_ModParticleFieldLine, ONLY: KindReg_
+    use IH_ModParticleFieldLine, ONLY: iKindReg
     use IH_BATL_lib, ONLY: Particle_I
     integer, intent(in) :: iBlockLocal
     !--------------------------------------------------------------------------
-    IH_n_particle = Particle_I(KindReg_)%nParticle
+    IH_n_particle = Particle_I(iKindReg)%nParticle
   end function IH_n_particle
   !============================================================================
 
