@@ -23,6 +23,15 @@ cd
 git clone https://gitlab.umich.edu/SWMF_software/SWMF_data --depth=1
 ```
 
+For solar applications (solar corona, inner heliosphere, CMEs) the
+`SWMFSOLAR` repository can be useful. This is typically downloaded
+into the SWMF directory, or to the (scratch/nobackup...) disk of
+a supercomputer where the runs are performed:
+```
+cd
+git clone https://gitlab.umich.edu/SWMF_software/SWMF_data --depth=1
+```
+
 Some data files used by the Center for Radiative Shock Hydrodynamics (CRASH)
 are in the `CRASH_data` repository that is available to registered users.
 If needed, it has to be placed into the home directory. 
