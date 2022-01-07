@@ -38,7 +38,7 @@ F			UseImplicitEnergy
 rotatedcartesian		TypeGeometry
 
 USERMODULE
-Waves and GEM, Yingjuan Ma
+Waves
  1.30			VersionUserModule
 
 #CHECKGRIDSIZE
