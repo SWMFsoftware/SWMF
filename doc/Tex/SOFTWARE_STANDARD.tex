@@ -5,9 +5,6 @@
 \title{Software Development Standards for CSEM and CRASH}
 \author{Gabor Toth}
 
-\usepackage{color}
-\newcommand{\red}[1]{\textbf{#1}}
-
 \begin{document}
 
 \maketitle
@@ -1524,6 +1521,7 @@ any of
 \begin{verbatim}
   Name             name of
   Type             type of
+  Char             generic character
   String           generic string
 \end{verbatim}
 All logical variable names must start with one of
@@ -1573,24 +1571,24 @@ character(len=100)::  StringLogVar        ! variables saved into the log file
 \begin{tabular}{lll}
 name &   typical range                 &  meaning \\
 \hline \\
-A    & {\tt 1:MaxBlock*nProc}          &  \red{A}ll blocks on all processors \\
-B    & {\tt 1:MaxBlock}                &  \red{B}locks on one processor \\
-C    & {\tt 1:nI,1:nJ,1:nK}            &  \red{C}ell centers without ghost cells \\
-C    & {\tt 1:MaxComp}                 &  \red{C}omponents of the SWMF \\
-D    & {\tt 1:nDim} or {1:MaxDim}      &  \red{D}imensions (of the grid) \\
-E    & {\tt 1:2*nDim}                  &  \red{E}dges (of a block) \\
-F    & {\tt 1:nI+1,1:nJ+1,1:nK+1}      &  \red{F}aces (of cells) \\
-G & {\tt MinI:MaxI,MinJ:MaxJ,MinK:MaxK} & \red{G}host and physical cells \\
-I    & {\tt ?:?}                       &  \red{I}ndex (none of the others) \\
-N    & {\tt 1:nI+1,1:nJ+1,1:nK+1}      &  \red{N}odes (of grid cells) \\
-P    & {\tt 1:nProc}                   &  \red{P}rocessors \\
-Q    & {\tt 1:4}                       &  \red{Q}uadrants for four finer neighbors\\
-S    & {\tt 1:2}                       &  \red{S}ides, two ends \\
-V    & {\tt 1:nVar}                    &  \red{V}ariables (state, plot...) \\
-W    & {\tt 1:nWave}                   &  \red{W}aves \\
-X    & {\tt 1:nI+1,1:nJ,1:nK}          &  \red{X} faces (of grid cells) \\
-Y    & {\tt 1:nI,1:nJ+1,1:nK}          &  \red{Y} faces \\
-Z    & {\tt 1:nI,1:nJ,1:nK+1}          &  \red{Z} faces
+A    & {\tt 1:MaxBlock*nProc}          &  \textbf{A}ll blocks on all processors \\
+B    & {\tt 1:MaxBlock}                &  \textbf{B}locks on one processor \\
+C    & {\tt 1:nI,1:nJ,1:nK}            &  \textbf{C}ell centers without ghost cells \\
+C    & {\tt 1:MaxComp}                 &  \textbf{C}omponents of the SWMF \\
+D    & {\tt 1:nDim} or {1:MaxDim}      &  \textbf{D}imensions (of the grid) \\
+E    & {\tt 1:2*nDim}                  &  \textbf{E}dges (of a block) \\
+F    & {\tt 1:nI+1,1:nJ+1,1:nK+1}      &  \textbf{F}aces (of cells) \\
+G & {\tt MinI:MaxI,MinJ:MaxJ,MinK:MaxK} & \textbf{G}host and physical cells \\
+I    & {\tt ?:?}                       &  \textbf{I}ndex (none of the others) \\
+N    & {\tt 1:nI+1,1:nJ+1,1:nK+1}      &  \textbf{N}odes (of grid cells) \\
+P    & {\tt 1:nProc}                   &  \textbf{P}rocessors \\
+Q    & {\tt 1:4}                       &  \textbf{Q}uadrants for four finer neighbors\\
+S    & {\tt 1:2}                       &  \textbf{S}ides, two ends \\
+V    & {\tt 1:nVar}                    &  \textbf{V}ariables (state, plot...) \\
+W    & {\tt 1:nWave}                   &  \textbf{W}aves \\
+X    & {\tt 1:nI+1,1:nJ,1:nK}          &  \textbf{X} faces (of grid cells) \\
+Y    & {\tt 1:nI,1:nJ+1,1:nK}          &  \textbf{Y} faces \\
+Z    & {\tt 1:nI,1:nJ,1:nK+1}          &  \textbf{Z} faces
 \end{tabular}
 \end{center}
 \label{tab:index}
