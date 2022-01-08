@@ -6,7 +6,7 @@ cd $HOME/Sites
 
 # Remove code from yesterday as well as various logs
 rm -rf SWMF_yesterday code.diff manual.log manual.err fortran.err \
-    process_swmf.log
+    name.err process_swmf.log
 
 # Create directory for new tests
 mkdir -p SWMF_TEST_RESULTS/`date +%Y/%m/%d` >& ~/Sites/process_swmf.log
@@ -62,3 +62,9 @@ cd ~/Sites/SWMF
 make FORMATF90 > ~/Sites/fortran.err
 # commit and push formatted code
 gitall "commit -m FormatFortran .; git push"
+
+# Check data names
+cd ~/Sites/SWMF/GM/BATSRUS
+~/Sites/SWMF/share/Scripts/CheckDataName.pl src/*.f90 srcEquation/*.f90 \
+    srcBATL/*.f90 srcUser/*.f90 >& ~/Sites/name.err
+

@@ -51,6 +51,7 @@ my $codefile = "code.diff";
 my $f90errorfile = "fortran.err";
 my $manerrorfile = "manual.err";
 my $paramerrorfile = "param.err";
+my $nameerrorfile = "name.err";
 my $lastpassfile = "lastpass.txt";
 
 my %tests;
@@ -341,6 +342,16 @@ foreach my $machine (@machines){
 ";
     last;
 }
+
+if(-s $nameerrorfile){
+    print FILE "
+<h3><A HREF=$nameerrorfile TARGET=swmf_name_error>
+<font color=red>Coding standard errors in BATSRUS/BATL code.
+Click here for more detail and fix it.</font></A>
+</h3>
+";
+}
+
 
 if(-s $f90errorfile){
     print FILE "
