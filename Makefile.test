@@ -41,7 +41,8 @@ test_help:
 	@(if [ -d GM/BATSRUS ]; then echo "    test8                      (run SC-IH coupling test with AWSoM-R)"; fi)
 	@(if [ -d GM/BATSRUS ]; then echo "    test9                      (run SC-IH coupling test with AWSoM)"; fi)
 	@(if [ -d PT/AMPS    ]; then echo "    test11                     (run GM-PT/AMPS coupler test)"; fi)
-	@(if [ -d PC/AMPS    ]; then echo "    test12                     (run GM-PC/AMPS and IPIC3D2 tests)"; fi)
+	@(if [ -d PC/AMPS    ]; then echo "    test12                     (run GM-PC/AMPS tests)"; fi)
+	@(if [ -d PC/IPIC3D2 ]; then echo "    test12_ipic3d              (run GM-PC/IPIC3D2 tests)"; fi)
 	@(if [ -d PT/AMPS    ]; then echo "    test13                     (run GM-PT/AMPS test: Europa)"; fi)
 	@(if [ -d PT/AMPS    ]; then echo "    test14                     (run OH-PT/AMPS test)"; fi)
 	@(if [ -d PT/AMPS    ]; then echo "    test14_1d                  (run OH-PT/AMPS test in 1D)"; fi)
@@ -2047,7 +2048,7 @@ test_ramscb_check:
 		> test_ramscb_ie.diff)
 	ls -l test_ramscb*.diff
 
-######## test PC/IPIC3D and PC/AMPS coupled with GM/BATSRUS #########
+######## test PC/AMPS coupled with GM/BATSRUS #########
 
 .NOTPARALLEL: test12
 
@@ -2057,9 +2058,6 @@ test12:
 	-@(if [ -d PC/AMPS ]; then $(MAKE) test12_aniso_AMPS_dynamic   TESTDIR=run_test12_aniso_AMPS_dynamic; fi)
 	-@(if [ -d PC/AMPS ]; then $(MAKE) test12_aniso_AMPS_openmp    TESTDIR=run_test12_aniso_AMPS_openmp; fi)
 	-@(if [ -d PC/AMPS ]; then ./Config.pl -noopenmp -o=PC:openmp=off; fi)
-	-@(if [ -d PC/IPIC3D2 ]; then $(MAKE) test12_aniso TESTDIR=run_test12_aniso; fi)
-	-@(if [ -d PC/IPIC3D2 ]; then $(MAKE) test12_iso   TESTDIR=run_test12_iso;   fi)
-	-@(if [ -d PC/IPIC3D2 ]; then $(MAKE) test12_3d    TESTDIR=run_test12_3d;    fi)
 
 ######## test PC coupled with GM/BATSRUS #########
 test12_aniso_AMPS_dynamic_fluxrope:
@@ -2079,7 +2077,6 @@ test12_aniso_AMPS_dynamic_fluxrope_compile:
 	$(MAKE) SWMF
 	$(MAKE) PIDL
 
-	
 test12_aniso_AMPS_dynamic_fluxrope_rundir:
 	rm -rf ${TESTDIR}
 	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR} COMPDIR=GM,PC
@@ -2097,9 +2094,7 @@ test12_aniso_AMPS_dynamic_fluxrope_check:
 		> test12_aniso_AMPS_dynamic_fluxrope_gmpc.diff)
 	ls -l test12_aniso_AMPS_dynamic_fluxrope_gmpc.diff
 
-
 #############################################################################
-
 
 test12_aniso_AMPS:
 	@echo "test12_aniso_AMPS_compile..." > test12_aniso_AMPS_gmpc.diff
@@ -2255,6 +2250,15 @@ test12_aniso_AMPS_dynamic_check:
 		> test12_aniso_AMPS_dynamic_gmpc.diff)
 	ls -l test12_aniso_AMPS_dynamic_gmpc.diff
 
+######## test PC/IPIC3D2 coupled with GM/BATSRUS #########
+
+.NOTPARALLEL: test12_ipic3d
+
+test12_ipic3d:
+	-@(if [ -d PC/IPIC3D2 ]; then $(MAKE) test12_aniso TESTDIR=run_test12_aniso; fi)
+	-@(if [ -d PC/IPIC3D2 ]; then $(MAKE) test12_iso   TESTDIR=run_test12_iso;   fi)
+	-@(if [ -d PC/IPIC3D2 ]; then $(MAKE) test12_3d    TESTDIR=run_test12_3d;    fi)
+
 #########################################################
 test12_aniso:
 	@echo "test12_aniso_compile..." > test12_aniso_gmpc.diff
@@ -2349,7 +2353,7 @@ test12_3d_check:
 		> test12_3d_pc.diff)
 	ls -l test12_3d_*.diff
 
-#### test IPIC3D.exe coupled with GM/BATSRUS using isotropic MHD #########
+#### test PC/IPIC3D2 coupled with GM/BATSRUS using isotropic MHD #########
 
 test12_iso:
 	@echo "test12_iso_compile..." > test12_iso_gm.diff
@@ -2391,6 +2395,8 @@ test12_iso_check:
 	   output/test12/cut_particles1.out.ref.iso.gz \
 		>> test12_iso_pc.diff)
 	ls -l test12_iso*.diff
+
+#### test SC/BATSRUS + IH/BATSRUS with aligned field and stream lines #########
 
 test_chgl:
 	@echo "test_chgl_compile..." > test_chgl_sc.diff
