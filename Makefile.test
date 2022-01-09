@@ -18,6 +18,7 @@ test_help:
 	@echo "    test8_check                (check test8 results)"
 	@echo "    test8_check BLESS=YES      (bless test8 results = update references)"
 	@echo "    test8 TESTDIR=run_test08   (run test8 in run_test08 directory)"
+	@echo "    test_gpu                   (run GPU related tests only)"
 	@echo "    test_share_library         (run share/Library tests)"
 	@echo "    test_util                  (run util/ tests)"
 	@echo "    test_batl                  (run BATL tests if BATL/ is present)"
@@ -63,6 +64,14 @@ test:
 	-@(${MAKE} test_comp)
 	-@(${MAKE} test_swmf)
 	-@(if [ -d BATL ]; then ${MAKE} test_batl; fi)
+	-@(${MAKE} test_check)
+
+.NOTPARALLEL: test_gpu
+
+test_gpu:
+	@rm -f *.diff
+	-@(${MAKE} test_swpc_gpu)
+	-@(cd GM/BATSRUS; ${MAKE} test_gpu)
 	-@(${MAKE} test_check)
 
 .NOTPARALLEL: test_swmf
