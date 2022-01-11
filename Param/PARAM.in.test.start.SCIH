@@ -264,7 +264,7 @@ periodic		TypeBc6   LatMax
 +init +ic		StringSwitch
 
 #SAVEPLOT
-5			nPlotFile
+6			nPlotFile
 x=0 VAR idl		StringPlot
 5			DnSavePlot
 -1.0			DtSavePlot
@@ -293,6 +293,24 @@ los ins idl_ascii		StringPlot
 5			DnSavePlot
 -1.0			DtSavePlot
 sta:euvi stb:euvi sdo:aia		StringsInstrument
+box VAR idl	  	StringPlot
+5                       DnSavePlot
+-1.0                   DtSavePlot
+HGR                     TypeCoordPlot
+0.0                     x0
+0.0                     y0
+1.1                     z0
+1.0                     xSize
+.1                     dX       ! only read if xSize /= 0
+0.1                     ySize
+0.05			dY       ! only read if ySize /= 0
+0.4                     zSize
+0.1                    dZ       ! only read if zSize /= 0
+0.0                     xAngle [deg]
+0.0                    yAngle [deg]
+0.0                     zAngle [deg]
+rho ux uy uz bx by bz I01 I02 p pe ppar
+g rbody
 
 #SATELLITE
 3			nSatellite

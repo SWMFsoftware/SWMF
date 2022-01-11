@@ -1,0 +1,32 @@
+Test input file for spectrum code
+#ECHO
+T				DoEcho
+
+#VERBOSE
+F				IsVerbose
+
+#OUTFILE
+RESULTS/spectrum.out		NameSpectrumFile
+
+#DATAFILE
+RESULTS/run_start/SC/box_var_8_n00000005.out			NameDataFile
+real4				TypeDataFile
+
+#TABLEFILE
+SPECTRUM_chianti_tbl.dat	NameTableFile
+1000				nMaxLine	
+
+#WAVELENGTHINTERVAL
+1				nWavelengthInterval
+200.				IntervalMin
+210.				IntervalMax
+0.01				SizeWavelengthBin
+
+#NOALFVEN
+F				IsNoAlfven
+
+#ISALLLINES
+F				IsAllLines
+
+#ISDOPPLER			
+T				IsDoppler

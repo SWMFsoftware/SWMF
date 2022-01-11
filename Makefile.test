@@ -236,7 +236,7 @@ test_pw_check:
 
 
 #### Plasmasphere model: DGCPM test ###
-
+     
 test_ps:
 	@echo "starting..." > test_ps.diff
 	@echo "test_ps_compile..." >> test_ps.diff
@@ -1248,7 +1248,8 @@ test9_compile:
 	${MAKE} SWMF
 	make PIDL
 	make FDIPS
-
+	cd GM/BATSRUS/srcPostProc; make SPECTRUM 
+	
 test9_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
@@ -1260,11 +1261,16 @@ test9_rundir:
 	perl -i -pe 's/dipole11.out/map_1.out/' ${TESTDIR}/SC/FDIPS.in
 	perl -i -pe 's/#(CHANGEPOLARFIELD)/$$1/; s/20/90/ if /n(Theta|Phi)/' ${TESTDIR}/SC/FDIPS.in
 	cd ${TESTDIR}/SC; ${PARALLEL} ${NPFLAG} 4 ./FDIPS.exe > runlog_fdips
-
+	gunzip -c GM/BATSRUS/data/SPECTRUM/SPECTRUM_chianti_tbl.dat.gz \
+        > ${TESTDIR}/SPECTRUM_chianti_tbl.dat
+	cp -f Param/SPECTRUM.in.test ${TESTDIR}/SPECTRUM.in	
+	ln -s ${BINDIR}/SPECTRUM.exe ${TESTDIR}/SPECTRUM.exe
+		
 test9_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl -m RESULTS/run_start
 	cd ${TESTDIR}; ./Restart.pl -i RESULTS/run_start/RESTART
+	cd ${TESTDIR}; 	${MPIRUN} ./SPECTRUM.exe > spectrum.log
 	
 test9_restart:
 	cd ${TESTDIR}; mv PARAM.in PARAM.in_start; rm -f PARAM.in_orig_
@@ -1293,7 +1299,12 @@ test9_check:
 	-(${DIFFNUM} -b -r=1e-4 -a=1e-27 \
                 ${TESTDIR}/RESULTS/run_start/SC/los_stb_euvi_6_n0000005.out \
                 output/test9/SC_los_stb_euvi_6_n0000005.out.gz \
-                >> test09_sc_los.diff)
+                > test09_sc_los.diff)
+	-(${DIFFNUM} -b -r=1e-5 -a=1e-12 \
+                ${TESTDIR}/RESULTS/spectrum.out \
+                output/test9/spectrum.out.gz \
+		> test09_spectrum.diff)
+
 	ls -l test09_*.diff
 
 
