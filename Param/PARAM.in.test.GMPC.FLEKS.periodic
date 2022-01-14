@@ -212,6 +212,9 @@ init_hall_resist		StringTest
 #B0SOURCE
 F			UseB0Source
 
+#ELECTRONENTROPY
+F			UseElectronEntropy
+
 #SCHEME
 2			nOrder
 Rusanov			TypeFlux

@@ -160,6 +160,8 @@ float			TypeBc6
 0.02			DyPic
 0.02			DzPic
 
+#ELECTRONENTROPY
+F			UseElectronEntropy
 
 #SCHEME
 2			nOrder
