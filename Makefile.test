@@ -136,7 +136,7 @@ test_check:
 		>> test_swmf.res
 	-@cat GM/BATSRUS/test_func.speed >> test_swmf.res
 
-### Unit tests of the share/Library
+### Unit tests of the share/Library ###
 
 test_share_library:
 	rm -f share/Library/test/*.diff
@@ -144,12 +144,12 @@ test_share_library:
 	cd share/Library/test; make test
 	ls -l share/Library/test/*.diff
 
-### Unit tests of the utilities
+### Unit tests of the utilities ###
 
 test_util:
 	cd util; make test
 
-### Unit tests of the BATL library
+### Unit tests of the BATL library ###
 
 test_batl:
 	cd BATL; ${MAKE} test
@@ -163,7 +163,7 @@ test_comp:
 
 ### SWMF tests ###
 
-#### Convection Zone model: FSAM test ####
+### test_cz: convection zone model FSAM test ###
 
 test_cz:
 	@echo "starting..."        >  test_cz.diff
@@ -199,7 +199,7 @@ test_cz_check:
 		> test_cz.diff
 	ls -ltr test_cz.diff
 
-#### Polarwind test ###
+### test_pw: Polarwind test ###
 
 test_pw:
 	@echo "starting..." > test_pw.diff
@@ -235,8 +235,8 @@ test_pw_check:
 	ls -ltr test_pw*.diff
 
 
-#### Plasmasphere model: DGCPM test ###
-     
+### test_ps: Plasmasphere model DGCPM test ###
+
 test_ps:
 	@echo "starting..." > test_ps.diff
 	@echo "test_ps_compile..." >> test_ps.diff
@@ -279,7 +279,7 @@ test_ps_check:
 	ls -ltr test_ps*.diff
 
 
-#### Plasmasphere-Ionosphere Coupling: PS-IE/DGCPM-RIM ###
+### test_psie: Plasmasphere-Ionosphere Coupling: PS-IE/DGCPM-RIM ###
 
 test_psie:
 	@echo "starting..." > test_psie.diff
@@ -323,7 +323,7 @@ test_psie_check:
 		>> test_psie.diff)
 	ls -ltr test_psie*.diff
 	
-### Test1: PW+IE+GM ###
+### test1: PW+IE+GM ###
 
 test1:
 	@echo "test1_compile..." > test01_gm.diff
@@ -391,7 +391,7 @@ test1_check:
 		>> test01_ie.diff)
 	ls -l test01_*.diff
 
-### Test2: GM+IE+RCM with multifluid GM-IM coupling ###
+### test2: GM+IE+RCM with multifluid GM-IM coupling ###
 
 test2:  
 	@echo "test2_compile..." > test02_gm_multi.diff
@@ -467,7 +467,7 @@ test2_check:
 		> test02_im_rcm_multi.diff)
 	ls -l test02_*.diff
 
-### test_swpc_build ###
+### test_swpc_build: configure SWMF with GM+IE+IM+RB only. ###
 
 # Configre with 4 components: GM+IE+IM+RB. Remove unused models.
 # Run test_swpc in the reduced SWMF build SWPC_build.
@@ -640,7 +640,7 @@ test_swpc_gpu_check:
 		>> test_swpc_gpu_ie.diff)
 	ls -l test_swpc_gpu_??.diff
 
-### test_swpc_multiion: GM+IE+IM ###
+### test_swpc_multiion: GM+IE+IM with multiion MHD ###
 
 test_swpc_multiion:
 	@echo "test_swpc_multiion_compile..." > test_swpc_multiion_gm.diff
@@ -711,7 +711,7 @@ test_swpc_multiion_check:
 		>> test_swpc_multiion_ie.diff)
 	ls -l test_swpc_multiion_*.diff
 
-### test_swpc_multispecies: GM+IE+IM ###
+### test_swpc_multispecies: GM+IE+IM with multispecies MHD ###
 
 test_swpc_multispecies:
 	@echo "test_swpc_multispecies_compile..." > test_swpc_multispecies_gm.diff
@@ -925,7 +925,7 @@ test_swpc_pwom_check:
 		>> test_swpc_pwom_ie.diff)
 	ls -l test_swpc_pwom_*.diff
 
-### test_swpc_amps
+### test_swpc_amps_build: Configure SWMF with GM+IE+IM+PT+RB ###
 
 test_swpc_amps_build:
 	rm -rf ${BUILD}
@@ -1015,7 +1015,7 @@ test_swpc_amps_check:
 		> test_swpc_amps_rb.diff)
 	ls -l test_swpc_amps_??.diff
 
-### Test4: GM+IE+HEIDI ###############
+### test4: GM+IE+HEIDI ###
 
 test4:
 	@echo "test4_compile..." > test04_gm.diff
@@ -1222,7 +1222,7 @@ test8_check:
 		> test08_sc_los.diff)
 	ls -l test08_*.diff
 
-### test9: SC + IH with new AWSoM updates. Restarting SC and running IH in 2nd and 5th order schemes ### 
+### test9: SC + IH. Test 2nd and 5th order schemes ### 
 
 test9:
 	@echo "test9_compile..." > test09_sc_chromo.diff
@@ -1308,7 +1308,7 @@ test9_check:
 	ls -l test09_*.diff
 
 
-### test11: Dipole field with solar wind coupled with an exosphere model, to test the GM/PT coupler
+### test11: Dipole field with solar wind coupled with an exosphere model, to test the GM/PT coupler ###
 
 test11:
 	@echo "test11_compile..." > test11_gm.diff
@@ -1360,7 +1360,7 @@ test11_check:
                 > test11_pt.diff)
 		ls -l test11*.diff
 
-### test13: Europa's exosphere model with coupled Gm and PT components
+### test13: Europa's exosphere model with GM and PT ###
 
 test13:
 	@echo "test13_compile..." > test13_pt.diff
@@ -1396,7 +1396,7 @@ test13_check:
 		> test13_pt.diff)
 		ls -l test13*.diff
 
-### test14: OH/BATSRUS (single-ion) coupled with PT/AMPS
+### test14: OH/BATSRUS (single-ion) coupled with PT/AMPS ###
 
 test14:
 	@echo "test14_compile..." > test14_ohpt.diff
@@ -1441,7 +1441,7 @@ test14_check:
 		> test14_ohpt.diff)
 	ls -l test14_ohpt.diff
 
-### test14_1d: OH/BATSRUS (single-ion) coupled with PT/AMPS
+### test14_1d: OH/BATSRUS (single-ion) coupled with PT/AMPS in a shocktube ###
 
 test14_1d:
 	@echo "test14_1d_compile..." > test14_1d_ohpt.diff
@@ -1481,7 +1481,7 @@ test14_1d_check:
 		>> test14_1d_ohpt.diff)	
 	ls -l test14_1d_ohpt.diff
 
-### test14pui: OH/BATSRUS with PUI (multi-ion) coupled with PT/AMPS
+### test14pui: OH/BATSRUS with PUI (multi-ion) coupled with PT/AMPS ###
 
 test14pui:
 	@echo "test14pui_compile..." > test14pui_ohpt.diff
@@ -1513,11 +1513,11 @@ test14pui_run:
 test14pui_check:
 	-(${DIFFNUM} -b -r=1e-5 -a=2e-21 \
 		${TESTDIR}/RESULTS/OH/log_n000000.log \
-		output/test14pui/OH_log_n000000.log \
+		output/test14pui/OH_log_n000000_np${NAMPS}.log \
 		> test14pui_ohpt.diff)
 	ls -l test14pui_ohpt.diff
 
-### test14pui1d: OH/BATSRUS with PUI (multi-ion) coupled with PT/AMPS in shock tube
+### test14pui1d: OH/BATSRUS with PUI (multi-ion) coupled with PT/AMPS in shock tube ###
 
 test14pui1d:
 	@echo "test14pui1d_compile..." > test14pui1d_ohpt.diff
@@ -1553,7 +1553,7 @@ test14pui1d_check:
                 > test14pui1d_ohpt.diff)
 	ls -l test14pui1d_ohpt.diff
 
-### test15: SP/MFLAMPA model coupled with SC and IH models
+### test15: SP/MFLAMPA model coupled with SC and IH models ###
 
 test15_build:
 	rm -rf SP_build
@@ -1613,7 +1613,7 @@ test15_check:
 		> test15_scihsp.diff)
 	ls -l test15_scihsp.diff
 
-### test15_long: same as test15, but SC/IH start from scratch
+### test15_long: same as test15, but SC/IH start from scratch ###
 
 test15_long:
 	rm -f test15_long*.diff
@@ -1674,7 +1674,7 @@ test15_long_check:
 		> test15_long_sp.diff)
 	ls -l test15_long*.diff
 
-### test15_single: same as test15_long, but with no restart
+### test15_single: same as test15_long, but with no restart ###
 
 test15_single:
 	rm -f test15_long*.diff
@@ -1699,7 +1699,7 @@ test15_single_run:
 	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
 
 
-### test15_pt: same as test15, but PT/AMPS model coupled with SC and IH models
+### test15_pt: same as test15, but PT/AMPS coupled with SC and IH ###
 
 test15_pt:
 	rm -f test15_scihpt.diff
@@ -1824,7 +1824,7 @@ test16_check:
 	ls -l test16.diff
 
 
-### test17: GM/BATSRUS+PC/FLEKS. 2D Alfven wave
+### test17: GM/BATSRUS+PC/FLEKS. 2D Alfven wave ###
 
 test17:
 	@echo "test17_compile..." > test17.diff
@@ -1903,7 +1903,7 @@ test17_check:
 	ls -l test17.diff
 
 
-### test18: BATSRUS+FLEKS. 3D reconnection
+### test18: BATSRUS+FLEKS. 3D reconnection ###
 
 test18:
 	@echo "test18_compile..." > test18.diff
@@ -1933,12 +1933,12 @@ test18_run:
 
 test18_check:
 	-@(${DIFFNUM} -b -r=1e-6 -a=1e-15 \
-		${TESTDIR}/RESULTS/PC/3d_var_region0_0_t00000016_n00000016.out \
-		output/test18/3d.ref.gz \
-		> test18.diff)
+	     ${TESTDIR}/RESULTS/PC/3d_var_region0_0_t00000016_n00000016.out \
+	     output/test18/3d.ref.gz \
+	     > test18.diff)
 	ls -l test18.diff
-###
-### test19: SC+IH+OH+SP
+
+### test19: SC+IH+OH+SP ###
 
 test19:
 	rm -f test19*.diff
@@ -2070,7 +2070,7 @@ test12:
 	-@(if [ -d PC/AMPS ]; then $(MAKE) test12_aniso_AMPS_openmp    TESTDIR=run_test12_aniso_AMPS_openmp; fi)
 	-@(if [ -d PC/AMPS ]; then ./Config.pl -noopenmp -o=PC:openmp=off; fi)
 
-######## test PC coupled with GM/BATSRUS #########
+### test12_aniso_AMPS_dynamic_fluxrope: test PC coupled with GM/BATSRUS ###
 test12_aniso_AMPS_dynamic_fluxrope:
 	@echo "test12_aniso_AMPS_dynamic_fluxrope_compile..." > test12_aniso_AMPS_dynamic_fluxrope_gmpc.diff
 	$(MAKE) test12_aniso_AMPS_dynamic_fluxrope_compile
@@ -2261,7 +2261,7 @@ test12_aniso_AMPS_dynamic_check:
 		> test12_aniso_AMPS_dynamic_gmpc.diff)
 	ls -l test12_aniso_AMPS_dynamic_gmpc.diff
 
-######## test PC/IPIC3D2 coupled with GM/BATSRUS #########
+### test12_ipic3d: test PC/IPIC3D2 coupled with GM/BATSRUS ###
 
 .NOTPARALLEL: test12_ipic3d
 
@@ -2317,7 +2317,7 @@ test12_aniso_check:
 		>> test12_aniso_gmpc.diff)
 	ls -l test12_aniso_gmpc.diff
 
-#### test IPIC3D.exe coupled with GM/BATSRUS using 3D reconetion #########
+#### test12_3d: PC/IPIC3D2 + GM/BATSRUS for 3D reconetion ###
 
 test12_3d:
 	@echo "test12_3d_compile..." > test12_3d_gm.diff
@@ -2364,7 +2364,7 @@ test12_3d_check:
 		> test12_3d_pc.diff)
 	ls -l test12_3d_*.diff
 
-#### test PC/IPIC3D2 coupled with GM/BATSRUS using isotropic MHD #########
+#### test12_iso: PC/IPIC3D2 + GM/BATSRUS with isotropic MHD ###
 
 test12_iso:
 	@echo "test12_iso_compile..." > test12_iso_gm.diff
@@ -2407,7 +2407,7 @@ test12_iso_check:
 		>> test12_iso_pc.diff)
 	ls -l test12_iso*.diff
 
-#### test SC/BATSRUS + IH/BATSRUS with aligned field and stream lines #########
+### test_chgl: test SC/BATSRUS + IH/BATSRUS with aligned field and stream lines ###
 
 test_chgl:
 	@echo "test_chgl_compile..." > test_chgl_sc.diff
