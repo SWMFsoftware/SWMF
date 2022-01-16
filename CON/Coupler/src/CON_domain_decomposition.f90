@@ -6,22 +6,29 @@ module CON_domain_decomposition
   ! icludes both the uniformly spaced ones (uniformly spaced with
   ! respect to some generalized coordinates) and Octree or Quadric
   ! tree for adaptive block decompositions.
-  use ModUtilities, ONLY: check_allocate
+
+  use ModUtilities, ONLY: check_allocate, CON_stop
   use CON_world
   use ModNumConst
   use ModMpi
   use ModKind,      ONLY: nByteReal
+
   ! revision history:
   ! 6/18/03-7/11/03 Sokolov I.V. <igorsok@umich.edu> phone(734)647-4705
+
   implicit none
+
   SAVE
+
   real, parameter :: cThird = 1.0/3.0
-  integer,parameter::Parent_=-1,&
-       MyNumberAsAChild_ =0,&
-       FirstChild_  =1,&
-       BLK_         =2,&
-       PE_          =3,&
-       None_        =-777
+  integer, parameter:: &
+       Parent_           = -1, &
+       MyNumberAsAChild_ =  0, &
+       FirstChild_       =  1, &
+       BLK_              =  2, &
+       PE_               =  3, &
+       None_             = -777
+
   type DomainType
      ! The type is to describe the domain decomposition for a
      ! component. The component should be properly registered with

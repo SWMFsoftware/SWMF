@@ -6,6 +6,8 @@ module PS_wrapper
 
   ! Wrapper for the "empty" Plasmasphere (PS) component
 
+  use ModUtilities, ONLY: CON_stop
+  
   implicit none
 
   private ! except
@@ -46,9 +48,7 @@ contains
     end select
 
   end subroutine PS_set_param
-
   !============================================================================
-
   subroutine PS_init_session(iSession, TimeSimulation)
 
     !INPUT PARAMETERS:
@@ -60,9 +60,7 @@ contains
     call CON_stop(NameSub//': PS_ERROR: empty version cannot be used!')
 
   end subroutine PS_init_session
-
   !============================================================================
-
   subroutine PS_finalize(TimeSimulation)
 
     !INPUT PARAMETERS:
@@ -73,9 +71,7 @@ contains
     call CON_stop(NameSub//': PS_ERROR: empty version cannot be used!')
 
   end subroutine PS_finalize
-
   !============================================================================
-
   subroutine PS_save_restart(TimeSimulation)
 
     !INPUT PARAMETERS:
@@ -86,7 +82,6 @@ contains
     call CON_stop(NameSub//': PS_ERROR: empty version cannot be used!')
 
   end subroutine PS_save_restart
-
   !============================================================================
   subroutine PS_get_for_gm(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVarIn)
 
@@ -100,9 +95,7 @@ contains
     call CON_stop(NameSub//': Empty version cannot be used!')
     
   end subroutine PS_get_for_gm
-
   !============================================================================
-
   subroutine PS_run(TimeSimulation,TimeSimulationLimit)
 
     !INPUT/OUTPUT ARGUMENTS:
@@ -116,9 +109,7 @@ contains
     call CON_stop(NameSub//': PS_ERROR: empty version cannot be used!')
 
   end subroutine PS_run
-
   !============================================================================
-
   subroutine PS_put_from_ie(iSize, jSize, Buffer_II)
 
     integer, intent(in):: iSize, jSize
@@ -129,5 +120,6 @@ contains
     call CON_stop(NameSub//': PS_ERROR: empty version cannot be used!')
 
   end subroutine PS_put_from_ie
-
+  !============================================================================
 end module PS_wrapper
+!==============================================================================

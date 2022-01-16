@@ -6,6 +6,8 @@ module PW_wrapper
 
   ! Wrapper for the empty PW component
 
+  use ModUtilities, ONLY: CON_stop
+  
   implicit none
 
   private ! except
@@ -47,9 +49,7 @@ contains
     end select
 
   end subroutine PW_set_param
-
   !============================================================================
-
   subroutine PW_init_session(iSession, TimeSimulation)
 
     !INPUT PARAMETERS:
@@ -61,9 +61,7 @@ contains
     call CON_stop(NameSub//': PW_ERROR: empty version cannot be used!')
 
   end subroutine PW_init_session
-
   !============================================================================
-
   subroutine PW_finalize(TimeSimulation)
 
     !INPUT PARAMETERS:
@@ -74,9 +72,7 @@ contains
     call CON_stop(NameSub//': PW_ERROR: empty version cannot be used!')
 
   end subroutine PW_finalize
-
   !============================================================================
-
   subroutine PW_save_restart(TimeSimulation)
 
     !INPUT PARAMETERS:
@@ -87,9 +83,7 @@ contains
     call CON_stop(NameSub//': PW_ERROR: empty version cannot be used!')
 
   end subroutine PW_save_restart
-
   !============================================================================
-
   subroutine PW_run(TimeSimulation,TimeSimulationLimit)
 
     !INPUT/OUTPUT ARGUMENTS:
@@ -103,9 +97,7 @@ contains
     call CON_stop(NameSub//': PW_ERROR: empty version cannot be used!')
 
   end subroutine PW_run
-
   !============================================================================
-
   subroutine PW_put_from_ie(Buffer_IIV, iSize, jSize, nVar, &
        Name_V, iBlock)
 
@@ -119,9 +111,7 @@ contains
     call CON_stop(NameSub//': PW_ERROR: empty version cannot be used!')
 
   end subroutine PW_put_from_ie
-
   !============================================================================
-
   subroutine PW_get_for_gm(Buffer_VI, nVar, nFieldLine, Name_V, tSimulation)
 
     character (len=*),parameter :: NameSub='PW_get_for_gm'
@@ -134,9 +124,7 @@ contains
     call CON_stop(NameSub//': PW_ERROR: empty version cannot be used!')
 
   end subroutine PW_get_for_gm
-
   !============================================================================
-
   subroutine PW_put_from_gm(nTotalLine, Buffer_I)
 
     integer,intent(in) :: nTotalLine
@@ -147,5 +135,6 @@ contains
 
     call CON_stop(NameSub//': PW_ERROR: empty version cannot be used!')
   end subroutine PW_put_from_gm
-
+  !============================================================================
 end module PW_wrapper
+!==============================================================================

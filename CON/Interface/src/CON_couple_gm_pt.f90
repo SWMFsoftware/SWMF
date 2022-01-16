@@ -9,7 +9,7 @@
 !
 module CON_couple_gm_pt
 
-  use CON_coupler, ONLY: GM_, PT_, Grid_C, lNameVar
+  use CON_coupler, ONLY: GM_, PT_, Grid_C, lNameVar, CON_set_do_test
   use CON_couple_points, ONLY: &
        couple_points_init, couple_points, CouplePointsType
 

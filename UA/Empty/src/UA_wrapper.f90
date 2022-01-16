@@ -6,6 +6,8 @@ module UA_wrapper
 
   ! Wrapper for Upper Atmosphere (UA) component
 
+  use ModUtilities, ONLY: CON_stop
+
   implicit none
 
   private ! except
@@ -17,8 +19,7 @@ module UA_wrapper
   public:: UA_finalize
 
 contains
-
-  !==========================================================================
+  !============================================================================
   subroutine UA_set_param(CompInfo, TypeAction)
 
     use CON_comp_info
@@ -41,9 +42,7 @@ contains
     end select
 
   end subroutine UA_set_param
-
   !============================================================================
-
   subroutine UA_init_session(iSession, TimeSimulation)
 
     !INPUT PARAMETERS:
@@ -55,9 +54,7 @@ contains
     call CON_stop(NameSub//': UA_ERROR: empty version cannot be used!')
 
   end subroutine UA_init_session
-
   !============================================================================
-
   subroutine UA_finalize(TimeSimulation)
 
     !INPUT PARAMETERS:
@@ -68,9 +65,7 @@ contains
     call CON_stop(NameSub//': UA_ERROR: empty version cannot be used!')
 
   end subroutine UA_finalize
-
   !============================================================================
-
   subroutine UA_save_restart(TimeSimulation)
 
     !INPUT PARAMETERS:
@@ -81,9 +76,7 @@ contains
     call CON_stop(NameSub//': UA_ERROR: empty version cannot be used!')
 
   end subroutine UA_save_restart
-
   !============================================================================
-
   subroutine UA_run(TimeSimulation,TimeSimulationLimit)
 
     !INPUT/OUTPUT ARGUMENTS:
@@ -97,8 +90,9 @@ contains
     call CON_stop(NameSub//': UA_ERROR: empty version cannot be used!')
 
   end subroutine UA_run
-  
+  !============================================================================
 end module UA_wrapper
+!==============================================================================
 
 ! The following subroutines are empty versions of those in UA/GITM2/src/
 ! The call to these routines is commented out in CON_couple_ie_ua.f90

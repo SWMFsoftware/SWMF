@@ -2,13 +2,16 @@
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module CON_router
+
   use CON_world
   use ModMpi
-  use CON_grid_descriptor, ONLY: GridType, LocalGridType, coord_grid_d,        &
-       nearest_grid_points, bilinear_interpolation, interpolation_amr_gc, BLK_,&
-       GlobalBlock_, GridPointFirst_, CellCentered_, Nodes_, set_local_gd,     &
-       set_standard_grid_descriptor,  clean_gd, global_i_grid_point_to_icb
-  use ModUtilities, ONLY: check_allocate
+  use CON_grid_descriptor, ONLY: &
+       GridType, LocalGridType, coord_grid_d, nearest_grid_points, &
+       bilinear_interpolation, interpolation_amr_gc, BLK_, GlobalBlock_, &
+       GridPointFirst_, CellCentered_, Nodes_, set_local_gd, &
+       set_standard_grid_descriptor, clean_gd, global_i_grid_point_to_icb
+  use ModUtilities, ONLY: check_allocate, CON_stop
+
   ! This file presents the class of routers between the grids, each
   ! of them can be either the uniformly spaced or Octree or Quadric
   ! adaptive block grid                   .
@@ -16,8 +19,11 @@ module CON_router
   ! The methods include: allocation, initialization, cleaner and
   ! two different constructors.
   !
+
   implicit none
+
   SAVE
+
   logical, parameter  :: UseUnionComm = .true.
   type DoAddPtrType
      logical, pointer :: DoAdd_I(:)

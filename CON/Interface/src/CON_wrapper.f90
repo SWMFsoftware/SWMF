@@ -2,15 +2,9 @@
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !
-!
-!
-!
-!
-!
 ! Contains general subroutines which call the specific subroutines
 ! in the component wrappers. The components are identified by their
 ! name or the component ID.
-!
 
 module CON_wrapper
   !
@@ -18,6 +12,7 @@ module CON_wrapper
   use CON_world
   use CON_comp_param
   use CON_comp_info
+  use ModUtilities, ONLY: CON_set_do_test, CON_stop
   use omp_lib
 
   use CZ_wrapper, ONLY: CZ_set_param, CZ_init_session, &       !^CMP IF CZ

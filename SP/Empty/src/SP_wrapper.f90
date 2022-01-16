@@ -3,6 +3,8 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module SP_wrapper
 
+  use ModUtilities, ONLY: CON_stop
+  
   implicit none
 
   save
@@ -22,7 +24,6 @@ module SP_wrapper
 
 contains
   !============================================================================
-
   subroutine SP_do_extract_lines(DoExtract)
     logical, intent(out):: DoExtract
 
@@ -95,3 +96,4 @@ contains
   end subroutine SP_adjust_lines
   !============================================================================
 end module SP_wrapper
+!==============================================================================

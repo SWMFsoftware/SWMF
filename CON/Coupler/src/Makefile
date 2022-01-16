@@ -9,7 +9,6 @@ include ../../../Makefile.conf
 
 MODULES = \
 	CON_domain_decomposition.o\
-	ModInitGridStorage.o\
 	CON_grid_storage.o\
 	CON_grid_descriptor.o\
 	CON_router.o\
