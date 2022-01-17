@@ -499,9 +499,9 @@ contains
     real    :: Coord_DI(nDim,2**nDim)
     real, parameter:: Tolerance = 0.001
     integer:: iTreeNode, iDim, iImages
-    !--------------------------------------------------------------------------
 
     ! Initialize arrays
+    !--------------------------------------------------------------------------
     iIndex_II=0;Weight_I= 0.0
     CoordStored_D=Coord_D
     iIndex_II(1:nDim,1)=&

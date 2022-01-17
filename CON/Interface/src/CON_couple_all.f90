@@ -21,7 +21,7 @@ module CON_couple_all
        iVarTarget_V, iVarTarget_VCC
   use CON_bline, ONLY: UseBLine_C, IsSource4BL_C
   use ModUtilities, ONLY: CON_set_do_test, CON_stop
-  
+
   !^CMP IF GM BEGIN
   use CON_couple_ee_gm        !^CMP IF EE
   use CON_couple_ih_gm        !^CMP IF IH

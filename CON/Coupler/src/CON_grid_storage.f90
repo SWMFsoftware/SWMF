@@ -50,8 +50,8 @@ module CON_grid_storage
        PtGrid, PwGrid, RbGrid, ScGrid, SpGrid, UaGrid, CzGrid
 
 contains
-
   !============================================================================
+
   ! revision history:
   ! 09SEP03              I.Sokolov<igorsok@umich.edu - initial prototype/code
   ! 12SEP03              version for any operating system
