@@ -6,6 +6,8 @@ module CZ_wrapper
 
   ! Wrapper for the empty Convection Zone (CZ) component
 
+  use ModUtilities, ONLY: CON_stop
+  
   implicit none
 
   private ! except

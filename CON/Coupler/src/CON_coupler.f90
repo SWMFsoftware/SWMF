@@ -17,7 +17,7 @@ module CON_coupler
        ncell_id
   use CON_router
   use CON_time, ONLY: FreqType
-  use ModUtilities, ONLY: check_allocate
+  use ModUtilities, ONLY: check_allocate, CON_set_do_test, CON_stop
   implicit none
 
   SAVE

@@ -2,9 +2,12 @@
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module CON_global_message_pass
+
   use CON_router
+  use ModUtilities, ONLY: CON_stop
+
   implicit none
-  !
+
   ! The toolkit for coupling the different data sets within a
   ! single component code, or within a framework, as it is now (see
   ! the date above) consists of:
@@ -71,8 +74,8 @@ module CON_global_message_pass
 
 contains
   !============================================================================
-  ! BEGIN
   subroutine global_message_pass(Router, nVar, fill_buffer, apply_buffer)
+
     ! Router: should be preset. See CON_router for the instructions.
     ! nVar is the number of REAL variables which are sent-received.
     ! nVar>1 means that more than one scalar field is involved. In

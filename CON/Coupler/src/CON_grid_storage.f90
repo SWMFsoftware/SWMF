@@ -2,13 +2,19 @@
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module CON_grid_storage
+
+  use CON_comp_param, ONLY: EE_, GM_, IE_, IH_, IM_, OH_, PC_, PS_, &
+       PT_, PW_, RB_, SC_, SP_, UA_, CZ_
   use CON_world
   use CON_domain_decomposition, ONLY: DomainType, DomainPointerType, &
        init_decomposition_dd, get_root_decomposition_dd,  &
        bcast_decomposition_dd, synchronize_refinement_dd, &
        associate_dd_pointer_dd
-  use ModInitGridStorage, ONLY:  init_grid_storage, MaxGrid
+  use ModUtilities, ONLY: CON_stop
+
   implicit none
+
+  integer, public, parameter:: MaxGrid = MaxComp
 
   type(DomainPointerType), private :: Domain_I(MaxGrid)
   logical   :: DoneDomainInit_C(MaxGrid)= .false.
@@ -38,7 +44,68 @@ module CON_grid_storage
      module procedure associate_dd_pointer_dd
      module procedure associate_dd_pointer_id
   end interface associate_dd_pointer
+
+  type(DomainType), save, target :: &
+       EeGrid, GmGrid, IeGrid, IhGrid, ImGrid, OhGrid, PcGrid, PsGrid, &
+       PtGrid, PwGrid, RbGrid, ScGrid, SpGrid, UaGrid, CzGrid
+
 contains
+  !============================================================================
+
+  ! revision history:
+  ! 09SEP03              I.Sokolov<igorsok@umich.edu - initial prototype/code
+  ! 12SEP03              version for any operating system
+  ! 16JAN05              G.Toth removed the obsolete GmIe_grid
+  subroutine init_grid_storage(Domain_I, GridID_)
+
+    integer,                 intent(in )   :: GridID_
+    type(DomainPointerType), intent(inout) :: Domain_I(MaxGrid)
+    ! information for the global grids is stored at all PEs so it is
+    ! important to reduce the memory requirements. This short procedure
+    ! describes how the memory is allocated for the domain decomposition
+    ! structure. This solution satisfies the most picky SGI compiler,
+    ! but requires to add manually an identifier for the domain
+    ! decomposition while adding a new component to the framework.
+
+    character(len=*), parameter:: NameSub = 'init_grid_storage'
+    !--------------------------------------------------------------------------
+    select case(GridID_)
+    case(EE_)
+       Domain_I(GridID_)%Ptr => EeGrid
+    case(GM_)
+       Domain_I(GridID_)%Ptr => GmGrid
+    case(IE_)
+       Domain_I(GridID_)%Ptr => IeGrid
+    case(IM_)
+       Domain_I(GridID_)%Ptr => ImGrid
+    case(IH_)
+       Domain_I(GridID_)%Ptr => IhGrid
+    case(OH_)
+       Domain_I(GridID_)%Ptr => OhGrid
+    case(PC_)
+       Domain_I(GridID_)%Ptr => PcGrid
+    case(PS_)
+       Domain_I(GridID_)%Ptr => PsGrid
+    case(PT_)
+       Domain_I(GridID_)%Ptr => PtGrid
+    case(PW_)
+       Domain_I(GridID_)%Ptr => PwGrid
+    case(RB_)
+       Domain_I(GridID_)%Ptr => RbGrid
+    case(SP_)
+       Domain_I(GridID_)%Ptr => SpGrid
+    case(SC_)
+       Domain_I(GridID_)%Ptr => ScGrid
+    case(UA_)
+       Domain_I(GridID_)%Ptr => UaGrid
+    case(CZ_)
+       Domain_I(GridID_)%Ptr => CzGrid
+    case default
+       write(*,*)'ERROR in ModInitGridStorage: GridID = ',GridID_
+       call CON_stop(NameSub//': not implemented grid ID')
+    end select
+
+  end subroutine init_grid_storage
   !============================================================================
   logical function done_dd_init(GridID_)
     integer,intent(in)::GridID_
@@ -160,7 +227,7 @@ contains
     type(DomainPointerType),intent(out)::DomainPointer
     !--------------------------------------------------------------------------
     nullify(DomainPointer%Ptr)
-    DomainPointer%Ptr=>Domain_I(GridID_)%Ptr
+    DomainPointer%Ptr => Domain_I(GridID_)%Ptr
   end subroutine associate_dd_pointer_id
   !============================================================================
   integer function ndim_id(GridID_)

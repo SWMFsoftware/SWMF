@@ -6,6 +6,8 @@ module PC_wrapper
 
   ! Wrapper for an "empty" Particle in Cell (PC) component
 
+  use ModUtilities, ONLY: CON_stop
+  
   implicit none
 
   private ! except
@@ -47,9 +49,7 @@ contains
     end select
 
   end subroutine PC_set_param
-
   !============================================================================
-
   subroutine PC_init_session(iSession, TimeSimulation)
 
     !INPUT PARAMETERS:
@@ -57,39 +57,33 @@ contains
     real,     intent(in) :: TimeSimulation   ! seconds from start time
 
     character(len=*), parameter :: NameSub='PC_init_session'
-
+    !--------------------------------------------------------------------------
     call CON_stop(NameSub//': PC_ERROR: empty version cannot be used!')
 
   end subroutine PC_init_session
-
   !============================================================================
-
   subroutine PC_finalize(TimeSimulation)
 
     !INPUT PARAMETERS:
     real,     intent(in) :: TimeSimulation   ! seconds from start time
 
     character(len=*), parameter :: NameSub='PC_finalize'
-
+    !--------------------------------------------------------------------------
     call CON_stop(NameSub//': PC_ERROR: empty version cannot be used!')
 
   end subroutine PC_finalize
-
   !============================================================================
-
   subroutine PC_save_restart(TimeSimulation)
 
     !INPUT PARAMETERS:
     real,     intent(in) :: TimeSimulation   ! seconds from start time
 
     character(len=*), parameter :: NameSub='PC_save_restart'
-
+    !--------------------------------------------------------------------------
     call CON_stop(NameSub//': PC_ERROR: empty version cannot be used!')
 
   end subroutine PC_save_restart
-
   !============================================================================
-
   subroutine PC_run(TimeSimulation,TimeSimulationLimit)
 
     !INPUT/OUTPUT ARGUMENTS:
@@ -99,13 +93,11 @@ contains
     real, intent(in):: TimeSimulationLimit ! simulation time not to be exceeded
 
     character(len=*), parameter :: NameSub='PC_run'
-
+    !--------------------------------------------------------------------------
     call CON_stop(NameSub//': PC_ERROR: empty version cannot be used!')
 
   end subroutine PC_run
-
   !============================================================================
-
   subroutine PC_find_points(nDimIn, nPoint, Xyz_DI, iProc_I)
 
     integer, intent(in) :: nDimIn                ! dimension of position vector
@@ -115,13 +107,10 @@ contains
 
     character(len=*), parameter:: NameSub = 'PC_find_points'
     !--------------------------------------------------------------------------
-
     call CON_stop(NameSub//': PC_ERROR: empty version cannot be used!')
 
   end subroutine PC_find_points
-
   !============================================================================
-
   subroutine PC_get_for_gm(IsNew, NameVar, nVarIn, nDimIn, nPoint, Xyz_DI, &
        Data_VI)
 
@@ -138,13 +127,10 @@ contains
 
     character(len=*), parameter :: NameSub='GM_get_for_pc'
     !--------------------------------------------------------------------------
-
     call CON_stop(NameSub//': PC_ERROR: empty version cannot be used!')
 
   end subroutine PC_get_for_gm
-
   !============================================================================
-
   subroutine PC_get_grid_info(nDimOut, iGridOut, iDecompOut)
 
     integer, intent(out):: nDimOut    ! grid dimensionality
@@ -153,13 +139,10 @@ contains
 
     character(len=*), parameter :: NameSub = 'PC_get_grid_info'
     !--------------------------------------------------------------------------
-
     call CON_stop(NameSub//': PC_ERROR: empty version cannot be used!')
 
   end subroutine PC_get_grid_info
-
   !============================================================================
-
   subroutine PC_put_from_gm(NameVar, nVar, nPoint, Data_VI, iPoint_I, Pos_DI)
 
     use CON_coupler, ONLY: i_proc, PC_, n_proc
@@ -177,21 +160,16 @@ contains
     call CON_stop(NameSub//': PC_ERROR: empty version cannot be used!')
 
   end subroutine PC_put_from_gm
-
   !============================================================================
-
   subroutine PC_put_from_gm_grid_info(nInt, nPicGrid, AccumulatedSize_I, Int_I)
     integer, intent(in)         :: nInt, nPicGrid
     integer, intent(in)         :: Int_I(nInt), AccumulatedSize_I(nPicGrid)    
     character(len=*), parameter :: NameSub='PC_put_from_gm_grid_info'
     !--------------------------------------------------------------------------
-
     call CON_stop(NameSub//': PC_ERROR: empty version cannot be used!')
 
   end subroutine PC_put_from_gm_grid_info
-  
   !============================================================================
-  
   subroutine PC_put_from_gm_dt(DtSi)
 
     real,    intent(in) :: DtSi
@@ -213,9 +191,9 @@ contains
 
     character(len=*), parameter :: NameSub = 'PC_put_from_gm_init'
     !--------------------------------------------------------------------------
-
     call CON_stop(NameSub//': PC_ERROR: empty version cannot be used!')
 
   end subroutine PC_put_from_gm_init
-
+  !============================================================================
 end module PC_wrapper
+!==============================================================================

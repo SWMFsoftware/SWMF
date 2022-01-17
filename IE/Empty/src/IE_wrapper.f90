@@ -4,6 +4,8 @@
 
 module IE_wrapper
 
+  use ModUtilities, ONLY: CON_stop
+  
   implicit none
 
 contains
@@ -31,9 +33,7 @@ contains
     end select
 
   end subroutine IE_set_param
-
   !============================================================================
-
   subroutine IE_init_session(iSession, TimeSimulation)
 
     !INPUT PARAMETERS:
@@ -45,9 +45,7 @@ contains
     call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
 
   end subroutine IE_init_session
-
   !============================================================================
-
   subroutine IE_finalize(TimeSimulation)
 
     !INPUT PARAMETERS:
@@ -58,9 +56,7 @@ contains
     call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
 
   end subroutine IE_finalize
-
   !============================================================================
-
   subroutine IE_save_restart(TimeSimulation)
 
     !INPUT PARAMETERS:
@@ -71,9 +67,7 @@ contains
     call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
 
   end subroutine IE_save_restart
-
   !============================================================================
-
   subroutine IE_run(TimeSimulation,TimeSimulationLimit)
 
     !INPUT/OUTPUT ARGUMENTS:
@@ -87,9 +81,7 @@ contains
     call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
 
   end subroutine IE_run
-
   !============================================================================
-
   subroutine IE_get_for_gm(Buffer_IIV, iSize, jSize, nVar, NameVar_I, &
        tSimulation)
 
@@ -103,9 +95,7 @@ contains
     call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
 
   end subroutine IE_get_for_gm
-
   !============================================================================
-
   subroutine IE_put_from_gm(Buffer_IIV, iSize, jSize, nVar)
 
     integer,          intent(in) :: iSize, jSize, nVar
@@ -116,9 +106,7 @@ contains
     call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
 
   end subroutine IE_put_from_gm
-
   !============================================================================
-
   subroutine IE_get_for_pw(Buffer_IIV, iSize, jSize, nVar, Name_V, NameHem,&
        tSimulation)
 
@@ -133,9 +121,7 @@ contains
     call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
 
   end subroutine IE_get_for_pw
-
   !============================================================================
-
   subroutine IE_get_for_rb(Buffer_IIV, iSize, jSize, nVar, Name_V, NameHem,&
        tSimulation)
 
@@ -150,9 +136,7 @@ contains
     call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
 
   end subroutine IE_get_for_rb
-
   !============================================================================
-
   subroutine IE_get_for_ps(Buffer_II, iSize, jSize, tSimulation)
 
     integer, intent(in) :: iSize, jSize
@@ -164,9 +148,7 @@ contains
     call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
 
   end subroutine IE_get_for_ps
-
   !============================================================================
-
   subroutine IE_get_for_im(nPoint,iPointStart,Index,Weight,Buff_V,nVar)
 
     use CON_router,   ONLY: IndexPtrType, WeightPtrType
@@ -181,9 +163,7 @@ contains
     call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
 
   end subroutine IE_get_for_im
-
   !============================================================================
-
   subroutine IE_put_from_UA(Buffer_III, iBlock, nMLTs, nLats, nVarsToPass)
 
     integer, intent(in) :: nMlts, nLats, iBlock, nVarsToPass
@@ -194,9 +174,7 @@ contains
     call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
 
   end subroutine IE_put_from_UA
-
   !============================================================================
-
   subroutine IE_get_for_ua(Buffer_II,iSize,jSize,NameVar,NameHem,tSimulation)
 
     integer,          intent(in)  :: iSize,jSize
@@ -210,9 +188,7 @@ contains
     call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
 
   end subroutine IE_get_for_ua
-
   !============================================================================
-
   subroutine IE_setnMlts(iComponent, nMLTsIn, iError)
 
     integer, intent(in)  :: iComponent, nMLTsIn
@@ -223,9 +199,7 @@ contains
     call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
 
   end subroutine IE_setnMlts
-
   !============================================================================
-
   subroutine IE_setnLats(iComponent, nLatsIn, iError)
 
     integer, intent(in)  :: iComponent, nLatsIn
@@ -236,9 +210,7 @@ contains
     call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
 
   end subroutine IE_setnLats
-
   !============================================================================
-
   subroutine IE_setgrid(iComponent, MLTsIn, LatsIn, iError)
 
     integer, intent(in) :: iComponent
@@ -250,9 +222,7 @@ contains
     call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
 
   end subroutine IE_setgrid
-
   !============================================================================
-
   subroutine IE_put_from_im(nPoint,iPointStart,Index,Weight,DoAdd,Buff_V,nVar)
 
     use CON_router,   ONLY: IndexPtrType, WeightPtrType
@@ -267,23 +237,20 @@ contains
     call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
 
   end subroutine IE_put_from_im
-
   !============================================================================
-
   subroutine IE_put_from_im_complete
 
-    write(*,*)"Don't know what IE_put_from_im_complete is really supposed to do."
+    write(*,*)"What is IE_put_from_im_complete really supposed to do?"
 
   end subroutine IE_put_from_im_complete
-
   !============================================================================
-
 end module IE_wrapper
-
 !============================================================================
-
 subroutine SPS_put_into_ie(Buffer_II, iSize, jSize, NameVar, iBlock)
 
+  use ModUtilities, ONLY: CON_stop
+  implicit none
+  
   integer, intent(in)           :: iSize,jSize
   real, intent(in)              :: Buffer_II(iSize,jSize)
   character (len=*),intent(in)  :: NameVar
@@ -294,11 +261,12 @@ subroutine SPS_put_into_ie(Buffer_II, iSize, jSize, NameVar, iBlock)
   call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
 
 end subroutine SPS_put_into_ie
-
 !============================================================================
-
 subroutine initialize_ie_ua_buffers(iOutputError)
 
+  use ModUtilities, ONLY: CON_stop
+  implicit none
+  
   integer :: iOutputError
 
   character (len=*),parameter :: NameSub='initialize_ie_ua_buffers'
@@ -306,4 +274,5 @@ subroutine initialize_ie_ua_buffers(iOutputError)
   call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
 
 end subroutine initialize_ie_ua_buffers
+!============================================================================
 

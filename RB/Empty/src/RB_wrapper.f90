@@ -16,6 +16,8 @@ module RB_wrapper
   ! !INTRODUCTION: This wrapper provides the "empty" interface
   !                for the  Radiation Belts Component             
 
+  use ModUtilities, ONLY: CON_stop
+  
   implicit none
 
   private ! except
@@ -34,7 +36,7 @@ module RB_wrapper
   public:: RB_put_from_ie
 
 contains
-
+  !============================================================================
   subroutine RB_set_param(CompInfo, TypeAction)
 
     use CON_comp_info
@@ -43,7 +45,6 @@ contains
     type(CompInfoType), intent(inout) :: CompInfo   ! component information
 
     character (len=*), parameter :: NameSub='RB_set_param'
-
     !-------------------------------------------------------------------------
     select case(TypeAction)
     case('VERSION')
@@ -56,9 +57,7 @@ contains
     end select
 
   end subroutine RB_set_param
-
   !============================================================================
-
   subroutine RB_init_session(iSession, TimeSimulation)
 
     integer,  intent(in) :: iSession         ! session number (starting from 1)
@@ -69,9 +68,7 @@ contains
     call CON_stop(NameSub//': RB_ERROR: empty version cannot be used!')
 
   end subroutine RB_init_session
-
   !===========================================================================
-
   subroutine RB_run(TimeSimulation,TimeSimulationLimit)
 
     real, intent(in):: TimeSimulationLimit ! simulation time not to be exceeded
@@ -81,9 +78,7 @@ contains
 
     call CON_stop(NameSub//': RB_ERROR: empty version cannot be used!')
   end subroutine RB_run
-
   !===========================================================================
-
   subroutine RB_finalize(TimeSimulation)
 
     real,     intent(in) :: TimeSimulation   ! seconds from start time
@@ -92,9 +87,7 @@ contains
 
     call CON_stop(NameSub//': RB_ERROR: empty version cannot be used!')
   end subroutine RB_finalize
-
   !===========================================================================
-
   subroutine RB_save_restart(TimeSimulation)
 
     real,     intent(in) :: TimeSimulation   ! seconds from start time
@@ -103,9 +96,7 @@ contains
 
     call CON_stop(NameSub//': RB_ERROR: empty version cannot be used!')
   end subroutine RB_save_restart
-
   !============================================================================
-
   subroutine RB_put_from_gm(Buffer_IIV, iSizeIn, jSizeIn, nVarIn,&
        BufferLine_VI, nVarLine, nPointLine, NameVar, tSimulation)
 
@@ -141,5 +132,6 @@ contains
     real, intent(in)               :: Buffer_III(4,2,nSats)
     character(len=100), intent(in) :: Buffer_I(nSats)
   end subroutine RB_put_sat_from_gm
-
+  !============================================================================
 end module RB_wrapper
+!==============================================================================

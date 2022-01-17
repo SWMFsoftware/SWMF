@@ -2,7 +2,8 @@
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module CON_grid_descriptor
-  use ModUtilities, ONLY: check_allocate
+
+  use ModUtilities, ONLY: check_allocate, CON_stop
   use ModKind
   use ModNumConst, ONLY: cTiny
 
@@ -18,9 +19,11 @@ module CON_grid_descriptor
        glue_margin, search_cell, search_in,  l_neighbor,                &
        None_,  pe_and_blk, cAlmostOne, PE_, BLK_,  FirstChild_
   use CON_grid_storage, ONLY: ndim_id, associate_dd_pointer, ncell_id
+
   implicit none
 
   PRIVATE ! Except
+
   public :: GridType
   type GridType
      ! The concept of the grid descriptor is very close to the domain
@@ -66,7 +69,7 @@ module CON_grid_descriptor
      !
      ! Typically the data sets in the basic grid are shaped as arrays
      ! like
-     ! real,dimension(1:n_cells_D(1),1:n_cells_d(2),...,&
+     ! real,dimension(n_cells_D(1),n_cells_d(2),...,&
      !     min_block(Domain%Ptr):max_block(Domain%Ptr))::DataSet_CB
      !
      ! The space of basic grids can be one-to-one mapped to the space
@@ -83,8 +86,8 @@ module CON_grid_descriptor
 
      integer::nDim           ! Difenes the grid dimensionality
 
-     integer,dimension(:),pointer::iPointMin_D
-     integer,dimension(:),pointer::iPointMax_D
+     integer, pointer:: iPointMin_D(:)
+     integer, pointer:: iPointMax_D(:)
 
      ! The block index IS NOT AFFECTED by this transformation and this
      ! is of crucial importance. Although the grid points of the
@@ -107,7 +110,7 @@ module CON_grid_descriptor
      !                           extended grid.or.&
      !                           displaced[extended grid]
      ! where the displacement is governed by the vector as follows:
-     real,dimension(:),pointer::Displacement_D
+     real, pointer::Displacement_D(:)
      ! For an arbitrary grid, for a given block the actual geometric
      ! displacement of the grid block fragment is equal to the product
      ! of Displacement_D by the grid size
@@ -199,9 +202,9 @@ contains
     ! the coordintes of the grid point
 
     type(GridType),intent(in)::Grid
-    integer,intent(in)::iTreeNode
-    integer,dimension(Grid%nDim),intent(in):: iPoints_D
-    real,dimension(Grid%nDim):: coord_grid_d_global
+    integer, intent(in)::iTreeNode
+    integer, intent(in):: iPoints_D(Grid%nDim)
+    real:: coord_grid_d_global(Grid%nDim) ! return value
     !--------------------------------------------------------------------------
     coord_grid_d_global = Grid%Domain%Ptr%CoordBlock_DI(:,iTreeNode) + &
          Grid%Domain%Ptr%dCoordCell_DI(:,iTreeNode)*&
@@ -489,17 +492,16 @@ contains
     integer,     intent(out):: nImage
     real,        intent(out):: Weight_I(2**nDim)
 
-    real,    dimension(nDim)::&
-         CoordStored_D, DCoordCells_D,DCoordTolerance_D
+    real:: CoordStored_D(nDim), DCoordCells_D(nDim), DCoordTolerance_D(nDim)
 
-    integer, dimension(nDim):: iPoints_D
-    logical, dimension(nDim):: IsAtFace_D
-    real                    :: Coord_DI(nDim,2**nDim)
-    real,          parameter:: Tolerance = 0.001
-    integer::iTreeNode,iDim,iImages
-    !--------------------------------------------------------------------------
+    integer :: iPoints_D(nDim)
+    logical :: IsAtFace_D(nDim)
+    real    :: Coord_DI(nDim,2**nDim)
+    real, parameter:: Tolerance = 0.001
+    integer:: iTreeNode, iDim, iImages
 
     ! Initialize arrays
+    !--------------------------------------------------------------------------
     iIndex_II=0;Weight_I= 0.0
     CoordStored_D=Coord_D
     iIndex_II(1:nDim,1)=&

@@ -6,7 +6,7 @@ module EE_wrapper
 
   ! Wrapper for the empty Eruptive Event generator (EE) component
 
-  use ModUtilities, ONLY: flush_unit
+  use ModUtilities, ONLY: flush_unit, CON_stop
   use ModIoUnit, ONLY: io_unit_new
 
   implicit none
@@ -31,7 +31,6 @@ module EE_wrapper
   public:: EE_use_pointer
 
 contains
-
   !==========================================================================
   subroutine EE_set_param(CompInfo, TypeAction)
 
@@ -55,9 +54,7 @@ contains
     end select
 
   end subroutine EE_set_param
-
   !============================================================================
-
   subroutine EE_init_session(iSession, TimeSimulation)
 
     !INPUT PARAMETERS:
@@ -69,9 +66,7 @@ contains
     call CON_stop(NameSub//': EE_ERROR: empty version cannot be used!')
 
   end subroutine EE_init_session
-
   !============================================================================
-
   subroutine EE_finalize(TimeSimulation)
 
     !INPUT PARAMETERS:
@@ -82,9 +77,7 @@ contains
     call CON_stop(NameSub//': EE_ERROR: empty version cannot be used!')
 
   end subroutine EE_finalize
-
   !============================================================================
-
   subroutine EE_save_restart(TimeSimulation)
 
     !INPUT PARAMETERS:
@@ -95,9 +88,7 @@ contains
     call CON_stop(NameSub//': EE_ERROR: empty version cannot be used!')
 
   end subroutine EE_save_restart
-
   !============================================================================
-
   subroutine EE_run(TimeSimulation,TimeSimulationLimit)
 
     !INPUT/OUTPUT ARGUMENTS:
@@ -111,7 +102,6 @@ contains
     call CON_stop(NameSub//': EE_ERROR: empty version cannot be used!')
 
   end subroutine EE_run
-
   !============================================================================
   subroutine EE_find_points(nDimIn, nPoint, Xyz_DI, iProc_I)
 
@@ -182,5 +172,6 @@ contains
     call CON_stop(NameSub//': EE_ERROR: empty version cannot be used!')
 
   end subroutine EE_put_from_sc
-
+  !============================================================================
 end module EE_wrapper
+!==============================================================================

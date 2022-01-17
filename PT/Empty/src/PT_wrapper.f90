@@ -1,13 +1,17 @@
 !  Copyright (C) 2002 Regents of the University of Michigan, 
 !  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-! Wrapper for the empty PTOM (PT) component
-!==========================================================================
+!==============================================================================
 module PT_wrapper
+
+  use ModUtilities, ONLY: CON_stop
+  
+  ! Wrapper for the empty PTOM (PT) component
 
   implicit none
 
 contains
+  !===========================================================================
   subroutine PT_set_param(CompInfo, TypeAction)
 
     use CON_comp_info
@@ -15,8 +19,8 @@ contains
     character (len=*), parameter :: NameSub='PT_set_param'
 
     ! Arguments
-    type(CompInfoType), intent(inout) :: CompInfo   ! Information for this comp.
-    character (len=*), intent(in)     :: TypeAction ! What to do
+    type(CompInfoType), intent(inout):: CompInfo   ! Information for this comp.
+    character (len=*), intent(in)    :: TypeAction ! What to do
     !-------------------------------------------------------------------------
     select case(TypeAction)
     case('VERSION')
@@ -30,9 +34,7 @@ contains
     end select
 
   end subroutine PT_set_param
-
   !============================================================================
-
   subroutine PT_init_session(iSession, TimeSimulation)
 
     !INPUT PARAMETERS:
@@ -44,9 +46,7 @@ contains
     call CON_stop(NameSub//': PT_ERROR: empty version cannot be used!')
 
   end subroutine PT_init_session
-
   !============================================================================
-
   subroutine PT_finalize(TimeSimulation)
 
     !INPUT PARAMETERS:
@@ -57,9 +57,7 @@ contains
     call CON_stop(NameSub//': PT_ERROR: empty version cannot be used!')
 
   end subroutine PT_finalize
-
   !============================================================================
-
   subroutine PT_save_restart(TimeSimulation)
 
     !INPUT PARAMETERS:
@@ -70,23 +68,20 @@ contains
     call CON_stop(NameSub//': PT_ERROR: empty version cannot be used!')
 
   end subroutine PT_save_restart
-
   !============================================================================
-
   subroutine PT_run(TimeSimulation,TimeSimulationLimit)
 
     !INPUT/OUTPUT ARGUMENTS:
-    real, intent(inout) :: TimeSimulation   ! current time of component
+    real, intent(inout):: TimeSimulation   ! current time of component
 
     !INPUT ARGUMENTS:
-    real, intent(in) :: TimeSimulationLimit ! simulation time not to be exceeded
+    real, intent(in):: TimeSimulationLimit ! simulation time not to be exceeded
 
     character(len=*), parameter :: NameSub='PT_run'
 
     call CON_stop(NameSub//': PT_ERROR: empty version cannot be used!')
 
   end subroutine PT_run
-
   !============================================================================
   subroutine PT_get_grid_info(nDimOut, iGridOut, iDecompOut)
 
@@ -129,7 +124,7 @@ contains
     call CON_stop(NameSub//': PT_ERROR: empty version cannot be used!')
 
   end subroutine PT_put_from_gm
-
+  !============================================================================
   subroutine PT_put_from_ih( &
        NameVar, nVar, nPoint, Data_VI, iPoint_I, Pos_DI)
 
@@ -145,7 +140,7 @@ contains
     call CON_stop(NameSub//': PT_ERROR: empty version cannot be used!')
 
   end subroutine PT_put_from_ih
-
+  !============================================================================
   subroutine PT_put_from_sc( &
        NameVar, nVar, nPoint, Data_VI, iPoint_I, Pos_DI)
 
@@ -161,8 +156,6 @@ contains
     call CON_stop(NameSub//': PT_ERROR: empty version cannot be used!')
 
   end subroutine PT_put_from_sc 
-
-
   !============================================================================
   subroutine PT_put_from_oh( &
        NameVar, nVar, nPoint, Data_VI, iPoint_I, Pos_DI)
@@ -180,7 +173,7 @@ contains
     call CON_stop(NameSub//': PT_ERROR: empty version cannot be used!')
 
   end subroutine PT_put_from_oh
-  !==============================================================================
+  !============================================================================
   subroutine PT_put_from_oh_dt(Dt)
     implicit none
     real,    intent(in):: Dt
@@ -188,7 +181,7 @@ contains
     !--------------------------------------------------------------------------
     call CON_stop(NameSub//': PT_ERROR: empty version cannot be used!')
   end subroutine PT_put_from_oh_dt
-
+  !============================================================================
   subroutine PT_put_from_ih_dt(Dt)
     implicit none
     real,    intent(in):: Dt
@@ -196,7 +189,7 @@ contains
     !--------------------------------------------------------------------------
     call CON_stop(NameSub//': PT_ERROR: empty version cannot be used!')
   end subroutine PT_put_from_ih_dt
-
+  !============================================================================
   subroutine PT_put_from_sc_dt(Dt)
     implicit none
     real,    intent(in):: Dt
@@ -204,9 +197,7 @@ contains
     !--------------------------------------------------------------------------
     call CON_stop(NameSub//': PT_ERROR: empty version cannot be used!')
   end subroutine PT_put_from_sc_dt
-
   !============================================================================
-
   subroutine PT_get_for_oh(IsNew, NameVar, nVarIn, nDimIn, nPoint, Xyz_DI, &
        Data_VI)
 
@@ -251,3 +242,4 @@ contains
   end subroutine PT_adjust_lines
   !============================================================================
 end module PT_wrapper
+!==============================================================================

@@ -5,7 +5,8 @@
 module IH_wrapper
 
   ! Wrapper for IH_BATSRUS Inner Heliosphere (IH) component
-  use CON_coupler,             ONLY: IH_, GridType, LocalGridType
+  use CON_coupler, ONLY: &
+       CON_set_do_test, CON_stop, IH_, GridType, LocalGridType
   use IH_ModBatsrusMethods,    ONLY: &
        BATS_init_session, BATS_setup, BATS_advance, BATS_save_files, &
        BATS_finalize

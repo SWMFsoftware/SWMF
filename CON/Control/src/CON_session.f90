@@ -24,7 +24,7 @@ module CON_session
        nIterationCheck, tSimulationCheck, TimeStepMin, &
        UseEndTime, save_end_time
   use ModFreq, ONLY: is_time_to
-  use ModUtilities, ONLY: CON_stop
+  use ModUtilities, ONLY: CON_stop, CON_set_do_test
   use ModMpi, ONLY: MPI_WTIME, MPI_LOGICAL
   use CON_transfer_data, ONLY: transfer_real
 

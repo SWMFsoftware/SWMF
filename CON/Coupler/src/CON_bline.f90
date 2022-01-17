@@ -6,7 +6,7 @@ module CON_bline
 #ifdef OPENACC
   use ModUtilities, ONLY: norm2
 #endif
-  use ModUtilities,      ONLY: check_allocate
+  use ModUtilities,      ONLY: check_allocate, CON_stop
   use ModConst,          ONLY: cBoltzmann
   use CON_coupler,       ONLY: MaxComp, is_proc0, i_proc, &
        GridType, LocalGridType, set_standard_grid_descriptor, set_local_gd

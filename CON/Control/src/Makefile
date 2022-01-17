@@ -95,15 +95,11 @@ LIBCONTROL = ${LIBDIR}/libCONTROL.a
 
 MY_LIB = ${LIBCONTROL}
 
-# Note: CON_methods is actually infrastructure, but it consists of
-#       external subroutines and functions only so it can be compiled here
-
 LIBOBJECTS = \
 	CON_main.o\
 	CON_variables.o\
 	CON_io.o\
 	CON_session.o\
-	CON_methods.o\
 	swmf_interface.o
 
 #
