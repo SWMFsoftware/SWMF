@@ -19,7 +19,7 @@ my $merge_stable =   # command to merge master into stable branch
 # weights for each platform to calculate skill scores
 my %WeightMachine = (
     "pleiades"     => "1.0",  # ifort pleiades
-    "pgi"          => "0.0",  # pgif90 pleiades
+    "pgi"          => "1.0",  # nvfortran pleiades
     "mstemgcc"     => "0.0",  # mstem-quda+gcc pleiades
     "gfortran"     => "1.0",  # gfortran optimized
     "grid"         => "1.0",  # nagfor debug
@@ -51,6 +51,7 @@ my $codefile = "code.diff";
 my $f90errorfile = "fortran.err";
 my $manerrorfile = "manual.err";
 my $paramerrorfile = "param.err";
+my $nameerrorfile = "name.err";
 my $lastpassfile = "lastpass.txt";
 
 my %tests;
@@ -202,10 +203,12 @@ foreach $day (@days){
 
     my $MaxScores;
     my $Scores;
+    my $MaxScoreMstem;
+    my $ScoreMstem;
 
     # Start table with first row containing the machine names
     $Table .=	
-	"<h3>$dayname<FONT COLOR=GREEN>_SCORE_</FONT></h3>\n".
+	"<h3>$dayname<FONT COLOR=GREEN>_SCORE_</FONT>, MSTEM: _SCORE2_</h3>\n".
 	"<p>\n".
 	"<table border=3>\n".
 	"  <tr>".
@@ -265,6 +268,11 @@ foreach $day (@days){
 		    my $WeightMachine = $WeightMachine{$machine};
 		    $MaxScores += $WeightMachine;
 		    $Scores    += $WeightMachine*$score;
+
+		    if($machine =~ /mstemgcc/){
+			$MaxScoreMstem += 1;
+			$ScoreMstem    += $score;
+		    }
 		}
 
 		# Indicate changes with upper case
@@ -290,6 +298,7 @@ foreach $day (@days){
 
     # Calculate success rate score and save it into file and table
     my $score = sprintf("%.1f", 100*$Scores/($MaxScores+1e-30)). '%';
+    my $score2 = sprintf("%.1f", 100*$ScoreMstem/($MaxScoreMstem+1e-30)). '%';
 
     print "day=$day score=$score MaxScores=$MaxScores\n";
     if($MaxScores > $MinScore and $Scores > $MinRate*$MaxScores){
@@ -306,7 +315,10 @@ foreach $day (@days){
 	unlink "$day/stable.txt";
 	open SCORE, ">$day/unstable.txt";        # indicate unstable score
     }
+    $Table =~ s/_SCORE2_/$score2/;
+
     print SCORE "ALL: $score\n";                 # set/update score
+    print SCORE "MSTEM: $score2\n";
     close SCORE;
 
     $Table .= "  </tr>\n</table>\n";
@@ -341,6 +353,16 @@ foreach my $machine (@machines){
 ";
     last;
 }
+
+if(-s $nameerrorfile){
+    print FILE "
+<h3><A HREF=$nameerrorfile TARGET=swmf_name_error>
+<font color=red>Coding standard errors in BATSRUS/BATL code.
+Click here for more detail and fix it.</font></A>
+</h3>
+";
+}
+
 
 if(-s $f90errorfile){
     print FILE "
@@ -380,12 +402,14 @@ print FILE "<h3>Weighting scheme</h3>\n";
 
 print FILE "
 <b><pre>
-Weight - machine
+Weight - Compiler
 ------------------------------------------
 ";
 
 foreach my $machine (sort keys %WeightMachine){
-    print FILE "   $WeightMachine{$machine} - $machine\n";
+    my $name = $HtmlMachine{$machine};
+    $name =~ s/<br>/ /;
+    print FILE "   $WeightMachine{$machine} - $name\n";
 }
 
 
