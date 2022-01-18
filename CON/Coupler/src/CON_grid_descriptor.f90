@@ -512,8 +512,8 @@ contains
     real    :: Coord_DI(nDim,2**nDim)
     real, parameter:: Tolerance = 0.001
     integer:: iTreeNode, iDim, iImages
-    !--------------------------------------------------------------------------
 
+    !--------------------------------------------------------------------------
     iIndex_II = 0
     Weight_I  = 0.0
     CoordStored_D = Coord_D
