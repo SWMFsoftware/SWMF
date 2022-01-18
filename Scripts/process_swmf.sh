@@ -66,5 +66,5 @@ gitall "commit -m FormatFortran .; git push"
 # Check data names
 cd ~/Sites/SWMF/GM/BATSRUS
 ~/Sites/SWMF/share/Scripts/CheckDataName.pl src/*.f90 srcEquation/*.f90 \
-    srcBATL/*.f90 srcUser/*.f90 >& ~/Sites/name.err
+    srcBATL/*.f90 srcInterface/*.f90 srcUser/*.f90 >& ~/Sites/name.err
 
