@@ -161,9 +161,9 @@ contains
 
   end subroutine PC_put_from_gm
   !============================================================================
-  subroutine PC_put_from_gm_grid_info(nInt, nPicGrid, AccumulatedSize_I, Int_I)
+  subroutine PC_put_from_gm_grid_info(nInt, nPicGrid, nSize_I, Int_I)
     integer, intent(in)         :: nInt, nPicGrid
-    integer, intent(in)         :: Int_I(nInt), AccumulatedSize_I(nPicGrid)    
+    integer, intent(in)         :: Int_I(nInt), nSize_I(nPicGrid)    
     character(len=*), parameter :: NameSub='PC_put_from_gm_grid_info'
     !--------------------------------------------------------------------------
     call CON_stop(NameSub//': PC_ERROR: empty version cannot be used!')

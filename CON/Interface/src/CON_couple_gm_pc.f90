@@ -104,7 +104,7 @@ contains
     logical :: DoTest, DoTestMe
 
     ! GM sends PC a number of integers and reals
-    integer, allocatable :: Int_I(:), AccumulatedSize_I(:)
+    integer, allocatable :: Int_I(:), nSize_I(:)
     integer :: nInt, nPicGrid
 
     ! This subroutine should be called from all PE-s
@@ -124,23 +124,23 @@ contains
 
     if(nInt>0) then
        allocate(Int_I(nInt))
-       allocate(AccumulatedSize_I(nPicGrid))
+       allocate(nSize_I(nPicGrid))
 
        if(is_proc(GM_)) &
             call GM_get_for_pc_grid_info(nInt, nPicGrid, &
-            AccumulatedSize_I, Int_I)
+            nSize_I, Int_I)
 
        ! Transfer integers from GM to PC
        call transfer_integer_array(GM_, PC_, nInt, Int_I, &
             UseSourceRootOnly=.false., UseTargetRootOnly=.false.)
-       call transfer_integer_array(GM_, PC_, nPicGrid, AccumulatedSize_I, &
+       call transfer_integer_array(GM_, PC_, nPicGrid, nSize_I, &
             UseSourceRootOnly=.false., UseTargetRootOnly=.false.)
 
        if(is_proc(PC_)) &
-            call PC_put_from_gm_grid_info(nInt, nPicGrid, AccumulatedSize_I, Int_I)
+            call PC_put_from_gm_grid_info(nInt, nPicGrid, nSize_I, Int_I)
 
        deallocate(Int_I)
-       deallocate(AccumulatedSize_I)
+       deallocate(nSize_I)
     endif
 
   end subroutine couple_gm_pc_grid_info
