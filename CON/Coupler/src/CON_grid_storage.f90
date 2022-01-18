@@ -3,6 +3,11 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module CON_grid_storage
 
+  ! revision history:
+  ! 09SEP03              I.Sokolov, igorsok@umich.edu - initial prototype/code
+  ! 12SEP03              version for any operating system
+  ! 16JAN05              G.Toth removed the obsolete GmIe_grid
+
   use CON_comp_param, ONLY: EE_, GM_, IE_, IH_, IM_, OH_, PC_, PS_, &
        PT_, PW_, RB_, SC_, SP_, UA_, CZ_
   use CON_world
@@ -51,11 +56,6 @@ module CON_grid_storage
 
 contains
   !============================================================================
-
-  ! revision history:
-  ! 09SEP03              I.Sokolov<igorsok@umich.edu - initial prototype/code
-  ! 12SEP03              version for any operating system
-  ! 16JAN05              G.Toth removed the obsolete GmIe_grid
   subroutine init_grid_storage(Domain_I, GridID_)
 
     integer,                 intent(in )   :: GridID_
@@ -116,16 +116,14 @@ contains
          done_dd_init = DoneDomainInit_C(GridID_)
   end function done_dd_init
   !============================================================================
-  ! Initialization for the decomposition.
-  ! Note that if the decomposition is a tree decomposition and
-  ! another order of children is accepted in the component,
-  ! different from that assumed to be standard one
-  ! the array iShift\_DI should be reassigned in set\_root.
   subroutine init_decomposition_id(&
-       GridID_,&
-       CompID_,&
-       nDim,   &
-       IsTreeDD)
+       GridID_, CompID_, nDim, IsTreeDD)
+
+    ! Initialization for the decomposition.
+    ! Note that if the decomposition is a tree decomposition and
+    ! another order of children is accepted in the component,
+    ! different from that assumed to be standard one
+    ! the array iShift\_DI should be reassigned in set\_root.
 
     integer,           intent(in) :: GridID_
     integer,           intent(in) :: CompID_,nDim
@@ -138,11 +136,9 @@ contains
     call init_grid_storage(Domain_I, GridID_)
     call init_decomposition_dd(Domain_I(GridID_)%Ptr, CompID_, nDim, IsTreeDD)
     DoneDomainInit_C(GridID_) = .true.;  nDim_C(GridID_) = nDim
+
   end subroutine init_decomposition_id
   !============================================================================
-  ! To get a decomposition domain, even the tree one, the root
-  ! decomposition should be first constructed. PE here are the ranks in the
-  ! LOCAL communicator for the component
   subroutine get_root_decomposition_id(&
        GridID_,      &! ID for Decomposition to be constructed
        iRootMapDim_D,&! As in DomainType
@@ -157,6 +153,10 @@ contains
        iDirMinusGlue,&! As in DomainType
        iDirPlusGlue,& ! As in DomainType
        iDirCycle)     ! As in DomainType)
+
+    ! To get a decomposition domain, even the tree one, the root
+    ! decomposition should be first constructed. PE here are the ranks in the
+    ! LOCAL communicator for the component
 
     integer, intent(in) :: GridID_
     integer, intent(in) :: iRootMapDim_D(nDim_C(GridID_))
@@ -185,6 +185,7 @@ contains
        iDirMinusGlue,&! As in DomainType
        iDirPlusGlue,& ! As in DomainType
        iDirCycle)     ! As in DomainType)
+
   end subroutine get_root_decomposition_id
   !============================================================================
   subroutine bcast_decomposition_id(GridID_)
@@ -192,21 +193,21 @@ contains
     integer,intent(in)::GridID_
     !--------------------------------------------------------------------------
     call bcast_decomposition_dd(Domain_I(GridID_)%Ptr)
+
   end subroutine bcast_decomposition_id
   !============================================================================
-  !
-  ! If any of the optional parameters is not present, the global
-  ! decomposition at all the PEs of the global communicator is
-  ! synchronized with the local one at root processor of the
-  ! component. Otherwise the global
-  ! decomposition at all the PEs of the communicator iProcUnion is
-  ! synchronized with the local one at the PE having the rank
-  ! iProcUnion in the communicator iCommUnion.
-  ! Recalculate local PE ranks (of the local grid) to their values
-  ! in the global communicator (i\_comm()).
-  !\end{verbatim}
   subroutine synchronize_refinement_id(&
        GridID_, LocalDomain, iProcUnion, iCommUnion)
+
+    ! If any of the optional parameters is not present, the global
+    ! decomposition at all the PEs of the global communicator is
+    ! synchronized with the local one at root processor of the
+    ! component. Otherwise the global
+    ! decomposition at all the PEs of the communicator iProcUnion is
+    ! synchronized with the local one at the PE having the rank
+    ! iProcUnion in the communicator iCommUnion.
+    ! Recalculate local PE ranks (of the local grid) to their values
+    ! in the global communicator (i\_comm()).
 
     integer,           intent(in) :: GridID_      ! Global grid ID
     type(DomainType),  intent(in) :: LocalDomain  ! Local Grid with which the
@@ -214,39 +215,50 @@ contains
     !--------------------------------------------------------------------------
     call synchronize_refinement_dd(&
             Domain_I(GridID_)%Ptr, LocalDomain, iProcUnion, iCommUnion)
+
   end subroutine synchronize_refinement_id
   !============================================================================
   integer function i_realization(GridID_)
+
     integer, intent(in) :: GridID_
     !--------------------------------------------------------------------------
     i_realization = Domain_I(GridID_)%Ptr%iRealization
+
   end function i_realization
   !============================================================================
   subroutine associate_dd_pointer_id(GridID_,DomainPointer)
-    integer, intent(in) :: GridID_
-    type(DomainPointerType),intent(out)::DomainPointer
+
+    integer,                 intent(in) :: GridID_
+    type(DomainPointerType), intent(out):: DomainPointer
     !--------------------------------------------------------------------------
     nullify(DomainPointer%Ptr)
     DomainPointer%Ptr => Domain_I(GridID_)%Ptr
+
   end subroutine associate_dd_pointer_id
   !============================================================================
   integer function ndim_id(GridID_)
+
     integer, intent(in) :: GridID_
     !--------------------------------------------------------------------------
     ndim_id = Domain_I(GridID_)%Ptr%nDim
+
   end function ndim_id
   !============================================================================
   function ncell_id(GridID_)
+
     integer,intent(in) :: GridID_
     integer :: ncell_id(nDim_C(GridID_))
     !--------------------------------------------------------------------------
     ncell_id = Domain_I(GridID_)%Ptr%nCell_D
+
   end function ncell_id
   !============================================================================
   integer function compid(GridID_)
+
     integer,intent(in)::GridID_
     !--------------------------------------------------------------------------
     compid = Domain_I(GridID_)%Ptr%CompID_
+
   end function compid
   !============================================================================
 end module CON_grid_storage
