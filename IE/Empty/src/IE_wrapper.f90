@@ -164,23 +164,37 @@ contains
 
   end subroutine IE_get_for_im
   !============================================================================
-  subroutine IE_put_from_UA(Buffer_III, iBlock, nMLTs, nLats, nVarsToPass)
+  subroutine IE_put_from_UA(Buffer_IIBV, nMLTs, nLats, nVarIn, NameVarUaIn_V)
 
-    integer, intent(in) :: nMlts, nLats, iBlock, nVarsToPass
-    real, dimension(nMlts, nLats, nVarsToPass), intent(in) :: Buffer_III
-
+    integer,          intent(in) :: nMlts, nLats, nVarIn
+    character(len=3), intent(in) :: NameVarUaIn_V(nVarIn)
+    real,             intent(in) :: Buffer_IIBV(nMlts, nLats, 2, nVarIn)
+    
     character (len=*),parameter :: NameSub='IE_put_from_UA'
 
     call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
 
   end subroutine IE_put_from_UA
   !============================================================================
-  subroutine IE_get_for_ua(Buffer_II,iSize,jSize,NameVar,NameHem,tSimulation)
+  subroutine IE_get_info_for_ua(nVar, NameVar_V)
 
-    integer,          intent(in)  :: iSize,jSize
-    real,             intent(out) :: Buffer_II(iSize,jSize)
-    character (len=*),intent(in)  :: NameVar
-    character (len=*),intent(in)  :: NameHem
+    integer,          intent(out)           :: nVar
+    character(len=*), intent(out), optional :: NameVar_V(:)
+
+    character(len=*), parameter :: NameSub='IE_get_info_for_ua'
+    
+    call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
+
+  end subroutine IE_get_info_for_ua
+  
+  !============================================================================
+
+  subroutine IE_get_for_ua(Buffer_IIV,iSize,jSize,nVarIn,NameVar_V, &
+       iBlock,tSimulation)
+
+    integer,          intent(in)  :: iSize,jSize, nVarIn, iBlock
+    real,             intent(out) :: Buffer_IIV(iSize,jSize,nVarIn)
+    character (len=*),intent(in)  :: NameVar_V(nVarIn)
     real,             intent(in)  :: tSimulation
 
     character (len=*),parameter :: NameSub='IE_get_for_ua'
