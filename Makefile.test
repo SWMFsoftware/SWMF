@@ -927,7 +927,7 @@ test_swpc_pwom_check:
 		>> test_swpc_pwom_ie.diff)
 	ls -l test_swpc_pwom_*.diff
 
-### test_swpc_pwom_species: GM+IE+IM/RCM2+PW/PWOM ###
+### test_swpc_pwom_species: multispecies GM+IE+IM/RCM2+PW/PWOM ###
 
 test_swpc_pwom_species:
 	@echo "test_swpc_pwom_species_compile..." \
