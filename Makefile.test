@@ -361,7 +361,7 @@ test1_run:
 	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
 
 test1_check:
-	-@(${DIFFNUM} -b -r=1e-7 \
+	-@(${DIFFNUM} -b -r=1e-5 \
 		${TESTDIR}/RESULTS/PW/north_plots_iline0001.out \
 		PW/PWOM/data/output/Earth/PW_north_plots_iline0001.out \
 		> test01_pw.diff)
@@ -385,7 +385,7 @@ test1_check:
 		${TESTDIR}/RESULTS/IE/IE*.log \
 		output/test1/IE.log \
 		> test01_ie.diff)
-	-@(${DIFFNUM} -b -r=1e-4 -a=6e-5 \
+	-@(${DIFFNUM} -b -r=1e-4 -a=1e-4 \
 		${TESTDIR}/RESULTS/IE/it000321_104510_000.idl \
 		output/test1/IE*.idl.gz \
 		>> test01_ie.diff)
