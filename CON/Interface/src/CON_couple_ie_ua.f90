@@ -25,379 +25,187 @@ module CON_couple_ie_ua
   ! 08/25/2003 A.Ridley <ridley@umich.edu> - initial version as external
   !                                          subroutines
   ! 08/27/2003 G.Toth <gtoth@umich.edu>    - combined them into a module
+  ! 11/10/2021 Burleigh/Welling <dwelling@uta.edu>
+  !                                        - Re-implemented & updated coupling.
 
   ! Communicator and logicals to simplify message passing and execution
-  integer, save :: iCommIeUa, iProc0Ua
+  ! Initialization status:
+  ! integer, save :: iCommIeUa, iProc0Ua
   logical :: UseMe=.true., IsInitialized = .false.
 
+  ! Information about number and names of variables to share:
+  integer, save :: nVarIeUa, nVarUaIe, nUaMagLon, nUaMagLat
+  character(len=3), allocatable :: NameVarIeUa_V(:), NameVarUaIe_V(:)
+
   ! Size of the 2D spherical structured IE grid
-  integer, save :: iSize, jSize, nCells_D(2)
+  integer, save :: iSize, jSize, nCells_D(2), nRootBlock_d(3)
 
 contains
   !============================================================================
 
   subroutine couple_ie_ua_init
 
-    use ModNumConst, ONLY:cPi
+    ! This subroutine should be called from all PE-s so that
+    ! a union group can be formed. The IE grid size is also stored.
+    ! Performs handshaking between UA and IE concerning names and number
+    ! of variables to transfer.
+
+    use CON_transfer_data, ONLY: transfer_integer, transfer_string_array
+    use UA_wrapper, ONLY: UA_get_info_for_ie
+    use IE_wrapper, ONLY: IE_get_info_for_ua
 
     ! General error code
     integer :: iError, i, j
 
-    ! This subroutine should be called from all PE-s so that
-    ! a union group can be formed. The IE grid size is also stored.
-
+    logical :: DoTest, DoTestMe
+    character(len=*), parameter:: NameSub = 'couple_ie_ua_init'
     !--------------------------------------------------------------------------
+    call CON_set_do_test(NameSub, DoTest, DoTestMe)
+
+    if(DoTestMe) write(*,*) NameSub//' called;, IsInitialized=', IsInitialized
     if(IsInitialized) RETURN
     IsInitialized = .true.
 
-    iProc0Ua = i_proc0(UA_)
-    call set_router_comm(IE_,UA_,iCommIeUa,UseMe,iProc0Ua)
+    ! IE to UA coupling: set names and number of variables
+    ! Get number of variables to be passed from UA to IE, pass to IE
+    if(is_proc(UA_)) call UA_get_info_for_ie(nVarIeUa)
+    call transfer_integer(UA_, IE_, nVarIeUa,  UseSourceRootOnly=.false.)
 
+    ! Allocate the array holding the variable names.
+    if(allocated(NameVarIeUa_V)) deallocate(NameVarIeUa_V)
+    allocate(NameVarIeUa_V(nVarIeUa))
+
+    ! Get variables names to be passed; transfer to IE
+    ! Obtain number of magnetic (not total grid) lats/lons used by UA.
+    if(is_proc(UA_)) call UA_get_info_for_ie(nVarIeUa, &
+         NameVarIeUa_V, nUaMagLat, nUaMagLon)
+    call transfer_integer(UA_, IE_, nUaMagLat, UseSourceRootOnly=.false.)
+    call transfer_integer(UA_, IE_, nUaMagLon, UseSourceRootOnly=.false.)
+    call transfer_string_array(UA_, IE_, nVarIeUa, NameVarIeUa_V, &
+         UseSourceRootOnly=.false.)
+
+    ! UA to IE coupling: set names and number of variables
+    ! Get number of variables to be passed from IE to UA, pass to UA
+    if(is_proc(IE_)) call IE_get_info_for_ua(nVarUaIe)
+    call transfer_integer(IE_, UA_, nVarUaIe, UseSourceRootOnly=.false.)
+
+    ! Allocate the array holding the variable names.
+    if(allocated(NameVarUaIe_V)) deallocate(NameVarUaIe_V)
+    allocate(NameVarUaIe_V(nVarUaIe))
+
+    ! Get variables names to be passed; transfer to IE
+    if(is_proc(IE_)) call IE_get_info_for_ua(nVarUaIe, NameVarUaIe_V)
+    call transfer_string_array(IE_, UA_, nVarUaIe, NameVarUaIe_V, &
+         UseSourceRootOnly=.false.)
+
+    if(DoTestMe)then
+       write(*,*) NameSub//' UA-IE coupling configuration:'
+       write(*,*) '   IE requests ', nVarUaIe, ' variables from UA:', &
+            NameVarUaIe_V
+       write(*,*) '   UA requests ', nVarIeUa, ' variables from IE:', &
+            NameVarIeUa_V
+    end if
+
+    ! NOT SURE IF NEEDED.
     ! This works for a NODE BASED regular IE grid only
+    ! <so then why does IE initialize with SPS, a grid based thing??? MB>
     nCells_D = ncell_id(IE_)
-    iSize=nCells_D(1); jSize=nCells_D(2)
+    ! iSize=nCells_D(1); jSize=nCells_D(2)   ! orig. MB
+    iSize=nCells_D(1)+1; jSize=nCells_D(2)+1 ! Grid size for 1 hemi.
 
-    write(*,*) "Initializing COUPLER!!", iSize, jSize
-
-    if (is_proc(UA_)) then
-       ! This won't work if we are using AMIE in RIM!
-       call EIE_InitGrid(iSize, jSize+1, 1, iError)
-       call EIE_FillLats(90.0-(Grid_C(IE_) % Coord1_I)*180.0/cPi,iError)
-       call EIE_FillMltsOffset((Grid_C(IE_) % Coord2_I)*180.0/cPi,iError)
-    endif
+    ! IE should share nVar and varNames to pass.
 
   end subroutine couple_ie_ua_init
   !============================================================================
 
   subroutine couple_ie_ua(tSimulation)
-
-    real, intent(in) :: tSimulation     ! simulation time at coupling
-
-    ! Couple between two components:
-    !    Ionosphere Electrodynamics (IE)  source
+    ! Couple between two components:\
+    !    Ionosphere Electrodynamics (IE)  source\
     !    Upper Atmosphere (UA) target
     !
     ! Send electrostatic potential from IE to UA.
+    use CON_transfer_data, ONLY: transfer_real_array
+    use IE_wrapper, ONLY: IE_get_for_ua
+    use UA_wrapper, ONLY: UA_put_from_ie
 
-    ! General coupling variables
+    real, intent(in) :: tSimulation     ! simulation time at coupling
 
-    ! Name of this interface
+    ! Buffer for all shared variables on the 2D IE grid
+    real, dimension(:,:,:), allocatable :: Buffer_IIV
 
+    ! Variables to assist with coupling
+    integer :: nSize, iBlock, iError
+
+    ! Debug variables:
     logical :: DoTest, DoTestMe
-    integer :: iProcWorld
-
     character(len=*), parameter:: NameSub = 'couple_ie_ua'
     !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
-    iProcWorld = i_proc()
-    call couple_mpi
 
-    if(DoTest)write(*,*)NameSub,': finished iProc=',iProcWorld
+    ! Allocate buffers both in IE (source) and UA (target):
+    allocate(Buffer_IIV(iSize,jSize,nVarIeUa), stat=iError)
+    call check_allocate(iError,NameSub//": Buffer_IIV")
 
-  contains
-    !==========================================================================
+    ! Transfer northern then southern hemisphere:
+    do iblock = 1,2
+       ! Get all variables from IE:
+       if(is_proc(IE_)) call IE_get_for_ua(Buffer_IIV, iSize, jSize, &
+            nVarIeUa, NameVarIeUa_V, iBlock, tSimulation)
 
-    subroutine couple_mpi
+       ! Transfer data:
+       call transfer_real_array(IE_, UA_, iSize*jSize*nVarIeUa, Buffer_IIV)
 
-      character (len=*), parameter :: NameSubSub=NameSub//'.couple_mpi'
+       ! UA receives & handles data:
+       if(is_proc(UA_)) call UA_put_from_ie(Buffer_IIV, iSize, jSize, &
+            nVarIeUa, NameVarIeUa_V, iBlock)
+    end do
 
-      ! Variable to pass is potential
-
-      character (len=*), parameter, dimension(3) :: &
-           NameVar_V=['Pot','Ave','Tot']
-
-      ! Buffer for the potential on the 2D IE grid
-      real, dimension(:,:), allocatable :: Buffer_II
-
-      ! MPI related variables
-
-      ! MPI status variable
-      integer :: iStatus_I(MPI_STATUS_SIZE)
-
-      ! General error code
-      integer :: iError
-
-      ! Message size
-      integer :: nSize
-
-      integer :: iBlock     ! 1 for northern and 2 for southern hemisphere
-      integer :: iVar       ! 1 for Pot, 2 for AveE, 3 for EFlux
-      integer :: iProcFrom  ! PE number sending the potential for current block
-      !------------------------------------------------------------------------
-
-      ! After everything is initialized exclude PEs which are not involved
-      if(.not.UseMe) RETURN
-
-      if(DoTest)write(*,*)NameSubSub,' starting, iProc=',iProcWorld
-      if(DoTest)write(*,*)NameSubSub,', iProc, UAi_iProc0, IEi_iProc0=', &
-           iProcWorld,i_proc0(UA_),i_proc0(IE_)
-
-      ! Allocate buffers both in UA and IE
-      allocate(Buffer_II(iSize,jSize), stat=iError)
-      call check_allocate(iError,NameSubSub//": Buffer_II")
-
-      if(DoTest)write(*,*)NameSubSub,', variables allocated',&
-           ', iProc:',iProcWorld
-
-      do iVar = 1, 3
-
-         ! Get potential from IE
-
-         if(is_proc(IE_))  &
-              call IE_get_for_ua(Buffer_II, iSize, jSize, &
-              NameVar_V(iVar), 'North', tSimulation)
-
-         ! Transfer variables from IE to UA
-
-         iProcFrom = i_proc0(IE_)
-
-         nSize = iSize*jSize
-
-         if(iProcFrom /= i_proc0(UA_))then
-            if(i_proc() == iProcFrom) &
-                 call MPI_send(Buffer_II,nSize,MPI_REAL,i_Proc0(UA_),&
-                 1,i_comm(),iError)
-            if(is_proc0(UA_)) &
-                 call MPI_recv(Buffer_II,nSize,MPI_REAL,iProcFrom,&
-                 1,i_comm(),iStatus_I,iError)
-         end if
-
-         ! Broadcast variables inside UA
-         if(n_proc(UA_)>1 .and. is_proc(UA_)) &
-              call MPI_bcast(Buffer_II,nSize,MPI_REAL,0,i_comm(UA_),iError)
-
-         if(DoTest)write(*,*)NameSubSub,', variables transferred',&
-              ', iProc:',iProcWorld
-
-         ! Put variables into UA
-         if(is_proc(UA_))then
-            call SPS_put_into_ie(Buffer_II, iSize, jSize, &
-                 NameVar_V(iVar))
-            if(DoTest) &
-                 write(*,*)NameSubSub//' iProc, Buffer(1,1)=',&
-                 iProcWorld,Buffer_II(1,1)
-         end if
-
-      enddo
-
-      ! Deallocate buffer to save memory
-      deallocate(Buffer_II)
-
-      if(DoTest)write(*,*)NameSubSub,', variables deallocated',&
-           ', iProc:',iProcWorld
-
-      if(DoTest)write(*,*)NameSubSub,' finished, iProc=',iProcWorld
-
-    end subroutine couple_mpi
-    !==========================================================================
+    ! Deallocate buffer to save memory
+    deallocate(Buffer_IIV)
 
   end subroutine couple_ie_ua
   !============================================================================
 
   subroutine couple_ua_ie(tSimulation)
 
+    use CON_transfer_data, ONLY: transfer_real_array
+    use UA_wrapper, ONLY: UA_get_for_ie
+    use IE_wrapper, ONLY: IE_put_from_ua
+
     real, intent(in) :: tSimulation     ! simulation time at coupling
 
-    ! Couple between two components:
-    !    Upper Atmosphere           (UA) source
+    ! Couple between two components:\
+    !    Upper Atmosphere           (UA) source\
     !    Ionosphere Electrodynamics (IE) target
     !
 
     ! General coupling variables
 
-    ! Name of this interface
+    ! Buffer for the variables on the 2D IE grid: lon, lat, block, vars
+    ! Always two blocks, one per hemisphere.
+    real, dimension(:,:,:,:), allocatable :: Buffer_IIBV ! to fill
 
     logical :: DoTest, DoTestMe
-    integer :: iProcWorld, iError
     character(len=*), parameter:: NameSub = 'couple_ua_ie'
     !--------------------------------------------------------------------------
-
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
 
-    iProcWorld = i_proc()
+    ! Allocate our transfer array:
+    allocate(Buffer_IIBV(nUaMagLon, nUaMagLat, 2, nVarUaIe))
 
-    if(DoTest)write(*,*)NameSub,' starting iProc=',iProcWorld
+    ! Gather values from UA:
+    if(is_proc(UA_)) call UA_get_for_ie(Buffer_IIBV, nUaMagLon, &
+         nUaMagLat, nVarUaIe, NameVarUaIe_V)
 
-    if(is_proc(UA_)) call initialize_ie_ua_buffers(iError)
+    ! Transfer data:
+    call transfer_real_array(UA_, IE_, nUaMagLon*nUaMagLat*2*nVarUaIe, &
+         Buffer_IIBV)
 
-    call couple_mpi
+    ! Distribute through IE:
+    if(is_proc(IE_)) call IE_put_from_ua(Buffer_IIBV,  &
+         nUaMagLon, nUaMagLat/2, nVarUaIe, NameVarUaIe_V)
 
-    if(DoTest)write(*,*)NameSub,': finished iProc=',iProcWorld
-
-  contains
-    !==========================================================================
-
-    subroutine couple_mpi
-
-      character (len=*), parameter :: NameSubSub=NameSub//'::couple_mpi'
-
-      ! Number of coordinates and number of variables to pass
-      integer, parameter :: nDimLoc=3, nVarIeUa=8
-
-      ! Names of locations for both blocks
-      character (len=*), parameter, dimension(2) :: &
-           NameLoc_B=['North','South']
-
-      ! Names of variables for both blocks
-      character (len=*), parameter :: NameVar='Lat:MLT:FAC:SigmaP:SigmaH'
-
-      ! Buffer for the variables on the 2D IE grid
-      real, dimension(:,:,:), allocatable :: Buffer_IIV
-
-      real, dimension(:,:), allocatable :: UAr2_Mlts, UAr2_Lats
-      real, dimension(:,:), allocatable :: UAr2_Hal, UAr2_Ped, UAr2_Fac
-
-      integer :: iStart, iEnd, UAi_nLats, UAi_nMlts, nVarsToPass
-
-      ! MPI related variables
-
-      ! MPI status variable
-      integer :: iStatus_I(MPI_STATUS_SIZE)
-
-      ! General error code
-      integer :: iError
-
-      ! Message size
-      integer :: nSize
-
-      integer :: iBlock, iProcTo
-
-      logical :: IsFirstTime = .true.
-
-      ! After everything is initialized exclude PEs which are not involved
-      !------------------------------------------------------------------------
-      if(.not.UseMe) RETURN
-
-      if(DoTest)write(*,*)NameSubSub,' starting, iProc=',iProcWorld
-      if(DoTest)write(*,*)NameSubSub,', iProc, UAi_iProc0, i_proc0(IE_)=', &
-           iProcWorld,i_proc0(UA_),i_proc0(IE_)
-
-!      write(*,*) "Goal #1 is to just get the codes running!"
-      write(*,*) "CON_couple_ie_ua -> couple_ua_ie is disabled"
-!      write(*,*) "UAi_nMlts, UAi_nLats", UAi_nMlts, UAi_nLats
-
-!      stop
-
-!!!
-!!!      ! Calculate field aligned currents in UA
-!!!
-!!!      if(is_proc(UA_))then
-!!!
-!!!         if(DoTest)write(*,*)NameSubSub,': call UA_calc_fac'
-!!!
-!!!         call UA_calc_electrodynamics(UAi_nMlts, UAi_nLats)
-!!!
-!!!         allocate(UAr2_Fac(UAi_nMlts, UAi_nLats), &
-!!!              UAr2_Ped(UAi_nMlts, UAi_nLats), &
-!!!              UAr2_Hal(UAi_nMlts, UAi_nLats), &
-!!!              UAr2_Lats(UAi_nMlts, UAi_nLats), &
-!!!              UAr2_Mlts(UAi_nMlts, UAi_nLats), stat=iError)
-!!!         call check_allocate(iError,NameSubSub//': '//NameLoc_B(1))
-!!!
-!!!         call UA_fill_electrodynamics(UAr2_Fac, UAr2_Ped, UAr2_Hal, &
-!!!              UAr2_Lats, UAr2_Mlts)
-!!!
-!!!         if(DoTest)write(*,*)i_proc(),':',NameSubSub,&
-!!!              ' nMlts,nLats=',UAi_nMlts, UAi_nLats
-!!!
-!!!      end if
-!!!      if(DoTest)write(*,*)NameSubSub,': bcast'
-!!!
-!!!
-!!!      ! Broadcast information about mapping points
-!!!
-!!!
-!!!      call MPI_bcast(UAi_nMlts,1,MPI_INTEGER,iProc0Ua,iCommIeUa,iError)
-!!!      call MPI_bcast(UAi_nLats,1,MPI_INTEGER,iProc0Ua,iCommIeUa,iError)
-!!!
-!!!      nVarsToPass = 3
-!!!      if (IsFirstTime) nVarsToPass = 5
-!!!
-!!!      allocate(Buffer_IIV(UAi_nMlts, UAi_nLats/2, nVarsToPass), stat=iError)
-!!!      call check_allocate(iError,NameSubSub//': '//'Buffer_IIV')
-!!!
-!!!      ! Do Northern and then Southern hemispheres
-!!!      do iBlock = 1, 2
-!!!
-!!!         if(DoTest)write(*,*)NameSubSub,': iBlock=',iBlock
-!!!
-!!!         ! The IE processor for this block
-!!!         iProcTo = pe_decomposition(IE_,iBlock)
-!!!
-!!!         if(DoTest)write(*,*)NameSubSub,': iProcTo=',iProcTo
-!!!
-!!!         if (is_proc0(UA_)) then
-!!!
-!!!            ! UA goes from the South pole to the north pole, while IE goes
-!!!            ! from the north pole to the south pole, so the blocks have to
-!!!            ! be reversed, basically.
-!!!
-!!!            if (iBlock == 1) then
-!!!               iStart = UAi_nLats/2 + 1
-!!!               iEnd   = UAi_nLats
-!!!            else
-!!!               iStart = 1
-!!!               iEnd   = UAi_nLats/2
-!!!            endif
-!!!            Buffer_IIV(:,1:UAi_nLats/2,1) = UAr2_Fac(:,iStart:iEnd)
-!!!            Buffer_IIV(:,1:UAi_nLats/2,2) = UAr2_Ped(:,iStart:iEnd)
-!!!            Buffer_IIV(:,1:UAi_nLats/2,3) = UAr2_Hal(:,iStart:iEnd)
-!!!            if (IsFirstTime) then
-!!!               Buffer_IIV(:,1:UAi_nLats/2,4) = UAr2_Lats(:,iStart:iEnd)
-!!!               Buffer_IIV(:,1:UAi_nLats/2,5) = UAr2_Mlts(:,iStart:iEnd)
-!!!            endif
-!!!
-!!!            if(DoTest)write(*,*)i_proc(),':',NameSubSub,': transfer ',NameVar,&
-!!!                 ' ',NameLoc_B(iBlock),&
-!!!                 ' maxval(Hall)=',maxval(Buffer_IIV(:,40:UAi_nLats/2,3)),&
-!!!                 ' maxloc(Hall)=',maxloc(Buffer_IIV(:,40:UAi_nLats/2,3))
-!!!
-!!!         endif
-!!!
-!!!
-!!!         ! Transfer values from UA to IE
-!!!
-!!!
-!!!         if(iProcTo /= i_proc0(UA_))then
-!!!            nSize = UAi_nMlts * (UAi_nLats/2) * nVarsToPass
-!!!            if(is_proc0(UA_)) &
-!!!                 call MPI_send(Buffer_IIV,nSize,MPI_REAL,iProcTo,&
-!!!                 1,i_comm(),iError)
-!!!            if(i_proc() == iProcTo) &
-!!!                 call MPI_recv(Buffer_IIV,nSize,MPI_REAL,i_proc0(UA_),&
-!!!                 1,i_comm(),iStatus_I,iError)
-!!!         end if
-!!!
-!!!         if(DoTest .and. i_proc() == iProcTo) &
-!!!              write(*,*)i_proc(),':',NameSubSub,': put ',NameVar, &
-!!!              ' ',NameLoc_B(iBlock), &
-!!!              ' maxval(Hall)=',maxval(Buffer_IIV(:,40:UAi_nLats/2,3)),&
-!!!              ' maxloc(Hall)=',maxloc(Buffer_IIV(:,40:UAi_nLats/2,3))
-!!!
-!!!
-!!!         ! Put values into IE
-!!!
-!!!         if(i_proc() == iProcTo )then
-!!!            call IE_put_from_ua(Buffer_IIV, iBlock, &
-!!!                 UAi_nMlts, UAi_nLats/2, nVarsToPass)
-!!!         end if
-!!!
-!!!      end do
-!!!
-!!!
-!!!      ! Deallocate buffer to save memory
-!!!
-!!!      deallocate(Buffer_IIV)
-!!!
-!!!      if(is_proc(UA_)) &
-!!!           deallocate(UAr2_Fac, UAr2_Ped, UAr2_Hal, UAr2_Lats, UAr2_Mlts)
-
-      IsFirstTime = .false.
-
-      if(DoTest)write(*,*)NameSubSub,' finished, iProc=',iProcWorld
-
-    end subroutine couple_mpi
-    !==========================================================================
+    deallocate(Buffer_IIbV)
 
   end subroutine couple_ua_ie
   !============================================================================

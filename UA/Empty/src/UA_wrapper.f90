@@ -18,6 +18,11 @@ module UA_wrapper
   public:: UA_save_restart
   public:: UA_finalize
 
+  ! IE Coupler:
+  public :: UA_get_info_for_ie
+  public :: UA_get_for_ie
+  public :: UA_put_from_ie
+
 contains
   !============================================================================
   subroutine UA_set_param(CompInfo, TypeAction)
@@ -90,7 +95,52 @@ contains
     call CON_stop(NameSub//': UA_ERROR: empty version cannot be used!')
 
   end subroutine UA_run
+
   !============================================================================
+  subroutine UA_get_info_for_ie(nVar, NameVar_V, nMagLat, nMagLon)
+    
+    !OUTPUT ARGUMENTS:
+    integer, intent(out) :: nVar
+    integer, intent(out), optional :: nMagLat, nMagLon
+    character(len=*), intent(out), optional :: NameVar_V(:)
+
+    character(len=*), parameter :: NameSub='UA_get_info_for_ie'
+
+    call CON_stop(NameSub//': UA_ERROR: empty version cannot be used!')
+
+  end subroutine UA_get_info_for_ie
+
+  !============================================================================
+  subroutine UA_put_from_ie(Buffer_IIV, iSizeIn, jSizeIn, nVarIn, &
+       NameVarIn_V, iBlock)
+
+    !INPUT/OUTPUT ARGUMENTS:
+    integer, intent(in)           :: iSizeIn, jSizeIn, nVarIn, iBlock
+    real, intent(in)              :: Buffer_IIV(iSizeIn,jSizeIn,nVarIn)
+    character (len=*),intent(in)  :: NameVarIn_V(nVarIn)
+
+    character (len=*), parameter :: NameSub='UA_put_from_ie'
+
+    call CON_stop(NameSub//': UA_ERROR: empty version cannot be used!')
+    
+  end subroutine UA_put_from_ie
+
+  !============================================================================
+  subroutine UA_get_for_ie(BufferOut_IIBV, nMltIn, nLatIn, nVarIn, NameVarIn_V)
+
+    ! INPUT ARGUMENTS:
+    integer,          intent(in) :: nMltIn, nLatIn, nVarIn
+    character(len=3), intent(in) :: NameVarIn_V(nVarIn)
+    
+    ! OUTPUT ARGUMENTS:
+    real, intent(out) :: BufferOut_IIBV(nMltIn, nLatIn, 2, nVarIn)
+    
+    character (len=*), parameter :: NameSub='UA_get_for_ie'
+
+    call CON_stop(NameSub//': UA_ERROR: empty version cannot be used!')
+    
+  end subroutine UA_get_for_ie
+  
 end module UA_wrapper
 !==============================================================================
 
