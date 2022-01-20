@@ -1,77 +1,65 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !^CMP FILE IE
 !^CMP FILE UA
 
-!BOP
-!MODULE: CON_couple_ie_ua - couple IE and UA components
 !
-!DESCRIPTION:
 ! Couple IE and UA components both ways.
 !
-!INTERFACE:
 module CON_couple_ie_ua
 
-  !USES:
   use CON_coupler
 
   use IE_wrapper, ONLY: IE_get_for_ua, IE_put_from_ua
-  
+
   implicit none
 
   private ! except
-
-  !PUBLIC MEMBER FUNCTIONS:
 
   public :: couple_ie_ua_init ! initialize both couplings
   public :: couple_ie_ua      ! couple IE to UA
   public :: couple_ua_ie      ! couple UA to IE
 
-  !REVISION HISTORY:
+  ! revision history:
   ! 08/25/2003 A.Ridley <ridley@umich.edu> - initial version as external
   !                                          subroutines
   ! 08/27/2003 G.Toth <gtoth@umich.edu>    - combined them into a module
   ! 11/10/2021 Burleigh/Welling <dwelling@uta.edu>
   !                                        - Re-implemented & updated coupling.
-  !EOP
 
   ! Communicator and logicals to simplify message passing and execution
   ! Initialization status:
-  !integer, save :: iCommIeUa, iProc0Ua
+  ! integer, save :: iCommIeUa, iProc0Ua
   logical :: UseMe=.true., IsInitialized = .false.
 
   ! Information about number and names of variables to share:
   integer, save :: nVarIeUa, nVarUaIe, nUaMagLon, nUaMagLat
   character(len=3), allocatable :: NameVarIeUa_V(:), NameVarUaIe_V(:)
-  
+
   ! Size of the 2D spherical structured IE grid
   integer, save :: iSize, jSize, nCells_D(2), nRootBlock_d(3)
 
 contains
+  !============================================================================
 
-  !BOP =======================================================================
-  !IROUTINE: couple_ie_ua_init - initialize IE-UA couplings
-  !INTERFACE:
   subroutine couple_ie_ua_init
 
-    !DESCRIPTION:
     ! This subroutine should be called from all PE-s so that
     ! a union group can be formed. The IE grid size is also stored.
     ! Performs handshaking between UA and IE concerning names and number
     ! of variables to transfer.
-    !EOP
 
     use CON_transfer_data, ONLY: transfer_integer, transfer_string_array
     use UA_wrapper, ONLY: UA_get_info_for_ie
     use IE_wrapper, ONLY: IE_get_info_for_ua
-    
+
     ! General error code
     integer :: iError, i, j
-    
+
     logical :: DoTest, DoTestMe
-    character(len=*), parameter :: NameSub='couple_ie_ua_init'
-    !------------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'couple_ie_ua_init'
+    !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
     if(DoTestMe) write(*,*) NameSub//' called;, IsInitialized=', IsInitialized
@@ -82,11 +70,11 @@ contains
     ! Get number of variables to be passed from UA to IE, pass to IE
     if(is_proc(UA_)) call UA_get_info_for_ie(nVarIeUa)
     call transfer_integer(UA_, IE_, nVarIeUa,  UseSourceRootOnly=.false.)
-    
+
     ! Allocate the array holding the variable names.
     if(allocated(NameVarIeUa_V)) deallocate(NameVarIeUa_V)
     allocate(NameVarIeUa_V(nVarIeUa))
-    
+
     ! Get variables names to be passed; transfer to IE
     ! Obtain number of magnetic (not total grid) lats/lons used by UA.
     if(is_proc(UA_)) call UA_get_info_for_ie(nVarIeUa, &
@@ -95,7 +83,7 @@ contains
     call transfer_integer(UA_, IE_, nUaMagLon, UseSourceRootOnly=.false.)
     call transfer_string_array(UA_, IE_, nVarIeUa, NameVarIeUa_V, &
          UseSourceRootOnly=.false.)
-    
+
     ! UA to IE coupling: set names and number of variables
     ! Get number of variables to be passed from IE to UA, pass to UA
     if(is_proc(IE_)) call IE_get_info_for_ua(nVarUaIe)
@@ -117,34 +105,29 @@ contains
        write(*,*) '   UA requests ', nVarIeUa, ' variables from IE:', &
             NameVarIeUa_V
     end if
-    
-    !NOT SURE IF NEEDED.
-    ! This works for a NODE BASED regular IE grid only 
+
+    ! NOT SURE IF NEEDED.
+    ! This works for a NODE BASED regular IE grid only
     ! <so then why does IE initialize with SPS, a grid based thing??? MB>
     nCells_D = ncell_id(IE_)
-    !iSize=nCells_D(1); jSize=nCells_D(2)   ! orig. MB
+    ! iSize=nCells_D(1); jSize=nCells_D(2)   ! orig. MB
     iSize=nCells_D(1)+1; jSize=nCells_D(2)+1 ! Grid size for 1 hemi.
 
     ! IE should share nVar and varNames to pass.
 
   end subroutine couple_ie_ua_init
+  !============================================================================
 
-  !BOP =======================================================================
-  !IROUTINE: couple_ie_ua - couple IE component to UA component
-  !INTERFACE:
   subroutine couple_ie_ua(tSimulation)
-    !DESCRIPTION:
-    ! Couple between two components:\\
-    !    Ionosphere Electrodynamics (IE)  source\\
+    ! Couple between two components:\
+    !    Ionosphere Electrodynamics (IE)  source\
     !    Upper Atmosphere (UA) target
     !
     ! Send electrostatic potential from IE to UA.
-    !EOP
     use CON_transfer_data, ONLY: transfer_real_array
     use IE_wrapper, ONLY: IE_get_for_ua
-    use UA_wrapper, ONLY: UA_put_from_ie    
+    use UA_wrapper, ONLY: UA_put_from_ie
 
-    !INPUT ARGUMENTS:
     real, intent(in) :: tSimulation     ! simulation time at coupling
 
     ! Buffer for all shared variables on the 2D IE grid
@@ -152,87 +135,81 @@ contains
 
     ! Variables to assist with coupling
     integer :: nSize, iBlock, iError
-    
+
     ! Debug variables:
-    character (len=*), parameter :: NameSub='couple_ie_ua'
     logical :: DoTest, DoTestMe
-    !-------------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'couple_ie_ua'
+    !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
 
     ! Allocate buffers both in IE (source) and UA (target):
     allocate(Buffer_IIV(iSize,jSize,nVarIeUa), stat=iError)
     call check_allocate(iError,NameSub//": Buffer_IIV")
-    
+
     ! Transfer northern then southern hemisphere:
     do iblock = 1,2
        ! Get all variables from IE:
        if(is_proc(IE_)) call IE_get_for_ua(Buffer_IIV, iSize, jSize, &
             nVarIeUa, NameVarIeUa_V, iBlock, tSimulation)
-       
+
        ! Transfer data:
        call transfer_real_array(IE_, UA_, iSize*jSize*nVarIeUa, Buffer_IIV)
-       
+
        ! UA receives & handles data:
        if(is_proc(UA_)) call UA_put_from_ie(Buffer_IIV, iSize, jSize, &
             nVarIeUa, NameVarIeUa_V, iBlock)
     end do
-    
+
     ! Deallocate buffer to save memory
     deallocate(Buffer_IIV)
-    
+
   end subroutine couple_ie_ua
-  
-  !BOP =======================================================================
-  !IROUTINE: couple_ua_ie - couple UA to IE component
-  !INTERFACE:
+  !============================================================================
+
   subroutine couple_ua_ie(tSimulation)
 
     use CON_transfer_data, ONLY: transfer_real_array
     use UA_wrapper, ONLY: UA_get_for_ie
     use IE_wrapper, ONLY: IE_put_from_ua
 
-    !INPUT ARGUMENTS:
     real, intent(in) :: tSimulation     ! simulation time at coupling
 
-    !DESCRIPTION:
-    ! Couple between two components:\\
-    !    Upper Atmosphere           (UA) source\\
+    ! Couple between two components:\
+    !    Upper Atmosphere           (UA) source\
     !    Ionosphere Electrodynamics (IE) target
     !
-    !EOP
 
-    !\
     ! General coupling variables
-    !/
 
     ! Buffer for the variables on the 2D IE grid: lon, lat, block, vars
     ! Always two blocks, one per hemisphere.
-    real, dimension(:,:,:,:), allocatable :: Buffer_IIBV ! to fill 
-    
+    real, dimension(:,:,:,:), allocatable :: Buffer_IIBV ! to fill
+
     logical :: DoTest, DoTestMe
-    character (len=*), parameter :: NameSub='couple_ua_ie'
-    !-------------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'couple_ua_ie'
+    !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
 
     ! Allocate our transfer array:
     allocate(Buffer_IIBV(nUaMagLon, nUaMagLat, 2, nVarUaIe))
-    
+
     ! Gather values from UA:
     if(is_proc(UA_)) call UA_get_for_ie(Buffer_IIBV, nUaMagLon, &
          nUaMagLat, nVarUaIe, NameVarUaIe_V)
 
-    ! Transfer data:                                                         
+    ! Transfer data:
     call transfer_real_array(UA_, IE_, nUaMagLon*nUaMagLat*2*nVarUaIe, &
          Buffer_IIBV)
 
     ! Distribute through IE:
     if(is_proc(IE_)) call IE_put_from_ua(Buffer_IIBV,  &
          nUaMagLon, nUaMagLat/2, nVarUaIe, NameVarUaIe_V)
-        
+
     deallocate(Buffer_IIbV)
 
   end subroutine couple_ua_ie
   !============================================================================
-  
+
 end module CON_couple_ie_ua
+!==============================================================================
 
