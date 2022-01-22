@@ -119,8 +119,8 @@ contains
   !============================================================================
 
   subroutine couple_ie_ua(tSimulation)
-    ! Couple between two components:\
-    !    Ionosphere Electrodynamics (IE)  source\
+    ! Couple between two components:
+    !    Ionosphere Electrodynamics (IE)  source
     !    Upper Atmosphere (UA) target
     !
     ! Send electrostatic potential from IE to UA.
@@ -174,8 +174,8 @@ contains
 
     real, intent(in) :: tSimulation     ! simulation time at coupling
 
-    ! Couple between two components:\
-    !    Upper Atmosphere           (UA) source\
+    ! Couple between two components:
+    !    Upper Atmosphere           (UA) source
     !    Ionosphere Electrodynamics (IE) target
     !
 

@@ -27,15 +27,16 @@ test_help:
 	@(if [ -d PW/PWOM    ]; then echo "    test_pw                    (run PW/PWOM test)"; fi)
 	@(if [ -d PS/DGCPM   ]; then echo "    test_ps                    (run PS/DGCPM test)"; fi)
 	@(if [ -d SP/MFLAMPA ]; then echo "    test_sp                    (run SP/MFLAMPA test)"; fi)
-	@(if [ -d IM/RCM2    ]; then echo "    test_swpc                  (run GM-IE-IM/RCM2 test as used by SWPC)"; fi)
+	@(if [ -d IM/RCM2    ]; then echo "    test_swpc                  (run GM-IE-RCM2 test as used by SWPC)"; fi)
 	@(if [ -d IM/RCM2    ]; then echo "    test_swpc_build            (create SWPC_build and run test_swpc)"; fi)
-	@(if [ -d IM/RCM2    ]; then echo "    test_swpc_gpu              (run GM-IE-IM/RCM2 test on GPU)"; fi)
-	@(if [ -d IM/RCM2    ]; then echo "    test_swpc_multiion         (run multiion GM-IE-IM/RCM2 SWPC test)"; fi)
-	@(if [ -d IM/RCM2    ]; then echo "    test_swpc_multispecies     (run multispecies GM-IE-IM/RCM2 SWPC test)"; fi)
-	@(if [ -d IM/CIMI2   ]; then echo "    test_swpc_cimi             (run anisotropic GM-IE-IM/CIMI2 SWPC test)"; fi)
-	@(if [ -d PW/PWOM    ]; then echo "    test_swpc_pwom             (run GM-IE-IM/RCM2-PW/PWOM SWPC test)"; fi)
-	@(if [ -d PW/PWOM    ]; then echo "    test1                      (run GM-IE-PW/PWOM test)"; fi)
-	@(if [ -d IM/HEIDI   ]; then echo "    test4                      (run GM-IE-IM/HEIDI test)"; fi)
+	@(if [ -d IM/RCM2    ]; then echo "    test_swpc_gpu              (run GM-IE-RCM2 test on GPU)"; fi)
+	@(if [ -d IM/RCM2    ]; then echo "    test_swpc_multiion         (run multiion GM-IE-RCM2 SWPC test)"; fi)
+	@(if [ -d IM/RCM2    ]; then echo "    test_swpc_multispecies     (run multispecies GM-IE-RCM2 SWPC test)"; fi)
+	@(if [ -d IM/CIMI2   ]; then echo "    test_swpc_cimi             (run anisotropic GM-IE-CIMI2 SWPC test)"; fi)
+	@(if [ -d PW/PWOM    ]; then echo "    test_swpc_pwom             (run GM-IE-RCM2-PWOM SWPC test)"; fi)
+	@(if [ -d PW/PWOM    ]; then echo "    test_swpc_pwom_species     (run multispecies GM-IE-RCM2-PWOM SWPC test)"; fi)
+	@(if [ -d PW/PWOM    ]; then echo "    test1                      (run GM-IE-PWOM test)"; fi)
+	@(if [ -d IM/HEIDI   ]; then echo "    test4                      (run GM-IE-HEIDI test)"; fi)
 	@(if [ -d GM/BATSRUS/srcUserExtra ]; then echo "    test5                      (run EE-SC test)"; fi)
 	@(if [ -d GM/BATSRUS/srcUserExtra ]; then echo "    test7                      (run IH-OH test)"; fi)
 	@(if [ -d GM/BATSRUS ]; then echo "    test8                      (run SC-IH coupling test with AWSoM-R)"; fi)
@@ -87,6 +88,7 @@ test_swmf:
 	-@(if [ -d IM/RCM2    ]; then ${MAKE} test_swpc_multispecies TESTDIR=run_test_swpc_multispecies; fi)
 	-@(if [ -d IM/CIMI2   ]; then ${MAKE} test_swpc_cimi TESTDIR=run_test_swpc_cimi; fi)
 	-@(if [ -d PW/PWOM    ]; then ${MAKE} test_swpc_pwom TESTDIR=run_test_swpc_pwom; fi)
+	-@(if [ -d PW/PWOM    ]; then ${MAKE} test_swpc_pwom_species TESTDIR=run_test_swpc_pwom_species; fi)
 	-@(if [ -d PW/PWOM    ]; then ${MAKE} test1 TESTDIR=run_test01; fi)
 	-@(if [ -d IM/HEIDI   ]; then ${MAKE} test4 TESTDIR=run_test04; fi)
 	-@(if [ -d GM/BATSRUS/srcUserExtra ]; then ${MAKE} test5 TESTDIR=run_test05; fi)
@@ -361,7 +363,7 @@ test1_run:
 	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
 
 test1_check:
-	-@(${DIFFNUM} -b -r=1e-7 \
+	-@(${DIFFNUM} -b -r=1e-5 \
 		${TESTDIR}/RESULTS/PW/north_plots_iline0001.out \
 		PW/PWOM/data/output/Earth/PW_north_plots_iline0001.out \
 		> test01_pw.diff)
@@ -385,7 +387,7 @@ test1_check:
 		${TESTDIR}/RESULTS/IE/IE*.log \
 		output/test1/IE.log \
 		> test01_ie.diff)
-	-@(${DIFFNUM} -b -r=1e-4 -a=6e-5 \
+	-@(${DIFFNUM} -b -r=1e-4 -a=1e-4 \
 		${TESTDIR}/RESULTS/IE/it000321_104510_000.idl \
 		output/test1/IE*.idl.gz \
 		>> test01_ie.diff)
@@ -924,6 +926,87 @@ test_swpc_pwom_check:
 		Param/SWPC/TestOutputPwom/it140410_000300_000.idl.gz \
 		>> test_swpc_pwom_ie.diff)
 	ls -l test_swpc_pwom_*.diff
+
+### test_swpc_pwom_species: multispecies GM+IE+IM/RCM2+PW/PWOM ###
+
+test_swpc_pwom_species:
+	@echo "test_swpc_pwom_species_compile..." \
+	      > test_swpc_pwom_species_gm.diff
+	@echo "test_swpc_pwom_species_compile..." \
+	      > test_swpc_pwom_species_ie.diff
+	${MAKE} test_swpc_pwom_species_compile
+	@echo "test_swpc_pwom_species_rundir..." \
+	      >> test_swpc_pwom_species_gm.diff
+	@echo "test_swpc_pwom_species_rundir..." \
+	      >> test_swpc_pwom_species_ie.diff
+	${MAKE} test_swpc_pwom_species_rundir
+	@echo "test_swpc_pwom_species_run..." \
+	      >> test_swpc_pwom_species_gm.diff
+	@echo "test_swpc_pwom_species_run..." \
+	      >> test_swpc_pwom_species_ie.diff
+	${MAKE} test_swpc_pwom_species_run
+	@echo "test_swpc_pwom_species_restart..." \
+	      >> test_swpc_pwom_species_gm.diff
+	@echo "test_swpc_pwom_species_restart..." \
+	      >> test_swpc_pwom_species_ie.diff
+	${MAKE} test_swpc_pwom_species_restart
+	@echo "test_swpc_pwom_species_check..." \
+	      >> test_swpc_pwom_species_gm.diff
+	@echo "test_swpc_pwom_species_check..." \
+	      >> test_swpc_pwom_species_ie.diff
+	${MAKE} test_swpc_pwom_species_check
+
+test_swpc_pwom_species_compile:
+	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2,PW/PWOM
+	./Config.pl -o=GM:u=Default,e=MhdHpOp,ng=2,g=8,8,8,IE:g=91,181,PW:Earth
+	${MAKE} SWMF
+	make PIDL
+
+test_swpc_pwom_species_rundir:
+	rm -rf ${TESTDIR}
+	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
+	cp Param/SWPC/*.in* Param/SWPC/*.dat ${TESTDIR}/
+	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in_pwom_species_init
+	perl -pi -e 'if(/MaxIter|MaxBlock|nTotalLine/){s/700/70/; s/1500/200/; s/5000/350/; s/252/4/;}; s/#BORIS/BORIS/; s/^\#(COMPONENTMAP.*production)/$$1/i; s/^(COMPONENTMAP.*nightly)/\#$$1/i' ${TESTDIR}/PARAM.in_pwom_species_init
+	cp ${TESTDIR}/PARAM.in_pwom_species_init ${TESTDIR}/PARAM.in
+
+test_swpc_pwom_species_run:
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./Restart.pl -i SWMF_RESTART.20140410_000200
+
+test_swpc_pwom_species_restart:
+	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in_pwom_species_restart
+	perl -pi -e 's/252/4/; s/#BORIS/BORIS/; s/^\#(COMPONENTMAP.*production)/$$1/i; s/^(COMPONENTMAP.*nightly)/\#$$1/i' ${TESTDIR}/PARAM.in_pwom_species_restart
+	cd ${TESTDIR}; cp PARAM.in_pwom_species_restart PARAM.in
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_restart
+	cd ${TESTDIR}; ./PostProc.pl -noptec
+
+test_swpc_pwom_species_check:
+	-@(${DIFFNUM} -b -r=1e-5 -a=1e-8 \
+		${TESTDIR}/GM/IO2/log_e20140410-000200.log \
+		Param/SWPC/TestOutputPwomSpecies/log_e20140410-000200.log \
+		> test_swpc_pwom_species_gm.diff)
+	-@(${DIFFNUM} -b -r=2e-4 -a=1e-5 \
+		${TESTDIR}/GM/IO2/magnetometers_e20140410-000200.mag \
+		Param/SWPC/TestOutputPwomSpecies/magnetometers_e20140410-000200.mag \
+		>> test_swpc_pwom_species_gm.diff)
+	-@(${DIFFNUM} -b -r=2e-4 -a=1e-4 \
+		${TESTDIR}/GM/IO2/mag_grid_e20140410-000300.out \
+		Param/SWPC/TestOutputPwomSpecies/mag_grid_e20140410-000300.out \
+		>> test_swpc_pwom_species_gm.diff)
+	-@(${DIFFNUM} -b -r=1e-5 -a=1e-8 \
+		${TESTDIR}/GM/IO2/geoindex_e20140410-000200.log \
+		Param/SWPC/TestOutputPwomSpecies/geoindex_e20140410-000200.log \
+		>> test_swpc_pwom_species_gm.diff)
+	-@(${DIFFNUM} -b -r=1e-5 \
+		${TESTDIR}/IE/ionosphere/IE_t140410_000200.log \
+		Param/SWPC/TestOutputPwomSpecies/IE_t140410_000200.log \
+		> test_swpc_pwom_species_ie.diff)
+	-@(${DIFFNUM} -b -r=1e-4 -a=5e-5 \
+		${TESTDIR}/IE/ionosphere/it140410_000300_000.idl \
+		Param/SWPC/TestOutputPwomSpecies/it140410_000300_000.idl.gz \
+		>> test_swpc_pwom_species_ie.diff)
+	ls -l test_swpc_pwom_species_*.diff
 
 ### test_swpc_amps_build: Configure SWMF with GM+IE+IM+PT+RB ###
 
