@@ -82,6 +82,7 @@ contains
          DoCoupleOnTime_C, IsTightCouple_CC
     use CON_physics
     use CON_bline, ONLY: BL_read_param
+    use ModUtilities,     ONLY: DoWriteCallSequence
 
     real :: VersionRead
 
@@ -154,13 +155,13 @@ contains
 
     character(len=*), parameter:: NameSub = 'read_inputs'
     !--------------------------------------------------------------------------
-    if(is_proc0())write(*,'(a,i3)')NameSub//': iSession=',iSession
+    if(is_proc0())write(*,'(a,i3)')NameSub//': iSession=', iSession
 
     ! Proc 0 reads the file and broadcasts to all PE-s
     if(IsFirstRead) call read_file(NameParamFile,i_comm())
 
     ! Read input data from string array stored in ModReadParam
-    call read_init('  ',iSession,iLine)
+    call read_init('  ', iSession,iLine)
 
     DoneBeginComp_C = .false.
     IsLastRead=.true.
@@ -185,11 +186,11 @@ contains
 
        case("#STDOUTDIR")
 
-          call read_var('NameStdoutDir',NameStdoutDir)
+          call read_var('NameStdoutDir', NameStdoutDir)
           call fix_dir_name(NameStdoutDir)
 
        case("#DESCRIPTION")
-          call read_var('StringDescription',StringDescription)
+          call read_var('StringDescription', StringDescription)
 
        case("#BEGIN_COMP")
 
@@ -262,7 +263,7 @@ contains
           EXIT
 
        case("#TIMEACCURATE")
-          call read_var('DoTimeAccurate',DoTimeAccurate)
+          call read_var('IsTimeAccurate', DoTimeAccurate)
           if(.not. IsStandAlone .and. .not. DoTimeAccurate)then
              if(is_proc0())write(*,*)NameSub// &
                   ' SWMF_ERROR: steady-state mode is available only'// &
@@ -297,26 +298,29 @@ contains
        case("#STOP")
 
           if(IsStandAlone)then
-             call read_var('MaxIteration'  , MaxIteration)
-             call read_var('tSimulationMax', tSimulationMax)
+             call read_var('MaxIter', MaxIteration)
+             call read_var('TimeMax', tSimulationMax)
           else if(is_proc0()) then
              write(*,*)NameSub// &
                   ' SWMF_WARNING: stop condition has been set externally'
              write(*,*)NameSub// &
-                  ' SWMF_WARNING: tSimulationMax = ',tSimulationMax
+                  ' SWMF_WARNING: TimeMax = ', tSimulationMax
           end if
 
        case("#STRICT")
 
-          call read_var('UseStrict',UseStrict)
+          call read_var('UseStrict', UseStrict)
 
        case("#VERBOSE")
 
-          call read_var('lVerbose',lVerbose)
+          call read_var('lVerbose', lVerbose)
 
+       case("#TESTINFO")
+          call read_var('DoWriteCallSequence', DoWriteCallSequence)          
+          
        case("#TEST")
 
-          call read_var('StringTest',StringTest)
+          call read_var('StringTest', StringTest)
 
        case("#TESTPROC")
 
@@ -324,11 +328,11 @@ contains
 
        case("#TIMING")
 
-          call read_var('UseTiming',UseTiming)
+          call read_var('UseTiming', UseTiming)
           if(UseTiming)then
-             call read_var('DnTiming'        ,DnTiming)
-             call read_var('nDepthTiming'    ,nDepthTiming)
-             call read_var('TypeTimingReport',TypeTimingReport)
+             call read_var('DnTiming'        , DnTiming)
+             call read_var('nDepthTiming'    , nDepthTiming)
+             call read_var('TypeTimingReport', TypeTimingReport)
              UseTimingAll = index(TypeTimingReport,'all') > 0
              TypeTimingReport = TypeTimingReport(1:4)
           end if
@@ -387,7 +391,7 @@ contains
           call read_var('nCouple', nCouple)
           if(nCouple > MaxCouple)then
              if(is_proc0()) write(*,*)NameSub// &
-                  ' SWMF_ERROR: nCouple > MaxCouple=',MaxCouple
+                  ' SWMF_ERROR: nCouple > MaxCouple=', MaxCouple
              if(UseStrict)then
                 iErrorSwmf = 13
                 RETURN
@@ -428,7 +432,7 @@ contains
 
        case("#COUPLE1","#COUPLE2","#COUPLE1SHIFT","#COUPLE2SHIFT")
 
-          call read_var('NameSource',NameComp1)
+          call read_var('NameSource', NameComp1)
           iComp1=i_comp(NameComp1)
           if(.not.use_comp(iComp1)) then
              if(is_proc0()) write(*,*) NameSub//' SWMF_ERROR: '// &
@@ -436,7 +440,7 @@ contains
              iErrorSwmf = 17
              RETURN
           end if
-          call read_var('NameTarget',NameComp2)
+          call read_var('NameTarget', NameComp2)
           iComp2=i_comp(NameComp2)
           if(.not.use_comp(iComp2))then
              if(is_proc0()) write(*,*) NameSub//' SWMF_ERROR: '// &
@@ -445,8 +449,8 @@ contains
              RETURN
           end if
 
-          call read_var('DnCouple',Couple_CC(iComp1,iComp2) % Dn)
-          call read_var('DtCouple',Couple_CC(iComp1,iComp2) % Dt)
+          call read_var('DnCouple', Couple_CC(iComp1,iComp2) % Dn)
+          call read_var('DtCouple', Couple_CC(iComp1,iComp2) % Dt)
           Couple_CC(iComp1,iComp2) % DoThis = &
                Couple_CC(iComp1,iComp2) % Dn >= 0 .or. &
                Couple_CC(iComp1,iComp2) % Dt >= 0.0
@@ -511,16 +515,16 @@ contains
           if(abs(VersionRead-VersionSwmf)>0.005.and.is_proc0())&
                write(*,'(a,f6.3,a,f6.3)') &
                NameSub//': SWMF_WARNING version in file is ',&
-               VersionRead,' but SWMF version is ',VersionSwmf
+               VersionRead,' but SWMF version is ', VersionSwmf
 
        case("#PRECISION")
           call read_var('nByteReal', nByteRealRead)
           if(nByteReal/=nByteRealRead)then
              if(is_proc0()) then
                 write(*,'(a,i1,a)') NameSub//' WARNING: '//&
-                     'SWMF was compiled with ',nByteReal,' byte reals'
+                     'SWMF was compiled with ', nByteReal,' byte reals'
                 write(*,'(a,i1,a)') NameSub//' WARNING: '// &
-                     'requested precision is ',nByteRealRead,' byte reals'
+                     'requested precision is ', nByteRealRead,' byte reals'
              end if
              if(UseStrict)then
                 if(is_proc0())write(*,*) &
@@ -548,7 +552,7 @@ contains
              write(*,*)NameSub// &
                   ' SWMF_WARNING: simulation time has been set externally'
              write(*,*)NameSub// &
-                  ' SWMF_WARNING: tSimulation = ',TimeStart % String
+                  ' SWMF_WARNING: tSimulation = ', TimeStart % String
           end if
 
        case("#STARTTIME", "#SETREALTIME")
@@ -571,19 +575,19 @@ contains
              write(*,*)NameSub// &
                   ' SWMF_WARNING: start time has been set externally'
              write(*,*)NameSub// &
-                  ' SWMF_WARNING: TimeStart = ',TimeStart % String
+                  ' SWMF_WARNING: TimeStart = ', TimeStart % String
           end if
 
        case("#TIMEEND", "#ENDTIME")
           if(IsStandAlone)then
-             call read_var('iYear'  ,TimeEnd % iYear)
-             call read_var('iMonth' ,TimeEnd % iMonth)
-             call read_var('iDay'   ,TimeEnd % iDay)
-             call read_var('iHour'  ,TimeEnd % iHour)
-             call read_var('iMinute',TimeEnd % iMinute)
-             call read_var('iSecond',TimeEnd % iSecond)
+             call read_var('iYear'  , TimeEnd % iYear)
+             call read_var('iMonth' , TimeEnd % iMonth)
+             call read_var('iDay'   , TimeEnd % iDay)
+             call read_var('iHour'  , TimeEnd % iHour)
+             call read_var('iMinute', TimeEnd % iMinute)
+             call read_var('iSecond', TimeEnd % iSecond)
              FracSecond = TimeEnd % FracSecond ! set default value
-             call read_var('FracSecond',FracSecond)
+             call read_var('FracSecond', FracSecond)
              TimeEnd % FracSecond = FracSecond
              call time_int_to_real(TimeEnd)
 
@@ -593,9 +597,9 @@ contains
                   ' SWMF_WARNING: end time cannot be set internally'
           end if
 
-       case('#PLANET','#MOON','#COMET', &
-            '#IDEALAXES','#ROTATIONAXIS','#MAGNETICAXIS','#MAGNETICCENTER',&
-            '#ROTATION','#NONDIPOLE','#DIPOLE', '#MULTIPOLEB0')
+       case('#PLANET', '#MOON', '#COMET', &
+            '#IDEALAXES', '#ROTATIONAXIS', '#MAGNETICAXIS', '#MAGNETICCENTER',&
+            '#ROTATION', '#NONDIPOLE', '#DIPOLE', '#MULTIPOLEB0')
           if(.not.is_first_read())then
              if(UseStrict)RETURN
              CYCLE
@@ -628,7 +632,7 @@ contains
           end do
        case default
           if(is_proc0()) write(*,*) NameSub,' ERROR: Invalid command ',&
-               trim(NameCommand),' at line',iLine,' in PARAM.in'
+               trim(NameCommand),' at line', iLine,' in PARAM.in'
           if(UseStrict)then
              iErrorSwmf = 30
              RETURN
@@ -716,7 +720,7 @@ contains
        end if
     end do
     ! reset ModReadParam to read the CON parameters
-    call read_init('  ',iSession,iLine)
+    call read_init('  ', iSession, iLine)
 
     ! Checks for UseEndTime=.true.
     if(UseEndTime)then
@@ -759,7 +763,7 @@ contains
     ! Initialize timing for CON
     if(is_proc0() .or. UseTimingAll)then
        call timing_active(UseTiming)
-       call timing_comp_proc('  ',i_proc())
+       call timing_comp_proc('  ', i_proc())
     end if
     ! Initialize timing for components
     do lComp=1,n_comp()
