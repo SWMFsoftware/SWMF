@@ -316,8 +316,8 @@ contains
           call read_var('lVerbose', lVerbose)
 
        case("#TESTINFO")
-          call read_var('DoWriteCallSequence', DoWriteCallSequence)          
-          
+          call read_var('DoWriteCallSequence', DoWriteCallSequence)
+
        case("#TEST")
 
           call read_var('StringTest', StringTest)
