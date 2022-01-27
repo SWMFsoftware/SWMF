@@ -276,15 +276,15 @@ run directory.
 </command>
 
 <command name="CHECKTIMESTEP">
-	 <parameter name="DoCheckTimeStep" type="logical" default="T"/>
-	 <parameter name="DnCheckTimeStep" type="integer" minimum="2"
-	 	    default="10"/>
-	 <parameter name="TimeStepMin" type="real" minimum="-1"
-	 	    default="-1"/>
+  <parameter name="DoCheckTimeStep" type="logical" default="T"/>
+  <if expr="$DoCheckTimeStep">
+    <parameter name="DnCheckTimeStep" type="integer" minimum="2" default="10"/>
+    <parameter name="TimeStepMin" type="real" minimum="-1" default="-1"/>
+  </if>
 
 #CHECKTIMESTEP
-T		DoCheckTimeStep
-10		DnCheckTimeStep (2 or more)
+T		DoCheckTimeStep (rest is read if true)
+10		DnCheckTimeStep (2 or more)  
 -1.0		TimeStepMin [s] (negative value means SessionTime/10,000,000)
 
 This command is only effective in time accurate mode. The goal is to

@@ -344,8 +344,10 @@ contains
        case("#CHECKTIMESTEP")
 
           call read_var('DoCheckTimeStep', DoCheckTimeStep)
-          call read_var('DnCheckTimeStep', DnCheckTimeStep)
-          call read_var('TimeStepMin'   ,  TimeStepMin)
+          if(DoCheckTimeStep)then
+             call read_var('DnCheckTimeStep', DnCheckTimeStep)
+             call read_var('TimeStepMin'   ,  TimeStepMin)
+          end if
 
        case("#CHECKSTOPFILE")
 
