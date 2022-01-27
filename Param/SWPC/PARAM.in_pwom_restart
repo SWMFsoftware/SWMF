@@ -330,10 +330,10 @@ F			IsVerboseSE
 
 #SETPRECIP
 F			UseFixedPrecip
-100.0			PrecipEnergyMin[eV]
-1000.0			PreciptEnergyMax[eV]
-400.0			PrecipEnergyMean[eV]
-2.0			PrecipEnergyFlux[ergs/cm2/s]
+100.0			PrecipEnergyMin [eV]
+1000.0			PrecipEnergyMax [eV]
+400.0			PrecipEnergyMean [eV]
+2.0			PrecipEnergyFlux [ergs/cm2/s]
 
 #SAVEPLOT
 1 min			DtSavePlot
