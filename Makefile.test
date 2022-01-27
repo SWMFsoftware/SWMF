@@ -75,7 +75,6 @@ test_gpu:
 	-@(${MAKE} test_swpc_gpu TESTDIR=run_test_swpc_gpu)
 	-@(cd GM/BATSRUS; ${MAKE} test_gpu)
 	-@(${MAKE} test_check)
-	share/Scripts/test_speed.pl . >> test_swmf.res
 
 .NOTPARALLEL: test_swmf
 
@@ -137,7 +136,7 @@ test_check:
 	@echo ' '
 	@echo '=============================================================='\
 		>> test_swmf.res
-	-@cat GM/BATSRUS/test_func.speed >> test_swmf.res
+	share/Scripts/test_speed.pl . >> test_swmf.res
 
 ### Unit tests of the share/Library ###
 
