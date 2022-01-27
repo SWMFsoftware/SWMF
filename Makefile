@@ -371,7 +371,10 @@ rundir: ENV_CHECK
 	cp share/Scripts/PostProc.pl  ${RUNDIR}/PostProc.pl
 	touch ${RUNDIR}/core
 	chmod 444 ${RUNDIR}/core
-	cd ${RUNDIR}; ln -s  ${DIR}/bin/SWMF.exe . ; ln -s  ${DIR}/Param .
+	cd ${RUNDIR}; \
+		ln -s ${DIR}/bin/SWMF.exe . ; \
+		ln -s ${DIR}/Param . ; \
+		ln -s ${DIR} SWMFDIR
 	@for i in `ls -d [A-Z][A-Z]`; do \
 		make rundircomp COMPDIR=$${i}DIR; \
 	done
