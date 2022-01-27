@@ -1,0 +1,79 @@
+Name First Last Stride
+======================
+#COMPONENTMAP
+PW 0 -1 1		CompMap
+
+#TEST
+get_HPI			StringTest
+
+#DESCRIPTION
+PW steady state run.		StringDescription
+
+#TIMEACCURATE
+T			IsTimeAccurate
+
+#STARTTIME
+2000			iYear
+01			iMonth
+01			iDay
+00			iHour
+00			iMinute
+00			iSecond
+0.0			FracSecond
+
+#IDEALAXES
+
+#SAVERESTART
+T			DoSaveRestart
+-1			DnSaveRestart
+3600			DtSaveRestart
+
+#BEGIN_COMP PW ---------------------------------------------------------------
+
+#ROTATION
+F			UseCentrifugal
+
+#FIELDLINE
+252			nTotalLine
+
+#SCHEME
+Godunov			TypeSolver
+Godunov			TypeFlux
+0.005			DtVertical
+F			IsFullyImplicit
+F			IsPointImplicit
+F			IsPointImplicitAll
+
+#SAVEPLOT
+1 hour			DtSavePlot
+-1			DnSavePlot
+T			DoSaveFirst
+
+#TYPEPLOT
+real8			TypePlot
+
+#MOTION
+F			DoMoveLine
+
+#AURORA
+T			UseAurora
+
+#NGDC_INDICES
+ApIndex.dat		NameApIndexFile
+f107.txt		NameF107File
+
+#NOAAHPI_INDICES
+power.txt		NameHpiFile
+
+#MHD_INDICES
+imf_pwss.dat		NameUpstreamFile
+
+#SAVEPLOTELECTRODYNAMICS
+T			DoPlotElectrodynamics
+3600.0			DtPlotElectrodynamics
+
+#END_COMP PW -----------------------------------------------------------------
+
+#STOP
+-1			MaxIter
+24 hour			TimeMax
