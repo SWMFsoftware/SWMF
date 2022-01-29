@@ -253,8 +253,8 @@ The default value is nStep=0.
 	<set name="_STOP" type="logical" value="1"/>
 
 #STOP
-100			MaxIteration
-10.0                    tSimulationMax [sec]
+100			MaxIter
+1.5 hour                TimeMax
 
 The MaxIteration variable contains the
 maximum number of iterations {\it since the beginning of the current run}
@@ -276,15 +276,15 @@ run directory.
 </command>
 
 <command name="CHECKTIMESTEP">
-	 <parameter name="DoCheckTimeStep" type="logical" default="T"/>
-	 <parameter name="DnCheckTimeStep" type="integer" minimum="2"
-	 	    default="10"/>
-	 <parameter name="TimeStepMin" type="real" minimum="-1"
-	 	    default="-1"/>
+  <parameter name="DoCheckTimeStep" type="logical" default="T"/>
+  <if expr="$DoCheckTimeStep">
+    <parameter name="DnCheckTimeStep" type="integer" minimum="2" default="10"/>
+    <parameter name="TimeStepMin" type="real" minimum="-1" default="-1"/>
+  </if>
 
 #CHECKTIMESTEP
-T		DoCheckTimeStep
-10		DnCheckTimeStep (2 or more)
+T		DoCheckTimeStep (rest is read if true)
+10		DnCheckTimeStep (2 or more)  
 -1.0		TimeStepMin [s] (negative value means SessionTime/10,000,000)
 
 This command is only effective in time accurate mode. The goal is to
@@ -415,11 +415,26 @@ in the #CHECKSTOP command.
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!  TESTING AND TIMING !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+<command name="TESTINFO">
+  <parameter name="DoWriteCallSequence" type="logical" default="F"/>
+
+#TESTINFO
+T		DoWriteCallSequence
+
+If DoWriteCallSequence is set to true, the code will attempt to produce
+a call sequence from the CON_stop subroutine (which is called when the
+code finds an error) by making an intentional floating point exception.
+This will work only if the compiler is able to and requested to produce a
+call sequence. The NAGFOR compiler combined with the -debug flag can do that.
+
+Default is DoWriteCallSequence=F.
+</command>
+
 <command name="TEST">
-	<parameter name="StringTest" type="string" length="200"/>
+  <parameter name="StringTest" type="string" length="200"/>
 
 #TEST
-CON_session::do_session		StringTest
+do_session			StringTest
 
 A space separated list of subroutine and function names to be tested. 
 Only subroutines containing the 'call CON_set_do_test(...)' statement
@@ -429,7 +444,7 @@ Default is an empty string.
 </command>
 
 <command name="TESTPROC">
-	<parameter name="iProcTest" type="integer" min="0" default="0"/>
+  <parameter name="iProcTest" type="integer" min="0" default="0"/>
 
 #TESTPROC
 1			iProcTest
@@ -439,12 +454,12 @@ in the SWMF. Default value is 0.
 </command>
 
 <command name="VERBOSE">
-	<parameter name="lVerbose" type="integer" input="select">
-		<option name="errors and warnings only" value="0" />
-		<option name="normal"                   value="1" default="T"/>
-		<option name="calls on test processor"  value="10" />
-		<option name="calls on all processors"  value="100" />
-        </parameter>
+  <parameter name="lVerbose" type="integer" input="select">
+    <option name="errors and warnings only" value="0" />
+    <option name="normal"                   value="1" default="T"/>
+    <option name="calls on test processor"  value="10" />
+    <option name="calls on all processors"  value="100" />
+  </parameter>
 
 #VERBOSE
 100			lVerbose
@@ -619,16 +634,16 @@ Components which are not used in a session can be switched off.
 
 ID Proc0 ProcEnd Stride nThread TAB SEPARATED comment
 #COMPONENTMAP
-IE    0      0    1         ! IE runs on PE 0
-PW    1     32    4    4    ! PW runs on PEs 1..32 with  4 threads
-GM   33     -1   16   16    ! GM runs on PEs 33... with 16 threads
+IE  0  0  1           CompMap IE runs on PE 0
+PW  1 32  4  4        CompMap PW runs on PEs 1..32 with  4 threads
+GM 33 -1 16 16        CompMap GM runs on PEs 33... with 16 threads
 
 ID Proc0 ProcEnd Stride nThread  TAB SEPARATED comment
 #LAYOUT
-GM    0     -3   -2   -2    ! GM runs on PEs ..nProc-3 with MaxThread/2 threads
-PC    0     -3   -1   -1    ! PC runs on PEs ..nProc-3 with MaxThread threads
-IM   -2     -2    1         ! IM runs on PE  nProc-2
-IE   -2     -1    1         ! IE runs on PEs nProc-2 and nProc-1
+GM  0 -3 -2 -2        CompMap GM runs on PEs ..nProc-3 with MaxThread/2 threads
+PC  0 -3 -1 -1        CompMap PC runs on PEs ..nProc-3 with MaxThread threads
+IM -2 -2  1           CompMap IM runs on PE  nProc-2
+IE -2 -1  1           CompMap IE runs on PEs nProc-2 and nProc-1
 
 The #COMPONENTMAP (or #LAYOUT) command lists the active components and
 their processor layout including the number of OpenMP threads for
