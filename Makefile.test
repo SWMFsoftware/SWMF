@@ -57,7 +57,7 @@ test_help:
 	@(if [ -d PC/FLEKS   ]; then echo "    test18                     (run GM-PC/FLEKS test: 3D reconnection)"; fi)
 	@echo "    test_check                 (collect test results into test_swmf.res)"
 
-.NOTPARALLEL: test
+.NOTPARALLEL:
 
 test:
 	@rm -f *.diff
@@ -68,15 +68,11 @@ test:
 	-@(if [ -d BATL ]; then ${MAKE} test_batl; fi)
 	-@(${MAKE} test_check)
 
-.NOTPARALLEL: test_gpu
-
 test_gpu:
 	@rm -f *.diff
 	-@(${MAKE} test_swpc_gpu TESTDIR=run_test_swpc_gpu)
 	-@(cd GM/BATSRUS; ${MAKE} test_gpu)
 	-@(${MAKE} test_check)
-
-.NOTPARALLEL: test_swmf
 
 test_swmf:
 	-@(if [ -d PS/DGCPM   ]; then ${MAKE} test_ps TESTDIR=run_test_ps; fi)
@@ -2144,8 +2140,6 @@ test_ramscb_check:
 
 ######## test PC/AMPS coupled with GM/BATSRUS #########
 
-.NOTPARALLEL: test12
-
 test12:
 	-@(if [ -d PC/AMPS ]; then $(MAKE) test12_aniso_AMPS TESTDIR=run_test12_aniso_AMPS; fi)
 	-@(if [ -d PC/AMPS ]; then $(MAKE) test12_aniso_AMPS_divE_corr TESTDIR=run_test12_aniso_AMPS_divE_corr; fi)
@@ -2345,8 +2339,6 @@ test12_aniso_AMPS_dynamic_check:
 	ls -l test12_aniso_AMPS_dynamic_gmpc.diff
 
 ### test12_ipic3d: test PC/IPIC3D2 coupled with GM/BATSRUS ###
-
-.NOTPARALLEL: test12_ipic3d
 
 test12_ipic3d:
 	-@(if [ -d PC/IPIC3D2 ]; then $(MAKE) test12_aniso TESTDIR=run_test12_aniso; fi)
