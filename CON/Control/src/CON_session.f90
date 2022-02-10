@@ -21,8 +21,7 @@ module CON_session
        nStep, nIteration, MaxIteration, DnRun_C, tSimulation, tSimulationMax, &
        CheckStop, DoCheckStopFile, CpuTimeSetup, CpuTimeStart, CpuTimeMax, &
        IsForcedStop, NameCompCheckKill, DoCheckTimeStep, DnCheckTimeStep, &
-       nIterationCheck, tSimulationCheck, TimeStepMin, &
-       UseEndTime, save_end_time
+       nIterationCheck, tSimulationCheck, TimeStepMin, UseEndTime
   use ModFreq, ONLY: is_time_to
   use ModUtilities, ONLY: CON_stop, CON_set_do_test
   use ModMpi, ONLY: MPI_WTIME, MPI_LOGICAL
@@ -503,11 +502,12 @@ contains
        ! Print progress report at given frequency
        call show_progress
 
-       ! Save restart files when scheduled
-       if(is_time_to(SaveRestart, nStep, tSimulation+DtTiny, DoTimeAccurate))&
+       ! Save restart files when scheduled except for the final save
+       ! with UseEndTime which overwrites tSimulation.
+       if(is_time_to(SaveRestart, nStep, tSimulation+DtTiny, DoTimeAccurate) &
+            .and. &
+            .not. (UseEndTime .and. tSimulation + DtTiny >= tSimulationMax)) &
             then
-          if(UseEndTime .and. tSimulation + DtTiny >= tSimulationMax) &
-               call save_end_time
           call save_restart
           IsRestartSaved = .true.
        endif
