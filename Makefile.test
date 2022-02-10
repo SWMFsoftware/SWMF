@@ -30,6 +30,7 @@ test_help:
 	@(if [ -d IM/RCM2    ]; then echo "    test_swpc                  (run GM-IE-RCM2 test as used by SWPC)"; fi)
 	@(if [ -d IM/RCM2    ]; then echo "    test_swpc_build            (create SWPC_build and run test_swpc)"; fi)
 	@(if [ -d IM/RCM2    ]; then echo "    test_swpc_gpu              (run GM-IE-RCM2 test on GPU)"; fi)
+	@(if [ -d IM/RCM2    ]; then echo "    test_swpc_large_gpu        (run large GM-IE-RCM2 test on GPU)"; fi)
 	@(if [ -d IM/RCM2    ]; then echo "    test_swpc_multiion         (run multiion GM-IE-RCM2 SWPC test)"; fi)
 	@(if [ -d IM/RCM2    ]; then echo "    test_swpc_multispecies     (run multispecies GM-IE-RCM2 SWPC test)"; fi)
 	@(if [ -d IM/CIMI2   ]; then echo "    test_swpc_cimi             (run anisotropic GM-IE-CIMI2 SWPC test)"; fi)
@@ -71,6 +72,7 @@ test:
 test_gpu:
 	@rm -f *.diff
 	-@(${MAKE} test_swpc_gpu TESTDIR=run_test_swpc_gpu)
+	-@(${MAKE} test_swpc_large_gpu TESTDIR=run_test_swpc_large_gpu)
 	-@(cd GM/BATSRUS; ${MAKE} test_gpu)
 	-@(${MAKE} test_check)
 
@@ -636,6 +638,70 @@ test_swpc_gpu_check:
 		Param/SWPC/TestOutputGPU/it140410_000300_000.idl.gz \
 		>> test_swpc_gpu_ie.diff)
 	ls -l test_swpc_gpu_??.diff
+
+
+### test_swpc_large_gpu: GM+IE+IM and GM runs on GPU for performance check ###
+
+test_swpc_large_gpu:
+	@echo "test_swpc_large_gpu_compile..." > test_swpc_large_gpu_gm.diff
+	@echo "test_swpc_large_gpu_compile..." > test_swpc_large_gpu_ie.diff
+	${MAKE} test_swpc_large_gpu_compile
+	@echo "test_swpc_large_gpu_rundir..." >> test_swpc_large_gpu_gm.diff
+	@echo "test_swpc_large_gpu_rundir..." >> test_swpc_large_gpu_ie.diff
+	${MAKE} test_swpc_large_gpu_rundir
+	@echo "test_swpc_large_gpu_run..." >> test_swpc_large_gpu_gm.diff
+	@echo "test_swpc_large_gpu_run..." >> test_swpc_large_gpu_ie.diff
+	${MAKE} test_swpc_large_gpu_run NP=2
+	@echo "test_swpc_large_gpu_check..." >> test_swpc_large_gpu_gm.diff
+	@echo "test_swpc_large_gpu_check..." >> test_swpc_large_gpu_ie.diff
+	${MAKE} test_swpc_large_gpu_check
+
+test_swpc_large_gpu_compile:
+	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2
+	./Config.pl -o=GM:u=Default,e=Mhd,ng=2,g=8,8,8,opt=none,IE:g=91,181
+	./Config.pl -acc
+	${MAKE} SWMF
+	make PIDL
+
+test_swpc_large_gpu_rundir:
+	rm -rf ${TESTDIR}
+	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
+	cp Param/SWPC/PARAM.in_SWPC_large_gpu Param/SWPC/SATELLITES.in Param/SWPC/*.dat ${TESTDIR}/
+	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in_SWPC_large_gpu
+	perl -pi -e 'if(/MaxIter|MaxBlock/){s/700/70/; s/1500/200/}' \
+	     ${TESTDIR}/PARAM.in_SWPC_large_gpu
+	cp ${TESTDIR}/PARAM.in_SWPC_large_gpu ${TESTDIR}/PARAM.in
+
+test_swpc_large_gpu_run:
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe | tee runlog
+	cd ${TESTDIR}; ./PostProc.pl -noptec
+
+test_swpc_large_gpu_check:
+	-@(${DIFFNUM} -b -r=1e-5 -a=2e-8 \
+		${TESTDIR}/GM/IO2/log_e20140410-000000.log \
+		Param/SWPC/TestOutputLargeGPU/log_e20140410-000000.log \
+		> test_swpc_large_gpu_gm.diff)
+	-@(${DIFFNUM} -b -r=2e-4 -a=1e-5 \
+		${TESTDIR}/GM/IO2/magnetometers_e20140410-000000.mag \
+		Param/SWPC/TestOutputLargeGPU/magnetometers_e20140410-000000.mag \
+		>> test_swpc_large_gpu_gm.diff)
+	-@(${DIFFNUM} -b -r=2e-4 -a=1e-4 \
+		${TESTDIR}/GM/IO2/mag_grid_e20140410-000000.out \
+		Param/SWPC/TestOutputLargeGPU/mag_grid_e20140410-000000.out.gz \
+		>> test_swpc_large_gpu_gm.diff)
+	-@(${DIFFNUM} -b -r=1e-5 -a=1e-8 \
+		${TESTDIR}/GM/IO2/geoindex_e20140410-000000.log \
+		Param/SWPC/TestOutputLargeGPU/geoindex_e20140410-000000.log \
+		>> test_swpc_large_gpu_gm.diff)
+	-@(${DIFFNUM} -b -r=1e-5 \
+		${TESTDIR}/IE/ionosphere/IE_t140410_000000.log \
+		Param/SWPC/TestOutputLargeGPU/IE_t140410_000000.log \
+		> test_swpc_large_gpu_ie.diff)
+	-@(${DIFFNUM} -b -r=1e-4 -a=6e-5 \
+		${TESTDIR}/IE/ionosphere/it140410_000100_000.idl \
+		Param/SWPC/TestOutputLargeGPU/it140410_000100_000.idl.gz \
+		>> test_swpc_large_gpu_ie.diff)
+	ls -l test_swpc_large_gpu_??.diff
 
 ### test_swpc_multiion: GM+IE+IM with multiion MHD ###
 

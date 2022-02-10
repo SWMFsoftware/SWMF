@@ -167,7 +167,8 @@ sub get_layout{
 	if(/^\#(COMPONENTMAP|LAYOUT)/){$start=1; next}
 
 	next unless $start; # Skip lines before #COMPONENTMAP
-	last if /^\#END/ or /^$/;   # Ignore lines after #END or empty line
+
+	last if (/^\#END/ or /^\s*$/);   # Ignore lines after #END or empty line
 
 	# extract layout information from one line in the component map
 	/^([A-Z][A-Z])\s+(\-?\d+)\s+(\-?\d+)\s+(\-?\d+)\s*(\-?\d*)/ or

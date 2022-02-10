@@ -2,7 +2,7 @@ Name Root Last Stride nThread
 #COMPONENTMAP
 GM  0 -2 1		CompMap root PE+GPU or 0..last-1 PEs
 IE -1 -1 1  		CompMap last PE
-IM -1 -1 1		CompMap last PE 
+IM -1 -1 1		CompMap last PE
 
 #TIMING
 T			UseTiming
@@ -11,7 +11,7 @@ T			UseTiming
 cumu			TypeTimingReport
 
 #DESCRIPTION
-Param/SWPC/PARAM.in_SWPC_gpu_restart: start Geospace on GPU		StringDescription
+Param/SWPC/PARAM.in_SWPC_large_gpu: run Geospace on GPU		StringDescription
 
 #TIMEACCURATE
 F			IsTimeAccurate
@@ -391,7 +391,7 @@ aur idl			StringPlot
 04			iMonth
 10			iDay
 00			iHour
-03			iMinute
+01			iMinute
 00			iSecond
 0.0			FracSecond
 
