@@ -346,11 +346,6 @@ F			DoCoupleOnTime
 
 #BEGIN_COMP GM ---------------------------------------------------------------
 
-#CHECKTIMESTEP
-T			DoCheckTimeStep
-2			DnCheckTimeStep
-1e-6			TimeStepMin
-
 ! Setting 1
 #IMCOUPLING
 20.0			TauCoupleIm
