@@ -7,7 +7,7 @@ module CON_time
   ! This module contains the time related variables of SWMF such
   ! as current and maximum time step and simulation time, or maximum
   ! CPU time allowed, etc.
-  
+
   use ModKind, ONLY: Real8_
   use ModFreq                 !!, ONLY: FreqType
   use ModTimeConvert          !!, ONLY: time_int_to_real, TimeType
