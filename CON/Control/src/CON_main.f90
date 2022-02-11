@@ -194,7 +194,13 @@ contains
     if (DnTiming > -2) call timing_report
 
     if(SaveRestart % DoThis .and. .not. IsRestartSaved)then
-       if(UseEndTime)call save_end_time
+       if(UseEndTime)then
+          ! Set TimeStart to TimeEnd and set simulation time to zero
+          ! Also set nStep to zero. These will be saved into RESTART.out
+          TimeStart   = TimeEnd
+          tSimulation = 0
+          nStep       = 0
+       end if
        if(is_proc(CON_)) call save_restart
     end if
     do lComp = 1,n_comp()

@@ -271,9 +271,6 @@ mc3			TypeLimiter
 #TIMEACCURATE
 T			IsTimeAccurate
 
-#CHECKTIMESTEP
-F			DoCheckTimeStep
-
 #PROGRESS
 100			DnProgressShort
 1000			DnProgressLong

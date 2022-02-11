@@ -302,11 +302,6 @@ F			DoCoupleOnTime
 
 #BEGIN_COMP GM ---------------------------------------------------------------
 
-#CHECKTIMESTEP
-T			DoCheckTimeStep
-2			DnCheckTimeStep
-1e-6			TimeStepMin
-
 #NONCONSERVATIVE
 T			UseNonConservative
 

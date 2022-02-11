@@ -587,7 +587,8 @@ test_swpc_gpu:
 
 test_swpc_gpu_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2
-	./Config.pl -o=GM:u=Default,e=Mhd,ng=2,g=8,8,8,opt=none,IE:g=91,181
+	./Config.pl -o=GM:u=Default,e=Mhd,ng=2,g=8,8,8,IE:g=91,181
+	./Config.pl -o=GM:opt=../../Param/SWPC/PARAM.in_SWPC_gpu_init
 	./Config.pl -acc
 	${MAKE} SWMF
 	make PIDL
@@ -658,7 +659,8 @@ test_swpc_large_gpu:
 
 test_swpc_large_gpu_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2
-	./Config.pl -o=GM:u=Default,e=Mhd,ng=2,g=8,8,8,opt=none,IE:g=91,181
+	./Config.pl -o=GM:u=Default,e=Mhd,ng=2,g=8,8,8,IE:g=91,181
+	./Config.pl -o=GM:opt=../../Param/SWPC/PARAM.in_SWPC_large_gpu
 	./Config.pl -acc
 	${MAKE} SWMF
 	make PIDL

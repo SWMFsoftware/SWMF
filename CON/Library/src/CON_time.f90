@@ -1,16 +1,12 @@
 !  Copyright (C) 2002 Regents of the University of Michigan,
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!
-!
-!
-!
-!
-! This module contains the time related variables of SWMF such
-! as current and maximum time step and simulation time, or maximum
-! CPU time allowed, etc.
 
 module CON_time
+
+  ! This module contains the time related variables of SWMF such
+  ! as current and maximum time step and simulation time, or maximum
+  ! CPU time allowed, etc.
 
   use ModKind, ONLY: Real8_
   use ModFreq                 !!, ONLY: FreqType
@@ -97,7 +93,6 @@ module CON_time
 
 contains
   !============================================================================
-
   subroutine init_time
 
     character(len=*), parameter:: NameSub = 'init_time'
@@ -124,7 +119,6 @@ contains
 
   end subroutine init_time
   !============================================================================
-
   subroutine get_time(&
        DoTimeAccurateOut, tSimulationOut, TimeStartOut, TimeCurrentOut, &
        TimeEndOut, tStartOut, tCurrentOut, nStepOut)
@@ -153,19 +147,5 @@ contains
 
   end subroutine get_time
   !============================================================================
-  subroutine save_end_time
-
-    ! Set TimeStart to TimeEnd and set simulation time to zero
-    ! Also set nStep to zero. These will be saved into RESTART.out
-
-    !--------------------------------------------------------------------------
-
-    TimeStart = TimeEnd
-    tSimulation = 0
-    nStep       = 0
-
-  end subroutine save_end_time
-  !============================================================================
-
 end module CON_time
 !==============================================================================

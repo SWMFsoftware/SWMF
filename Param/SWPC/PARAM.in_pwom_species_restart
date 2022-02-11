@@ -20,12 +20,6 @@ Param/SWPC/PARAM.in_pwom_species_restart: restart multispecies Geospace with PWO
 #TIMEACCURATE
 T			IsTimeAccurate
 
-! For some reason this is needed. To be debugged why.
-#CHECKTIMESTEP
-F			DoCheckTimeStep
--1			DnCheckTimeStep
--1.0			TimeStepMin
-
 #PROGRESS
 100			DnProgressShort
 1000			DnProgressLong
