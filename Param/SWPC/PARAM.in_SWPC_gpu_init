@@ -255,7 +255,7 @@ mc3			TypeLimiter
 #END_COMP GM -----------------------------------------------------------------
 
 #STOP
-1500			MaxIter
+10000			MaxIter
 -1.			TimeMax
 
 #RUN ##########################################################################
@@ -270,9 +270,9 @@ T			IsTimeAccurate
 #SAVERESTART
 T			DoSaveRestart
 -1			DnSaveRestart
-1 min			DtSaveRestart
+1 hour			DtSaveRestart
 
-#RESTARTOUTDIR
+RESTARTOUTDIR
 SWMF_RESTART.YYYYMMDD_HHMMSS		NameRestartOutDir
 
 #CHECKKILL
@@ -283,8 +283,8 @@ T			DoCheckStop
 -1			DnCheckStop
 1 min			DtCheckStop
 
-CPUTIMEMAX
-47.5 hour		CpuTimeMax [sec]
+#CPUTIMEMAX
+23.5 hour		CpuTimeMax [sec]
 
 #COMPONENT
 IM			NameComp
@@ -369,7 +369,7 @@ z=0 MHD idl		StringPlot
 
 #BORIS
 T			UseBorisCorrection
-0.01			BorisClightFactor
+0.015			BorisClightFactor
 
 #TIMESTEPPING
 1			nStage
