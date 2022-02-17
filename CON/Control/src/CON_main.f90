@@ -194,7 +194,7 @@ contains
     if (DnTiming > -2) call timing_report
 
     if(SaveRestart % DoThis .and. .not. IsRestartSaved)then
-       if(UseEndTime)then
+       if(UseEndTime .and. .not. IsForcedStop)then
           ! Set TimeStart to TimeEnd and set simulation time to zero
           ! Also set nStep to zero. These will be saved into RESTART.out
           TimeStart   = TimeEnd

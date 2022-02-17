@@ -598,13 +598,13 @@ test_swpc_gpu_rundir:
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/SWPC/PARAM.in_*gpu* Param/SWPC/SATELLITES.in Param/SWPC/*.dat ${TESTDIR}/
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in_SWPC_gpu_init
-	perl -pi -e 'if(/MaxIter|MaxBlock|Resolution/){s/700/70/; s/1500/200/; s/5000/350/; s/0\.125/2.0/}; s/#BORIS/BORIS/;' \
+	perl -pi -e 'if(/MaxIter|MaxBlock|Resolution/){s/700/70/; s/10000/200/; s/5000/350/; s/0\.125/2.0/}; s/#BORIS/BORIS/;' \
 	     ${TESTDIR}/PARAM.in_SWPC_gpu_init
 	cp ${TESTDIR}/PARAM.in_SWPC_gpu_init ${TESTDIR}/PARAM.in
 
 test_swpc_gpu_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe | tee runlog
-	cd ${TESTDIR}; ./Restart.pl -i SWMF_RESTART.20140410_000200
+	cd ${TESTDIR}; ./Restart.pl
 
 test_swpc_gpu_restart:
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in_SWPC_gpu_restart
