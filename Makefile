@@ -367,8 +367,7 @@ ${RUNDIR}:
 rundir: ENV_CHECK
 	mkdir -p ${RUNDIR}/STDOUT
 	@echo "Copy a working PARAM.in file here" > ${RUNDIR}/PARAM.in
-	cp share/Scripts/Restart.pl   ${RUNDIR}/Restart.pl
-	cp share/Scripts/PostProc.pl  ${RUNDIR}/PostProc.pl
+	cp share/Scripts/Restart.pl share/Scripts/PostProc.pl share/Scripts/Resubmit.pl ${RUNDIR}/
 	touch ${RUNDIR}/core
 	chmod 444 ${RUNDIR}/core
 	cd ${RUNDIR}; \
