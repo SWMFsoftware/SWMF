@@ -603,14 +603,14 @@ test_swpc_gpu_rundir:
 	cp ${TESTDIR}/PARAM.in_SWPC_gpu_init ${TESTDIR}/PARAM.in
 
 test_swpc_gpu_run:
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe | tee runlog
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
 	cd ${TESTDIR}; ./Restart.pl
 
 test_swpc_gpu_restart:
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in_SWPC_gpu_restart
 	perl -pi -e 's/#BORIS/BORIS/' ${TESTDIR}/PARAM.in_SWPC_gpu_restart
 	cd ${TESTDIR}; cp PARAM.in_SWPC_gpu_restart PARAM.in
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe | tee runlog_restart
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_restart
 	cd ${TESTDIR}; ./PostProc.pl -noptec
 
 test_swpc_gpu_check:
@@ -675,7 +675,7 @@ test_swpc_large_gpu_rundir:
 	cp ${TESTDIR}/PARAM.in_SWPC_large_gpu ${TESTDIR}/PARAM.in
 
 test_swpc_large_gpu_run:
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe | tee runlog
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl -noptec
 
 test_swpc_large_gpu_check:
