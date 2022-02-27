@@ -56,7 +56,7 @@ the results per year, month and day.
       <td><b>nagfor debug</b></td>
       <td>iMac with quad-core Intel i7</td>
       <td>nagfor,gcc_mpicc</td>
-      <td>NAGFOR v6.2(6210) with gcc 9.3<br>-debug -O0</td>
+      <td>NAGFOR v6.2(6210) with gcc 9.3<br>-debug -O2</td>
       <td>mpich-3.2.1</td>
       <td>NP=4, NTHREAD=1</td>
       <td></td>
@@ -82,20 +82,29 @@ the results per year, month and day.
   <tr>
       <td><b>nvidia pleiades</b></td>
       <td>Skylake CPU, V100 GPU</td>
-      <td>nvfortran,nvc</td>
+      <td>nvfortran,nvc,-acc</td>
       <td>purge, use -a /nasa/nvidia/hpc_sdk/modulefiles<br>-O1</td>
       <td>nvhpc/20.9</td>
-      <td>NP=8, NTHREAD=1, OpenACC</td>
+      <td>NP=8, NTHREAD=1</td>
       <td><font color=RED>MPICC_CC=nvc, MPICXX_CXX=nvc++</font></td>
   </tr>
   <tr>
-      <td><b>MSTEM-QUDA</b></td>
+      <td><b>MSTEM gfortran</b></td>
       <td>SGI ICE</td>
       <td>gfortran,gcc_mpicc</td>
       <td>gcc/9.3</td>
       <td>mpi-hpe/mpt</td>
       <td>NP=8, NTHREAD=2</td>
       <td></td>
+  </tr>
+  <tr>
+      <td><b>MSTEM ifort</b></td>
+      <td>SGI ICE</td>
+      <td>ifortmpif90,iccmpicxx</td>
+      <td>comp-intel, gcc/9.3</td>
+      <td>mpi-hpe/mpt</td>
+      <td>NP=7, NTHREAD=2</td>
+      <td><font color=RED>MPICC_CC=icc, MPICXX_CXX=icpc</font></td>
   </tr>
 </table>
 <hr>
