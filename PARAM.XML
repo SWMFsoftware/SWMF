@@ -1326,6 +1326,21 @@ but on some systems it may be very slow.
 The default is to flush the output, i.e. DoFlush=T.
 </command>
 
+<command name="MAKEDIR">
+	<parameter name="DoMakeDir" type="logical" default="T"/>
+
+#MAKEDIR
+F			DoMakeDir
+
+If the DoMakeDir variable is true, the code will make directories
+as needed. On some machines (Pleiades), however, this can fail,
+so it is better to create all directories in advance and not trying
+to do it from the code. This is, of course, incompatible with a 
+dynamic restart directory name in #RESTARTOUTDIR.
+
+The default is DoMakeDir=T.
+</command>
+
 <command name="STDOUT">
 	<parameter name="UseStdout" type="logical" default="T"/>
 

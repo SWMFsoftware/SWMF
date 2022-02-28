@@ -17,8 +17,8 @@ module CON_io
        dLongitudeHgi, dLongitudeHgiDeg, init_axes
   use ModReadParam
   use CON_variables
-  use ModUtilities, ONLY: DoFlush, flush_unit, fix_dir_name, make_dir, &
-       split_string, open_file, close_file
+  use ModUtilities, ONLY: DoFlush, flush_unit, fix_dir_name, &
+       DoMakeDir, make_dir, split_string, open_file, close_file
   use ModLookupTable, ONLY: read_lookup_table_param
 
   implicit none
@@ -179,6 +179,9 @@ contains
 
        case("#FLUSH")
           call read_var('DoFlush', DoFlush)
+
+       case("#MAKEDIR")
+          call read_var('DoMakeDir', DoMakeDir)
 
        case("#STDOUT")
 
