@@ -37,7 +37,6 @@ my %component;
 
 if($umichgitlab){
     %component = (
-	"FSAM"          => "CZ", 
 	"BATSRUS"       => "GM", 
 	"Ridley_serial" => "IE", 
 	"CIMI2"         => "IM", 
