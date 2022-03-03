@@ -9,35 +9,48 @@ push @INC, '.';
 
 my $SiteDir = `pwd`; chop($SiteDir);
 
-# Conditions for merging into stable branch
-my $MinScore = 600;  # minimum for total score: most tests ran
-my $MinRate  = 0.95; # minimum 95% success rate
-my $merge_stable =   # command to merge master into stable branch
-    'cd SWMF && share/Scripts/gitall "checkout stable && sleep 10; ' . 
-    'git pull --depth=100; git merge master && git push"';
-
 # weights for each platform to calculate skill scores
 my %WeightMachine = (
-    "pleiades"     => "1.0",  # ifort pleiades
+    "pleiades"     => "0.0",  # ifort pleiades
     "pgi"          => "1.0",  # nvfortran pleiades
     "mstemgcc"     => "0.0",  # mstem-quda+gcc pleiades
+    "mstemifort"   => "0.0",  # mstem-quda+ifort pleiades
     "gfortran"     => "1.0",  # gfortran optimized
     "grid"         => "1.0",  # nagfor debug
     "mesh"         => "1.0",  # nagfor optimized
     );
+
+# Conditions for merging into stable branch
+# minimum score (requires that most tests actually finished)
+my $MinScore =
+    10 *$WeightMachine{"pgi"}       + # GPU tests
+    150*($WeightMachine{"pleiades"} + # CPU tests
+	 $WeightMachine{"gfortran"} +
+	 $WeightMachine{"grid"}     +
+	 $WeightMachine{"mesh"}     );
+
+# Required successrate
+my $MinRate  = 0.95; 
+
+# command to merge master into stable branch
+my $merge_stable =   
+    'cd SWMF && share/Scripts/gitall "checkout stable && sleep 10; ' . 
+    'git pull --depth=100; git merge master && git push"';
 
 # Describe machine in the Html table
 my %HtmlMachine = (
     "pleiades"     => "ifort<br>pleiades",
     "pgi"          => "nvfortran<br>pleiades",
     "mstemgcc"     => "MSTEM-QUDA<br>gfortran pleiades",
+    "mstemifort"   => "MSTEM-QUDA<br>ifort pleiades",
     "gfortran"     => "gfortran<br>optimized",
     "grid"         => "nagfor<br>debug",
     "mesh"         => "nagfor<br>optimized",
     );
 
 # List of platforms in a logical order
-my @machines = ("gfortran", "grid", "mesh", "pleiades", "pgi", "mstemgcc");
+my @machines =
+    ("gfortran", "grid", "mesh", "pleiades", "pgi", "mstemgcc", "mstemifort");
 
 my $ERROR = "ERROR in process_tests.pl";
 
@@ -269,7 +282,7 @@ foreach $day (@days){
 		    $MaxScores += $WeightMachine;
 		    $Scores    += $WeightMachine*$score;
 
-		    if($machine =~ /mstemgcc/){
+		    if($machine =~ /mstem/){
 			$MaxScoreMstem += 1;
 			$ScoreMstem    += $score;
 		    }
