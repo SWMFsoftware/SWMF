@@ -513,7 +513,7 @@ test_swpc_compile:
 test_swpc_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
-	cp Param/SWPC/*.in* Param/SWPC/*.dat ${TESTDIR}/
+	cd Param/SWPC/; cp PARAM.in_SWPC_v2_init PARAM.in_SWPC_v2_restart *.in *.dat ../../${TESTDIR}/
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in_SWPC_v2_init
 	perl -pi -e 'if(/MaxIter|MaxBlock/){s/700/70/; s/1500/200/; s/5000/350/}; s/#BORIS/BORIS/; s/^\#(COMPONENTMAP.*production)/$$1/i; s/^(COMPONENTMAP.*nightly)/\#$$1/i' ${TESTDIR}/PARAM.in_SWPC_v2_init
 	cp ${TESTDIR}/PARAM.in_SWPC_v2_init ${TESTDIR}/PARAM.in
@@ -596,7 +596,7 @@ test_swpc_gpu_compile:
 test_swpc_gpu_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
-	cp Param/SWPC/PARAM.in_*gpu* Param/SWPC/SATELLITES.in Param/SWPC/*.dat ${TESTDIR}/
+	cd Param/SWPC; cp PARAM.in_*gpu* SATELLITES.in *.dat ../../${TESTDIR}/
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in_SWPC_gpu_init
 	perl -pi -e 'if(/MaxIter|MaxBlock|Resolution/){s/700/70/; s/10000/200/; s/5000/350/; s/0\.125/2.0/}; s/#BORIS/BORIS/;' \
 	     ${TESTDIR}/PARAM.in_SWPC_gpu_init
@@ -668,7 +668,7 @@ test_swpc_large_gpu_compile:
 test_swpc_large_gpu_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
-	cp Param/SWPC/PARAM.in_SWPC_large_gpu Param/SWPC/SATELLITES.in Param/SWPC/*.dat ${TESTDIR}/
+	cd Param/SWPC; cp PARAM.in_SWPC_large_gpu SATELLITES.in *.dat ../../${TESTDIR}/
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in_SWPC_large_gpu
 	perl -pi -e 'if(/MaxIter|MaxBlock/){s/700/70/; s/1500/200/}' \
 	     ${TESTDIR}/PARAM.in_SWPC_large_gpu
@@ -733,7 +733,7 @@ test_swpc_multiion_compile:
 test_swpc_multiion_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
-	cp Param/SWPC/*.in* Param/SWPC/*.dat ${TESTDIR}/
+	cd Param/SWPC/; cp PARAM.in_*multiion_v2* *.in *.dat ../../${TESTDIR}/
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in_multiion_v2_init
 	perl -pi -e 'if(/MaxIter|MaxBlock/){s/700/70/; s/1500/200/; s/5000/350/}; s/#BORIS/BORIS/' ${TESTDIR}/PARAM.in_multiion_v2_init
 	cp ${TESTDIR}/PARAM.in_multiion_v2_init ${TESTDIR}/PARAM.in
@@ -804,7 +804,7 @@ test_swpc_multispecies_compile:
 test_swpc_multispecies_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
-	cp Param/SWPC/*.in* Param/SWPC/*.dat ${TESTDIR}/
+	cd Param/SWPC/; cp PARAM.in_*multispecies_v2* *.in *.dat ../../${TESTDIR}/
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in_multispecies_v2_init
 	perl -pi -e 'if(/MaxIter|MaxBlock/){s/700/70/; s/1500/200/; s/5000/350/}; s/#BORIS/BORIS/' ${TESTDIR}/PARAM.in_multispecies_v2_init
 	cp ${TESTDIR}/PARAM.in_multispecies_v2_init ${TESTDIR}/PARAM.in
@@ -876,7 +876,7 @@ test_swpc_cimi_compile:
 test_swpc_cimi_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
-	cp Param/SWPC/*.in* Param/SWPC/*.dat ${TESTDIR}/
+	cd Param/SWPC/; cp PARAM.in_*cimi_v2* *.in *.dat ../../${TESTDIR}/
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in_cimi_v2_init
 	perl -pi -e 'if(/MaxIter|MaxBlock/){s/700/70/; s/1500/200/; s/5000/350/}; s/#BORIS/BORIS/; s/^\#(COMPONENTMAP.*production)/$$1/i; s/^(COMPONENTMAP.*nightly)/\#$$1/i' ${TESTDIR}/PARAM.in_cimi_v2_init
 	cp ${TESTDIR}/PARAM.in_cimi_v2_init ${TESTDIR}/PARAM.in
@@ -947,7 +947,7 @@ test_swpc_pwom_compile:
 test_swpc_pwom_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
-	cp Param/SWPC/*.in* Param/SWPC/*.dat ${TESTDIR}/
+	cd Param/SWPC/; cp PARAM.in_pwom_init PARAM.in_pwom_restart *.in *.dat ../../${TESTDIR}/
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in_pwom_init
 	perl -pi -e 'if(/MaxIter|MaxBlock|nTotalLine/){s/700/70/; s/1500/200/; s/5000/350/; s/252/4/;}; s/#BORIS/BORIS/; s/^\#(COMPONENTMAP.*production)/$$1/i; s/^(COMPONENTMAP.*nightly)/\#$$1/i' ${TESTDIR}/PARAM.in_pwom_init
 	cp ${TESTDIR}/PARAM.in_pwom_init ${TESTDIR}/PARAM.in
@@ -1028,7 +1028,7 @@ test_swpc_pwom_species_compile:
 test_swpc_pwom_species_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
-	cp Param/SWPC/*.in* Param/SWPC/*.dat ${TESTDIR}/
+	cd Param/SWPC/; cp PARAM.in_*pwom_species* *.in *.dat ../../${TESTDIR}/
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in_pwom_species_init
 	perl -pi -e 'if(/MaxIter|MaxBlock|nTotalLine/){s/700/70/; s/1500/200/; s/5000/350/; s/252/4/;}; s/#BORIS/BORIS/; s/^\#(COMPONENTMAP.*production)/$$1/i; s/^(COMPONENTMAP.*nightly)/\#$$1/i' ${TESTDIR}/PARAM.in_pwom_species_init
 	cp ${TESTDIR}/PARAM.in_pwom_species_init ${TESTDIR}/PARAM.in
@@ -1113,7 +1113,7 @@ test_swpc_amps_compile:
 test_swpc_amps_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
-	cp Param/SWPC/*.in* Param/SWPC/*.dat ${TESTDIR}/
+	cd Param/SWPC/; cp PARAM.in_*amps* *.in *.dat ../../${TESTDIR}/
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in_amps_init
 	perl -pi -e 'if(/MaxIter/){s/700/70/; s/1500/200/}; s/#BORIS/BORIS/' \
 	     ${TESTDIR}/PARAM.in_amps_init

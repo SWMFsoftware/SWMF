@@ -283,6 +283,10 @@ T			DoSaveRestart
 -1			DnSaveRestart
 1 min			DtSaveRestart
 
+! On Pleiades, switch on MAKEDIR and switch off RESTARTOUTDIR
+MAKEDIR
+F			DoMakeDir
+
 #RESTARTOUTDIR
 SWMF_RESTART.YYYYMMDD_HHMMSS		NameRestartOutDir
 
