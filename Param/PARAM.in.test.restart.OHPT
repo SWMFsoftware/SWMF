@@ -23,15 +23,6 @@ F  			IsTimeAccurate
 #RESTART
 T			isRestart
 
-#SAMPLING
-F			SamplingMode data sampling
-
-#SAMPLING_LENGTH
-2			SamplingLength
-
-#SAMPLING_OUTPUT_CADENCE
-9			SamplingOutputCadence
-
 #END_COMP PT -----------------------------------------------------------------
 
 #BEGIN_COMP OH ---------------------------------------------------------------
@@ -41,7 +32,6 @@ OH/restartIN/restart.H
 
 #GRAVITY
 F			UseGravity (rest of parameters read if true)
-0			iDirGravity(0 - central, 1 - X, 2 - Y, 3 - Z direction)
 
 MINIMUMDENSITY
 1e-7			RhoMin
@@ -49,101 +39,11 @@ MINIMUMDENSITY
 MINIMUMPRESSURE
 1e-20			pMin
 
-#BODY
-T			UseBody
-30.0			rBody (AU)
-0.01			BodyNDim [/cc] number density for ions
-1.09E5			BodyTDim [K] temperature for ions
-
 #PLOTFILENAME
 year			NameMaxTimeUnit
 
 #GRIDBLOCKALL
 3500			MaxBlock
-
-#GRIDLEVEL
-2			nLevel
-all			StringShape
-
-#GRIDLEVEL
-5			nLevel (usually 11)
-initial			StringShape
-
-#GRIDLEVEL
-11			nLevel
-shell0			StringShape
-30.0			RadiusInner
-30.2			Radius
-
-#GRIDRESOLUTION
-35.937			Resolution
-box			StringShape
-0.0			xMinBox
--600.			yMinBox
--600.			zMinBox
--600.			xMaxBox
-600.			yMaxBox
-600.			zMaxBox
-
-#GRIDRESOLUTION
-17.969			Resolution
-box			StringShape
--153.0			xMinBox
--340.0			yMinBox
--340.0			zMinBox
--600.0			xMaxBox
-340.0			yMaxBox
-340.0			zMaxBox
-
-#GRIDRESOLUTION
-8.984			Resolution
-box			StringShape
--109.0			xMinBox
--200.0			yMinBox
--200.0			zMinBox
--400.0			xMaxBox
-200.0			yMaxBox
-200.0			zMaxBox
-
-#GRIDRESOLUTION
-4.492			Resolution
-box			StringShape
--59.64			xMinBox
--136.0			yMinBox
--136.0			zMinBox
--272.0			xMaxBox
-136.0			yMaxBox
-136.0			zMaxBox
-
-#GRIDRESOLUTION
-3.0			Resolution
-box			StringShape
--71.31			xMinBox
--85.0			yMinBox
--85.0			zMinBox
--170.0			xMaxBox
-85.0			yMaxBox
-85.0			zMaxBox
-
-#GRIDRESOLUTION
-1.5			Resolution
-box			StringShape
--20.00			xMinBox
--42.0			yMinBox
--42.0			zMinBox
--68.0			xMaxBox
-42.0			yMaxBox
-42.0			zMaxBox
-
-#GRIDRESOLUTION
-0.7			Resolution
-box			StringShape
--5.0			xMinBox
--40.0			yMinBox
--40.0			zMinBox
--40.0			xMaxBox
-40.0			yMaxBox
-40.0			zMaxBox
 
 #INNERBOUNDARY
 user			TypeBcBody
@@ -170,9 +70,6 @@ Linde			TypeFlux
 
 #NONCONSERVATIVE
 T			UseNonConservative
-
-#CONSERVATIVECRITERIA
-0			nConservCrit
 
 #SAVERESTART
 T			DoSaveRestart
@@ -255,6 +152,19 @@ OH			NameComp1
 PT			NameComp2
 -1			DnCouple
 0.1 year		DtCouple
+
+#BEGIN_COMP PT ---------------------------------------------------------------
+
+#SAMPLING
+F			SamplingMode data sampling
+
+#SAMPLING_LENGTH
+2			SamplingLength
+
+#SAMPLING_OUTPUT_CADENCE
+9			SamplingOutputCadence
+
+#END_COMP PT -----------------------------------------------------------------
 
 #STOP
 -1			MaxIter
