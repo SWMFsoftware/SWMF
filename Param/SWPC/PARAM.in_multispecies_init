@@ -319,7 +319,8 @@ T			DoCoupleImPressure
 T			DoCoupleImDensity
 0.01			DensityCoupleFloor
 F			DoFixPolarRegion
-! end of setting 1
+
+End of setting 1
 
 ! Setting 2
 IMCOUPLING
@@ -335,7 +336,8 @@ T			DoFixPolarRegion
 
 IMCOUPLINGSMOOTH
 10.0			dLatSmoothIm [deg]
-! end of setting 2
+
+End of setting 2
 
 ! Pressures below pMinDim are replaced with pMinDim.
 #MINIMUMPRESSURE
