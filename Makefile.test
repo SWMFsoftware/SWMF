@@ -1763,7 +1763,7 @@ test15_check:
 
 test15_long:
 	rm -f test15_long*.diff
-	@echo "test15_compile..." >> test15_long_sp.diff
+	@echo "test15_compile..." > test15_long_sp.diff
 	${MAKE} test15_compile
 	@echo "test15_long_rundir..." >> test15_long_sp.diff
 	${MAKE} test15_long_rundir
@@ -1824,7 +1824,7 @@ test15_long_check:
 
 test15_single:
 	rm -f test15_long*.diff
-	@echo "test15_compile..." >> test15_long_sp.diff
+	@echo "test15_compile..." > test15_long_sp.diff
 	${MAKE} test15_compile
 	@echo "test15_single_rundir..." >> test15_long_sp.diff
 	${MAKE} test15_single_rundir
@@ -2088,7 +2088,7 @@ test18_check:
 
 test19:
 	rm -f test19*.diff
-	@echo "test19_compile..." >> test19_sp.diff
+	@echo "test19_compile..." > test19_sp.diff
 	${MAKE} test19_compile
 	@echo "test19_rundir..." >> test19_sp.diff
 	${MAKE} test19_rundir
