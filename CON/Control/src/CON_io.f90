@@ -74,7 +74,6 @@ module CON_io
 
 contains
   !============================================================================
-
   subroutine read_inputs(IsLastRead)
 
     use CON_coupler, ONLY: &
@@ -652,8 +651,8 @@ contains
     if(is_proc0())then
        do iComp = 1, MaxComp
           if(.not. use_comp(iComp) .and. DoneBeginComp_C(iComp)) &
-               call CON_stop(NameSub//' SWMF_ERROR: '// &
-               NameComp_I(iComp)//' cannot read parameters as it is not active')
+               call CON_stop(NameSub//' SWMF_ERROR: '//NameComp_I(iComp)// &
+               ' cannot read parameters as it is not active')
        end do
     end if
 
@@ -729,10 +728,10 @@ contains
 
     ! Checks for UseEndTime=.true.
     if(UseEndTime)then
-       if(.not.DoTimeAccurate)&
-            call CON_stop('#ENDTIME command cannot be used in steady-state')
-       if(.not.IsLastRead)&
-            call CON_stop('#ENDTIME command can be only used in the last session')
+       if(.not.DoTimeAccurate) call CON_stop( &
+            '#ENDTIME command cannot be used in steady-state mode')
+       if(.not.IsLastRead) call CON_stop( &
+            '#ENDTIME command can be only used in the last session')
 
        ! Determine, when to stop the simulation
        tSimulationMax = TimeEnd % Time - TimeStart % Time
@@ -743,6 +742,12 @@ contains
        call time_real_to_int(TimeEnd)
     end if
 
+    if(.not.DoTimeAccurate .and. MaxIteration < 0) call CON_stop(NameSub// &
+         ' SWMF_ERROR: MaxIter < 0 in steady state mode')
+
+    if(DoTimeAccurate .and. tSimulationMax < 0.0) call CON_stop(NameSub// &
+         ' SWMF_ERROR: TimeMax < 0 in time accurate mode')
+    
     if(DoTimeAccurate .and. DoCheckTimeStep)then
        ! Initialize check time step
        nIterationCheck  = nIteration
@@ -789,7 +794,6 @@ contains
   contains
     !==========================================================================
     logical function is_first_read()
-
       !------------------------------------------------------------------------
       if(.not.IsFirstRead)then
          if(is_proc0()) write(*,*) NameSub,' ERROR: command ',&
@@ -804,7 +808,6 @@ contains
     !==========================================================================
   end subroutine read_inputs
   !============================================================================
-
   subroutine set_stdout
     ! If UseStdout is true tell the components to use STDOUT with
     ! a prefix string.
@@ -855,7 +858,6 @@ contains
     end do
   end subroutine set_stdout
   !============================================================================
-
   subroutine save_restart
 
     use CON_coupler, ONLY: NameRestartOutDirComp
@@ -878,7 +880,6 @@ contains
 
     character(len=*), parameter:: NameSub = 'save_restart'
     !--------------------------------------------------------------------------
-
     if(lVerbose>0 .and. is_proc0(CON_)) &
          write(*,*)NameSub,' is called at nStep,tSimulation=',&
          nStep,tSimulation
@@ -968,6 +969,5 @@ contains
 
   end subroutine save_restart
   !============================================================================
-
 end module CON_io
 !==============================================================================
