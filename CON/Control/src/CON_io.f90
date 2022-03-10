@@ -747,7 +747,7 @@ contains
 
     if(DoTimeAccurate .and. tSimulationMax < 0.0) call CON_stop(NameSub// &
          ' SWMF_ERROR: TimeMax < 0 in time accurate mode')
-    
+
     if(DoTimeAccurate .and. DoCheckTimeStep)then
        ! Initialize check time step
        nIterationCheck  = nIteration
