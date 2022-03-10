@@ -3,7 +3,7 @@ Name Root Last Stride nThread
 GM  0 -1 -1 -1		CompMap 0:nProc-1 multithreaded
 IE -2 -1  1  		CompMap last 2 PE-s
 IM -2 -2  1		CompMap nProc-2 PE
-PC  0 -1 -1
+PC  0 -1 -1		CompMap
 
 #DESCRIPTION
 Param/SWPC/PARAM.in_SWPC_v2_init: Example file to start a run for the SWPC Version 2 code selection		StringDescription
@@ -451,7 +451,7 @@ aur idl			StringPlot
 
 #TIMESTEPPING_FLEKS0
 T			useFixedDt
-0.25			Dt
+0.25			dt
 
 #MAXBLOCKSIZE
 4			nCellX
@@ -463,21 +463,21 @@ T			useFixedDt
 0.1			ratioDivC2C
 
 #PARTICLES
-3
-3
-3
+3			nParticleX
+3			nParticleY
+3			nParticleZ
 
 #RESAMPLING
-F
+F			doReSampling
 
 #SAVEPLOT
 2			nPlotFile
-z=0 var idl_ascii planet		StringPlot
+z=0 var ascii planet		StringPlot
 -1			DnSavePlot
 5.0			DtSavePlot
 1/4			DxSavePlot
 {fluid} numS0 numS1		NameVars
-y=0 var idl_ascii planet		StringPlot
+y=0 var ascii planet		StringPlot
 -1			DnSavePlot
 5.0			DtSavePlot
 1/4			DxSavePlot
