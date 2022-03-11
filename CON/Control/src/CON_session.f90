@@ -55,11 +55,9 @@ module CON_session
   logical :: IsProc_C(MaxComp) ! is this PE actively used by a component?
 
   logical :: DoTest, DoTestMe
-  !---------------------------------------------------------------------------
 
 contains
   !============================================================================
-
   subroutine init_session
 
     ! Initialize possibly overlapping components for the current session.
@@ -146,7 +144,6 @@ contains
 
   end subroutine init_session
   !============================================================================
-
   subroutine do_session(IsLastSession, tCoupleExtra_C)
 
     logical, intent(inout) :: IsLastSession ! set it to true if run should stop
@@ -188,11 +185,11 @@ contains
 
     character(len=*), parameter:: NameSub = 'do_session'
     !--------------------------------------------------------------------------
-
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
 
     if(DoTestMe)then
-       write(*,*)NameSub,' IsLastSession=',IsLastSession
+       write(*,*)NameSub,' IsLastSession, tSimulationMax=', &
+            IsLastSession, tSimulationMax
        if(present(tCoupleExtra_C)) &
             write(*,*)NameSub,'tCoupleExtra_C=',tCoupleExtra_C(1:nComp)
     end if
@@ -263,8 +260,7 @@ contains
        ! Stop this session if stopping conditions are fulfilled
        if(MaxIteration >= 0 .and. nIteration >= MaxIteration) &
             EXIT TIMELOOP
-       if(DoTimeAccurate .and. tSimulationMax > 0.0 &
-            .and. tSimulation + DtTiny >= tSimulationMax) &
+       if(DoTimeAccurate .and. tSimulation + DtTiny >= tSimulationMax) &
             EXIT TIMELOOP
 
        ! Exit from time loop and return if an external coupling should be done
@@ -548,7 +544,6 @@ contains
 
   end subroutine do_session
   !============================================================================
-
   function do_stop_now() result(DoStopNow)
 
     !RETURN VALUE:
@@ -559,7 +554,6 @@ contains
     ! If any of these conditions hold return true, otherwise false
     ! on all PE-s. This subroutine contains an MPI\_bcast, so frequent
     ! checks may affect parallel performance.
-
     !--------------------------------------------------------------------------
     DoStopNow=.false.
     if(is_proc0())then
@@ -580,7 +574,6 @@ contains
 
   end function do_stop_now
   !============================================================================
-
   subroutine show_progress
     ! Print information about time and time step at the periodicity
     ! given by DnShowProgressShort and DnShowProgressLong which can
@@ -589,7 +582,6 @@ contains
     use CON_time, ONLY: get_time, TimeType
 
     type(TimeType):: TimeCurrent
-
     !--------------------------------------------------------------------------
     if(.not.is_proc0()) RETURN
 
@@ -616,6 +608,5 @@ contains
 
   end subroutine show_progress
   !============================================================================
-
 end module CON_session
 !==============================================================================

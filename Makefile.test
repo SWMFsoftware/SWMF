@@ -36,6 +36,7 @@ test_help:
 	@(if [ -d IM/CIMI2   ]; then echo "    test_swpc_cimi             (run anisotropic GM-IE-CIMI2 SWPC test)"; fi)
 	@(if [ -d PW/PWOM    ]; then echo "    test_swpc_pwom             (run GM-IE-RCM2-PWOM SWPC test)"; fi)
 	@(if [ -d PW/PWOM    ]; then echo "    test_swpc_pwom_species     (run multispecies GM-IE-RCM2-PWOM SWPC test)"; fi)
+	@(if [ -d PC/FLEKS   ]; then echo "    test_swpc_aepic            (run MHD-AEPIC GM-IE-RCM2-PC SWPC test)"; fi)	
 	@(if [ -d PW/PWOM    ]; then echo "    test1                      (run GM-IE-PWOM test)"; fi)
 	@(if [ -d IM/HEIDI   ]; then echo "    test4                      (run GM-IE-HEIDI test)"; fi)
 	@(if [ -d GM/BATSRUS/srcUserExtra ]; then echo "    test5                      (run EE-SC test)"; fi)
@@ -103,6 +104,7 @@ test_swmf:
 	-@(if [ -d PC/FLEKS   ]; then ${MAKE} test16 TESTDIR=run_test16; fi)
 	-@(if [ -d PC/FLEKS   ]; then ${MAKE} test17 TESTDIR=run_test17; fi)
 	-@(if [ -d PC/FLEKS   ]; then ${MAKE} test18 TESTDIR=run_test18; fi)
+	-@(if [ -d PC/FLEKS   ]; then ${MAKE} test_swpc_aepic TESTDIR=run_test_swpc_aepic; fi)
 	-@(if [ -d SP/MFLAMPA ]; then ${MAKE} test19 TESTDIR=run_test19; fi)
 	./Config.pl -noamrex
 
@@ -565,6 +567,61 @@ test_swpc_check:
 		Param/SWPC/TestOutput/RB_20140410_000300_e.fls.gz \
 		> test_swpc_rcm_rb.diff)
 	ls -l test_swpc_rcm_??.diff
+
+
+### test_swpc_aepic: GM+IE+IM+PC ###
+
+test_swpc_aepic:
+	@echo "test_swpc_aepic_compile..." > test_swpc_aepic_gm.diff
+	@echo "test_swpc_aepic_compile..." > test_swpc_aepic_pc.diff
+	${MAKE} test_swpc_aepic_compile
+	@echo "test_swpc_aepic_rundir..." >> test_swpc_aepic_gm.diff
+	@echo "test_swpc_aepic_rundir..." >> test_swpc_aepic_pc.diff
+	${MAKE} test_swpc_aepic_rundir
+	@echo "test_swpc_aepic_run..." >> test_swpc_aepic_gm.diff
+	@echo "test_swpc_aepic_run..." >> test_swpc_aepic_pc.diff
+	${MAKE} test_swpc_aepic_run
+	@echo "test_swpc_aepic_check..." >> test_swpc_aepic_gm.diff
+	@echo "test_swpc_aepic_check..." >> test_swpc_aepic_pc.diff
+	${MAKE} test_swpc_aepic_check
+
+test_swpc_aepic_compile:
+	./Config.pl -amrex
+	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2,PC/FLEKS
+	./Config.pl -o=GM:u=Default,e=Mhd,ng=2,g=8,8,8,IE:g=91,181
+	${MAKE} SWMF
+	make PIDL INTERPOLATE
+
+test_swpc_aepic_rundir:
+	rm -rf ${TESTDIR}
+	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
+	cd Param/SWPC/; cp PARAM.in_SWPC_aepic_init *.in *.dat ../../${TESTDIR}/
+	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in_SWPC_aepic_init
+	cp ${TESTDIR}/PARAM.in_SWPC_aepic_init ${TESTDIR}/PARAM.in
+	ln -s ${BINDIR}/INTERPOLATE.exe ${TESTDIR}/
+
+test_swpc_aepic_run:
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl
+	
+test_swpc_aepic_check:
+	-@(${DIFFNUM} -b -r=2e-4 -a=1e-4 \
+		${TESTDIR}/GM/IO2/y=0_var_1_e20140410-000005-000.out \
+		Param/SWPC/TestOutput/y=0_var_1_e20140410-000005-000.out.gz \
+		> test_swpc_aepic_gm.diff)
+	-@(${DIFFNUM} -b -r=1e-5 -a=1e-8 \
+		${TESTDIR}/GM/IO2/z=0_var_2_e20140410-000005-000.out \
+		Param/SWPC/TestOutput/z=0_var_2_e20140410-000005-000.out.gz \
+		>> test_swpc_aepic_gm.diff)
+	-@(${DIFFNUM} -b -r=1e-3 \
+                ${TESTDIR}/PC/plots/y=0_var_region0_1_t00000005_n00000020.out \
+		Param/SWPC/TestOutput/y=0_var_region0_1_t00000005_n00000020.out.gz \
+		> test_swpc_aepic_pc.diff)
+	-@(${DIFFNUM} -b -r=1e-3 \
+                ${TESTDIR}/PC/plots/z=0_var_region0_0_t00000005_n00000020.out \
+		Param/SWPC/TestOutput/z=0_var_region0_0_t00000005_n00000020.out.gz \
+		>> test_swpc_aepic_pc.diff)	
+	ls -l test_swpc_aepic_??.diff
 
 ### test_swpc_gpu: GM+IE+IM and GM runs on GPU or in GPU compatible mode ###
 
@@ -1763,7 +1820,7 @@ test15_check:
 
 test15_long:
 	rm -f test15_long*.diff
-	@echo "test15_compile..." >> test15_long_sp.diff
+	@echo "test15_compile..." > test15_long_sp.diff
 	${MAKE} test15_compile
 	@echo "test15_long_rundir..." >> test15_long_sp.diff
 	${MAKE} test15_long_rundir
@@ -1824,7 +1881,7 @@ test15_long_check:
 
 test15_single:
 	rm -f test15_long*.diff
-	@echo "test15_compile..." >> test15_long_sp.diff
+	@echo "test15_compile..." > test15_long_sp.diff
 	${MAKE} test15_compile
 	@echo "test15_single_rundir..." >> test15_long_sp.diff
 	${MAKE} test15_single_rundir
@@ -2088,7 +2145,7 @@ test18_check:
 
 test19:
 	rm -f test19*.diff
-	@echo "test19_compile..." >> test19_sp.diff
+	@echo "test19_compile..." > test19_sp.diff
 	${MAKE} test19_compile
 	@echo "test19_rundir..." >> test19_sp.diff
 	${MAKE} test19_rundir

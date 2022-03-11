@@ -192,6 +192,7 @@ approximately zero tilt towards the Sun.
 	<parameter name="iMinute" type="integer" min="0" max="59" default="0"/>
 	<parameter name="iSecond" type="integer" min="0" max="59" default="0"/>
 	<parameter name="FracSecond" type="real" min="0" max="1"  default="0"/>
+	<set name="TimeMax" type="real" value="0"/>
 	<set name="_ENDTIME" type="logical" value="1"/>
 
 #ENDTIME
@@ -265,10 +266,13 @@ relative to the initial time determined by the #STARTTIME command.
 If tSimulation reaches this value the session is finished.
 
 Using a negative value for either variables means that the
-corresponding condition is  not checked. The default values
-are MaxIteration=0 and tSimulationMax = 0.0, so the #STOP command
-must be used in every session. The only exception is the last
-session, where the #ENDTIME command can be used instead of #STOP.
+corresponding condition is  not checked. If TimeMax is negative
+in time accurate mode or MaxIter is negative in steady state mode,
+the code stops with an error message. If the values are set to zero,
+the code will run and stop as normal, but not advance the solution.
+The #STOP command must be used in every session. The only exception is the last
+session, where the #ENDTIME command can be used instead of #STOP in
+time-accurate mode.
 
 If the code completes the last session of the run successfully, 
 both the SWMF.SUCCESS and the SWMF.DONE files are created in the 
@@ -1326,6 +1330,21 @@ but on some systems it may be very slow.
 The default is to flush the output, i.e. DoFlush=T.
 </command>
 
+<command name="MAKEDIR">
+	<parameter name="DoMakeDir" type="logical" default="T"/>
+
+#MAKEDIR
+F			DoMakeDir
+
+If the DoMakeDir variable is true, the code will make directories
+as needed. On some machines (Pleiades), however, this can fail,
+so it is better to create all directories in advance and not trying
+to do it from the code. This is, of course, incompatible with a 
+dynamic restart directory name in #RESTARTOUTDIR.
+
+The default is DoMakeDir=T.
+</command>
+
 <command name="STDOUT">
 	<parameter name="UseStdout" type="logical" default="T"/>
 
@@ -1684,8 +1703,20 @@ the run.
 !!!!!!!!!!!!!!!!!!!!!!!!! GLOBAL RULES !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 -->
+<rule expr="$IsTimeAccurate or not $_ENDTIME">
+  The #ENDTIME command can only be used in time-accurate mode
+</rule>
+
 <rule expr="$_STOP or $_ENDTIME">
-  Either #STOP or #ENDTIME (in final session) command must be used
+  Either #STOP or #ENDTIME in final session must be used
+</rule>
+
+<rule expr="not ($IsTimeAccurate and $TimeMax &lt; 0)">
+  In time-accurate mode TimeMax cannot be negative
+</rule>
+
+<rule expr="$IsTimeAccurate or $MaxIter &gt;= 0">
+  In steady state mode MaxIter cannot be negative
 </rule>
 
 </commandList>
