@@ -452,7 +452,6 @@ FIXED			TypeComposition
 F			IsEmptyInitial
 T			IsGmInitial
 F			IsDataInitial
-F			IsRBSPData
 
 #SAVELOG
 5.0			DtLogOut
