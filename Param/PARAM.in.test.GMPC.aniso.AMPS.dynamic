@@ -13,20 +13,17 @@ NONE			NamePlanet
 
 #SAVERESTART
 F			DoSaveRestart
--1			DnSaveRestart
-100			DtSaveRestart
 
 #COUPLE2TIGHT
 GM			NameMaster
 PC			NameSlave
 T			DoCouple
 
-
 COUPLE2
-GM
-PC
--1
-1
+GM			NameComp1
+PC			NameComp2
+-1			DnCouple
+1.0			DtCouple
 
 #PROGRESS
 1			DnProgressShort
@@ -271,30 +268,10 @@ F			doCorrectDivE
 1			DnSavePlot
 -1			DtSavePlot
 1			DxSavePlot
-3d fluid ascii si		StringPlot
-1			DnOutput
--1			DtOutput
-1			DxOutput
-
-
 
 #END_COMP PC -----------------------------------------------------------------
 
 #STOP
 -1			MaxIter
 10			TimeMax
-
-
-#END
-#RUN
-
-#COMPONENT
-GM
-F
-
-
-#STOP
--1			MaxIteration
-15			tSimulationMax
-
 

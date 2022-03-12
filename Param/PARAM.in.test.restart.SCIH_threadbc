@@ -211,13 +211,13 @@ HGR			TypeCoordPlot
 4.0			dLat
 {HD} te ti		NameVars
 {default}		NamePars
-			ObsPosZ
+
 #LOOKUPTABLE		OffsetAngle
 AiaXrt			NameTable
 load			NameCommand
 SC/Param/los_tbl.dat		NameFile
 ascii			TypeFile
-			MuLimbDarkening
+
 #LOOKUPTABLE		nPix
 euv			NameTable
 load			NameCommand
@@ -336,7 +336,7 @@ g rbody			NamePars
 buf MHD idl		StringPlot
 -1			DnSavePlot
 50.0			DtSavePlot
-			DxSavePlot
+
 #END_COMP IH -----------------------------------------------------------------
 
 #COUPLE1

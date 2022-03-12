@@ -127,7 +127,7 @@ SC/Param/RadCoolCorona_8.0.dat		NameFile
 ascii			TypeFile
 
 #TRANSITIONREGION
-T			DoExpandTransitionRegion
+T			DoExtendTransitionRegion
 2.2e5			TeTransitionRegionSi
 1.0e1			DeltaTeModSi
 
@@ -183,9 +183,6 @@ initial			StringShape
 
 #DOAMR
 F			DoAmr
--1			DnAmr
-4.0			DtAmr
-T			IsStrictAmr
 
 #TIMESTEPLIMIT
 T			UseDtLimit
