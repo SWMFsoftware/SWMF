@@ -302,5 +302,5 @@ SC			NameComp2
 0.1			DtCouple
 
 #STOP
-10			MaxIter
--1.0			TimeMax
+-1			MaxIter
+1.0			TimeMax

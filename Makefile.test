@@ -607,19 +607,19 @@ test_swpc_aepic_run:
 test_swpc_aepic_check:
 	-@(${DIFFNUM} -b -r=2e-4 -a=1e-4 \
 		${TESTDIR}/GM/IO2/y=0_var_1_e20140410-000005-000.out \
-		Param/SWPC/TestOutput/y=0_var_1_e20140410-000005-000.out.gz \
+		Param/SWPC/TestOutputAepic/y=0_var_1_e20140410-000005-000.out.gz \
 		> test_swpc_aepic_gm.diff)
 	-@(${DIFFNUM} -b -r=1e-5 -a=1e-8 \
 		${TESTDIR}/GM/IO2/z=0_var_2_e20140410-000005-000.out \
-		Param/SWPC/TestOutput/z=0_var_2_e20140410-000005-000.out.gz \
+		Param/SWPC/TestOutputAepic/z=0_var_2_e20140410-000005-000.out.gz \
 		>> test_swpc_aepic_gm.diff)
 	-@(${DIFFNUM} -b -r=1e-3 \
                 ${TESTDIR}/PC/plots/y=0_var_region0_1_t00000005_n00000020.out \
-		Param/SWPC/TestOutput/y=0_var_region0_1_t00000005_n00000020.out.gz \
+		Param/SWPC/TestOutputAepic/y=0_var_region0_1_t00000005_n00000020.out.gz \
 		> test_swpc_aepic_pc.diff)
 	-@(${DIFFNUM} -b -r=1e-3 \
                 ${TESTDIR}/PC/plots/z=0_var_region0_0_t00000005_n00000020.out \
-		Param/SWPC/TestOutput/z=0_var_region0_0_t00000005_n00000020.out.gz \
+		Param/SWPC/TestOutputAepic/z=0_var_region0_0_t00000005_n00000020.out.gz \
 		>> test_swpc_aepic_pc.diff)	
 	ls -l test_swpc_aepic_??.diff
 

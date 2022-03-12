@@ -121,6 +121,8 @@ T
 
 #END_COMP EE -----------------------------------------------------------------
 
+Normally TimeMax should stop the run. Here MaxIter does.
+This works OK when only one component is running.
 #STOP
 10			MaxIter
--1.			TimeMax
+100.			TimeMax
