@@ -198,8 +198,6 @@ periodic		TypeBc1
 periodic		TypeBc2
 periodic		TypeBc3
 periodic		TypeBc4
-float			TypeBc5
-float			TypeBc6
 
 #HALLRESISTIVITY
 T			UseHallResist

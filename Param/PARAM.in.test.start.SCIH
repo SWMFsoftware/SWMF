@@ -151,7 +151,7 @@ ascii			TypeFile
 #USERINPUTEND -------------------------------------
 
 #TRANSITIONREGION
-T			DoExpandTransitionRegion
+T			DoExtendTransitionRegion
 2.2e5			TeTransitionRegionSi
 1.0e1			DeltaTeModSi
 
@@ -219,7 +219,6 @@ T			IsStrictAmr
 2			nOrder (1 or 2)
 Linde			TypeFlux (Roe, Rusanov, Linde, Sokolov
 minmod			TypeLimiter
-1.2			LimiterBeta
 
 #LIMITER
 T			UseLogRhoLimiter

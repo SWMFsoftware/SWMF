@@ -484,6 +484,7 @@ F			IsVerboseSE
 
 #SETPRECIP
 F			UseFixedPrecip
+
 100.0			PrecipEnergyMin [eV]
 1000.0			PrecipEnergyMax [eV]
 400.0			PrecipEnergyMean [eV]

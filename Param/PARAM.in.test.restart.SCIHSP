@@ -51,7 +51,6 @@ T			DoConvergenceCheck
 second			TypeBc
 1e-6			Tolerance
 20			MaxIter
-F			UseThomasAlg
 
 #BODY
 T			UseBody
