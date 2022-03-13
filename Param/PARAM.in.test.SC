@@ -247,11 +247,6 @@ z=0 VAR idl		StringPlot
 -1.0			DxSavePlot
 rho ux uy uz ti te bx by bz I01 I02 p		NameVars
 g rbody			NamePars
-3d VAR tec
-100000			DnSavePlot
--1.			DtSavePlot
-rho ux uy uz ti te bx by bz I01 I02 p
-g rbody
 
 #SAVEINITIAL
 T			DoSaveInitial
