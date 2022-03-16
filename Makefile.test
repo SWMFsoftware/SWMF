@@ -1470,7 +1470,7 @@ test9_rundir:
         > ${TESTDIR}/SPECTRUM_chianti_tbl.dat
 	cp -f Param/SPECTRUM.in.test ${TESTDIR}/SPECTRUM.in	
 	ln -s ${BINDIR}/SPECTRUM.exe ${TESTDIR}/SPECTRUM.exe
-		
+
 test9_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl -m RESULTS/run_start
