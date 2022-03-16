@@ -1460,7 +1460,7 @@ test9_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/PARAM.in.test.start.SCIH ${TESTDIR}/PARAM.in
-#	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
+	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
 	cp Param/map_04.out ${TESTDIR}/SC/
 	cp -f ${MAGNETOGRAMDIR}/FDIPS.in.orig ${TESTDIR}/SC/FDIPS.in
 	perl -i -pe 's/dipole11.out/map_04.out/' ${TESTDIR}/SC/FDIPS.in
@@ -1480,7 +1480,7 @@ test9_run:
 test9_cme:
 	cd ${TESTDIR}; mv PARAM.in PARAM.in_start; rm -f PARAM.in_orig_
 	cd ${TESTDIR}; cp Param/PARAM.in.test.cme.SCIH PARAM.in
-#	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
+	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl RESULTS/run_cme
 	cd ${TESTDIR}; cp -r RESULTS/run_start/RESTART/IH \
@@ -1490,7 +1490,7 @@ test9_cme:
 test9_restart:
 	cd ${TESTDIR}; mv PARAM.in PARAM.in_cme; rm -f PARAM.in_cme_
 	cd ${TESTDIR}; cp Param/PARAM.in.test.restart.SCIH PARAM.in
-#	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
+	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl -m RESULTS/run_restart
 
