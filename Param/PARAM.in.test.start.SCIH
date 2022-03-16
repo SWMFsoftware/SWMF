@@ -22,7 +22,7 @@ want to use the true HGI/HGR coordinate systems.
 Begin session: 1
 
 #DESCRIPTION
-SWMFSOLAR/Param/PARAM.in.test.start.SCIH: create steady state solar corona	StringDescription
+Param/PARAM.in.test.start.SCIH: create steady state solar corona	StringDescription
 
 INCLUDE
 RESTART.in
@@ -115,14 +115,14 @@ F			UseB0MomentumFlux
 1.0e6			PoyntingFluxPerBSi^ [J/m^2/s/T]
 
 #CORONALHEATING
-turbulentcascade		TypeCoronalHeating
+turbulentcascade	TypeCoronalHeating
 T			UseWaveReflection
 1.5e5			LperpTimesSqrtBSi^
 0.0			rMinWaveReflection^
 F			UseSurfaceWaveRefl^
 
 #HEATPARTITIONING
-stochasticheating		TypeHeatPartitioning
+stochasticheating	TypeHeatPartitioning
 0.21			StochasticExponent^
 0.18			StochasticAmplitude^
 
@@ -135,16 +135,16 @@ load			NameCommand
 SC/Param/RadCoolCorona_8.0.dat		NameFile
 ascii			TypeFile
 
-#USERINPUTBEGIN
+#USERINPUTBEGIN -------------------------------------------------------------
 
 #CHROMOBC
 2e17			NchromoSi	nChromoSi_AWSoM^
 5e4			TchromoSi
 
-#USERINPUTEND
+#USERINPUTEND -------------------------------------------------------------
 
 #TRANSITIONREGION
-T			DoExpandTransitionRegion
+T			DoExtendTransitionRegion
 2.2e5			TeTransitionRegionSi
 1.0e1			DeltaTeModSi
 
@@ -275,7 +275,7 @@ VAR			StringLog
 1			DnSaveLogfile
 -1.			DtSaveLogfile
 rho mx my mz p pmin urmin urmax wflx wplusflx wminusflx keflx		NameLogVars
-1.01 23.99     	    	  rLog
+1.01 23.99     	    	  StringLogRadii
 
 #OUTERBOUNDARY
 user			TypeBc1   user for spherical and user_outerbcs
@@ -290,19 +290,19 @@ periodic		TypeBc6   LatMax
 
 #SAVEPLOT
 4			nPlotFile
-x=0 VAR idl		StringPlot
+x=0 VAR idl_ascii	StringPlot
 10			DnSavePlot
 -1.0			DtSavePlot
 -1.0			DxSavePlot
 {MHD} b1x b1y b1z te ti dphi	NameVars
 {default}		NamePars
-y=0 VAR idl		StringPlot
+y=0 VAR idl_ascii	StringPlot
 10			DnSavePlot
 -1.			DtSavePlot
 -1.0			DxSavePlot
 {MHD} b1x b1y b1z te ti dphi	NameVars
 {default}		NamePars
-z=0 VAR idl		StringPlot
+z=0 VAR idl_ascii	StringPlot
 10			DnSavePlot
 -1.			DtSavePlot
 -1.0			DxSavePlot
@@ -522,12 +522,12 @@ buffergrid		TypeBcBody
 
 #BUFFERGRID
 5			nRBuff
-240			nPhiBuff
-120			nThetaBuff
-18.0			rBuffMin
-20.0			rBuffMax
-0.0			PhiBuffMin
-360.			PhiBuffMax
+240			nLonBuff
+120			nLatBuff
+18.0			RBuffMin
+20.0			RBuffMax
+0.0			LonBuffMin
+360.			LonBuffMax
 -90.0			LatBuffMin
 90.0			LatBuffMax
 
@@ -590,19 +590,19 @@ rho mx my mz p pmin urmin urmax		NameLogVars
 
 #SAVEPLOT
 4			nPlotFile
-x=0 VAR idl		StringPlot
+x=0 VAR idl_ascii	StringPlot
 10			DnSavePlot
 -1.			DtSavePlot
 -1.0			DxSavePlot
 {MHD} b1x b1y b1z te ti dx	NameVars
 {default}		NamePars
-y=0 VAR idl		StringPlot
+y=0 VAR idl_ascii	StringPlot
 10			DnSavePlot
 -1.			DtSavePlot
 -1.0			DxSavePlot
 {MHD} b1x b1y b1z te ti dx	NameVars
 {default}		NamePars
-z=0 VAR idl		StringPlot
+z=0 VAR idl_ascii	StringPlot
 10			DnSavePlot
 -1.			DtSavePlot
 -1.0			DxSavePlot
