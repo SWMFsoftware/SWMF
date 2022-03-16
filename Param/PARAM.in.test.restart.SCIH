@@ -18,7 +18,7 @@ density so that the run does not fail for solar maximum
 Begin session: 1
 
 #DESCRIPTION
-Param/PARAM.in.test.start.cme: restart from steady-state to initiate a CME in SC	StringDescription
+Param/PARAM.in.test.restart.SCIH: restart from steady-state to initiate a CME in SC		StringDescription
 
 #INCLUDE
 RESTART.in
@@ -88,7 +88,7 @@ SC/fdips_bxyz.out		NameFile
 real4			TypeFile
 
 HARMONICSFILE		^
-SC/harmonics_adapt.dat	NameHarmonicsFile
+SC/harmonics_adapt.dat		NameHarmonicsFile
 
 HARMONICSGRID		^
 1.0			rMagnetogram
@@ -137,7 +137,7 @@ ascii			TypeFile
 2e17			NchromoSi	nChromoSi_AWSoM^
 5e4			TchromoSi
 
-#USERINPUTEND ----------------------------------------------------------------
+#USERINPUTEND -------------------------------------
 
 #TRANSITIONREGION
 T			DoExtendTransitionRegion
@@ -279,8 +279,8 @@ T			DoSaveLogfile
 VAR			StringLog
 -1			DnSaveLogfile
 2.			DtSaveLogfile
-rho mx my mz p pmin urmin urmax wflx wplusflx wminusflx keflx	NameLogVars
-1.01 23.99     	    	StringLogRadii
+rho mx my mz p pmin urmin urmax wflx wplusflx wminusflx keflx		NameLogVars
+1.01 23.99		StringLogRadii
 
 ------------ CME related parameters -------------------------------------------
 
@@ -293,10 +293,10 @@ T			UseDtLimit
 
 add the perturb switch for CME
 USERSWITCH		sc_cme^
-+init +ic +perturb	StringSwitch
++init +ic +perturb		StringSwitch
 
 #USERSWITCH		sc_restart^
-+init +ic -perturb	StringSwitch
++init +ic -perturb		StringSwitch
 
 flux-rope parameters
 #CME
@@ -322,24 +322,24 @@ x=0 VAR idl		StringPlot
 -1			DnSavePlot
 10.0			DtSavePlot
 -1.0			DxSavePlot
-{MHD} b1x b1y b1z te ti dphi qrad qheat qebyq qparbyq qperpbyq	NameVars
+{MHD} b1x b1y b1z te ti dphi qrad qheat qebyq qparbyq qperpbyq		NameVars
 {default}		NamePars
 y=0 VAR idl		StringPlot
 -1			DnSavePlot
 10.			DtSavePlot
 -1.0			DxSavePlot
-{MHD} b1x b1y b1z te ti dphi qrad qheat qebyq qparbyq qperpbyq	NameVars
+{MHD} b1x b1y b1z te ti dphi qrad qheat qebyq qparbyq qperpbyq		NameVars
 {default}		NamePars
 z=0 VAR idl		StringPlot
 -1			DnSavePlot
 10.			DtSavePlot
 -1.0			DxSavePlot
-{MHD} b1x b1y b1z te ti dphi qrad qheat qebyq qparbyq qperpbyq	NameVars
+{MHD} b1x b1y b1z te ti dphi qrad qheat qebyq qparbyq qperpbyq		NameVars
 {default}		NamePars
 los ins idl_ascii		StringPlot
 -1			DnSavePlot
 10.0			DtSavePlot
-soho:c2 soho:c3 sta:cor1 sta:cor2 stb:cor1 stb:cor2	StringsInstrument
+soho:c2 soho:c3 sta:cor1 sta:cor2 stb:cor1 stb:cor2		StringsInstrument
 
 3d VAR tcp		StringPlot
 -1			DnSavePlot
@@ -432,38 +432,38 @@ shell0			StringShape
 
 #AMRREGION
 cmecone			NameRegion
-conex0                  StringShape
--215.                   Height
-20                      Radius
+conex0			StringShape
+-215.			Height
+20			Radius
 
 #AMRREGION
 earthcone		NameRegion
-conex0                  StringShape
--215.                   Height
-80                      Radius
+conex0			StringShape
+-215.			Height
+80			Radius
 
 #AMRCRITERIARESOLUTION
-4                       nRefineCrit
-dx                      StringRefine
-8.                      RefineTo
-4.                      CoarsenFrom
-dx +Outershell          StringRefine
-0.5                     RefineTo
-0.25                    CoarsenFrom
+4			nRefineCrit
+dx			StringRefine
+8.			RefineTo
+4.			CoarsenFrom
+dx +Outershell		StringRefine
+0.5			RefineTo
+0.25			CoarsenFrom
 dx +cmecone		StringRefine
 0.35			RefineTo
-0.175                  	CoarsenFrom
+0.175			CoarsenFrom
 dx +earthcone		StringRefine
-0.7                     RefineTo
-0.35                   	CoarsenFrom
-currentsheet            StringRefine
-0.5                     CoarsenLimit
-0.5                     RefineLimit
+0.7			RefineTo
+0.35			CoarsenFrom
+currentsheet		StringRefine
+0.5			CoarsenLimit
+0.5			RefineLimit
 1.0			MaxResolution
 
 GRIDRESOLUTION
-0.5                    Resolution
-initial                 StringShape
+0.5			Resolution
+initial			StringShape
 
 #SAVEINITIAL
 F			DoSaveInitial
@@ -475,10 +475,10 @@ buffergrid		TypeBcBody
 5			nRBuff
 240			nLonBuff
 120			nLatBuff
-18.0			rBuffMin
-20.0			rBuffMax
+18.0			RBuffMin
+20.0			RBuffMax
 0.0			LonBuffMin
-360.			LatBuffMax
+360.			LonBuffMax
 -90.0			LatBuffMin
 90.0			LatBuffMax
 
@@ -547,41 +547,41 @@ x=0 VAR idl		StringPlot
 -1			DnSavePlot
 10.0			DtSavePlot
 -1.0			DxSavePlot
-{MHD} b1x b1y b1z te ti dx qrad qheat qebyq qparbyq qperpbyq dt	NameVars
+{MHD} b1x b1y b1z te ti dx qrad qheat qebyq qparbyq qperpbyq dt		NameVars
 {default}		NamePars
 y=0 VAR idl		StringPlot
 -1			DnSavePlot
 10.			DtSavePlot
 -1.0			DxSavePlot
-{MHD} b1x b1y b1z te ti dx qrad qheat qebyq qparbyq qperpbyq dt	NameVars
+{MHD} b1x b1y b1z te ti dx qrad qheat qebyq qparbyq qperpbyq dt		NameVars
 {default}		NamePars
 z=0 VAR idl		StringPlot
 -1			DnSavePlot
 10.			DtSavePlot
 -1.0			DxSavePlot
-{MHD} b1x b1y b1z te ti dx qrad qheat qebyq qparbyq qperpbyq dt	NameVars
+{MHD} b1x b1y b1z te ti dx qrad qheat qebyq qparbyq qperpbyq dt		NameVars
 {default}		NamePars
 
-3d VAR tcp              StringPlot
--1                      DnSavePlot
-10.                    DtSavePlot
-{MHD} b1x b1y b1z te ti qrad qheat qebyq qparbyq qperpbyq divu	NameVars
-{default}               NamePars
+3d VAR tcp		StringPlot
+-1			DnSavePlot
+10.			DtSavePlot
+{MHD} b1x b1y b1z te ti qrad qheat qebyq qparbyq qperpbyq divu		NameVars
+{default}		NamePars
 
 #SATELLITE
 3			nSatellite
 MHD hgi			StringSatellite
 -1  			DnOutput
 2.			DtOutput
-IH/TRAJECTORY/earth.dat	NameTrajectoryFile
+IH/TRAJECTORY/earth.dat		NameTrajectoryFile
 MHD hgi			StringSatellite
 -1  			DnOutput
 2.			DtOutput
-IH/TRAJECTORY/sta.dat	NameTrajectoryFile
+IH/TRAJECTORY/sta.dat		NameTrajectoryFile
 MHD hgi			StringSatellite
 -1  			DnOutput
 2.			DtOutput
-IH/TRAJECTORY/stb.dat	NameTrajectoryFile
+IH/TRAJECTORY/stb.dat		NameTrajectoryFile
 
 #END_COMP IH -----------------------------------------------------------------
 
@@ -607,26 +607,26 @@ x=0 VAR idl		StringPlot
 -1			DnSavePlot
 10.0			DtSavePlot
 -1.0			DxSavePlot
-{MHD} b1x b1y b1z te ti dphi qrad qheat qebyq qparbyq qperpbyq	NameVars
+{MHD} b1x b1y b1z te ti dphi qrad qheat qebyq qparbyq qperpbyq		NameVars
 {default}		NamePars
 y=0 VAR idl		StringPlot
 -1			DnSavePlot
 10.			DtSavePlot
 -1.0			DxSavePlot
-{MHD} b1x b1y b1z te ti dphi qrad qheat qebyq qparbyq qperpbyq	NameVars
+{MHD} b1x b1y b1z te ti dphi qrad qheat qebyq qparbyq qperpbyq		NameVars
 {default}		NamePars
 z=0 VAR idl		StringPlot
 -1			DnSavePlot
 10.			DtSavePlot
 -1.0			DxSavePlot
-{MHD} b1x b1y b1z te ti dphi qrad qheat qebyq qparbyq qperpbyq	NameVars
+{MHD} b1x b1y b1z te ti dphi qrad qheat qebyq qparbyq qperpbyq		NameVars
 {default}		NamePars
 
-3d VAR tcp              StringPlot
--1                      DnSavePlot
-3600.                    DtSavePlot
-{MHD} b1x b1y b1z te ti qrad qheat qebyq qparbyq qperpbyq divu	NameVars
-{default}               NamePars
+3d VAR tcp		StringPlot
+-1			DnSavePlot
+3600.			DtSavePlot
+{MHD} b1x b1y b1z te ti qrad qheat qebyq qparbyq qperpbyq divu		NameVars
+{default}		NamePars
 
 #END_COMP SC -----------------------------------------------------------------
 
@@ -638,26 +638,26 @@ x=0 VAR idl		StringPlot
 -1			DnSavePlot
 10.0			DtSavePlot
 -1.0			DxSavePlot
-{MHD} b1x b1y b1z te ti dx qrad qheat qebyq qparbyq qperpbyq dt	NameVars
+{MHD} b1x b1y b1z te ti dx qrad qheat qebyq qparbyq qperpbyq dt		NameVars
 {default}		NamePars
 y=0 VAR idl		StringPlot
 -1			DnSavePlot
 10.			DtSavePlot
 -1.0			DxSavePlot
-{MHD} b1x b1y b1z te ti dx qrad qheat qebyq qparbyq qperpbyq dt	NameVars
+{MHD} b1x b1y b1z te ti dx qrad qheat qebyq qparbyq qperpbyq dt		NameVars
 {default}		NamePars
 z=0 VAR idl		StringPlot
 -1			DnSavePlot
 10.			DtSavePlot
 -1.0			DxSavePlot
-{MHD} b1x b1y b1z te ti dx qrad qheat qebyq qparbyq qperpbyq dt	NameVars
+{MHD} b1x b1y b1z te ti dx qrad qheat qebyq qparbyq qperpbyq dt		NameVars
 {default}		NamePars
 
-3d VAR tcp              StringPlot
--1                      DnSavePlot
-10.                    DtSavePlot
-{MHD} b1x b1y b1z te ti qrad qheat qebyq qparbyq qperpbyq divu	NameVars
-{default}               NamePars
+3d VAR tcp		StringPlot
+-1			DnSavePlot
+10.			DtSavePlot
+{MHD} b1x b1y b1z te ti qrad qheat qebyq qparbyq qperpbyq divu		NameVars
+{default}		NamePars
 
 #END_COMP IH -----------------------------------------------------------------
 
@@ -666,7 +666,7 @@ z=0 VAR idl		StringPlot
 15.0			TimeMax
 
 End Session: 3
-#RUN #################################################################################
+#RUN ##########################################################################
 Begin Session: 4
 
 #COUPLE1
@@ -682,39 +682,39 @@ F			UseComp
 #BEGIN_COMP IH ---------------------------------------------------------------
 
 #SAVEPLOT
-4                       nPlotFile
-x=0 VAR idl             StringPlot
--1                      DnSavePlot
-10.                   DtSavePlot
--1.0                    DxSavePlot
-{MHD} b1x b1y b1z te ti dx qrad qheat qebyq qparbyq qperpbyq dt	NameVars
-{default}               NamePars
-y=0 VAR idl             StringPlot
--1                      DnSavePlot
-10.                   DtSavePlot
--1.0                    DxSavePlot
-{MHD} b1x b1y b1z te ti dx qrad qheat qebyq qparbyq qperpbyq dt	NameVars
-{default}               NamePars
-z=0 VAR idl             StringPlot
--1                      DnSavePlot
-10.                   DtSavePlot
--1.0                    DxSavePlot
-{MHD} b1x b1y b1z te ti dx qrad qheat qebyq qparbyq qperpbyq dt	NameVars
-{default}               NamePars
-shl VAR idl             StringPlot
--1                      DnSavePlot
-5.0                   DtSavePlot
-hgi                     TypeCoordPlot
-212.0                   rMin
-212.0                   rMax
-0.                      LonMin
-360.                    LonMax
-1.                      dLon    ! only read if LonMin /= LonMax
--30.                    LatMin
-30.                     LatMax
-1.                      dLat    ! only read if LatMin /= LatMax
-{MHD} b1x b1y b1z qheat qebyq qparbyq qperpbyq 	      NameVars
-{default}               NamePars
+4			nPlotFile
+x=0 VAR idl		StringPlot
+-1			DnSavePlot
+10.			DtSavePlot
+-1.0			DxSavePlot
+{MHD} b1x b1y b1z te ti dx qrad qheat qebyq qparbyq qperpbyq dt		NameVars
+{default}		NamePars
+y=0 VAR idl		StringPlot
+-1			DnSavePlot
+10.			DtSavePlot
+-1.0			DxSavePlot
+{MHD} b1x b1y b1z te ti dx qrad qheat qebyq qparbyq qperpbyq dt		NameVars
+{default}		NamePars
+z=0 VAR idl		StringPlot
+-1			DnSavePlot
+10.			DtSavePlot
+-1.0			DxSavePlot
+{MHD} b1x b1y b1z te ti dx qrad qheat qebyq qparbyq qperpbyq dt		NameVars
+{default}		NamePars
+shl VAR idl		StringPlot
+-1			DnSavePlot
+5.0			DtSavePlot
+hgi			TypeCoordPlot
+212.0			rMin
+212.0			rMax
+0.			LonMin
+360.			LonMax
+1.			dLon    ! only read if LonMin /= LonMax
+-30.			LatMin
+30.			LatMax
+1.			dLat    ! only read if LatMin /= LatMax
+{MHD} b1x b1y b1z qheat qebyq qparbyq qperpbyq 		NameVars
+{default}		NamePars
 
 #END_COMP IH -----------------------------------------------------------------
 

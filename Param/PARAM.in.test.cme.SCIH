@@ -18,7 +18,7 @@ density so that the run does not fail for solar maximum
 Begin session: 1
 
 #DESCRIPTION
-Param/PARAM.in.test.cme.SCIH: restart from CME run in SC and continue in SC and IH	StringDescription
+Param/PARAM.in.test.cme.SCIH: restart from CME run in SC and continue in SC and IH		StringDescription
 
 #INCLUDE
 RESTART.in
@@ -88,7 +88,7 @@ SC/fdips_bxyz.out		NameFile
 real4			TypeFile
 
 HARMONICSFILE		^
-SC/harmonics_adapt.dat	NameHarmonicsFile
+SC/harmonics_adapt.dat		NameHarmonicsFile
 
 HARMONICSGRID		^
 1.0			rMagnetogram
@@ -132,7 +132,7 @@ ascii			TypeFile
 2e17			NchromoSi	nChromoSi_AWSoM^
 5e4			TchromoSi
 
-#USERINPUTEND ---------------------------------------------------------------
+#USERINPUTEND -------------------------------------
 
 #TRANSITIONREGION
 T			DoExtendTransitionRegion
@@ -287,10 +287,10 @@ T			UseDtLimit
 
 add the perturb switch for CME
 #USERSWITCH		sc_cme^
-+init +ic +perturb	StringSwitch
++init +ic +perturb		StringSwitch
 
 USERSWITCH		sc_restart^
-+init +ic -perturb	StringSwitch
++init +ic -perturb		StringSwitch
 
 flux-rope parameters
 #CME
@@ -316,29 +316,29 @@ x=0 VAR idl		StringPlot
 -1			DnSavePlot
 10.0			DtSavePlot
 -1.0			DxSavePlot
-{MHD} b1x b1y b1z te ti dphi qrad qheat qebyq qparbyq qperpbyq	NameVars
+{MHD} b1x b1y b1z te ti dphi qrad qheat qebyq qparbyq qperpbyq		NameVars
 {default}		NamePars
 y=0 VAR idl		StringPlot
 -1			DnSavePlot
 10.			DtSavePlot
 -1.0			DxSavePlot
-{MHD} b1x b1y b1z te ti dphi qrad qheat qebyq qparbyq qperpbyq	NameVars
+{MHD} b1x b1y b1z te ti dphi qrad qheat qebyq qparbyq qperpbyq		NameVars
 {default}		NamePars
 z=0 VAR idl		StringPlot
 -1			DnSavePlot
 10.			DtSavePlot
 -1.0			DxSavePlot
-{MHD} b1x b1y b1z te ti dphi qrad qheat qebyq qparbyq qperpbyq	NameVars
+{MHD} b1x b1y b1z te ti dphi qrad qheat qebyq qparbyq qperpbyq		NameVars
 {default}		NamePars
 los ins idl_ascii		StringPlot
 -1			DnSavePlot
 10.0			DtSavePlot
-soho:c2 soho:c3 sta:cor1 sta:cor2 stb:cor1 stb:cor2	StringsInstrument
+soho:c2 soho:c3 sta:cor1 sta:cor2 stb:cor1 stb:cor2		StringsInstrument
 
 los ins tec		StringPlot
 -1			DnSavePlot
 10.0			DtSavePlot
-soho:c2 soho:c3 sta:cor1 sta:cor2 stb:cor1 stb:cor2	StringsInstrument
+soho:c2 soho:c3 sta:cor1 sta:cor2 stb:cor1 stb:cor2		StringsInstrument
 3d VAR tcp		StringPlot
 -1			DnSavePlot
 10.			DtSavePlot
