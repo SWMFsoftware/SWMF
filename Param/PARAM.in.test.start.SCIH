@@ -1,4 +1,4 @@
-sFor a three-temperature solar wind simulation, configure SWMF with
+For a three-temperature solar wind simulation, configure SWMF with
 
 ./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
 ./Config.pl -o=SC:u=Awsom,e=AwsomAnisoPi,g=6,8,8,nG=3
