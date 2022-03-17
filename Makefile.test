@@ -1475,7 +1475,7 @@ test9_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl -m RESULTS/run_start
 	cd ${TESTDIR}; ./Restart.pl -i RESULTS/run_start/RESTART
-	cd ${TESTDIR}; 	${MPIRUN} ./SPECTRUM.exe > spectrum.log
+	#cd ${TESTDIR}; 	${MPIRUN} ./SPECTRUM.exe > spectrum.log
 
 test9_cme:
 	cd ${TESTDIR}; mv PARAM.in PARAM.in_start; rm -f PARAM.in_orig_
@@ -1539,12 +1539,13 @@ test9_check:
 		${TESTDIR}/RESULTS/run_restart/IH/log_n000011.log \
 		output/test9/IH_log_n000011.log \
 		> test09_ih.diff)	
-	-(${DIFFNUM} -b -r=1e-5 -a=1e-12 \
-                ${TESTDIR}/RESULTS/spectrum.out \
-                output/test9/spectrum.out.gz \
-		> test09_spectrum.diff)
-
 	ls -l test09_*.diff
+
+#	-(${DIFFNUM} -b -r=1e-5 -a=1e-12 \
+#                ${TESTDIR}/RESULTS/spectrum.out \
+#                output/test9/spectrum.out.gz \
+#		> test09_spectrum.diff)
+
 
 
 ### test11: Dipole field with solar wind coupled with an exosphere model, to test the GM/PT coupler ###
