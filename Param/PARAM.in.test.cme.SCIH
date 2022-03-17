@@ -18,7 +18,7 @@ density so that the run does not fail for solar maximum
 Begin session: 1
 
 #DESCRIPTION
-Param/PARAM.in.test.cme.SCIH: restart from CME run in SC and continue in SC and IH		StringDescription
+Param/PARAM.in.test.cme.SCIH: restart from background run and initiate CME		StringDescription
 
 #INCLUDE
 RESTART.in

@@ -22,7 +22,7 @@ want to use the true HGI/HGR coordinate systems.
 Begin session: 1
 
 #DESCRIPTION
-Param/PARAM.in.test.start.SCIH: create steady state solar corona	StringDescription
+Param/PARAM.in.test.start.SCIH: create steady state solar corona		StringDescription
 
 INCLUDE
 RESTART.in
@@ -92,7 +92,7 @@ SC/fdips_bxyz.out		NameFile
 real4			TypeFile
 
 HARMONICSFILE		^
-SC/harmonics_adapt.dat	NameHarmonicsFile
+SC/harmonics_adapt.dat		NameHarmonicsFile
 
 HARMONICSGRID		^
 1.0			rMagnetogram
@@ -115,14 +115,14 @@ F			UseB0MomentumFlux
 1.0e6			PoyntingFluxPerBSi^ [J/m^2/s/T]
 
 #CORONALHEATING
-turbulentcascade	TypeCoronalHeating
+turbulentcascade		TypeCoronalHeating
 T			UseWaveReflection
 1.5e5			LperpTimesSqrtBSi^
 0.0			rMinWaveReflection^
 F			UseSurfaceWaveRefl^
 
 #HEATPARTITIONING
-stochasticheating	TypeHeatPartitioning
+stochasticheating		TypeHeatPartitioning
 0.21			StochasticExponent^
 0.18			StochasticAmplitude^
 
@@ -141,7 +141,7 @@ ascii			TypeFile
 2e17			NchromoSi	nChromoSi_AWSoM^
 5e4			TchromoSi
 
-#USERINPUTEND -------------------------------------------------------------
+#USERINPUTEND -------------------------------------
 
 #TRANSITIONREGION
 T			DoExtendTransitionRegion
@@ -275,7 +275,7 @@ VAR			StringLog
 1			DnSaveLogfile
 -1.			DtSaveLogfile
 rho mx my mz p pmin urmin urmax wflx wplusflx wminusflx keflx		NameLogVars
-1.01 23.99     	    	  StringLogRadii
+1.01 23.99		StringLogRadii
 
 #OUTERBOUNDARY
 user			TypeBc1   user for spherical and user_outerbcs
@@ -290,42 +290,42 @@ periodic		TypeBc6   LatMax
 
 #SAVEPLOT
 4			nPlotFile
-x=0 VAR idl_ascii	StringPlot
+x=0 VAR idl_ascii		StringPlot
 10			DnSavePlot
 -1.0			DtSavePlot
 -1.0			DxSavePlot
-{MHD} b1x b1y b1z te ti dphi	NameVars
+{MHD} b1x b1y b1z te ti dphi		NameVars
 {default}		NamePars
-y=0 VAR idl_ascii	StringPlot
+y=0 VAR idl_ascii		StringPlot
 10			DnSavePlot
 -1.			DtSavePlot
 -1.0			DxSavePlot
-{MHD} b1x b1y b1z te ti dphi	NameVars
+{MHD} b1x b1y b1z te ti dphi		NameVars
 {default}		NamePars
-z=0 VAR idl_ascii	StringPlot
+z=0 VAR idl_ascii		StringPlot
 10			DnSavePlot
 -1.			DtSavePlot
 -1.0			DxSavePlot
-{MHD} b1x b1y b1z te ti dphi	NameVars
+{MHD} b1x b1y b1z te ti dphi		NameVars
 {default}		NamePars
-los ins idl_ascii	StringPlot
+los ins idl_ascii		StringPlot
 10			DnSavePlot
 -1.0			DtSavePlot
-sta:euvi stb:euvi sdo:aia	StringsInstrument
+sta:euvi stb:euvi sdo:aia		StringsInstrument
 
-3d VAR idl	  	StringPlot
-5      			DnSavePlot
+3d VAR idl		StringPlot
+5			DnSavePlot
 -1.			DtSavePlot
 -1.			DxSavePlot
-cut ray idl	  	StringPlot ! 3D cut plot with raytrace info
-10                   	DnSavePlot
--1.                     DtSavePlot
-1.01                    Coord1MinCut
-1.6                     Coord1MaxCut
-0.                      Coord2MinCut
-360.                    Coord2MaxCut
--90.                    Coord3MinCut
-90.                     Coord3MaxCut
+cut ray idl		StringPlot ! 3D cut plot with raytrace info
+10			DnSavePlot
+-1.			DtSavePlot
+1.01			Coord1MinCut
+1.6			Coord1MaxCut
+0.			Coord2MinCut
+360.			Coord2MaxCut
+-90.			Coord3MinCut
+90.			Coord3MaxCut
 0			DxSavePlot
 
 #SATELLITE
@@ -478,8 +478,8 @@ conex0			StringShape
 -215.			Height
 80.			Radius
 
-AMRCRITERIARESOLUTION	
-3                       nRefineCrit
+AMRCRITERIARESOLUTION
+3			nRefineCrit
 dx			StringRefine
 8.			RefineTo
 4.			CoarsenFrom
@@ -491,8 +491,8 @@ currentsheet		StringRefine
 0.5			RefineLimit
 1.0			MaxResolution
 
-#AMRCRITERIARESOLUTION	
-5                       nRefineCrit
+#AMRCRITERIARESOLUTION
+5			nRefineCrit
 dx			StringRefine
 8.			RefineTo
 4.			CoarsenFrom
@@ -511,8 +511,8 @@ currentsheet		StringRefine
 1.0			MaxResolution
 
 #GRIDRESOLUTION
-4.0                     Resolution
-initial                 StringShape
+4.0			Resolution
+initial			StringShape
 
 #SAVEINITIAL
 F			DoSaveInitial
@@ -590,23 +590,23 @@ rho mx my mz p pmin urmin urmax		NameLogVars
 
 #SAVEPLOT
 4			nPlotFile
-x=0 VAR idl_ascii	StringPlot
+x=0 VAR idl_ascii		StringPlot
 10			DnSavePlot
 -1.			DtSavePlot
 -1.0			DxSavePlot
-{MHD} b1x b1y b1z te ti dx	NameVars
+{MHD} b1x b1y b1z te ti dx		NameVars
 {default}		NamePars
-y=0 VAR idl_ascii	StringPlot
+y=0 VAR idl_ascii		StringPlot
 10			DnSavePlot
 -1.			DtSavePlot
 -1.0			DxSavePlot
-{MHD} b1x b1y b1z te ti dx	NameVars
+{MHD} b1x b1y b1z te ti dx		NameVars
 {default}		NamePars
-z=0 VAR idl_ascii	StringPlot
+z=0 VAR idl_ascii		StringPlot
 10			DnSavePlot
 -1.			DtSavePlot
 -1.0			DxSavePlot
-{MHD} b1x b1y b1z te ti dx	NameVars
+{MHD} b1x b1y b1z te ti dx		NameVars
 {default}		NamePars
 shl VAR idl		StringPlot
 10			DnSavePlot
@@ -621,8 +621,8 @@ HGC			TypeCoordPlot
 -90.			LatMin
 90.			LatMax
 1.			dLat    ! only read if LatMin /= LatMax
-{MHD} b1x b1y b1z qheat qebyq qparbyq qperpbyq 	      NameVars
-{default}     	  	NamePars
+{MHD} b1x b1y b1z qheat qebyq qparbyq qperpbyq 		NameVars
+{default}		NamePars
 
 Start and EndTimeTraj may need to change to stop before CME flare time
 #SATELLITE

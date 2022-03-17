@@ -18,7 +18,7 @@ density so that the run does not fail for solar maximum
 Begin session: 1
 
 #DESCRIPTION
-Param/PARAM.in.test.restart.SCIH: restart from steady-state to initiate a CME in SC		StringDescription
+Param/PARAM.in.test.restart.SCIH: restart from the CME run		StringDescription
 
 #INCLUDE
 RESTART.in
@@ -227,9 +227,6 @@ initial			StringShape
 
 #DOAMR
 F			DoAmr
-4			DnAmr
--1.0			DtAmr
-T			IsStrictAmr
 
 #TIMESTEPPING
 2			nStage
@@ -282,7 +279,7 @@ VAR			StringLog
 rho mx my mz p pmin urmin urmax wflx wplusflx wminusflx keflx		NameLogVars
 1.01 23.99		StringLogRadii
 
------------- CME related parameters -------------------------------------------
+------------ switch off CME -------------------------------------------
 
 #UPDATECHECK
 F			UseUpdateCheck
@@ -301,15 +298,6 @@ USERSWITCH		sc_cme^
 flux-rope parameters
 #CME
 F			UseCme^
-T			DoAddFluxRope
-87.50			LongitudeCme^
-14.50			LatitudeCme^
-250.68			OrientationCme^
-GL			TypeCme
--5.0			BStrength^
-0.8			Radius^
-0.60			Stretch^
-1.0			ApexHeight^
 
 -------------------------------------------------------------------------------
 #SAVETECPLOT
@@ -456,6 +444,7 @@ dx +cmecone		StringRefine
 dx +earthcone		StringRefine
 0.7			RefineTo
 0.35			CoarsenFrom
+
 currentsheet		StringRefine
 0.5			CoarsenLimit
 0.5			RefineLimit
