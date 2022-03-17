@@ -131,7 +131,7 @@ load			NameCommand
 SC/Param/RadCoolCorona_8.0.dat		NameFile
 ascii			TypeFile
 
-#USERINPUTBEGIN --------------------------------------------------------------
+#USERINPUTBEGIN -----------------------------------
 
 #CHROMOBC
 2e17			NchromoSi	nChromoSi_AWSoM^
