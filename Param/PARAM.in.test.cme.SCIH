@@ -222,9 +222,6 @@ initial			StringShape
 
 #DOAMR
 F			DoAmr
-4			DnAmr
--1.0			DtAmr
-T			IsStrictAmr
 
 #TIMESTEPPING
 2			nStage
