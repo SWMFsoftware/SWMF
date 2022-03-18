@@ -1428,19 +1428,22 @@ test8_check:
 ### test9: SC + IH. Test 2nd and 5th order schemes ### 
 
 test9:
-	@echo "test9_compile..." > test09_sc_chromo.diff
+	@echo "test9_compile..." > test09_sc.diff
 	@echo "test9_compile..." > test09_ih.diff
 	${MAKE} test9_compile
-	@echo "test9_rundir..." >> test09_sc_chromo.diff
+	@echo "test9_rundir..." >> test09_sc.diff
 	@echo "test9_rundir..." >> test09_ih.diff
 	${MAKE} test9_rundir
-	@echo "test9_run..." >> test09_sc_chromo.diff
+	@echo "test9_run..." >> test09_sc.diff
 	@echo "test9_run..." >> test09_ih.diff
 	${MAKE} test9_run
-	@echo "test9_restart..." >> test09_sc_chromo.diff
+	@echo "test9_cme..." >> test09_sc.diff
+	@echo "test9_cme..." >> test09_ih.diff
+	${MAKE} test9_cme
+	@echo "test9_restart..." >> test09_sc.diff
 	@echo "test9_restart..." >> test09_ih.diff
 	${MAKE} test9_restart
-	@echo "test9_check..." >> test09_sc_chromo.diff
+	@echo "test9_check..." >> test09_sc.diff
 	@echo "test9_check..." >> test09_ih.diff
 	${MAKE} test9_check
 
@@ -1458,25 +1461,34 @@ test9_rundir:
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/PARAM.in.test.start.SCIH ${TESTDIR}/PARAM.in
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
-	cp GM/BATSRUS/Param/CORONA/RadCoolCorona_8.0.dat ${TESTDIR}/RadCoolCorona_8.0.dat
-	cp Param/map_1.out ${TESTDIR}/SC/
+	cp Param/map_04.out ${TESTDIR}/SC/
 	cp -f ${MAGNETOGRAMDIR}/FDIPS.in.orig ${TESTDIR}/SC/FDIPS.in
-	perl -i -pe 's/dipole11.out/map_1.out/' ${TESTDIR}/SC/FDIPS.in
+	perl -i -pe 's/dipole11.out/map_04.out/' ${TESTDIR}/SC/FDIPS.in
 	perl -i -pe 's/#(CHANGEPOLARFIELD)/$$1/; s/20/90/ if /n(Theta|Phi)/' ${TESTDIR}/SC/FDIPS.in
 	cd ${TESTDIR}/SC; ${PARALLEL} ${NPFLAG} 4 ./FDIPS.exe > runlog_fdips
 	gunzip -c GM/BATSRUS/data/SPECTRUM/SPECTRUM_chianti_tbl.dat.gz \
         > ${TESTDIR}/SPECTRUM_chianti_tbl.dat
 	cp -f Param/SPECTRUM.in.test ${TESTDIR}/SPECTRUM.in	
 	ln -s ${BINDIR}/SPECTRUM.exe ${TESTDIR}/SPECTRUM.exe
-		
+
 test9_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl -m RESULTS/run_start
 	cd ${TESTDIR}; ./Restart.pl -i RESULTS/run_start/RESTART
-	cd ${TESTDIR}; 	${MPIRUN} ./SPECTRUM.exe > spectrum.log
-	
-test9_restart:
+	#cd ${TESTDIR}; 	${MPIRUN} ./SPECTRUM.exe > spectrum.log
+
+test9_cme:
 	cd ${TESTDIR}; mv PARAM.in PARAM.in_start; rm -f PARAM.in_orig_
+	cd ${TESTDIR}; cp Param/PARAM.in.test.cme.SCIH PARAM.in
+	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl RESULTS/run_cme
+	cd ${TESTDIR}; cp -r RESULTS/run_start/RESTART/IH \
+	   RESULTS/run_cme/RESTART/
+	cd ${TESTDIR}; ./Restart.pl -i RESULTS/run_cme/RESTART
+
+test9_restart:
+	cd ${TESTDIR}; mv PARAM.in PARAM.in_cme; rm -f PARAM.in_cme_
 	cd ${TESTDIR}; cp Param/PARAM.in.test.restart.SCIH PARAM.in
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
@@ -1486,29 +1498,54 @@ test9_check:
 	-(${DIFFNUM} -b -r=1e-5 -a=1e-27 \
 		${TESTDIR}/RESULTS/run_start/SC/log_n000001.log \
 		output/test9/SC_log_n000001.log \
-		> test09_sc_chromo.diff)
+		> test09_sc.diff)
+	-(${DIFFNUM} -b -r=1e-4 -a=1e-27 \
+                ${TESTDIR}/RESULTS/run_start/SC/los_sdo_aia_6_n0000010.out \
+                output/test9/SC_los_sdo_aia_6_n0000010.out.gz \
+                > test09_sc_los.diff)
+	-(${DIFFNUM} -b -r=1e-4 -a=1e-27 \
+                ${TESTDIR}/RESULTS/run_start/SC/los_sta_euvi_4_n0000010.out \
+                output/test9/SC_los_sta_euvi_4_n0000010.out.gz \
+                > test09_sc_los.diff)
+	-(${DIFFNUM} -b -r=1e-4 -a=1e-27 \
+                ${TESTDIR}/RESULTS/run_start/SC/los_stb_euvi_5_n0000010.out \
+                output/test9/SC_los_stb_euvi_5_n0000010.out.gz \
+                > test09_sc_los.diff)
 	-(${DIFFNUM} -b -r=1e-5 \
-		${TESTDIR}/RESULTS/run_restart/IH/log_n000005.log \
-		output/test9/IH_log_n000005.log \
+		${TESTDIR}/RESULTS/run_start/IH/log_n000001.log \
+		output/test9/IH_log_n000001.log \
 		> test09_ih.diff)
 	-(${DIFFNUM} -b -r=2e-5 -a=1e-27 \
-		${TESTDIR}/RESULTS/run_restart/IH/trj_earth_t00000010_n00000007.sat \
-		output/test9/IH_trj_earth_t00000010_n00000007.sat \
-		> test09_ih_trj_earth.diff)
-	-(${DIFFNUM} -b -r=1e-4 -a=1e-27 \
-                ${TESTDIR}/RESULTS/run_start/SC/los_sta_euvi_5_n0000005.out \
-                output/test9/SC_los_sta_euvi_5_n0000005.out.gz \
-                > test09_sc_los.diff)
-	-(${DIFFNUM} -b -r=1e-4 -a=1e-27 \
-                ${TESTDIR}/RESULTS/run_start/SC/los_stb_euvi_6_n0000005.out \
-                output/test9/SC_los_stb_euvi_6_n0000005.out.gz \
-                > test09_sc_los.diff)
-	-(${DIFFNUM} -b -r=1e-5 -a=1e-12 \
-                ${TESTDIR}/RESULTS/spectrum.out \
-                output/test9/spectrum.out.gz \
-		> test09_spectrum.diff)
-
+		${TESTDIR}/RESULTS/run_start/IH/trj_earth_n00000010.sat \
+		output/test9/IH_trj_earth_n00000010.sat \
+		> test09_ih_trj_earth.diff)	
+	-(${DIFFNUM} -b -r=1e-5 -a=1e-27 \
+		${TESTDIR}/RESULTS/run_cme/SC/log_n000010.log \
+		output/test9/SC_log_n000010.log \
+		> test09_sc_cme.diff)
+	-(${DIFFNUM} -b -r=1e-5 -a=1e-27 \
+		${TESTDIR}/RESULTS/run_cme/SC/los_soho_c2_4_t00000010_n0000012.out \
+		output/test9/SC_cme_los_soho_c2_4_t00000010_n0000012.out \
+		> test09_sc_cme_los.diff)
+	-(${DIFFNUM} -b -r=1e-5 -a=1e-27 \
+		${TESTDIR}/RESULTS/run_restart/SC/los_soho_c2_4_t00000010_n0000012.out \
+		output/test9/SC_restart_los_soho_c2_4_t00000010_n0000012.out \
+		> test09_sc_restart_los.diff)
+	-(${DIFFNUM} -b -r=2e-5 -a=1e-27 \
+		${TESTDIR}/RESULTS/run_restart/IH/sat_earth_n00000012.sat \
+		output/test9/IH_sat_earth_n00000012.sat \
+		> test09_ih_trj_earth.diff)	
+	-(${DIFFNUM} -b -r=1e-5 \
+		${TESTDIR}/RESULTS/run_restart/IH/log_n000011.log \
+		output/test9/IH_log_n000011.log \
+		> test09_ih.diff)	
 	ls -l test09_*.diff
+
+#	-(${DIFFNUM} -b -r=1e-5 -a=1e-12 \
+#                ${TESTDIR}/RESULTS/spectrum.out \
+#                output/test9/spectrum.out.gz \
+#		> test09_spectrum.diff)
+
 
 
 ### test11: Dipole field with solar wind coupled with an exosphere model, to test the GM/PT coupler ###

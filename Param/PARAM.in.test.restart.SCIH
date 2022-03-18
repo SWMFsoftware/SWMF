@@ -1,15 +1,3 @@
-For a single-temperature solar wind simulation, configure SWMF with
-
-./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
-./Config.pl -o=SC:u=Awsom,e=MhdWaves,g=6,4,4,nG=3
-./Config.pl -o=IH:u=Awsom,e=MhdWaves,g=4,4,4,nG=3
-
-For a two-temperature solar wind simulation, configure SWMF with
-
-./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
-./Config.pl -o=SC:u=Awsom,e=Awsom,g=6,4,4,nG=3
-./Config.pl -o=IH:u=Awsom,e=Awsom,g=4,4,4,nG=3
-
 For a three-temperature solar wind simulation, configure SWMF with
 
 ./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
@@ -27,13 +15,10 @@ IMPORTANT:
 Use the user CHROMOBC command to increase the inner boundary number
 density so that the run does not fail for solar maximum
 
-RESTART SC for boundary & couple with IH for 0 steps
-RESTART IH to run 5th order scheme
-
 Begin session: 1
 
 #DESCRIPTION
-Param/PARAM.in.test.restart.SCIH: create steady state solar corona		StringDescription
+Param/PARAM.in.test.restart.SCIH: restart from the CME run		StringDescription
 
 #INCLUDE
 RESTART.in
@@ -45,19 +30,39 @@ IH 0 -1 1		CompMap
 #TIMEACCURATE
 T			IsTimeAccurate
 
+STARTTIME		^
+2014			iYear
+09			iMonth
+10			iDay
+14			iHour
+00			iMinute
+00			iSecond
+0.0			FracSecond
+
 #SAVERESTART
 T			DoSaveRestart
 -1			DnSaveRestart
 10.0			DtSaveRestart
 
+ROTATEHGR		^
+-1.			dLongitudeHgr^
+
+ROTATEHGI		^
+-1.			dLongitudeHgi^
+
+#TEST
+init_axes		StringTest
+
 #BEGIN_COMP SC ---------------------------------------------------------------
 
-Needed for AMR
 #GRIDBLOCKALL
 2500			MaxBlock
 
 #INCLUDE
-SC/restartIN/restart.H	
+SC/restartIN/restart.H
+
+#RESTARTOUTFILE
+one			StringRestartOutFile
 
 #COORDSYSTEM
 HGR			TypeCoordSystem
@@ -76,46 +81,46 @@ T			UseBody
 #BODY
 F			UseBody
 
-#LOOKUPTABLE
+#LOOKUPTABLE		FDIPS^
 B0			NameTable
 load			NameCommand
 SC/fdips_bxyz.out		NameFile
 real4			TypeFile
 
-HARMONICSFILE
+HARMONICSFILE		^
 SC/harmonics_adapt.dat		NameHarmonicsFile
 
-HARMONICSGRID
+HARMONICSGRID		^
 1.0			rMagnetogram
-25			rSourceSurface^
+2.5			rSourceSurface^
 T			IsLogRadius^
 180			MaxOrder
 400			nR
 180			nLon
 90			nLat
 
-FACTORB0
-1.0			FactorB0 BrFactor^
-
-#CURLB0
+CURLB0
 T			UseCurlB0
-2.5			rCurrentFreeB0
+2.5			rCurrentB0
 F			UseB0MomentumFlux
 
+FACTORB0		^
+1.0			FactorB0 BrFactor^
+
 #POYNTINGFLUX
-1.0e6			PoyntingFluxPerBSi [J/m^2/s/T]
+1.0e6			PoyntingFluxPerBSi^ [J/m^2/s/T]
 
 #CORONALHEATING
 turbulentcascade		TypeCoronalHeating
 T			UseWaveReflection
-1.5e5			LperpTimesSqrtBSi
-0.0			rMinWaveReflection
-F			UseSurfaceWaveRefl
+1.5e5			LperpTimesSqrtBSi^
+0.0			rMinWaveReflection^
+F			UseSurfaceWaveRefl^
 
 #HEATPARTITIONING
 stochasticheating		TypeHeatPartitioning
-0.21			StochasticExponent
-0.18			StochasticAmplitude
+0.21			StochasticExponent^
+0.18			StochasticAmplitude^
 
 #RADIATIVECOOLING
 T			UseRadCooling
@@ -125,6 +130,14 @@ radcool			NameTable
 load			NameCommand
 SC/Param/RadCoolCorona_8.0.dat		NameFile
 ascii			TypeFile
+
+#USERINPUTBEGIN -----------------------------------
+
+#CHROMOBC
+2e17			NchromoSi	nChromoSi_AWSoM^
+5e4			TchromoSi
+
+#USERINPUTEND -------------------------------------
 
 #TRANSITIONREGION
 T			DoExtendTransitionRegion
@@ -164,29 +177,56 @@ shell0			StringShape
 1.0			RadiusInner
 1.7			Radius
 
-#AMRCRITERIARESOLUTION
+#AMRREGION
+cmecone			NameRegion
+conex0			StringShape
+-24.			Height
+5.			Radius
+
+#AMRREGION
+earthcone		NameRegion
+conex0			StringShape
+-24.			Height
+9.			Radius
+
+AMRCRITERIARESOLUTION		regular_grid^
 3			nRefineCrit
 dphi			StringRefine
 3.0			RefineTo
 1.5			CoarsenFrom
 dphi Innershell		StringRefine
-1.5			RefineTo
+1.5  			RefineTo
 0.75			CoarsenFrom
 currentsheet		StringRefine
 0.5			CoarsenLimit
 0.5			RefineLimit
 1.5			MaxResolution
 
-#GRIDRESOLUTION
+#AMRCRITERIARESOLUTION		cme_grid^
+5			nRefineCrit
+dphi			StringRefine
+3.0			RefineTo
+1.5			CoarsenFrom
+dphi Innershell		StringRefine
+1.5  			RefineTo
+0.75			CoarsenFrom
+dphi cmecone		StringRefine
+0.35			RefineTo
+0.175			CoarsenFrom
+dphi earthcone		StringRefine
+0.7			RefineTo
+0.35			CoarsenFrom
+currentsheet		StringRefine
+0.5			CoarsenLimit
+0.5			RefineLimit
+1.5			MaxResolution
+
+GRIDRESOLUTION
 6.0			Resolution
 initial			StringShape
 
 #DOAMR
 F			DoAmr
-
-#TIMESTEPLIMIT
-T			UseDtLimit
-0.5			DtLimitDim
 
 #TIMESTEPPING
 2			nStage
@@ -211,17 +251,17 @@ F			UseRhoRatioLimiter
 1E-9			pMinDim for fluid 1
 1E-9			PeMinDim
 
+MINIMUMRADIALSPEED
+T			UseSpeedMin
+10			rSpeedMin
+250			SpeedMinDim
+10 h			TauSpeedMinDim
+
 #NONCONSERVATIVE
-T			UseNonConservative
+F			UseNonConservative^
 
 #RESCHANGE
 T			UseAccurateReschange
-
-#SAVELOGFILE
-T			DoSaveLogfile
-RAW			StringLog
-1			DnSaveLogfile
--1.			DtSaveLogfile
 
 #OUTERBOUNDARY
 user			TypeBc1   user for spherical and user_outerbcs
@@ -231,40 +271,69 @@ periodic		TypeBc4   LonMax
 periodic		TypeBc5   LatMin
 periodic		TypeBc6   LatMax
 
-#USERSWITCH
-+init +ic		StringSwitch
+#SAVELOGFILE
+T			DoSaveLogfile
+VAR			StringLog
+-1			DnSaveLogfile
+2.			DtSaveLogfile
+rho mx my mz p pmin urmin urmax wflx wplusflx wminusflx keflx		NameLogVars
+1.01 23.99		StringLogRadii
 
+------------ switch off CME -------------------------------------------
+
+#UPDATECHECK
+F			UseUpdateCheck
+
+#TIMESTEPLIMIT
+T			UseDtLimit
+5.0			DtLimitDim
+
+add the perturb switch for CME
+USERSWITCH		sc_cme^
++init +ic +perturb		StringSwitch
+
+#USERSWITCH		sc_restart^
++init +ic -perturb		StringSwitch
+
+flux-rope parameters
+#CME
+F			UseCme^
+
+-------------------------------------------------------------------------------
+#SAVETECPLOT
+T			DoSaveOneTecFile
+
+save frequently for first few hours
 #SAVEPLOT
-3			nPlotFile
+4			nPlotFile
 x=0 VAR idl		StringPlot
 -1			DnSavePlot
-5.0			DtSavePlot
+10.0			DtSavePlot
 -1.0			DxSavePlot
-{MHD} b1x b1y b1z te ti		NameVars
+{MHD} b1x b1y b1z te ti dphi qrad qheat qebyq qparbyq qperpbyq		NameVars
 {default}		NamePars
 y=0 VAR idl		StringPlot
 -1			DnSavePlot
-5.0			DtSavePlot
+10.			DtSavePlot
 -1.0			DxSavePlot
-{MHD} b1x b1y b1z te ti		NameVars
+{MHD} b1x b1y b1z te ti dphi qrad qheat qebyq qparbyq qperpbyq		NameVars
 {default}		NamePars
 z=0 VAR idl		StringPlot
 -1			DnSavePlot
-5.0			DtSavePlot
+10.			DtSavePlot
 -1.0			DxSavePlot
-{MHD} b1x b1y b1z te ti		NameVars
-{default}		NamePars
-
-3d VAR idl		StringPlot
--1			DnSavePlot
-5.0			DtSavePlot
--1.			DxSavePlot
-{MHD} b1x b1y b1z te ti		NameVars
+{MHD} b1x b1y b1z te ti dphi qrad qheat qebyq qparbyq qperpbyq		NameVars
 {default}		NamePars
 los ins idl_ascii		StringPlot
 -1			DnSavePlot
-5.0			DtSavePlot
-sta:euvi stb:euvi sdo:aia		StringsInstrument
+10.0			DtSavePlot
+soho:c2 soho:c3 sta:cor1 sta:cor2 stb:cor1 stb:cor2		StringsInstrument
+
+3d VAR tcp		StringPlot
+-1			DnSavePlot
+10.			DtSavePlot
+{MHD} b1x b1y b1z te ti		NameVars
+{default}		NamePars
 
 #SATELLITE
 3			nSatellite
@@ -310,25 +379,10 @@ T			DoSaveInitial
 
 #END_COMP SC -----------------------------------------------------------------
 
-#COMPONENT
-IH			NameComp
-F			UseComp
-
-#STOP
--1			MaxIter
-5 s			TimeMax
-
-#RUN ##########################################################################
-
-#COMPONENT
-IH			NameComp
-T			UseComp
-
 #BEGIN_COMP IH ---------------------------------------------------------------
 
-Needed for AMR
 #GRIDBLOCKALL
-3000			MaxBlock
+3500			MaxBlock
 
 #INCLUDE
 IH/restartIN/restart.H
@@ -364,25 +418,44 @@ shell0			StringShape
 18.0			RadiusInner
 21.0			Radius
 
+#AMRREGION
+cmecone			NameRegion
+conex0			StringShape
+-215.			Height
+20			Radius
+
+#AMRREGION
+earthcone		NameRegion
+conex0			StringShape
+-215.			Height
+80			Radius
+
 #AMRCRITERIARESOLUTION
-3			nRefineCrit
+4			nRefineCrit
 dx			StringRefine
 8.			RefineTo
 4.			CoarsenFrom
 dx +Outershell		StringRefine
-1.0			RefineTo
-0.5			CoarsenFrom
+0.5			RefineTo
+0.25			CoarsenFrom
+dx +cmecone		StringRefine
+0.35			RefineTo
+0.175			CoarsenFrom
+dx +earthcone		StringRefine
+0.7			RefineTo
+0.35			CoarsenFrom
+
 currentsheet		StringRefine
 0.5			CoarsenLimit
 0.5			RefineLimit
 1.0			MaxResolution
 
-#GRIDRESOLUTION
-1.0			Resolution
+GRIDRESOLUTION
+0.5			Resolution
 initial			StringShape
 
 #SAVEINITIAL
-T			DoSaveInitial
+F			DoSaveInitial
 
 #INNERBOUNDARY
 buffergrid		TypeBcBody
@@ -404,14 +477,14 @@ T			UseAccurateReschange
 #CORONALHEATING
 turbulentcascade		TypeCoronalHeating
 T			UseWaveReflection
-1.5e5			LperpTimesSqrtBSi
-0.0			rMinWaveReflection
-F			UseSurfaceWaveRefl
+1.5e5			LperpTimesSqrtBSi^
+0.0			rMinWaveReflection^
+F			UseSurfaceWaveRefl^
 
 #HEATPARTITIONING
 stochasticheating		TypeHeatPartitioning
-0.21			StochasticExponent
-0.18			StochasticAmplitude
+0.21			StochasticExponent^
+0.18			StochasticAmplitude^
 
 #SCHEME
 2			nOrder
@@ -427,7 +500,7 @@ It might be important to prevent code crashing due to CMEs with strong shocks.
 1E-14			PeMinDim
 
 #NONCONSERVATIVE
-T			UseNonConservative
+F			UseNonConservative^
 
 #TIMESTEPPING
 2			nStage
@@ -441,47 +514,52 @@ F			UseConstrainB
 
 #SAVELOGFILE
 T			DoSaveLogfile
-RAW			StringLog
-1			DnSaveLogfile
--1.			DtSaveLogfile
+VAR			StringLog
+-1			DnSaveLogfile
+1.			DtSaveLogfile
+rho mx my mz p pmin urmin urmax		NameLogVars
 
 #SAVEPLOT
-4			nPlotFile
+3			nPlotFile
 x=0 VAR idl		StringPlot
-2			DnSavePlot
--1.			DtSavePlot
+-1			DnSavePlot
+10.0			DtSavePlot
 -1.0			DxSavePlot
-{MHD} b1x b1y b1z te ti		NameVars
+{MHD} b1x b1y b1z te ti dx qrad qheat qebyq qparbyq qperpbyq dt		NameVars
 {default}		NamePars
 y=0 VAR idl		StringPlot
-2 			DnSavePlot
--1.			DtSavePlot
+-1			DnSavePlot
+10.			DtSavePlot
 -1.0			DxSavePlot
-{MHD} b1x b1y b1z te ti		NameVars
+{MHD} b1x b1y b1z te ti dx qrad qheat qebyq qparbyq qperpbyq dt		NameVars
 {default}		NamePars
 z=0 VAR idl		StringPlot
-2 			DnSavePlot
--1.			DtSavePlot
+-1			DnSavePlot
+10.			DtSavePlot
 -1.0			DxSavePlot
-{MHD} b1x b1y b1z te ti		NameVars
+{MHD} b1x b1y b1z te ti dx qrad qheat qebyq qparbyq qperpbyq dt		NameVars
 {default}		NamePars
-3d VAR idl		StringPlot
-2			DnSavePlot
--1.			DtSavePlot
--1			DxSavePlot
-{MHD} b1x b1y b1z te ti		NameVars
+
+3d VAR tcp		StringPlot
+-1			DnSavePlot
+10.			DtSavePlot
+{MHD} b1x b1y b1z te ti qrad qheat qebyq qparbyq qperpbyq divu		NameVars
 {default}		NamePars
 
 #SATELLITE
-1			nSatellite
-VAR HGI trajrange		StringSatellite
-1			DnOutput
--1.0			DtOutput [sec]
+3			nSatellite
+MHD hgi			StringSatellite
+-1  			DnOutput
+2.			DtOutput
 IH/TRAJECTORY/earth.dat		NameTrajectoryFile
--5 d			StartTimeTraj
-5 d			EndTimeTraj
-1 h			DtTraj
-rho ux uy uz bx by bz p ppar pperp pe ehot I01 I02		NameSatelliteVars
+MHD hgi			StringSatellite
+-1  			DnOutput
+2.			DtOutput
+IH/TRAJECTORY/sta.dat		NameTrajectoryFile
+MHD hgi			StringSatellite
+-1  			DnOutput
+2.			DtOutput
+IH/TRAJECTORY/stb.dat		NameTrajectoryFile
 
 #END_COMP IH -----------------------------------------------------------------
 
@@ -493,11 +571,81 @@ IH			NameTarget
 
 #STOP
 -1			MaxIter
-6.0			TimeMax
+12.			TimeMax
 
-End session: 1
+End session: 2
 #RUN ##########################################################################
-Begin session: 2
+Begin session: 3
+
+#BEGIN_COMP SC ---------------------------------------------------------------
+
+#SAVEPLOT
+3			nPlotFile
+x=0 VAR idl		StringPlot
+-1			DnSavePlot
+10.0			DtSavePlot
+-1.0			DxSavePlot
+{MHD} b1x b1y b1z te ti dphi qrad qheat qebyq qparbyq qperpbyq		NameVars
+{default}		NamePars
+y=0 VAR idl		StringPlot
+-1			DnSavePlot
+10.			DtSavePlot
+-1.0			DxSavePlot
+{MHD} b1x b1y b1z te ti dphi qrad qheat qebyq qparbyq qperpbyq		NameVars
+{default}		NamePars
+z=0 VAR idl		StringPlot
+-1			DnSavePlot
+10.			DtSavePlot
+-1.0			DxSavePlot
+{MHD} b1x b1y b1z te ti dphi qrad qheat qebyq qparbyq qperpbyq		NameVars
+{default}		NamePars
+
+3d VAR tcp		StringPlot
+-1			DnSavePlot
+3600.			DtSavePlot
+{MHD} b1x b1y b1z te ti qrad qheat qebyq qparbyq qperpbyq divu		NameVars
+{default}		NamePars
+
+#END_COMP SC -----------------------------------------------------------------
+
+#BEGIN_COMP IH ---------------------------------------------------------------
+
+#SAVEPLOT
+3			nPlotFile
+x=0 VAR idl		StringPlot
+-1			DnSavePlot
+10.0			DtSavePlot
+-1.0			DxSavePlot
+{MHD} b1x b1y b1z te ti dx qrad qheat qebyq qparbyq qperpbyq dt		NameVars
+{default}		NamePars
+y=0 VAR idl		StringPlot
+-1			DnSavePlot
+10.			DtSavePlot
+-1.0			DxSavePlot
+{MHD} b1x b1y b1z te ti dx qrad qheat qebyq qparbyq qperpbyq dt		NameVars
+{default}		NamePars
+z=0 VAR idl		StringPlot
+-1			DnSavePlot
+10.			DtSavePlot
+-1.0			DxSavePlot
+{MHD} b1x b1y b1z te ti dx qrad qheat qebyq qparbyq qperpbyq dt		NameVars
+{default}		NamePars
+
+3d VAR tcp		StringPlot
+-1			DnSavePlot
+10.			DtSavePlot
+{MHD} b1x b1y b1z te ti qrad qheat qebyq qparbyq qperpbyq divu		NameVars
+{default}		NamePars
+
+#END_COMP IH -----------------------------------------------------------------
+
+#STOP
+-1			MaxIter
+15.0			TimeMax
+
+End Session: 3
+#RUN ##########################################################################
+Begin Session: 4
 
 #COUPLE1
 SC			NameSource
@@ -511,32 +659,46 @@ F			UseComp
 
 #BEGIN_COMP IH ---------------------------------------------------------------
 
-#AMR
--1			DnRefine
-
-#SCHEME
-5			nOrder (1 or 2)
-Rusanov			TypeFlux (Roe, Rusanov, Linde, Sokolov
-mc3			TypeLimiter
-1.2			LimiterBeta
-
-#SCHEME5
-T			UseFDFaceFlux
-MP5			TypeLimiter
-F			UseHighResChange
-F			UseHighOrderAMR
-F			DoCorrectFace
-
-#LIMITER
-F			UseLogRhoLimiter
-F			UseLogPLimiter
-F			UseRhoRatioLimiter
+#SAVEPLOT
+4			nPlotFile
+x=0 VAR idl		StringPlot
+-1			DnSavePlot
+10.			DtSavePlot
+-1.0			DxSavePlot
+{MHD} b1x b1y b1z te ti dx qrad qheat qebyq qparbyq qperpbyq dt		NameVars
+{default}		NamePars
+y=0 VAR idl		StringPlot
+-1			DnSavePlot
+10.			DtSavePlot
+-1.0			DxSavePlot
+{MHD} b1x b1y b1z te ti dx qrad qheat qebyq qparbyq qperpbyq dt		NameVars
+{default}		NamePars
+z=0 VAR idl		StringPlot
+-1			DnSavePlot
+10.			DtSavePlot
+-1.0			DxSavePlot
+{MHD} b1x b1y b1z te ti dx qrad qheat qebyq qparbyq qperpbyq dt		NameVars
+{default}		NamePars
+shl VAR idl		StringPlot
+-1			DnSavePlot
+5.0			DtSavePlot
+hgi			TypeCoordPlot
+212.0			rMin
+212.0			rMax
+0.			LonMin
+360.			LonMax
+1.			dLon    ! only read if LonMin /= LonMax
+-30.			LatMin
+30.			LatMax
+1.			dLat    ! only read if LatMin /= LatMax
+{MHD} b1x b1y b1z qheat qebyq qparbyq qperpbyq 		NameVars
+{default}		NamePars
 
 #END_COMP IH -----------------------------------------------------------------
 
 #STOP
 -1			MaxIter
-10 s			TimeMax
+20.			TimeMax
 
-End Session: 2
-#END ########################################################################
+End session: 4
+#END ##########################################################################
