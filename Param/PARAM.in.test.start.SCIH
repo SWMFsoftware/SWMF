@@ -308,15 +308,15 @@ los ins idl_ascii		StringPlot
 -1.0			DtSavePlot
 sta:euvi stb:euvi sdo:aia		StringsInstrument
 
-cut ray idl_ascii       StringPlot ! 3D cut plot with raytrace info
-80000                   DnSavePlot
--1.                     DtSavePlot
-1.01                    Coord1MinCut
-1.6                     Coord1MaxCut
-0.                      Coord2MinCut
-360.                    Coord2MaxCut
--90.                    Coord3MinCut
-90.                     Coord3MaxCut
+cut ray idl_ascii		StringPlot ! 3D cut plot with raytrace info
+80000			DnSavePlot
+-1.			DtSavePlot
+1.01			Coord1MinCut
+1.6			Coord1MaxCut
+0.			Coord2MinCut
+360.			Coord2MaxCut
+-90.			Coord3MinCut
+90.			Coord3MaxCut
 0			DxSavePlot
 
 #SATELLITE
@@ -612,7 +612,7 @@ HGC			TypeCoordPlot
 -90.			LatMin
 90.			LatMax
 1.			dLat    ! only read if LatMin /= LatMax
-{MHD} b1x b1y b1z qheat qebyq qparbyq qperpbyq 	      NameVars
+{MHD} b1x b1y b1z qheat qebyq qparbyq qperpbyq 		NameVars
 {default}		NamePars
 
 Start and EndTimeTraj may need to change to stop before CME flare time
