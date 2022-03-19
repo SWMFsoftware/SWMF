@@ -1450,11 +1450,10 @@ test9:
 test9_compile:
 	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
 	./Config.pl -o=SC:u=Awsom,e=AwsomAnisoPi,ng=2,g=6,8,8
-	./Config.pl -o=IH:u=Awsom,e=AwsomAnisoPi,ng=3,g=8,8,8
+	./Config.pl -o=IH:u=Awsom,e=AwsomAnisoPi,ng=2,g=8,8,8
 	${MAKE} SWMF
 	make PIDL
 	make FDIPS
-	cd GM/BATSRUS/srcPostProc; make SPECTRUM 
 	
 test9_rundir:
 	rm -rf ${TESTDIR}
@@ -1466,16 +1465,11 @@ test9_rundir:
 	perl -i -pe 's/dipole11.out/map_04.out/' ${TESTDIR}/SC/FDIPS.in
 	perl -i -pe 's/#(CHANGEPOLARFIELD)/$$1/; s/20/90/ if /n(Theta|Phi)/' ${TESTDIR}/SC/FDIPS.in
 	cd ${TESTDIR}/SC; ${PARALLEL} ${NPFLAG} 4 ./FDIPS.exe > runlog_fdips
-	gunzip -c GM/BATSRUS/data/SPECTRUM/SPECTRUM_chianti_tbl.dat.gz \
-        > ${TESTDIR}/SPECTRUM_chianti_tbl.dat
-	cp -f Param/SPECTRUM.in.test ${TESTDIR}/SPECTRUM.in	
-	ln -s ${BINDIR}/SPECTRUM.exe ${TESTDIR}/SPECTRUM.exe
 
 test9_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl -m RESULTS/run_start
 	cd ${TESTDIR}; ./Restart.pl -i RESULTS/run_start/RESTART
-	#cd ${TESTDIR}; 	${MPIRUN} ./SPECTRUM.exe > spectrum.log
 
 test9_cme:
 	cd ${TESTDIR}; mv PARAM.in PARAM.in_start; rm -f PARAM.in_orig_
@@ -1540,13 +1534,6 @@ test9_check:
 		output/test9/IH_log_n000011.log \
 		> test09_ih.diff)	
 	ls -l test09_*.diff
-
-#	-(${DIFFNUM} -b -r=1e-5 -a=1e-12 \
-#                ${TESTDIR}/RESULTS/spectrum.out \
-#                output/test9/spectrum.out.gz \
-#		> test09_spectrum.diff)
-
-
 
 ### test11: Dipole field with solar wind coupled with an exosphere model, to test the GM/PT coupler ###
 

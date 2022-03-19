@@ -97,7 +97,7 @@ y=0 MHD idl		StringPlot
 0			StateVar Bz
 5.2E-13			StateVar P
 
-#USERINPUTBEGIN --------------------------------------------------------
+#USERINPUTBEGIN -----------------------------------
 
 #SOLARWINDH
 0.00874			SWH_rho_dim [n/cc]
