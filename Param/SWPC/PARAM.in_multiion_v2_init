@@ -134,7 +134,7 @@ ionosphere		TypeBcBody
 T			UseCpcpBc  (rest is read if true)
 28.0			Rho0Cpcp   [amu/cc]  for H+
 0.1			RhoPerCpcp [amu/cc / keV]
-8.0			RhoCpcp    [amu/cc]  for O+
+8.0			Rho0Cpcp   [amu/cc]  for O+
 0.3			RhoPerCpcp [amu/cc / keV]
 
 #SOLARWINDFILE
