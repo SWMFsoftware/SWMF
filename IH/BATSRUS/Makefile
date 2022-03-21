@@ -25,6 +25,7 @@ rundir: check_src
 	mkdir ${RUNDIR}/IH
 	cd ${RUNDIR}/IH; \
 		mkdir restartIN restartOUT IO2; \
+		ln -s IO2 plots; \
 		ln -s ${BINDIR}/PostIDL.exe .; \
 		ln -s ${BINDIR}/PostSPH.exe .; \
 		ln -s ${BINDIR}/EARTH_TRAJ.exe .; \
