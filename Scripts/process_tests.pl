@@ -348,6 +348,7 @@ while(<TEMPLATEFILE>){
 
 # Check for errors in PARAM.in and PARAM.XML files
 foreach my $machine (@machines){
+    next if $machine =~ /mstem/; # this is at least a day old
     my $file = $days[0]."/$machine/$logfile";
     next unless -s $file;
     my $Error = `grep -C2 '^Error at line' $file`;
