@@ -1308,6 +1308,9 @@ contains
                 ! Skip points that were not found (outside of source domain)
                 if(iProc < 0) CYCLE
 
+                ! only work on iProcSourceLocal
+                if(iProcSourceLocal /= iProcSourceLocal_P(iProc)) CYCLE
+
                 ! If iBuffer > iCoupleBuffer then jump to next target proc.
                 ! While loop is needed, because next target proc may not have
                 ! inquired about any points, so we need to proceed more
@@ -1318,8 +1321,6 @@ contains
                         + nCouplePointSource_I(iCouple)
 
                 enddo
-                ! only count for iProcSourceLocal
-                if(iProcSourceLocal /= iProcSourceLocal_P(iProc)) CYCLE
 
                 ! Translate union rank to local rank for target proc
                 iProcTargetLocal = &
