@@ -6,7 +6,7 @@ module CON_couple_points
 
   ! Couple two components by sending and receiving positions of
   ! target points and values of the source component at these locations
-  
+
   use CON_coupler
 
   implicit none
@@ -252,7 +252,7 @@ contains
 
     if(DoTestMe) write(*,*) NameSub,' iDecompSource, iDecompTarget, IsNewRoute=', &
          iDecompSource, iDecompTarget, IsNewRoute
-    
+
     Coupler%iDecompLastSource = iDecompSource
     Coupler%iDecompLastTarget = iDecompTarget
 
@@ -456,7 +456,7 @@ contains
 
        if(DoTest)call timing_stop('pnt_route_'//NameSourceTarget)
        if(DoTestMe) write(*,*) NameSub,' finished router for diff layout'
-       
+
     end if    ! IsNewRoute
 
     ! Transfer data from Source to Target
