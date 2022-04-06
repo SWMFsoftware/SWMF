@@ -2,10 +2,10 @@
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
-!
-! Couple two components in a pointwise manner
-!
 module CON_couple_points
+
+  ! Couple two components by sending and receiving positions of
+  ! target points and values of the source component at these locations
 
   use CON_coupler
 
@@ -13,7 +13,6 @@ module CON_couple_points
 
   public :: couple_points_init
   public :: couple_points
-  public :: couple_points_finalize
 
   type CouplePointsType
 
@@ -105,6 +104,7 @@ contains
 
     ! The layouts agree if the union and the intersection coincide
     Coupler%IsSameLayout = Coupler%nProcCommon == Coupler%nProcUnion
+    !!! Coupler%nProcUnion !!! n_proc(Coupler%iCompTarget) !!!  Coupler%nProcUnion
 
     if(DoTestMe)then
        write(*,*)NameSub,' iProc0Source, iProc0Target = ', &
@@ -116,7 +116,6 @@ contains
 
   end subroutine couple_points_init
   !============================================================================
-
   subroutine couple_points(Coupler, &
        source_get_grid_info, source_find_points, source_get, &
        target_get_grid_info, target_put)
@@ -251,6 +250,9 @@ contains
     IsNewRoute = iDecompSource /= Coupler%iDecompLastSource &
          .or. Coupler%iDecompLastTarget /= iDecompTarget
 
+    if(DoTestMe) write(*,*) NameSub,' iDecompSource, iDecompTarget, IsNewRoute=', &
+         iDecompSource, iDecompTarget, IsNewRoute
+
     Coupler%iDecompLastSource = iDecompSource
     Coupler%iDecompLastTarget = iDecompTarget
 
@@ -267,7 +269,7 @@ contains
           call target_put(Coupler%NameVar, Coupler%nVar, &
                Coupler%nPointTarget, Pos_DI = Coupler%PosTarget_DI)
        else
-          ! Array has to be allocated on other prorcessors too
+          ! Array has to be allocated on other processors too
           allocate(Coupler%PosTarget_DI(Coupler%nDim,0))
        end if
 
@@ -299,7 +301,7 @@ contains
           end do
           deallocate(Coupler%PosTarget_DI)
 
-          ! Set number of points to be received on the GM component
+          ! Set number of points to be received by the source component
           call set_recv_info(Coupler%iCommUnion, &
                Coupler%nProcUnion, Coupler%iProcUnion, &
                Coupler%nPointTarget_P, Coupler%nPointSource, &
@@ -315,6 +317,7 @@ contains
                Coupler%nPointSource_P, Coupler%PosSource_DI)
 
           deallocate(PosSortTarget_DI)
+          if(DoTestMe) write(*,*) NameSub,' finished router for same layout'
 
        else
           ! Layouts are different
@@ -452,6 +455,7 @@ contains
        end if ! IsSameLayout
 
        if(DoTest)call timing_stop('pnt_route_'//NameSourceTarget)
+       if(DoTestMe) write(*,*) NameSub,' finished router for diff layout'
 
     end if    ! IsNewRoute
 
@@ -472,6 +476,7 @@ contains
     allocate(Coupler%DataTarget_VI(Coupler%nVar, Coupler%nData))
     if(DoTest)call timing_stop('pnt_alloc_'//NameSourceTarget)
 
+    if(DoTestMe) write(*,*) NameSub,' start transfer buffer'
     if(DoTest)call timing_start('pnt_transfer_'//NameSourceTarget)
     if(Coupler%IsSameLayout)then
        call transfer_buffer(Coupler%iCommUnion, &
@@ -491,6 +496,8 @@ contains
     if(DoTest)call timing_stop('pnt_transfer_'//NameSourceTarget)
     deallocate(Coupler%DataSource_VI)
 
+    if(DoTestMe) write(*,*) NameSub,' start target_put'
+
     ! Give the data to target
     if(DoTest)call timing_start('pnt_put_'//NameSourceTarget)
     if(is_proc(Coupler%iCompTarget)) call target_put( &
@@ -501,20 +508,10 @@ contains
     deallocate(Coupler%DataTarget_VI)
 
     if(DoTest) call timing_stop('pnt_cpl_'//NameSourceTarget)
+    if(DoTestMe) write(*,*) NameSub,'_',NameSourceTarget,' finished'
 
   end subroutine couple_points
   !============================================================================
-
-  subroutine couple_points_finalize(Coupler)
-
-    type(CouplePointsType), intent(inout) :: Coupler
-
-    ! Deallocate arrays
-
-    !--------------------------------------------------------------------------
-  end subroutine couple_points_finalize
-  !============================================================================
-
   subroutine transfer_buffer(iComm, nProc, iProc, nData, &
        nBufferS, nBufferS_P, BufferS_I, &
        nBufferR, nBufferR_P, BufferR_I)
@@ -600,7 +597,6 @@ contains
 
   end subroutine transfer_buffer
   !============================================================================
-
   subroutine transfer_buffer_real(&
        iComm, nProc, iProc,&
        nCoupleS, iCoupleProcS_I, nCouplePointS_I,&
@@ -693,7 +689,6 @@ contains
 
   end subroutine transfer_buffer_real
   !============================================================================
-
   subroutine get_transfer_buffer_order(&
        iCompSource, iCompTarget, &
        nBuffer, iProc_I, &
@@ -768,7 +763,6 @@ contains
 
   end subroutine get_transfer_buffer_order
   !============================================================================
-
   subroutine transfer_buffer_int(&
        iComm, nProc, iProc,&
        nCoupleS, iCoupleProcS_I, nCouplePointS_I,&
@@ -858,7 +852,6 @@ contains
 
   end subroutine transfer_buffer_int
   !============================================================================
-
   subroutine get_buffer_order(&
        nProc, nBuffer, iProc_I, nBuffer_P, iBuffer_I, nData)
 
@@ -912,7 +905,6 @@ contains
 
   end subroutine get_buffer_order
   !============================================================================
-
   subroutine set_recv_info(iComm, nProc, iProc, &
        nBufferS_P, nBufferR, nBufferR_P)
 
@@ -931,7 +923,6 @@ contains
     integer:: iProcR
     integer:: iError, iStatus_I(MPI_STATUS_SIZE)
     !--------------------------------------------------------------------------
-
     ! Gather the nBufferS_P information onto the root.
     ! The resulting nPointRS_PP table contains the
     ! the number of points owned by iProcR and iProcS.
@@ -967,7 +958,6 @@ contains
 
   end subroutine set_recv_info
   !============================================================================
-
   subroutine set_inquiry(iComm, nProc, iProc,                    &
        iCompSource, iCompTarget, nProcCommon,                    &
        nCoupleTarget, iCoupleProcTarget_I, nCouplePointTarget_I, &
@@ -1106,7 +1096,6 @@ contains
 
   end subroutine set_inquiry
   !============================================================================
-
   subroutine get_recv_buffer_size(iComm, nProc, iProc,&
        nCoupleS, iCoupleProcS_I, nCouplePointS_I,&
        nCoupleR, iCoupleProcR_I, nCouplePointR_I)
@@ -1170,7 +1159,6 @@ contains
     deallocate(iRequest_I, iStatus_II)
   end subroutine get_recv_buffer_size
   !============================================================================
-
   subroutine set_data_transfer(iComm, iCompSource, iCompTarget, &
        nProcUnion,&
        nBufferSource, iProcSource_I, &
@@ -1221,7 +1209,7 @@ contains
     integer:: iError
     integer, allocatable:: iProcSourceLocal_P(:), iProcTargetLocal_P(:)
     integer, allocatable:: iProcSourceUnion_P(:), iProcTargetUnion_P(:)
-    integer, allocatable:: nPoint_PP(:,:), nPointRecv_P(:), nPointSend_P(:)
+    integer, allocatable:: nPointRecv_P(:), nPointSend_P(:)
     integer, allocatable:: iCoupleProc_P(:), nCouplePoint_P(:)
     character(len=*), parameter:: NameSub = 'set_data_transfer'
     !--------------------------------------------------------------------------
@@ -1284,71 +1272,78 @@ contains
             nProcUnion, nProcSource, nProcTarget,&
             iProcSourceLocal_P, iProcTargetLocal_P,     &
             iProcSourceUnion_P, iProcTargetUnion_P)
-       ! nPoint_PP is number of points to send from Source to Target
-       allocate(nPoint_PP(0:nProcSource-1, 0:nProcTarget-1))
 
-       ! build nPoint_PP on the source processors
-       ! each proc on Source has only part of the info, store it into nPoint_PP
-       nPoint_PP = 0
-       if(nCoupleSource > 0)then
-          ! iCouple is the sequential index (1:nCoupleSource) of the target processor
-          ! that this source proc is communicating with. Start the loop at iCouple=1
-          iCouple = 1
-
-          ! iCoupleProcSource_I(iCouple) is the MPI rank of target proc for
-          ! union communicator that sent the request to this source proc.
-          ! iProcTargetLocal is the rank of target proc on the target component
-          iProcTargetLocal = iProcTargetLocal_P(iCoupleProcSource_I(iCouple))
-
-          ! iCoupleBuffer is the linear buffer index. Initialize with number of
-          ! points that were requested by the 1st target processor.
-          iCoupleBuffer = nCouplePointSource_I(iCouple)
-
-          ! Loop over all points for which the inquiry was made
-          ! and set nPoint_PP indexed by owner and target local ranks.
-          do iBuffer = 1, nBufferSource
-             ! Point indexed by iBuffer is owned by source proc iProc (rank on union)
-             iProc = iProcSource_I(iBuffer)
-             ! Skip points that were not found (outside of source domain)
-             if(iProc < 0) CYCLE
-
-             ! If iBuffer exceeds the iCoupleBuffer then jump to next target proc.
-             ! While loop is needed, because next target proc may not have inquired
-             ! about any points, so we need to proceed more than 1 target procs.
-             do while (iBuffer > iCoupleBuffer)
-                iCouple = iCouple + 1
-                iCoupleBuffer = iCoupleBuffer + nCouplePointSource_I(iCouple)
-
-                ! Translate union rank to local rank for target proc
-                iProcTargetLocal = iProcTargetLocal_P(iCoupleProcSource_I(iCouple))
-             enddo
-             ! iProcSourceLocal is the MPI rank of this source proc on source component
-             iProcSourceLocal = iProcSourceLocal_P(iProc)
-
-             ! Count this point in the communication matrix
-             nPoint_PP(iProcSourceLocal,iProcTargetLocal) = &
-                  nPoint_PP(iProcSourceLocal,iProcTargetLocal) + 1
-          end do
-       end if
-
-       deallocate(iCoupleProcSource_I, nCouplePointSource_I)
-
-       ! Reduce the row nPoint_PP(iProcSourceLocal,:)
+       ! nPointSend_P is number of points to send to Target procs
+       ! nPointRecv_P is number of points received by target procs
        allocate(nPointSend_P(0:nProcTarget-1), nPointRecv_P(0:nProcTarget-1))
 
-       ! Each source processor collects the row of the matrix that it needs.
-       ! Each row is added up from all source processors, because they
-       ! were asked about point positions randomly.
+       ! build nPointSend_P on the source procs one by one to reduce storage
        do iProcSourceLocal = 0, nProcSource-1
-          ! Extract the particular row (partial info)
-          nPointSend_P = nPoint_PP(iProcSourceLocal,:)
-          ! Add up partial rows and collect it on iProcSourceLocal
+
+          ! Initialize with zero (nothing to send)
+          nPointSend_P = 0
+
+          if(nCoupleSource > 0)then
+             ! iCouple is the sequential index (1:nCoupleSource) of the target
+             ! processor that this source proc is communicating with.
+             ! Start the loop at iCouple=1
+             iCouple = 1
+
+             ! iCoupleProcSource_I(iCouple) is the MPI rank of target proc for
+             ! union communicator that sent the request to this source proc.
+             ! iProcTargetLocal is the rank of target proc on target component
+             iProcTargetLocal = &
+                  iProcTargetLocal_P(iCoupleProcSource_I(iCouple))
+
+             ! iCoupleBuffer is the linear buffer index. Initialize with number
+             ! of points that were requested by the 1st target processor.
+             iCoupleBuffer = nCouplePointSource_I(iCouple)
+
+             ! Loop over all points for which the inquiry was made
+             ! and set nPointSend_P indexed by target local ranks.
+             do iBuffer = 1, nBufferSource
+                ! Point indexed by iBuffer is owned by source proc iProc
+                ! (rank on union)
+                iProc = iProcSource_I(iBuffer)
+                ! Skip points that were not found (outside of source domain)
+                if(iProc < 0) CYCLE
+
+                ! only work on iProcSourceLocal
+                if(iProcSourceLocal /= iProcSourceLocal_P(iProc)) CYCLE
+
+                ! If iBuffer > iCoupleBuffer then jump to next target proc.
+                ! While loop is needed, because next target proc may not have
+                ! inquired about any points, so we need to proceed more
+                ! than 1 target procs.
+                do while (iBuffer > iCoupleBuffer)
+                   iCouple = iCouple + 1
+                   iCoupleBuffer = iCoupleBuffer &
+                        + nCouplePointSource_I(iCouple)
+
+                enddo
+
+                ! Translate union rank to local rank for target proc
+                iProcTargetLocal = &
+                     iProcTargetLocal_P(iCoupleProcSource_I(iCouple))
+
+                ! Count this point in the communication matrix
+                nPointSend_P(iProcTargetLocal) = &
+                     nPointSend_P(iProcTargetLocal) + 1
+             end do
+          end if
+
+          ! Each source processor iProcSourceLocal collects the number of
+          ! points for the target processors.
+          ! It is added up from all source processors, because they
+          ! were asked about point positions randomly.
           call MPI_Reduce(&
                nPointSend_P, nPointRecv_P, nProcTarget, MPI_INTEGER, MPI_SUM, &
                iProcSourceLocal, i_comm(iCompSource), iError)
-       end do
 
-       deallocate(nPoint_PP, nPointSend_P)
+       end do ! iProcSourceLocal
+
+       deallocate(iCoupleProcSource_I, nCouplePointSource_I)
+       deallocate(nPointSend_P)
 
        ! Skip target processors that have no data to receive.
        ! Count the target processors that have data (nCoupleSource).
@@ -1379,7 +1374,6 @@ contains
 
   end subroutine set_data_transfer
   !============================================================================
-
   subroutine get_rank_translation(                 &
        iCommUnion, iCompSource, iCompTarget,       &
        nProcUnion, nProcSource, nProcTarget,&
@@ -1443,6 +1437,5 @@ contains
 
   end subroutine get_rank_translation
   !============================================================================
-
 end module CON_couple_points
 !==============================================================================
