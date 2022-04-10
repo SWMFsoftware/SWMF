@@ -1,5 +1,5 @@
 Ridley Ionosphere Model, [deg] and [kV]
-t yy mm dd hh mm ss ms tilt cpcpn cpcps
+t year mo dy hr mn sc msc tilt cpcpn cpcps
   0.00000E+00 2014  4 10  0  2  0   0   -4.51360  5.25659E+01  6.08781E+01
   5.00000E+00 2014  4 10  0  2  5   0   -4.51029  5.25055E+01  6.07869E+01
   1.00000E+01 2014  4 10  0  2 10   0   -4.50698  5.24507E+01  6.07075E+01
