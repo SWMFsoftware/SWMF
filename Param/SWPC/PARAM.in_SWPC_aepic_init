@@ -354,10 +354,16 @@ z=0 VAR idl_ascii		StringPlot
 1			nStage
 0.85			CflExpl
 
+! HallFactorMax is used to set the PIC scaling factor
+#HALLRESISTIVITY
+F			UseHallResist
+16			HallFactorMax
+0.1			HallCmaxFactor
+
 --------------Pic begin---------------
 #PICUNIT
 1.0			xUnitPicSi [m]
-500e3			uUnitPicSi [m/s]
+2000e3			uUnitPicSi [m/s]
 
 #PICBALANCE
 F			DoBalancePicBlock
@@ -370,9 +376,9 @@ F			DoBalancePicBlock
  20.0			yMaxPic
 -20.0			zMinPic
  20.0			zMaxPic
-2			DxPic
-2			DyPic
-2			DzPic
+0.5			DxPic
+0.5			DyPic
+0.5			DzPic
 
 #REGION
 magnetosphere		NameRegion
@@ -454,13 +460,16 @@ T			useFixedDt
 0.25			dt
 
 #MAXBLOCKSIZE
-4			nCellX
-4			nCellY
-4			nCellZ
+8			nCellX
+8			nCellY
+8			nCellZ
 
 #DISCRETIZATION
 0.6			theta
 0.1			ratioDivC2C
+
+#MONITOR
+1
 
 #PARTICLES
 3			nParticleX
