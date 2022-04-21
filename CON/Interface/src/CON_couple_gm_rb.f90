@@ -89,7 +89,7 @@ contains
     real, allocatable :: SatPos_DII(:,:,:)
 
     ! Buffer for satellite names
-    character (len=100), allocatable:: NameSat_I(:)
+    character (len=100), allocatable:: NameFileSat_I(:)
 
     logical :: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'couple_gm_rb'
@@ -100,20 +100,20 @@ contains
 
     if (nShareSats > 0) then
        ! If RB sat tracing is enabled, get sat locations from GM
-       allocate(SatPos_DII(4,2,nShareSats), NameSat_I(nShareSats))
+       allocate(SatPos_DII(4,2,nShareSats), NameFileSat_I(nShareSats))
        if(is_proc(GM_)) &
-            call GM_get_sat_for_rb(SatPos_DII, NameSat_I, nShareSats)
+            call GM_get_sat_for_rb(SatPos_DII, NameFileSat_I, nShareSats)
 
        ! The satellite trace is only on the root Source
        call transfer_real_array(GM_, RB_, 4*2*nShareSats, SatPos_DII)
 
        ! The satellite names are known all source procs
-       call transfer_string_array(GM_, RB_, nShareSats, NameSat_I, &
+       call transfer_string_array(GM_, RB_, nShareSats, NameFileSat_I, &
             UseSourceRootOnly = .false.)
 
        if(is_proc(RB_)) &
-            call RB_put_sat_from_gm(nShareSats, NameSat_I, SatPos_DII)
-       deallocate(SatPos_DII, NameSat_I)
+            call RB_put_sat_from_gm(nShareSats, NameFileSat_I, SatPos_DII)
+       deallocate(SatPos_DII, NameFileSat_I)
     end if
 
     ! Allocate buffers both in GM and RB
