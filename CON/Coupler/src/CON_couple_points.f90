@@ -16,7 +16,7 @@ module CON_couple_points
 
   ! Debugging
   logical, parameter:: UseOldCode = .false., DoDebug = .false.
-  
+
   integer :: nCoupleSource, nCoupleTarget
   ! processors of the OTHER component to communicate with
   integer, allocatable :: iCoupleProcSource_I(:), iCoupleProcTarget_I(:)
@@ -43,13 +43,13 @@ module CON_couple_points
 
      ! Number of source and target procs
      integer :: nProcSource=-1, nProcTarget=-1
-     
+
      ! Root processor indexes with respect to the union communicator
      integer:: iProc0Source, iProc0Target
 
      ! Processor indexes with respect to the union communicator
      integer, allocatable:: iProcSource_P(:), iProcTarget_P(:)
-     
+
      ! number of processors of the OTHER component to communicate with
      integer :: nCoupleSource, nCoupleTarget
 
@@ -107,7 +107,7 @@ contains
     ! Number of source and target processors
     Coupler%nProcSource = n_proc(Coupler%iCompSource)
     Coupler%nProcTarget = n_proc(Coupler%iCompTarget)
-    
+
     ! Get the union communicator and the root proc indexes of the two
     ! components in the union communicator
     Coupler%iProc0Source = i_proc0(Coupler%iCompSource)
@@ -144,7 +144,7 @@ contains
             i_group(Coupler%iCompTarget), Coupler%nProcTarget, &
             [(iProc, iProc=0, Coupler%nProcTarget-1)], iGroup, &
             Coupler%iProcTarget_P, iError)
-       
+
        call MPI_group_free(iGroup, iError)
     end if
     if(DoTestMe)then
@@ -250,7 +250,7 @@ contains
     ! Target positions sorted according to the corresponding source processors
     real, allocatable:: PosSortTarget_DI(:,:)
 
-    ! Debugging 
+    ! Debugging
     character(len=4):: NameSourceTarget
     integer:: iUnitTest
     logical:: DoTest, DoTestMe
@@ -557,7 +557,7 @@ contains
                      ' new nCouplePointSource_I=', Coupler%nCouplePointSource_I
              end if
           end if
-          
+
           ! Allocate buffer for positions on source (zero size on target)
           if(is_proc(Coupler%iCompSource)) Coupler%nPointSource = &
                sum(Coupler%nCouplePointSource_I)
@@ -1113,17 +1113,17 @@ contains
     nProcR = n_proc(iCompR)
 
     nBufferR_P = 0 ! initialize on all processors
-    
+
     if(iProcS >= 0)then
        ! Gather the nBufferS_P information onto the root of the sender.
        ! The resulting nPointRS_PP table contains the
-       ! the number of points transfered from iProcS to iProcR.       
+       ! the number of points transfered from iProcS to iProcR.
        if(iProcS == 0)then
           allocate(nPointRS_PP(0:nProcR-1,0:nProcS-1), nPointS_P(0:nProcS-1))
        else
           allocate(nPointRS_PP(1,1))
        end if
-       
+
        call MPI_gather(nBufferS_P, nProcR, MPI_INTEGER, &
             nPointRS_PP, nProcR, MPI_INTEGER, 0, iCommS, iError)
 
@@ -1299,10 +1299,10 @@ contains
   end subroutine set_inquiry
   !============================================================================
   subroutine compact_router( &
-       nProc, iProc_P, nPoint_P, nCouple, iProc_I, nPoint_I) 
+       nProc, iProc_P, nPoint_P, nCouple, iProc_I, nPoint_I)
 
     ! Compact the nPoint_P(nProc) array to nPoint_I(nCouple)
-    ! containng the non-zero elements only. 
+    ! containng the non-zero elements only.
 
     integer, intent(in):: nProc
     integer, intent(in):: iProc_P(0:nProc-1) ! union index of component procs
@@ -1313,9 +1313,9 @@ contains
     integer, allocatable, intent(inout):: nPoint_I(:) ! size of coupler
 
     integer:: iProc, iCouple
-    !--------------------------------------------------------------------------
 
     ! Number of procs with data
+    !--------------------------------------------------------------------------
     nCouple = count(nPoint_P /= 0)
 
     if(nCouple == 0) RETURN
@@ -1332,7 +1332,7 @@ contains
        iProc_I(iCouple)  = iProc_P(iProc)
        nPoint_I(iCouple) = nPoint_P(iProc)
     end do
-    
+
   end subroutine compact_router
   !============================================================================
   subroutine get_recv_buffer_size(iComm, nProc, iProc,&
