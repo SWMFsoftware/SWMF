@@ -160,7 +160,7 @@ contains
       real :: BufferKp
 
       ! Buffer for satellite names
-      character(len=100), allocatable:: NameSat_I(:)
+      character(len=100), allocatable:: NameFileSat_I(:)
 
       character(len=*), parameter :: NameSubSub=NameSub//'.couple_rcm'
       !------------------------------------------------------------------------
@@ -190,15 +190,17 @@ contains
 
       ! If IM sat tracing is enabled, get sat locations from GM
       if (nShareSats > 0) then
-         allocate(SatPos_DII(3,2,nShareSats), NameSat_I(nShareSats))
-         if(is_proc(GM_)) &
-              call GM_get_sat_for_im(SatPos_DII, NameSat_I, nShareSats)
-         call transfer_string_array(GM_, IM_, nShareSats, NameSat_I, &
+         allocate(SatPos_DII(3,2,nShareSats), NameFileSat_I(nShareSats))
+         if(is_proc(GM_)) then
+            call GM_get_sat_for_im(SatPos_DII, NameFileSat_I, nShareSats)
+         end if
+         call transfer_string_array(GM_, IM_, nShareSats, NameFileSat_I, &
               UseSourceRootOnly = .false.)
          call transfer_real_array(GM_, IM_, size(SatPos_DII), SatPos_DII)
-         if(is_proc(IM_)) &
-              call IM_put_sat_from_gm(nShareSats, NameSat_I, SatPos_DII)
-         deallocate(SatPos_DII, NameSat_I)
+         if(is_proc(IM_)) then
+            call IM_put_sat_from_gm(nShareSats, NameFileSat_I, SatPos_DII)
+         end if
+         deallocate(SatPos_DII, NameFileSat_I)
       end if
 
     end subroutine couple_rcm
@@ -296,7 +298,7 @@ contains
       real :: BufferKp, BufferAe
 
       ! Buffer for satellite names
-      character(len=100), allocatable:: NameSat_I(:)
+      character(len=100), allocatable:: NameFileSat_I(:)
 
       logical :: DoTest, DoTestMe
 
@@ -347,19 +349,19 @@ contains
 
       ! If IM sat tracing is enabled, get sat locations from GM
       if (nShareSats > 0) then
-         allocate(SatPos_DII(4,2,nShareSats), NameSat_I(nShareSats))
+         allocate(SatPos_DII(4,2,nShareSats), NameFileSat_I(nShareSats))
          if(is_proc(GM_)) &
-              call GM_get_sat_for_im_crcm(SatPos_DII, NameSat_I, nShareSats)
+              call GM_get_sat_for_im_crcm(SatPos_DII, NameFileSat_I, nShareSats)
 
          ! Transfer satellite names from GM to IM
-         call transfer_string_array(GM_, IM_, nShareSats, NameSat_I, &
+         call transfer_string_array(GM_, IM_, nShareSats, NameFileSat_I, &
               UseSourceRootOnly = .false.)
          ! Transfer satellite locations from GM to IM
          call transfer_real_array(GM_, IM_, size(SatPos_DII), SatPos_DII)
 
          if(is_proc(IM_)) &
-              call IM_put_sat_from_gm(nShareSats, NameSat_I, SatPos_DII)
-         deallocate(SatPos_DII, NameSat_I)
+              call IM_put_sat_from_gm(nShareSats, NameFileSat_I, SatPos_DII)
+         deallocate(SatPos_DII, NameFileSat_I)
       end if
 
     end subroutine couple_crcm

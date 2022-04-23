@@ -199,7 +199,7 @@ SATELLITES.in
 magin_GEM.dat		NameMagInputFile
 single			TypeFileOut
 -1			DnOutput
-1 min			DtOutput
+20			DtOutput
 
 #GEOMAGINDICES
 180			nSizeKpWindow [min]
@@ -215,7 +215,7 @@ GEO			TypeCoordMagGrid
 -85.			LatMinMagGrid
 85.			LatMaxMagGrid
 -1			DnSaveMagGrid
-1 min			DtSaveMagGrid
+20			DtSaveMagGrid
 
 #END_COMP GM -----------------------------------------------------------------
 

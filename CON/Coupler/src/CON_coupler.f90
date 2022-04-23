@@ -341,7 +341,6 @@ contains
 
   contains
     !==========================================================================
-
     subroutine init_coord_system_all
       integer :: iComp
       !------------------------------------------------------------------------
@@ -351,7 +350,7 @@ contains
               Grid_C(iComp)%Coord1_I, &
               Grid_C(iComp)%Coord2_I, &
               Grid_C(iComp)%Coord3_I)
-!!!      Grid_C(iComp)%nCoord_D    = 0 !!! pgf90 20.4 with debug flags fails on this
+!!! Grid_C(iComp)%nCoord_D = 0 !!! pgf90 20.4 with debug flags fails on this
          Grid_C(iComp)%TypeCoord   = '???'
          Grid_C(iComp)%TypeGeometry = 'cartesian'
          Grid_C(iComp)%nVar         = 0
@@ -360,10 +359,11 @@ contains
       end do
     end subroutine init_coord_system_all
     !==========================================================================
-
   end subroutine set_coord_system
   !============================================================================
-  subroutine gen_to_stretched(XyzGen_D,XyzStretched_D,nDim,GridID_,DoExtrapolate)
+  subroutine gen_to_stretched( &
+       XyzGen_D,XyzStretched_D,nDim,GridID_,DoExtrapolate)
+
     integer,intent(in)::nDim,GridID_
     real,dimension(nDim),intent(in)::XyzGen_D
 
@@ -371,8 +371,8 @@ contains
     ! to do extrapolation, while the VALUE of it, if present, is meaningless
     logical, OPTIONAL, intent(in):: DoExtrapolate
     real,dimension(nDim),intent(out)::XyzStretched_D
-    !   Trasforms generalized coordinates (which for the stretched grids are usually
-    !   nothing but the grid point index) to streched coordinates
+    ! Trasforms generalized coordinates (for the stretched grids these are
+    ! the grid point index) to streched coordinates
     real:: OneIfExtrapolate = 1.0
 
     !--------------------------------------------------------------------------
@@ -397,7 +397,6 @@ contains
       integer::iL,iU,Number
       real::Fraction
       !------------------------------------------------------------------------
-
       iL=lbound(Coord_I,1)
       iU=ubound(Coord_I,1)
 
@@ -419,7 +418,9 @@ contains
     !==========================================================================
   end subroutine gen_to_stretched
   !============================================================================
-  subroutine stretched_to_gen(XyzStretched_D,XyzGen_D,nDim,GridID_,DoExtrapolate)
+  subroutine stretched_to_gen( &
+       XyzStretched_D,XyzGen_D,nDim,GridID_,DoExtrapolate)
+
     integer,intent(in)::nDim,GridID_
     real,dimension(nDim),intent(in)::XyzStretched_D
 
@@ -491,7 +492,6 @@ contains
     !==========================================================================
   end subroutine stretched_to_gen
   !============================================================================
-  ! simplified interfaces for Igor's coupler
   subroutine set_grid_descriptor( &
        iComp,        & ! Component ID
        nDim,         & ! Dimensionality of the grid
@@ -508,6 +508,8 @@ contains
        IsPeriodic_D, & ! Periodicity for all dimesnsions (op)
        nVar,         & ! Number of variables per grid cell
        NameVar       ) ! Variable names
+
+    ! simplified interface for simple components
 
     integer, intent(in) :: iComp, nDim
     integer, intent(in) :: nRootBlock_D(nDim), nCell_D(nDim)
@@ -1117,11 +1119,11 @@ contains
          GridTarget, LocalGridTarget)
   end subroutine init_coupler
   !============================================================================
-
   subroutine check_couple_symm(iComp1,iComp2,NameCaller)
-    integer, intent(in)           :: iComp1,iComp2
-    character (len=*), intent(in) :: NameCaller
 
+    integer, intent(in)           :: iComp1,iComp2
+
+    character (len=*), intent(in) :: NameCaller
     !--------------------------------------------------------------------------
     call check_i_comp(iComp1,NameCaller//' iComp1 ')
     call check_i_comp(iComp2,NameCaller//' iComp2 ')
@@ -1138,7 +1140,6 @@ contains
 
   end subroutine check_couple_symm
   !============================================================================
-
   subroutine set_router_comm(iComp1, iComp2, iCommRouter, UseMe, iProc, jProc)
 
     ! This routine has to be called from ALL processors in i_comm()
@@ -1171,9 +1172,9 @@ contains
     iGroup1 = i_group(iComp1)
     iGroup2 = i_group(iComp2)
 
-    call MPI_group_union(iGroup1,iGroup2, iGroupUnion, iError)
+    call MPI_group_union(iGroup1, iGroup2, iGroupUnion, iError)
 
-    call MPI_comm_create(i_comm(),iGroupUnion,iCommRouter,iError)
+    call MPI_comm_create(i_comm(), iGroupUnion, iCommRouter, iError)
 
     call MPI_group_rank(iGroupUnion, iProcUnion, iError)
 
@@ -1199,6 +1200,5 @@ contains
 
   end subroutine set_router_comm
   !============================================================================
-
 end module CON_coupler
 !==============================================================================
