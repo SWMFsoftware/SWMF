@@ -97,6 +97,9 @@ contains
     logical:: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'couple_points_init'
     !--------------------------------------------------------------------------
+
+    if(Coupler%nProcUnion > 0) RETURN ! Already initialized coupler
+
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
     if(DoTestMe) &
          write(*,*) NameSub, ' starting for Source, Target=', &
