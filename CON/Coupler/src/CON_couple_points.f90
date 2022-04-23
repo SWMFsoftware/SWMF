@@ -930,10 +930,10 @@ contains
 
     integer, allocatable:: nPointRS_PP(:,:), nPoint_P(:)
     integer:: iProcR, iError
-    !--------------------------------------------------------------------------
     ! Gather the nBufferS_P information onto the root.
     ! The resulting nPointRS_PP table contains the
     ! the number of points owned by iProcR and iProcS.
+    !--------------------------------------------------------------------------
     if(iProc == 0)then
        allocate(nPointRS_PP(0:nProc-1,0:nProc-1), nPoint_P(0:nProc-1))
     else
@@ -1283,6 +1283,7 @@ contains
     deallocate(iRequest_I)
 
   end subroutine get_recv_buffer_size
+  !============================================================================
 
 end module CON_couple_points
 !==============================================================================
