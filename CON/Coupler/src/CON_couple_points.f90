@@ -1332,7 +1332,7 @@ contains
     if(allocated(nPoint_I)) deallocate(nPoint_I); allocate(nPoint_I(nCouple))
 
     if(nCouple == 0) RETURN
-    
+
     ! Fill in compacted arrays
     iCouple = 0
     do iProc = 0, nProc-1
