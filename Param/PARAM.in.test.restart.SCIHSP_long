@@ -54,16 +54,6 @@ limited			TypeBc
 1e-6			Tolerance
 40			MaxIter
 
-
-#BODY
-T			UseBody
-1.0			rBody
-1.5e8			BodyNDim
-1.5e6			BodyTDim
-
-#BODY
-F			UseBody
-
 #HARMONICSFILE
 SC/Param/CR2077_GNG.dat		NameHarmonicsFile
 
