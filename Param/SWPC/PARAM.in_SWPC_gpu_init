@@ -11,7 +11,7 @@ T			UseTiming
 cumu			TypeTimingReport
 
 #DESCRIPTION
-Param/SWPC/PARAM.in_SWPC_gpu_restart: start Geospace on GPU		StringDescription
+Param/SWPC/PARAM.in_SWPC_gpu_init: start Geospace on GPU		StringDescription
 
 #TIMEACCURATE
 F			IsTimeAccurate
@@ -35,6 +35,11 @@ IE			NameComp2
 10			DnCouple
 -1.0			DtCouple
 
+#CHECKTIMESTEP
+T			DoCheckTimeStep (rest is read if true)
+100			DnCheckTimeStep (2 or more)
+1e-6			TimeStepMin [s] (negative value means SessionTime/1e7)
+
 #BEGIN_COMP GM ---------------------------------------------------------------
 
 #UPDATE
@@ -56,7 +61,7 @@ fast			TypeUpdate
 
 ! Maximum resolution initially
 #GRIDRESOLUTION
-0.125			Resolution
+2.0			Resolution
 initial			StringShape
 
 ! Minimum resolution in the computational domain
@@ -178,6 +183,12 @@ z=0 MHD idl		StringPlot
 -1.			DtSavePlot
 -1.			DxSavePlot
 
+#DOAMR
+T			DoAmr
+100			DnAmr
+-1.0			DtAmr
+T			IsStrictAmr
+
 ! Satellite trajectories
 #INCLUDE
 SATELLITES.in
@@ -242,6 +253,9 @@ min idl			StringPlot
 
 #BEGIN_COMP GM ---------------------------------------------------------------
 
+#DOAMR
+F			DoAmr
+
 #SCHEME
 2			nOrder
 Linde			TypeFlux
@@ -255,7 +269,7 @@ mc3			TypeLimiter
 #END_COMP GM -----------------------------------------------------------------
 
 #STOP
-10000			MaxIter
+1500			MaxIter
 -1.			TimeMax
 
 #RUN ##########################################################################

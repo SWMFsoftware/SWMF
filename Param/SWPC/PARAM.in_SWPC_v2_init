@@ -43,7 +43,7 @@ IE			NameComp2
 #CHECKTIMESTEP
 T			DoCheckTimeStep (rest is read if true)
 100			DnCheckTimeStep (2 or more)
-1e-6			TimeStepMin [s] (negative value means SessionTime/10,000,000)
+1e-6			TimeStepMin [s] (negative value means SessionTime/1e7)
 
 #BEGIN_COMP GM ---------------------------------------------------------------
 
