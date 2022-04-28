@@ -15,7 +15,7 @@ module CON_couple_points
   public :: couple_points
 
   ! Debugging
-  logical, parameter:: UseOldCode = .true., DoDebug = .false.
+  logical, parameter:: UseOldCode = .false., DoDebug = .false.
 
   integer :: nCoupleSource, nCoupleTarget
   ! processors of the OTHER component to communicate with
@@ -97,6 +97,9 @@ contains
     logical:: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'couple_points_init'
     !--------------------------------------------------------------------------
+
+    if(Coupler%nProcUnion > 0) RETURN ! Already initialized coupler
+
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
     if(DoTestMe) &
          write(*,*) NameSub, ' starting for Source, Target=', &
@@ -252,7 +255,7 @@ contains
 
     ! Debugging
     character(len=4):: NameSourceTarget
-    integer:: iUnitTest
+    integer:: iUnitTestOld, iUnitTestNew
     logical:: DoTest, DoTestMe
 
     character(len=*), parameter:: NameSub = 'couple_points'
@@ -262,7 +265,8 @@ contains
     if(DoTest)then
        NameSourceTarget = NameComp_I(Coupler%iCompSource) &
             //            NameComp_I(Coupler%iCompTarget)
-       iUnitTest = i_proc() + 10
+       iUnitTestOld = i_proc() + 10
+       iUnitTestNew = i_proc() + 15
        if(DoTestMe) write(*,*) NameSub,' doing ',NameSourceTarget
 
        call timing_start('pnt_cpl_'//NameSourceTarget)
@@ -479,28 +483,30 @@ contains
                   Coupler%nData)
 
              if(UseOldCode)then
-                write(iUnitTest,*) NameSourceTarget, &
+                write(iUnitTestOld,*) NameSourceTarget,&
+                     ' nPointTarget_P=', Coupler%nPointTarget_P
+                write(iUnitTestOld,*) NameSourceTarget, &
                      ' old nCoupleTarget=', Coupler%nCoupleTarget
-                write(iUnitTest,*) NameSourceTarget, &
+                write(iUnitTestOld,*) NameSourceTarget, &
                      ' old iCoupleProcTarget_I =', Coupler%iCoupleProcTarget_I
-                write(iUnitTest,*) NameSourceTarget, &
+                write(iUnitTestOld,*) NameSourceTarget, &
                      ' old nCouplePointTarget_I=', Coupler%nCouplePointTarget_I
-                flush(iUnitTest)
+                flush(iUnitTestOld)
              end if
              call compact_router(nProcSource, &
                   Coupler%iProcSource_P, Coupler%nPointTarget_P, &
                   Coupler%nCoupleTarget, &
                   Coupler%iCoupleProcTarget_I, Coupler%nCouplePointTarget_I)
              if(DoDebug)then
-                write(iUnitTest,*) NameSourceTarget,&
+                write(iUnitTestNew,*) NameSourceTarget,&
                      ' nPointTarget_P=', Coupler%nPointTarget_P
-                write(iUnitTest,*) NameSourceTarget, &
+                write(iUnitTestNew,*) NameSourceTarget, &
                      ' new nCoupleTarget=', Coupler%nCoupleTarget
-                write(iUnitTest,*) NameSourceTarget, &
+                write(iUnitTestNew,*) NameSourceTarget, &
                      ' new iCoupleProcTarget_I =', Coupler%iCoupleProcTarget_I
-                write(iUnitTest,*) NameSourceTarget, &
+                write(iUnitTestNew,*) NameSourceTarget, &
                      ' new nCouplePointTarget_I=', Coupler%nCouplePointTarget_I
-                flush(iUnitTest)
+                flush(iUnitTestNew)
              end if
 
              ! Order points according to the owner processor indexes
@@ -534,28 +540,30 @@ contains
 
           if(is_proc(Coupler%iCompSource)) then
              if(UseOldCode)then
-                write(iUnitTest,*) NameSourceTarget, &
+                write(iUnitTestOld,*) NameSourceTarget, &
+                     ' nPointSource_P=', Coupler%nPointSource_P
+                write(iUnitTestOld,*) NameSourceTarget, &
                      ' old nCoupleSource=', Coupler%nCoupleSource
-                write(iUnitTest,*) NameSourceTarget,&
+                write(iUnitTestOld,*) NameSourceTarget,&
                      ' old iCoupleProcSource_I =', Coupler%iCoupleProcSource_I
-                write(iUnitTest,*) NameSourceTarget, &
+                write(iUnitTestOLd,*) NameSourceTarget, &
                      ' old nCouplePointSource_I=', Coupler%nCouplePointSource_I
-                flush(iUnitTest)
+                flush(iUnitTestOld)
              end if
              call compact_router(nProcTarget, &
                   Coupler%iProcTarget_P, Coupler%nPointSource_P, &
                   Coupler%nCoupleSource, &
                   Coupler%iCoupleProcSource_I, Coupler%nCouplePointSource_I)
              if(DoDebug)then
-                write(iUnitTest,*) NameSourceTarget, &
-                  ' nPointSource_P=', Coupler%nPointSource_P
-                write(iUnitTest,*) NameSourceTarget, &
+                write(iUnitTestNew,*) NameSourceTarget, &
+                     ' nPointSource_P=', Coupler%nPointSource_P
+                write(iUnitTestNew,*) NameSourceTarget, &
                      ' new nCoupleSource=', Coupler%nCoupleSource
-                write(iUnitTest,*) NameSourceTarget, &
+                write(iUnitTestNew,*) NameSourceTarget, &
                      ' new iCoupleProcSource_I =', Coupler%iCoupleProcSource_I
-                write(iUnitTest,*) NameSourceTarget, &
+                write(iUnitTestNew,*) NameSourceTarget, &
                      ' new nCouplePointSource_I=', Coupler%nCouplePointSource_I
-                flush(iUnitTest)
+                flush(iUnitTestNew)
              end if
           end if
 
@@ -1319,10 +1327,11 @@ contains
     !--------------------------------------------------------------------------
     nCouple = count(nPoint_P /= 0)
 
-    if(nCouple == 0) RETURN
-
+    ! Reallocate arrays
     if(allocated(iProc_I)) deallocate(iProc_I);   allocate(iProc_I(nCouple))
     if(allocated(nPoint_I)) deallocate(nPoint_I); allocate(nPoint_I(nCouple))
+
+    if(nCouple == 0) RETURN
 
     ! Fill in compacted arrays
     iCouple = 0
