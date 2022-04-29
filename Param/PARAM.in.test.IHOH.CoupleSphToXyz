@@ -19,14 +19,10 @@ HGI			TypeCoordSystem
 #GRAVITY
 F			UseGravity (rest of parameters read if true)
 
-#BODY
-T			UseBody
+#CORONA
 50.0			rBody (Rs)
 1e3			BodyNDim [/cc] number density for ions
 1E5			BodyTDim [K] temperature for ions
-
-#BODY
-F			UseBody
 
 #USERINPUTBEGIN -----------------------------------
 
@@ -151,14 +147,10 @@ g rbody			NamePars
 #COORDSYSTEM
 HGI			TypeCoordSystem
 
-#BODY
-T			UseBody
+#CORONA
 3.0			rBody (AU)
 1e3			BodyNDim [/cc] number density for ions
 1E5			BodyTDim [K] temperature for ions
-
-#BODY
-F			UseBody
 
 #GRAVITY
 F			UseGravity (rest of parameters read if true)

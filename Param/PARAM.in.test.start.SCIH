@@ -76,15 +76,6 @@ HGR			TypeCoordSystem
 1.0			IonCharge [e]
 1.0			ElectronTemperatureRatio
 
-#BODY
-T			UseBody
-1.0			rBody
-1.5e8			BodyNDim
-1.5e6			BodyTDim
-
-#BODY
-F			UseBody
-
 #LOOKUPTABLE		FDIPS^
 B0			NameTable
 load			NameCommand
