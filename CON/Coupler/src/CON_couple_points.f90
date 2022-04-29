@@ -321,7 +321,7 @@ contains
        end if
 
        allocate(nPointSource_P(nProcTarget), nPointTarget_P(nProcSource))
-       
+
        if(allocated(Coupler%iPointTarget_I)) deallocate(Coupler%iPointTarget_I)
 
        if(Coupler%IsSameLayout) then
@@ -498,10 +498,10 @@ contains
              flush(iUnitTest)
           end if
        end if
-       
+
        ! Router is already compacted, information is stored
-       deallocate(nPointSource_P, nPointTarget_P)   
-          
+       deallocate(nPointSource_P, nPointTarget_P)
+
        ! Allocate buffer for positions on source (zero size on target)
        if(is_proc(Coupler%iCompSource)) Coupler%nPointSource = &
             sum(Coupler%nPointSourceCouple_I)
