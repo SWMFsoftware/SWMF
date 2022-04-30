@@ -379,12 +379,6 @@ IH/restartIN/restart.H
 #COORDSYSTEM
 HGI			TypeCoordSystem
 
-#BODY
-T			UseBody
-19.			rBody
-3.0E+8			BodyNDim
-3.5E+6			BodyTDim
-
 #PLASMA
 1.0			FluidMass [amu]
 1.0			IonCharge [e]
