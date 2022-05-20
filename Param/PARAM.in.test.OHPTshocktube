@@ -30,12 +30,12 @@ PT			NameComp2
 1			nRootBlock1
 1			nRootBlock2
 1			nRootBlock3
--200			xMin
-200			xMax
--200			yMin
-200			yMax
--200			zMin
-200			zMax
+-260			xMin
+260			xMax
+-260			yMin
+260			yMax
+-260			zMin
+260			zMax
 
 #OUTERBOUNDARY
 periodic		TypeBc1
