@@ -94,7 +94,6 @@ test_swmf:
 	-@(if [ -d GM/BATSRUS/srcUserExtra ]; then ${MAKE} test7 TESTDIR=run_test07; fi)
 	-@(if [ -d GM/BATSRUS ]; then ${MAKE} test8 TESTDIR=run_test08; fi)
 	-@(if [ -d GM/BATSRUS ]; then ${MAKE} test9 TESTDIR=run_test09; fi)
-	-@(${MAKE} test12)
 	-@(if [ -d PT/AMPS    ]; then ${MAKE} test13 TESTDIR=run_test13; fi)
 	-@(if [ -d PT/AMPS    ]; then ${MAKE} test14_1d TESTDIR=run_test14_1d; fi)
 	-@(if [ -d PT/AMPS    ]; then ${MAKE} test14 TESTDIR=run_test14; fi)
@@ -2289,11 +2288,11 @@ test_ramscb_check:
 ######## test PC/AMPS coupled with GM/BATSRUS #########
 
 test12:
-	-@(if [ -d PC/AMPS ]; then $(MAKE) test12_aniso_AMPS TESTDIR=run_test12_aniso_AMPS; fi)
-	-@(if [ -d PC/AMPS ]; then $(MAKE) test12_aniso_AMPS_divE_corr TESTDIR=run_test12_aniso_AMPS_divE_corr; fi)
-	-@(if [ -d PC/AMPS ]; then $(MAKE) test12_aniso_AMPS_dynamic   TESTDIR=run_test12_aniso_AMPS_dynamic; fi)
-	-@(if [ -d PC/AMPS ]; then $(MAKE) test12_aniso_AMPS_openmp    TESTDIR=run_test12_aniso_AMPS_openmp; fi)
-	-@(if [ -d PC/AMPS ]; then ./Config.pl -noopenmp -o=PC:openmp=off; fi)
+	-@($(MAKE) test12_aniso_AMPS TESTDIR=run_test12_aniso_AMPS)
+	-@($(MAKE) test12_aniso_AMPS_divE_corr TESTDIR=run_test12_aniso_AMPS_divE_corr)
+	-@($(MAKE) test12_aniso_AMPS_dynamic   TESTDIR=run_test12_aniso_AMPS_dynamic)
+	-@($(MAKE) test12_aniso_AMPS_openmp    TESTDIR=run_test12_aniso_AMPS_openmp)
+	./Config.pl -noopenmp -o=PC:openmp=off
 
 ### test12_aniso_AMPS_dynamic_fluxrope: test PC coupled with GM/BATSRUS ###
 test12_aniso_AMPS_dynamic_fluxrope:
