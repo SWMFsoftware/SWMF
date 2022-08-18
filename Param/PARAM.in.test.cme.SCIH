@@ -288,7 +288,7 @@ T			DoAddFluxRope
 14.50			LatitudeCme^
 250.68			OrientationCme^
 GL			TypeCme
--5.0			BStrength^
+5.0			BStrength^
 0.8			Radius^
 0.60			Stretch^
 1.0			ApexHeight^

@@ -20,7 +20,7 @@ BATL/
 SWPCTEST
 SWMFSOLAR
 
-run*/
+run*
 Makefile.conf
 Makefile.def
 Makefile.RULES
