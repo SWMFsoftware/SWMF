@@ -289,6 +289,7 @@ T			DoAddFluxRope
 250.68			OrientationCme^
 GL			TypeCme
 5.0			BStrength^
+1			iHelicity^
 0.8			Radius^
 0.60			Stretch^
 1.0			ApexHeight^
