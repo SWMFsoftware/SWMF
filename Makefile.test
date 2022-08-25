@@ -42,8 +42,8 @@ test_help:
 	@(if [ -d GM/BATSRUS/srcUserExtra ]; then echo "    test5                      (run EE-SC test)"; fi)
 	@(if [ -d GM/BATSRUS/srcUserExtra ]; then echo "    test7                      (run IH-OH test)"; fi)
 	@(if [ -d GM/BATSRUS ]; then echo "    test8                      (run SC-IH coupling test with AWSoM-R)"; fi)
-	@(if [ -d GM/BATSRUS ]; then echo "    test8_realtime             (run SC-IH like in a real-time)"; fi)
 	@(if [ -d GM/BATSRUS ]; then echo "    test9                      (run SC-IH coupling test with AWSoM)"; fi)
+	@(if [ -d GM/BATSRUS ]; then echo "    test10                     (run SC-IH like in a real-time)"; fi)
 	@(if [ -d PT/AMPS    ]; then echo "    test11                     (run GM-PT/AMPS coupler test)"; fi)
 	@(if [ -d PC/AMPS    ]; then echo "    test12                     (run GM-PC/AMPS tests)"; fi)
 	@(if [ -d PC/IPIC3D2 ]; then echo "    test12_ipic3d              (run GM-PC/IPIC3D2 tests)"; fi)
@@ -1425,108 +1425,6 @@ test8_check:
 		> test08_sc_los.diff)
 	ls -l test08_*.diff
 
-### test8_realtime: SC + IH with Threaded-Field-Line boundary condition test ###
-
-test8_realtime:
-	@echo "test8_realtime_compile..." > test08_realtime_sc_thread.diff
-	@echo "test8_realtime_compile..." > test08_realtime_ih.diff
-	${MAKE} test8_realtime_compile
-	@echo "test8_realtime_rundir..." >> test08_realtime_sc_thread.diff
-	@echo "test8_realtime_rundir..." >> test08_realtime_ih.diff
-	${MAKE} test8_realtime_rundir
-	@echo "test8_realtime_run..." >> test08_realtime_sc_thread.diff
-	@echo "test8_realtime_run..." >> test08_realtime_ih.diff
-	${MAKE} test8_realtime_run
-	@echo "test8_realtime_restart..." >> test08_realtime_sc_thread.diff
-	@echo "test8_realtime_restart..." >> test08_realtime_ih.diff
-	${MAKE} test8_realtime_restart
-#	@echo "test8_check..." >> test08_sc_thread.diff
-#	@echo "test8_check..." >> test08_ih.diff
-#	${MAKE} test8_check
-
-test8_realtime_compile:
-	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
-	./Config.pl -o=SC:u=Awsom,e=Awsom,ng=2,g=4,4,4
-	./Config.pl -o=IH:u=Awsom,e=Awsom,ng=2,g=4,4,4
-	${MAKE} SWMF
-	make PIDL
-	cd util/DATAREAD/srcMagnetogram; ${MAKE} HARMONICS
-
-test8_realtime_rundir:
-	rm -rf ${TESTDIR}
-	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
-	cd ${TESTDIR}/SC; perl -i -pe \
-	's/dipole11uniform/fitsfile/; s/harmonics11uniform/harmonics/; s/\d+(\s+MaxOrder)/30$$1/' \
-	HARMONICS.in
-	@echo " Before starting real time simulation from scratch, download the latest GONG magnetogram"
-	cd ${TESTDIR}/SC; \
-	cp ${SCDIR}/data/input/2261_222.fits.gz .; \
-	gzip -d *.fits.gz; mv *.fits endmagnetogram; \
-	python3 ${DIR}/util/DATAREAD/srcMagnetogram/remap_magnetogram.py \
-	endmagnetogram; \
-	mv map_01.out fitsfile.out; \
-	./HARMONICS.exe |tee harmonics.log; \
-	mv MAGNETOGRAMTIME.in ENDMAGNETOGRAMTIME.in; \
-	mv harmonics.dat endmagnetogram.dat; \
-	cp ${DIR}/Param/PARAM.in.realtime.SCIH_threadbc \
-	PARAM.tmp; \
-	${DIR}/share/Scripts/ParamConvert.pl \
-	PARAM.TMP ../PARAM.in
-	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
-
-test8_realtime_run:
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-
-test8_realtime_restart:
-	cd ${TESTDIR}; ./Restart.pl; \
-	mv PARAM.in PARAM.in_start; rm -f PARAM.in_orig_
-	@echo "Before restarting real-time simulation remove start magnetogram"
-	cd ${TESTDIR}/SC; \
-	rm -f STARTMAGNETOGRAMTIME.in startmagnetogram.dat PARAM.tmp; \
-	rm -f *.fits.gz *.fits harmonics.log fitsfile.out; \
-	rm -f endmagnetogram; \
-	cp ENDMAGNETOGRAMTIME.in STARTMAGNETOGRAMTIME.in; \
-	cp endmagnetogram.dat startmagnetogram.dat
-	@echo "Download new magnetogram"
-	cd ${TESTDIR}/SC; \
-	cp ${SCDIR}/data/input/2261_218.fits.gz .; \
-	gzip -d *.fits.gz; mv *.fits endmagnetogram; \
-	python3 ${DIR}/util/DATAREAD/srcMagnetogram/remap_magnetogram.py \
-	endmagnetogram; \
-	mv map_01.out fitsfile.out; \
-	perl -i -pe \
-	's/2261.2270982/2261.2164177/' fitsfile.out; \
-	./HARMONICS.exe |tee harmonics.log; \
-	mv MAGNETOGRAMTIME.in ENDMAGNETOGRAMTIME.in; \
-	mv harmonics.dat endmagnetogram.dat; \
-	cp ${DIR}/Param/PARAM.in.realtime.restart.SCIH_threadbc \
-	PARAM.tmp; \
-	${DIR}/share/Scripts/ParamConvert.pl \
-	PARAM.TMP ../PARAM.in
-	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_restart
-	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS
-
-#test8_check:
-#	-(${DIFFNUM} -b -r=1e-4 -a=1e-26 \
-#		${TESTDIR}/RESULTS/SC/log_n000000.log \
-#		output/test8/SC_log_n000000.log \
-#		> test08_sc_thread.diff)
-#	-(${DIFFNUM} -b -r=1e-5 -a=1e-26 \
-#		${TESTDIR}/RESULTS/SC/rfr_rwi_4_*.outs \
-#		output/test8/SC_rfr.ref.gz \
-#		>> test08_sc_thread.diff)
-#	-(${DIFFNUM} -b -r=1e-5 \
-#		${TESTDIR}/RESULTS/IH/log_n000000.log \
-#		output/test8/IH_log_n000000.log \
-#		> test08_ih.diff)
-#	-(${DIFFNUM} -b -r=1e-5 \
-#		${TESTDIR}/RESULTS/SC/los_sdo_aia*.out \
-#		SC/BATSRUS/data/output/test8/SC_los_sdo_aia.out.gz \
-#		> test08_sc_los.diff)
-#	ls -l test08_realtime_*.diff
-
-
 ### test9: SC + IH. Test 2nd and 5th order schemes ### 
 
 test9:
@@ -1636,6 +1534,107 @@ test9_check:
 		output/test9/IH_log_n000011.log \
 		> test09_ih.diff)	
 	ls -l test09_*.diff
+
+### test10: real-time SC + IH test ###
+
+test10:
+	@echo "test10_compile..." > test10_sc_thread.diff
+	@echo "test10_compile..." > test10_ih.diff
+	${MAKE} test10_compile
+	@echo "test10_rundir..." >> test10_sc_thread.diff
+	@echo "test10_rundir..." >> test10_ih.diff
+	${MAKE} test10_rundir
+	@echo "test10_run..." >> test10_sc_thread.diff
+	@echo "test10_run..." >> test10_ih.diff
+	${MAKE} test10_run
+	@echo "test10_restart..." >> test10_sc_thread.diff
+	@echo "test10_restart..." >> test10_ih.diff
+	${MAKE} test10_restart
+#	@echo "test8_check..." >> test08_sc_thread.diff
+#	@echo "test8_check..." >> test08_ih.diff
+#	${MAKE} test8_check
+
+test10_compile:
+	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
+	./Config.pl -o=SC:u=Awsom,e=Awsom,ng=2,g=4,4,4
+	./Config.pl -o=IH:u=Awsom,e=Awsom,ng=2,g=4,4,4
+	${MAKE} SWMF
+	make PIDL
+	cd util/DATAREAD/srcMagnetogram; ${MAKE} HARMONICS
+
+test10_rundir:
+	rm -rf ${TESTDIR}
+	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
+	cd ${TESTDIR}/SC; perl -i -pe \
+	's/dipole11uniform/fitsfile/; s/harmonics11uniform/harmonics/; s/\d+(\s+MaxOrder)/30$$1/' \
+	HARMONICS.in
+	@echo " Before starting real time simulation from scratch, download the latest GONG magnetogram"
+	cd ${TESTDIR}/SC; \
+	cp ${SCDIR}/data/input/2261_222.fits.gz .; \
+	gzip -d *.fits.gz; mv *.fits endmagnetogram; \
+	python3 ${DIR}/util/DATAREAD/srcMagnetogram/remap_magnetogram.py \
+	endmagnetogram; \
+	mv map_01.out fitsfile.out; \
+	./HARMONICS.exe |tee harmonics.log; \
+	mv MAGNETOGRAMTIME.in ENDMAGNETOGRAMTIME.in; \
+	mv harmonics.dat endmagnetogram.dat; \
+	cp ${DIR}/Param/PARAM.in.realtime.SCIH_threadbc \
+	PARAM.tmp; \
+	${DIR}/share/Scripts/ParamConvert.pl \
+	PARAM.TMP ../PARAM.in
+	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
+
+test10_run:
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+
+test10_restart:
+	cd ${TESTDIR}; ./Restart.pl; \
+	mv PARAM.in PARAM.in_start; rm -f PARAM.in_orig_
+	@echo "Before restarting real-time simulation remove start magnetogram"
+	cd ${TESTDIR}/SC; \
+	rm -f STARTMAGNETOGRAMTIME.in startmagnetogram.dat PARAM.tmp; \
+	rm -f *.fits.gz *.fits harmonics.log fitsfile.out; \
+	rm -f endmagnetogram; \
+	cp ENDMAGNETOGRAMTIME.in STARTMAGNETOGRAMTIME.in; \
+	cp endmagnetogram.dat startmagnetogram.dat
+	@echo "Download new magnetogram"
+	cd ${TESTDIR}/SC; \
+	cp ${SCDIR}/data/input/2261_218.fits.gz .; \
+	gzip -d *.fits.gz; mv *.fits endmagnetogram; \
+	python3 ${DIR}/util/DATAREAD/srcMagnetogram/remap_magnetogram.py \
+	endmagnetogram; \
+	mv map_01.out fitsfile.out; \
+	perl -i -pe \
+	's/2261.2270982/2261.2164177/' fitsfile.out; \
+	./HARMONICS.exe |tee harmonics.log; \
+	mv MAGNETOGRAMTIME.in ENDMAGNETOGRAMTIME.in; \
+	mv harmonics.dat endmagnetogram.dat; \
+	cp ${DIR}/Param/PARAM.in.realtime.restart.SCIH_threadbc \
+	PARAM.tmp; \
+	${DIR}/share/Scripts/ParamConvert.pl \
+	PARAM.TMP ../PARAM.in
+	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_restart
+	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS
+
+#test8_check:
+#	-(${DIFFNUM} -b -r=1e-4 -a=1e-26 \
+#		${TESTDIR}/RESULTS/SC/log_n000000.log \
+#		output/test8/SC_log_n000000.log \
+#		> test08_sc_thread.diff)
+#	-(${DIFFNUM} -b -r=1e-5 -a=1e-26 \
+#		${TESTDIR}/RESULTS/SC/rfr_rwi_4_*.outs \
+#		output/test8/SC_rfr.ref.gz \
+#		>> test08_sc_thread.diff)
+#	-(${DIFFNUM} -b -r=1e-5 \
+#		${TESTDIR}/RESULTS/IH/log_n000000.log \
+#		output/test8/IH_log_n000000.log \
+#		> test08_ih.diff)
+#	-(${DIFFNUM} -b -r=1e-5 \
+#		${TESTDIR}/RESULTS/SC/los_sdo_aia*.out \
+#		SC/BATSRUS/data/output/test8/SC_los_sdo_aia.out.gz \
+#		> test08_sc_los.diff)
+#	ls -l test10_*.diff
 
 ### test11: Dipole field with solar wind coupled with an exosphere model, to test the GM/PT coupler ###
 
