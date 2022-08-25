@@ -15,9 +15,9 @@ F			IsTimeAccurate
 ENDMAGNETOGRAMTIME.in
 
 #SAVERESTART
-T
-100
--1
+T			DoSaveRestart
+100			DnSaveRestart
+1			DtSaveRestart
 
 
 #BEGIN_COMP SC ---------------------------------------------------------------

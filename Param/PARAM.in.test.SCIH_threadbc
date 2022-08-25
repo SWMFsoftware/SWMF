@@ -412,19 +412,19 @@ x=0 VAR idl		StringPlot
 10 			DnSavePlot
 -1.			DtSavePlot
 -1.0			DxSavePlot
-rho ux uy uz ti te bx by bz I01 I02 p sign		NameVars
+rho ux uy uz ti te bx by bz I01 I02 p		NameVars
 g rbody			NamePars
 y=0 VAR idl		StringPlot
 10			DnSavePlot
 -1.			DtSavePlot
 -1.0			DxSavePlot
-rho ux uy uz ti te bx by bz I01 I02 p sign		NameVars
+rho ux uy uz ti te bx by bz I01 I02 p		NameVars
 g rbody			NamePars
 z=0 VAR idl		StringPlot
 10 			DnSavePlot
 -1.			DtSavePlot
 -1.0			DxSavePlot
-rho ux uy uz ti te bx by bz I01 I02 p sign		NameVars
+rho ux uy uz ti te bx by bz I01 I02 p		NameVars
 g rbody			NamePars
 buf MHD idl		StringPlot
 -1			DnSavePlot
