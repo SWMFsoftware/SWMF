@@ -1550,9 +1550,9 @@ test10:
 	@echo "test10_restart..." >> test10_sc_thread.diff
 	@echo "test10_restart..." >> test10_ih.diff
 	${MAKE} test10_restart
-#	@echo "test8_check..." >> test08_sc_thread.diff
-#	@echo "test8_check..." >> test08_ih.diff
-#	${MAKE} test8_check
+	@echo "test10_check..." >> test10_sc_thread.diff
+	@echo "test10_check..." >> test10_ih.diff
+	${MAKE} test10_check
 
 test10_compile:
 	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
@@ -1617,24 +1617,25 @@ test10_restart:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_restart
 	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS
 
-#test8_check:
-#	-(${DIFFNUM} -b -r=1e-4 -a=1e-26 \
-#		${TESTDIR}/RESULTS/SC/log_n000000.log \
-#		output/test8/SC_log_n000000.log \
-#		> test08_sc_thread.diff)
+test10_check:
+	-(${DIFFNUM} -b -r=1e-4 -a=1e-26 \
+		${TESTDIR}/RESULTS/SC/log_n000000.log \
+		output/test10/SC_log_n000000.log \
+		> test10_sc_thread.diff)
+	-(${DIFFNUM} -b -r=1e-5 \
+		${TESTDIR}/RESULTS/IH/log_n000001.log \
+		output/test10/IH_log_n000000.log \
+		> test10_ih.diff)
+	ls -l test10_*.diff
 #	-(${DIFFNUM} -b -r=1e-5 -a=1e-26 \
 #		${TESTDIR}/RESULTS/SC/rfr_rwi_4_*.outs \
 #		output/test8/SC_rfr.ref.gz \
 #		>> test08_sc_thread.diff)
 #	-(${DIFFNUM} -b -r=1e-5 \
-#		${TESTDIR}/RESULTS/IH/log_n000000.log \
-#		output/test8/IH_log_n000000.log \
-#		> test08_ih.diff)
-#	-(${DIFFNUM} -b -r=1e-5 \
 #		${TESTDIR}/RESULTS/SC/los_sdo_aia*.out \
 #		SC/BATSRUS/data/output/test8/SC_los_sdo_aia.out.gz \
 #		> test08_sc_los.diff)
-#	ls -l test10_*.diff
+#	
 
 ### test11: Dipole field with solar wind coupled with an exosphere model, to test the GM/PT coupler ###
 
