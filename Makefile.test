@@ -1566,7 +1566,7 @@ test10_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cd ${TESTDIR}/SC; perl -i -pe \
-	's/dipole11uniform/fitsfile/; s/harmonics11uniform/harmonics/; s/\d+(\s+MaxOrder)/30$$1/' \
+	's/dipole11uniform/map_01/; s/harmonics11uniform/endmagnetogram/; s/\d+(\s+MaxOrder)/30$$1/' \
 	HARMONICS.in
 	@echo " Before starting real time simulation from scratch, download the latest GONG magnetogram"
 	cd ${TESTDIR}/SC; \
@@ -1574,10 +1574,8 @@ test10_rundir:
 	gzip -d *.fits.gz; mv *.fits endmagnetogram; \
 	python3 ${DIR}/util/DATAREAD/srcMagnetogram/remap_magnetogram.py \
 	endmagnetogram; \
-	mv map_01.out fitsfile.out; \
 	./HARMONICS.exe |tee harmonics.log; \
 	mv MAGNETOGRAMTIME.in ENDMAGNETOGRAMTIME.in; \
-	mv harmonics.dat endmagnetogram.dat; \
 	cp ${DIR}/Param/PARAM.in.realtime.SCIH_threadbc \
 	PARAM.tmp; \
 	${DIR}/share/Scripts/ParamConvert.pl \
@@ -1603,12 +1601,10 @@ test10_restart:
 	gzip -d *.fits.gz; mv *.fits endmagnetogram; \
 	python3 ${DIR}/util/DATAREAD/srcMagnetogram/remap_magnetogram.py \
 	endmagnetogram; \
-	mv map_01.out fitsfile.out; \
 	perl -i -pe \
-	's/2261.2270982/2261.2164177/' fitsfile.out; \
+	's/2261.2270982/2261.2164177/' map_01.out; \
 	./HARMONICS.exe |tee harmonics.log; \
 	mv MAGNETOGRAMTIME.in ENDMAGNETOGRAMTIME.in; \
-	mv harmonics.dat endmagnetogram.dat; \
 	cp ${DIR}/Param/PARAM.in.realtime.restart.SCIH_threadbc \
 	PARAM.tmp; \
 	${DIR}/share/Scripts/ParamConvert.pl \
