@@ -29,7 +29,8 @@ rundir: check_src
 		ln -s ${BINDIR}/PostSPH.exe .; \
 		ln -s ${BINDIR}/FDIPS.exe .; \
 		ln -s ${BINDIR}/HARMONICS.exe .; \
-		cp ${DIR}/util/DATAREAD/srcMagnetogram/HARMONICS.in.orig .; \
+		cp ${DIR}/util/DATAREAD/srcMagnetogram/HARMONICS.in.orig \
+		HARMONICS.in; \
 		cp    ${DIR}/share/Scripts/pIDL .; \
 		cp    ${DIR}/GM/BATSRUS/Scripts/TEC/pTEC .; \
 		ln -s ${DIR}/GM/BATSRUS/Param/CORONA Param; \
