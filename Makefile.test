@@ -2773,4 +2773,19 @@ test_chgl_check:
 		> test_chgl_ih.diff)
 	ls -l test_chgl_*.diff
 
+###############################################################################
+test_eeggl:
+	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
+	cd ${EMPIRICALEEDIR};make FRM
+	rm -rf ${TESTDIR}
+	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR} COMPDIR=SC,IH
+	cd ${TESTDIR}/SC;  ln -s  ${BINDIR}/FRMAGNETOGRAM.exe .
+	cp ${MAGNETOGRAMDIR}/fitsfile.fits ${TESTDIR}/SC/.
+	cd ${TESTDIR}/SC; python3 ./GLSETUP.py fitsfile.fits -CMESpeed 600 \
+		-LonPosIn 333.5 -LatPosIn 22.606750850296976 \
+		-LonNegIn 324.5 -LatNegIn 23.996973841730536 > runlog_eeggl
+	-${DIFFNUM} -t -r=1e-7 -a=1e-9 \
+		${TESTDIR}/SC/CME.in ${MAGNETOGRAMDIR}/CME.ref > test_eeggl.diff
+	@ls -l test_eeggl.diff
+
 
