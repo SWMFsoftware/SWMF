@@ -1,82 +1,40 @@
-Begin session: 1
-
 #COMPONENTMAP
 SC  0 -1  1		CompMap
 IH  0 -1  1		CompMap
 
-#DESCRIPTION
-Param/PARAM.in.test.SCIH_threadbc: create steady state solar corona with Threaded-Field-Lines		StringDescription
-
-#TIMEACCURATE
-F			IsTimeAccurate
+#INCLUDE
+RESTART.in
 
 #STARTTIME
-2008			iYear
-11			iMonth
-20			iDay
-6			iHour
-0			iMinute
-0			iSecond
-0.0			FracSecond
+#INCLUDE
+STARTMAGNETOGRAMTIME.in
 
+#TIMESIMULATION
+0.0			tSimulation
 
+#NSTEP
+0			nStep
+
+#DESCRIPTION
+Param/PARAM.in.test.restart.SCIH_threadbc: Time accurate SC-IH run with SC switched off in second session		StringDescription
+
+#TIMEACCURATE
+T			IsTimeAccurate
 
 #BEGIN_COMP SC ---------------------------------------------------------------
 
-#GRIDGEOMETRY
-spherical_lnr		TypeGeometry
+#INCLUDE
+SC/restartIN/restart.H
 
-! Use a true sphere, so box is made much larger
-#GRID
-1			nRootBlock1
-2			nRootBlock2
-1			nRootBlock3
--100.0			xMin
- 100.0			xMax
--100.0			yMin
- 100.0			yMax
--100.0			zMin
- 100.0			zMax
+#STARTTIME
+#INCLUDE
+STARTMAGNETOGRAMTIME.in
 
-#LIMITRADIUS
-1.15			rMin
-24.0			rMax
+#TIMESIMULATION
+0.0			tSimulation
 
-#AMRREGION
-InnerShell		NameRegion
-box_gen			StringShape
-1.05			xMinBox
-0.0			yMinBox
--70.0			zMinBox
-1.7			xMaxBox
-360.0			yMaxBox
-70.0			zMaxBox
-
-#AMRCRITERIALEVEL
-3			nRefineCrit
-Level			StringRefine
-2			RefineTo
-2			CoarsenFrom
-Level +InnerShell		StringRefine
-5			RefineTo
-5			CoarsenFrom
-currentsheet		StringRefine
-0.5			CoarsenLimit
-0.5			RefineLimit
-5			MaxLevel
-
-#GRIDLEVEL
-2			nLevel
-initial			StringShape
-
-#DOAMR
-T			DoAmr
-80			DnAmr
--1.0			DtAmr
-T			IsStrictAmr
-
-#COORDSYSTEM
-HGR			TypeCoordSystem
+#NSTEP
+0			nStep
 
 #PLASMA
 1.0			FluidMass [amu]
@@ -100,12 +58,14 @@ limited			TypeBc
 1.0e-6			Tolerance
 40			MaxIter
 
-
-#GRIDBLOCKALL
-1200			MaxBlock
-
 #HARMONICSFILE
-SC/Param/CR2077_GNG.dat		NameHarmonicsFile
+SC/startmagnetogram.dat		NameHarmonicsFile
+
+#NEWHARMONICSFILE
+SC/endmagnetogram.dat		NameHarmonicsFileNew
+
+#HELIOUPDATEB0
+50.0			DtUpdateB0
 
 #HARMONICSGRID
 1.0			rMagnetogram
@@ -143,7 +103,7 @@ uniform			TypeHeatPartitioning
 0.6			QionRatio
 
 #TEST
-krylov radiative_cooling		StringTest
+radiative_cooling		StringTest
 
 #RADIATIVECOOLING
 T			UseRadCooling
@@ -211,34 +171,67 @@ none			TypeBc5
 none			TypeBc6
 
 #SAVEPLOT
-3			nPlotFile
+5			nPlotFile
 x=0 VAR idl		StringPlot
-10			DnSavePlot
--1.			DtSavePlot
+-1			DnSavePlot
+10.0			DtSavePlot
 -1.0			DxSavePlot
 rho ux uy uz ti te bx by bz I01 I02 p		NameVars
 g rbody			NamePars
 y=0 VAR idl		StringPlot
-10			DnSavePlot
--1.			DtSavePlot
+-1			DnSavePlot
+10.0			DtSavePlot
 -1.0			DxSavePlot
 rho ux uy uz ti te bx by bz I01 I02 p		NameVars
 g rbody			NamePars
 z=0 VAR idl		StringPlot
-10			DnSavePlot
--1.			DtSavePlot
+-1			DnSavePlot
+10			DtSavePlot
 -1.0			DxSavePlot
 rho ux uy uz ti te bx by bz I01 I02 p		NameVars
 g rbody			NamePars
+los ins idl_ascii		StringPlot
+-1			DnSavePlot
+100.0			DtSavePlot
+sta:euvi stb:euvi sdo:aia		StringsInstrument
+shl VAR idl_ascii		StringPlot
+-1			DnSavePlot
+10.0			DtSavePlot
+HGR			TypeCoordPlot
+1.03			rMin
+1.03			rMax
+2.0			LonMin
+358.0			LonMax
+4.0			dLon
+-88.0			LatMin
+88.0			LatMax
+4.0			dLat
+{HD} te ti		NameVars
+{default}		NamePars
 
-3d VAR tec		StringPlot
-100000			DnSavePlot
--1.			DtSavePlot
-rho ux uy uz ti te bx by bz I01 I02 p
-g rbody
+#LOOKUPTABLE		OffsetAngle
+AiaXrt			NameTable
+load			NameCommand
+SC/Param/los_tbl.dat		NameFile
+ascii			TypeFile
 
-#SAVEINITIAL
-T			DoSaveInitial
+#LOOKUPTABLE		nPix
+euv			NameTable
+load			NameCommand
+SC/Param/los_Eit_cor.dat		NameFile
+ascii			TypeFile
+
+#LOOKUPTABLE
+EuviA			NameTable
+load			NameCommand
+SC/Param/los_EuviA.dat		NameFile
+ascii			TypeFile
+
+#LOOKUPTABLE
+EuviB			NameTable
+load			NameCommand
+SC/Param/los_EuviB.dat		NameFile
+ascii			TypeFile
 
 #SATELLITE
 3			nSatellite
@@ -257,105 +250,29 @@ SC/TRAJECTORY/stb.dat		NameTrajectoryFile
 
 #END_COMP SC -----------------------------------------------------------------
 
-#COMPONENT
-IH			NameComp
-F			UseComp
-
-#STOP
-100			MaxIter
--1.0			TimeMax
-
-End session: 1
-#RUN ##########################################################################
-Begin session: 2
-
-#TIMEACCURATE
-T			IsTimeAccurate
-
-#COMPONENT
-IH			NameComp
-T			UseComp
-
-#COUPLE1
-SC			NameSource
-IH			NameTarget
--1			DnCouple
-1.0			DtCouple
-
-#STOP
--1			MaxIter
-50			TimeMax
-
-#BEGIN_COMP SC ---------------------------------------------------------------
-
-#AMR
--1			DnRefine
-
-#END_COMP SC -----------------------------------------------------------------
-
 #BEGIN_COMP IH ---------------------------------------------------------------
 
-#COORDSYSTEM
-HGR			TypeCoordSystem
+#INCLUDE
+IH/restartIN/restart.H
 
-#BODY
-T			UseBody
-19.0			rBody
-3.0E+8			BodyNDim
-3.5E+6			BodyTDim
+#STARTTIME
+#INCLUDE
+STARTMAGNETOGRAMTIME.in
+
+#TIMESIMULATION
+0.0			tSimulation
+
+#NSTEP
+0			nStep
+
 
 #PLASMA
 1.0			FluidMass [amu]
 1.0			IonCharge [e]
 1.0			ElectronTemperatureRatio
 
-#GRID
-1			nRootBlock1
-1			nRootBlock2
-1			nRootBlock3
--250.0			xMin
- 250.0			xMax
--250.0			yMin
- 250.0			yMax
--250.0			zMin
- 250.0			zMax
-
-#GRIDBLOCKALL
-6800			MaxBlock
-
-#AMRREGION
-OuterShell		NameRegion
-shell0			StringShape
-18.0			RadiusInner
-21.0			Radius
-
-#AMRCRITERIALEVEL
-3			nRefineCrit
-Level			StringRefine
-4			RefineTo
-4			CoarsenFrom
-Level +OuterShell		StringRefine
-5			RefineTo
-5			CoarsenFrom
-currentsheet		StringRefine
-0.5			CoarsenLimit
-0.5			RefineLimit
-5			MaxLevel
-
-#GRIDLEVEL
-5			nLevel
-initial			StringShape
-
 #INNERBOUNDARY
 buffergrid		TypeBcBody
-
-#HELIOBUFFERGRID
-2			nRBuff
-64			nLonBuff
-32			nLatBuff
-18.0			RBuffMin
-20.0			RBuffMax
-
 
 #OUTERBOUNDARY
 float			TypeBc1
@@ -403,26 +320,24 @@ RAW			StringLog
 1			DnSaveLogfile
 -1.			DtSaveLogfile
 
-#SAVEINITIAL
-T			DoSaveInitial
 
 #SAVEPLOT
 4			nPlotFile
 x=0 VAR idl		StringPlot
-10 			DnSavePlot
--1.			DtSavePlot
+-1 			DnSavePlot
+10.0			DtSavePlot
 -1.0			DxSavePlot
 rho ux uy uz ti te bx by bz I01 I02 p		NameVars
 g rbody			NamePars
 y=0 VAR idl		StringPlot
-10			DnSavePlot
--1.			DtSavePlot
+-1			DnSavePlot
+10.0			DtSavePlot
 -1.0			DxSavePlot
 rho ux uy uz ti te bx by bz I01 I02 p		NameVars
 g rbody			NamePars
 z=0 VAR idl		StringPlot
-10 			DnSavePlot
--1.			DtSavePlot
+-1			DnSavePlot
+10.0			DtSavePlot
 -1.0			DxSavePlot
 rho ux uy uz ti te bx by bz I01 I02 p		NameVars
 g rbody			NamePars
@@ -432,5 +347,53 @@ buf MHD idl		StringPlot
 
 #END_COMP IH -----------------------------------------------------------------
 
-End session: 2
+#COUPLE1
+SC			NameSource
+IH			NameTarget
+-1			DnCouple
+1.0			DtCouple
+
+#ENDTIME
+#INCLUDE
+ENDMAGNETOGRAMTIME.in
+
+#END ##########################################################################
+
+Possible continuation with SC off
+
+#RUN ##########################################################################
+
+#COMPONENT
+SC			NameComp
+F			UseComp
+
+#BEGIN_COMP IH ----------------------------------------------------------------
+
+#SAVEPLOT
+3			nPlotFiles
+x=0 VAR idl		StringPlot
+10 			DnSavePlot
+-1.			DtSavePlot
+-1.0			DxSavePlot
+rho ux uy uz ti te bx by bz I01 I02 p sign
+g rbody
+y=0 VAR idl		StringPlot
+10			DnSavePlot
+-1.			DtSavePlot
+-1.0			DxSavePlot
+rho ux uy uz ti te bx by bz I01 I02 p sign
+g rbody
+z=0 VAR idl		StringPlot
+10 			DnSavePlot
+-1.			DtSavePlot
+-1.0			DxSavePlot
+rho ux uy uz ti te bx by bz I01 I02 p sign
+g rbody
+
+#END_COMP IH ------------------------------------------------------------------
+
+#STOP
+-1			MaxIter
+1000.0			TimeMax
+
 #END ##########################################################################

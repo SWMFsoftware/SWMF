@@ -11,14 +11,13 @@ Param/PARAM.in.test.SCIH_threadbc: create steady state solar corona with Threade
 F			IsTimeAccurate
 
 #STARTTIME
-2008			iYear
-11			iMonth
-20			iDay
-6			iHour
-0			iMinute
-0			iSecond
-0.0			FracSecond
+#INCLUDE
+ENDMAGNETOGRAMTIME.in
 
+#SAVERESTART
+T			DoSaveRestart
+100			DnSaveRestart
+1			DtSaveRestart
 
 
 #BEGIN_COMP SC ---------------------------------------------------------------
@@ -95,7 +94,7 @@ T			UseFieldLineThreads
 
 #THREADEDBC
 T			UseAlignedVelocity
-T			DoConvergenceCheck
+F			DoConvergenceCheck
 limited			TypeBc
 1.0e-6			Tolerance
 40			MaxIter
@@ -105,7 +104,7 @@ limited			TypeBc
 1200			MaxBlock
 
 #HARMONICSFILE
-SC/Param/CR2077_GNG.dat		NameHarmonicsFile
+SC/endmagnetogram.dat		NameHarmonicsFile
 
 #HARMONICSGRID
 1.0			rMagnetogram
@@ -143,7 +142,7 @@ uniform			TypeHeatPartitioning
 0.6			QionRatio
 
 #TEST
-krylov radiative_cooling		StringTest
+radiative_cooling		StringTest
 
 #RADIATIVECOOLING
 T			UseRadCooling
@@ -269,9 +268,6 @@ End session: 1
 #RUN ##########################################################################
 Begin session: 2
 
-#TIMEACCURATE
-T			IsTimeAccurate
-
 #COMPONENT
 IH			NameComp
 T			UseComp
@@ -279,12 +275,12 @@ T			UseComp
 #COUPLE1
 SC			NameSource
 IH			NameTarget
--1			DnCouple
-1.0			DtCouple
+1			DnCouple
+-1			DtCouple
 
 #STOP
--1			MaxIter
-50			TimeMax
+101			MaxIter
+-1			TimeMax
 
 #BEGIN_COMP SC ---------------------------------------------------------------
 
@@ -403,34 +399,42 @@ RAW			StringLog
 1			DnSaveLogfile
 -1.			DtSaveLogfile
 
-#SAVEINITIAL
-T			DoSaveInitial
 
 #SAVEPLOT
-4			nPlotFile
+3			nPlotFile
 x=0 VAR idl		StringPlot
 10 			DnSavePlot
 -1.			DtSavePlot
 -1.0			DxSavePlot
-rho ux uy uz ti te bx by bz I01 I02 p		NameVars
+rho ux uy uz ti te bx by bz I01 I02 p sign		NameVars
 g rbody			NamePars
 y=0 VAR idl		StringPlot
 10			DnSavePlot
 -1.			DtSavePlot
 -1.0			DxSavePlot
-rho ux uy uz ti te bx by bz I01 I02 p		NameVars
+rho ux uy uz ti te bx by bz I01 I02 p sign		NameVars
 g rbody			NamePars
 z=0 VAR idl		StringPlot
 10 			DnSavePlot
 -1.			DtSavePlot
 -1.0			DxSavePlot
-rho ux uy uz ti te bx by bz I01 I02 p		NameVars
+rho ux uy uz ti te bx by bz I01 I02 p sign		NameVars
 g rbody			NamePars
-buf MHD idl		StringPlot
--1			DnSavePlot
-50.0			DtSavePlot
+
 
 #END_COMP IH -----------------------------------------------------------------
+
+End session: 2
+#RUN ##########################################################################
+Begin session: 3
+
+#COMPONENT
+SC			NameComp
+F			UseComp
+
+#STOP
+150			MaxIter
+-1			TimeMax
 
 End session: 2
 #END ##########################################################################
