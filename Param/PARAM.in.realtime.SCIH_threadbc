@@ -103,17 +103,12 @@ limited			TypeBc
 #GRIDBLOCKALL
 1200			MaxBlock
 
-#HARMONICSFILE
-SC/endmagnetogram.dat		NameHarmonicsFile
 
-#HARMONICSGRID
-1.0			rMagnetogram
-2.5			rSourceSurface
-F			IsLogRadius
-30			MaxOrder
-30			nR
-90			nLon
-90			nLat
+#LOOKUPTABLE
+B0			NameTable
+load			NameCommand
+harmonics_new_bxyz.out		NameFile
+real4			TypeFile
 
 #CURLB0
 T			UseCurlB0

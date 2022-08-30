@@ -58,8 +58,12 @@ limited			TypeBc
 1.0e-6			Tolerance
 40			MaxIter
 
-#HARMONICSFILE
-SC/startmagnetogram.dat		NameHarmonicsFile
+
+#LOOKUPTABLE
+B0			NameTable
+load			NameCommand
+harmonics_bxyz.out		NameFile
+real4			TypeFile
 
 #NEWHARMONICSFILE
 SC/endmagnetogram.dat		NameHarmonicsFileNew
