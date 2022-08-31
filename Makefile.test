@@ -1536,6 +1536,11 @@ test9_check:
 	ls -l test09_*.diff
 
 ### test10: real-time SC + IH test ###
+### Uses two real GONG magnetogram,  however, the actual time difference
+### of about 5 hours is artificially reduced to 150 second, with the command
+### perl -i -pe 's/2261.2270982/2261.2164177/' map_01.out
+### All the other commands  reealistically reprroduce the actual  scheme
+### for real-time simulations with the AWSoM-R
 
 test10:
 	@echo "test10_compile..." > test10_sc_thread.diff
@@ -1560,14 +1565,18 @@ test10_compile:
 	./Config.pl -o=IH:u=Awsom,e=Awsom,ng=2,g=4,4,4
 	${MAKE} SWMF
 	make PIDL
-	cd util/DATAREAD/srcMagnetogram; ${MAKE} HARMONICS
+	cd util/DATAREAD/srcMagnetogram; \
+	${MAKE} HARMONICS; \
+	${MAKE} CONVERTHARMONICS
 
 test10_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cd ${TESTDIR}/SC; perl -i -pe \
 	's/dipole11uniform/map_01/; s/harmonics11uniform/endmagnetogram/; s/\d+(\s+MaxOrder)/30$$1/' \
-	HARMONICS.in
+	HARMONICS.in;  perl -i -pe \
+	's/harmonics/endmagnetogram/; s/\d+(\s+MaxOrder)/30$$1/; s/\d+(\s+nR)/30$$1/; s/\d+(\s+nLon)/90$$1/; s/\d+(\s+nLat)/90$$1/' \
+	HARMONICSGRID.in
 	@echo " Before starting real time simulation from scratch, download the latest GONG magnetogram"
 	cd ${TESTDIR}/SC; \
 	cp ${SCDIR}/data/input/2261_222.fits.gz .; \
@@ -1576,10 +1585,12 @@ test10_rundir:
 	endmagnetogram; \
 	./HARMONICS.exe |tee harmonics.log; \
 	mv MAGNETOGRAMTIME.in ENDMAGNETOGRAMTIME.in; \
+	${MPIRUN} ./CONVERTHARMONICS.exe > convert.log ; \
+	mv  harmonics_bxyz.out ../harmonics_new_bxyz.out; \
 	cp ${DIR}/Param/PARAM.in.realtime.SCIH_threadbc \
 	PARAM.tmp; \
 	${DIR}/share/Scripts/ParamConvert.pl \
-	PARAM.TMP ../PARAM.in
+	PARAM.tmp ../PARAM.in
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test10_run:
@@ -1589,12 +1600,13 @@ test10_restart:
 	cd ${TESTDIR}; ./Restart.pl; \
 	mv PARAM.in PARAM.in_start; rm -f PARAM.in_orig_
 	@echo "Before restarting real-time simulation remove start magnetogram"
+	cd ${TESTDIR}; rm -f harmonics_bxyz.out; \
+	mv  harmonics_new_bxyz.out harmonics_bxyz.out
 	cd ${TESTDIR}/SC; \
 	rm -f STARTMAGNETOGRAMTIME.in startmagnetogram.dat PARAM.tmp; \
 	rm -f *.fits.gz *.fits harmonics.log fitsfile.out; \
-	rm -f endmagnetogram; \
-	cp ENDMAGNETOGRAMTIME.in STARTMAGNETOGRAMTIME.in; \
-	cp endmagnetogram.dat startmagnetogram.dat
+	rm -f endmagnetogram*; \
+	cp ENDMAGNETOGRAMTIME.in STARTMAGNETOGRAMTIME.in
 	@echo "Download new magnetogram"
 	cd ${TESTDIR}/SC; \
 	cp ${SCDIR}/data/input/2261_218.fits.gz .; \
@@ -1608,13 +1620,13 @@ test10_restart:
 	cp ${DIR}/Param/PARAM.in.realtime.restart.SCIH_threadbc \
 	PARAM.tmp; \
 	${DIR}/share/Scripts/ParamConvert.pl \
-	PARAM.TMP ../PARAM.in
+	PARAM.tmp ../PARAM.in
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_restart
 	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS
 
 test10_check:
-	-(${DIFFNUM} -b -r=1e-4 -a=1e-26 \
+	-(${DIFFNUM} -b -r=1e-5 -a=1e-26 \
 		${TESTDIR}/RESULTS/SC/log_n000000.log \
 		output/test10/SC_log_n000000.log \
 		> test10_sc_thread.diff)

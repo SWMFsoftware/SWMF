@@ -29,10 +29,15 @@ rundir: check_src
 		ln -s ${BINDIR}/PostSPH.exe .; \
 		ln -s ${BINDIR}/FDIPS.exe .; \
 		ln -s ${BINDIR}/HARMONICS.exe .; \
+		ln -s ${BINDIR}/CONVERTHARMONICS.exe .; \
 		cp ${MAGNETOGRAMDIR}/HARMONICS.in.orig \
 		HARMONICS.in; \
-		ln -s ${MAGNETOGRAMDIR}/*.py .; \
-		ln -s ${MAGNETOGRAMDIR}/*.pro .; \
+		cp ${MAGNETOGRAMDIR}/HARMONICSGRID.in.orig \
+		HARMONICSGRID.in; \
+		ln -s ${MAGNETOGRAMDIR}/remap_magnetogram.py .; \
+		ln -s ${MAGNETOGRAMDIR}/read_magnetogram.pro .; \
+		ln -s ${MAGNETOGRAMDIR}/readfits.pro .; \
+		ln -s ${MAGNETOGRAMDIR}/GLSETUP* .; \
 		cp    ${DIR}/share/Scripts/pIDL .; \
 		cp    ${DIR}/GM/BATSRUS/Scripts/TEC/pTEC .; \
 		ln -s ${DIR}/GM/BATSRUS/Param/CORONA Param; \
