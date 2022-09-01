@@ -25,6 +25,7 @@ rundir: check_src
 	mkdir ${RUNDIR}/EE
 	cd ${RUNDIR}/EE; \
 		mkdir restartIN restartOUT IO2; \
+		ln -s IO2 plots; \
 		ln -s ${BINDIR}/PostIDL.exe .; \
 		cp    ${DIR}/share/Scripts/pIDL .; \
 		cp    ${DIR}/GM/BATSRUS/Scripts/TEC/pTEC .; \
