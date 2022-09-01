@@ -27,7 +27,6 @@ rundir: check_src
 		mkdir restartIN restartOUT IO2; \
 		ln -s IO2 plots; \
 		ln -s ${BINDIR}/PostIDL.exe .; \
-		ln -s ${BINDIR}/PostSPH.exe .; \
 		ln -s ${BINDIR}/EARTH_TRAJ.exe .; \
 		cp    ${DIR}/share/Scripts/pIDL .; \
 		cp    ${DIR}/GM/BATSRUS/Scripts/TEC/pTEC .; \
