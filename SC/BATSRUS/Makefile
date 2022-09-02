@@ -25,8 +25,8 @@ rundir: check_src
 	mkdir ${RUNDIR}/SC
 	cd ${RUNDIR}/SC; \
 		mkdir restartIN restartOUT IO2; \
+		ln -s IO2 plots; \
 		ln -s ${BINDIR}/PostIDL.exe .; \
-		ln -s ${BINDIR}/PostSPH.exe .; \
 		ln -s ${BINDIR}/FDIPS.exe .; \
 		ln -s ${BINDIR}/HARMONICS.exe .; \
 		ln -s ${BINDIR}/CONVERTHARMONICS.exe .; \

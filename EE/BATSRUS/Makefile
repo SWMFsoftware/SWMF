@@ -25,8 +25,8 @@ rundir: check_src
 	mkdir ${RUNDIR}/EE
 	cd ${RUNDIR}/EE; \
 		mkdir restartIN restartOUT IO2; \
+		ln -s IO2 plots; \
 		ln -s ${BINDIR}/PostIDL.exe .; \
-		ln -s ${BINDIR}/PostSPH.exe .; \
 		cp    ${DIR}/share/Scripts/pIDL .; \
 		cp    ${DIR}/GM/BATSRUS/Scripts/TEC/pTEC .; \
 		ln -s ${DIR}/GM/BATSRUS/Param/FLUXEMERGENCE Param
