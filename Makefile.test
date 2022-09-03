@@ -2808,8 +2808,8 @@ test_eeggl_rundir:
 
 test_eeggl_run:
 	cd ${TESTDIR}/SC; \
-	python3 remap_magnetogram.py fitsfile.fits fitsfile; \
-	python3  GLSETUP.py fitsfile.out --UseBATS -CMESpeed 600 \
+	python3 remap_magnetogram.py fitsfile.fits map; \
+	python3  GLSETUP.py map.out -CMESpeed 600 \
 		-LonPosIn 333.5 -LatPosIn 22.606750850296976 \
 		-LonNegIn 324.5 -LatNegIn 23.996973841730536 > runlog_eeggl
 
