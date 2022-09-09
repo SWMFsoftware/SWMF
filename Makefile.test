@@ -1565,7 +1565,7 @@ test10_compile:
 	./Config.pl -o=IH:u=Awsom,e=Awsom,ng=2,g=4,4,4
 	${MAKE} SWMF
 	make PIDL
-	cd util/DATAREAD/srcMagnetogram; \
+	cd ${MAGNETOGRAMDIR}; \
 	${MAKE} HARMONICS; \
 	${MAKE} CONVERTHARMONICS
 
@@ -1573,7 +1573,7 @@ test10_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cd ${TESTDIR}/SC; perl -i -pe \
-	's/dipole11uniform/map_01/; s/harmonics11uniform/endmagnetogram/; s/\d+(\s+MaxOrder)/30$$1/' \
+	's/dipole11uniform/fitsfile/; s/harmonics11uniform/endmagnetogram/; s/\d+(\s+MaxOrder)/30$$1/' \
 	HARMONICS.in;  perl -i -pe \
 	's/harmonics/endmagnetogram/; s/\d+(\s+MaxOrder)/30$$1/; s/\d+(\s+nR)/30$$1/; s/\d+(\s+nLon)/90$$1/; s/\d+(\s+nLat)/90$$1/' \
 	HARMONICSGRID.in
@@ -1581,8 +1581,8 @@ test10_rundir:
 	cd ${TESTDIR}/SC; \
 	cp ${SCDIR}/data/input/2261_222.fits.gz .; \
 	gzip -d *.fits.gz; mv *.fits endmagnetogram; \
-	python3 ${DIR}/util/DATAREAD/srcMagnetogram/remap_magnetogram.py \
-	endmagnetogram; \
+	python3 remap_magnetogram.py \
+	endmagnetogram fitsfile; \
 	./HARMONICS.exe |tee harmonics.log; \
 	mv MAGNETOGRAMTIME.in ENDMAGNETOGRAMTIME.in; \
 	${MPIRUN} ./CONVERTHARMONICS.exe > convert.log ; \
@@ -1611,10 +1611,10 @@ test10_restart:
 	cd ${TESTDIR}/SC; \
 	cp ${SCDIR}/data/input/2261_218.fits.gz .; \
 	gzip -d *.fits.gz; mv *.fits endmagnetogram; \
-	python3 ${DIR}/util/DATAREAD/srcMagnetogram/remap_magnetogram.py \
-	endmagnetogram; \
+	python3 remap_magnetogram.py \
+	endmagnetogram fitsfile; \
 	perl -i -pe \
-	's/2261.2270982/2261.2164177/' map_01.out; \
+	's/0.2270982/0.2164177/' fitsfile.out; \
 	./HARMONICS.exe |tee harmonics.log; \
 	mv MAGNETOGRAMTIME.in ENDMAGNETOGRAMTIME.in; \
 	cp ${DIR}/Param/PARAM.in.realtime.restart.SCIH_threadbc \
@@ -2787,17 +2787,83 @@ test_chgl_check:
 
 ###############################################################################
 test_eeggl:
+	@echo "test_eeggl_compile..." > test_eeggl.diff
+	${MAKE} test_eeggl_compile
+	@echo "test_eeggl_rundir..." >> test_eeggl.diff
+	${MAKE} test_eeggl_rundir
+	@echo "test_eeggl_run..." >> test_eeggl.diff
+	${MAKE} test_eeggl_run
+	@echo "test_eeggl_check..." >> test_eeggl.diff
+	${MAKE} test_eeggl_check
+
+test_eeggl_compile:
 	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
 	cd ${EMPIRICALEEDIR};make FRM
+
+test_eeggl_rundir:
 	rm -rf ${TESTDIR}
 	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR} COMPDIR=SC,IH
-	cd ${TESTDIR}/SC;  ln -s  ${BINDIR}/FRMAGNETOGRAM.exe .
 	cp ${MAGNETOGRAMDIR}/fitsfile.fits ${TESTDIR}/SC/.
-	cd ${TESTDIR}/SC; python3 ./GLSETUP.py fitsfile.fits -CMESpeed 600 \
+
+test_eeggl_run:
+	cd ${TESTDIR}/SC; \
+	python3 remap_magnetogram.py fitsfile.fits map; \
+	python3  GLSETUP.py map.out -CMESpeed 600 \
 		-LonPosIn 333.5 -LatPosIn 22.606750850296976 \
 		-LonNegIn 324.5 -LatNegIn 23.996973841730536 > runlog_eeggl
+
+test_eeggl_check:
 	-${DIFFNUM} -t -r=1e-7 -a=1e-9 \
 		${TESTDIR}/SC/CME.in ${MAGNETOGRAMDIR}/CME.ref > test_eeggl.diff
+	-${DIFFNUM} -t -r=1e-7 -a=1e-9 \
+		${TESTDIR}/SC/FRMagnetogram.out \
+		${SCDIR}/data/output/FRMagnetogram.ref >> test_eeggl.diff
 	@ls -l test_eeggl.diff
 
+###############################################################################
+test_td:
+	@echo "test_td_compile..." > test_td.diff
+	${MAKE} test_td_compile
+	@echo "test_td_rundir..." >> test_td.diff
+	${MAKE} test_td_rundir
+	@echo "test_td_run..." >> test_td.diff
+	${MAKE} test_td_run
+
+test_td_compile:
+	${MAKE} SWMF
+	cd ${MAGNETOGRAMDIR}; \
+	${MAKE} HARMONICS; \
+	${MAKE} CONVERTHARMONICS
+	cd ${EMPIRICALEEDIR};make FRM
+
+test_td_rundir:
+	./Config.pl -v=SC/BATSRUS
+	rm -rf ${TESTDIR}
+	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR} COMPDIR=SC
+	cd ${TESTDIR}/SC; \
+	perl -i -pe \
+	's/dipole11uniform/fitsfile/; s/harmonics11uniform/harmonics/' \
+	HARMONICS.in; \
+	perl -i -pe \
+	's/\d+(\s+MaxOrder)/180$$1/' \
+	HARMONICS.in; \
+	perl -i -pe \
+	's/\d+(\s+MaxOrder)/180$$1/; s/\d+(\s+nR)/100$$1/' \
+	HARMONICSGRID.in;  \
+	perl -i -pe \
+	's/\d+(\s+nLon)/360$$1/; s/\d+(\s+nLat)/180$$1/' \
+	HARMONICSGRID.in
+	@echo " Before stating TDSETUP, download the magnetogram"
+
+test_td_run:
+	cd ${TESTDIR}/SC; \
+	cp ${SCDIR}/data/input/2135_026.fits fitsfile.fits; \
+	python3 remap_magnetogram.py \
+	fitsfile.fits fitsfile; \
+	./HARMONICS.exe |tee harmonics.log
+	@echo " Reconstruction of potential field takes a while, please, wait"
+	cd ${TESTDIR}/SC; \
+	${MPIRUN} ./CONVERTHARMONICS.exe > convert.log
+	cd ${TESTDIR}/SC; \
+	python3 GLSETUP.py field_2d.out -CMESpeed 600
 
