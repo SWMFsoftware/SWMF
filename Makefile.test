@@ -2830,11 +2830,11 @@ test_td:
 	${MAKE} test_td_run
 
 test_td_compile:
-	${MAKE} SWMF
+	cd ${EMPIRICALEEDIR};make FRM
 	cd ${MAGNETOGRAMDIR}; \
 	${MAKE} HARMONICS; \
 	${MAKE} CONVERTHARMONICS
-	cd ${EMPIRICALEEDIR};make FRM
+
 
 test_td_rundir:
 	./Config.pl -v=SC/BATSRUS
