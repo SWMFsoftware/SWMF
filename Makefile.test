@@ -2865,5 +2865,5 @@ test_td_run:
 	cd ${TESTDIR}/SC; \
 	${MPIRUN} ./CONVERTHARMONICS.exe > convert.log
 	cd ${TESTDIR}/SC; \
-	python3 GLSETUP.py field_2d.out -CMESpeed 600
+	python3 TDSETUP.py field_2d.out
 
