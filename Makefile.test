@@ -24,6 +24,7 @@ test_help:
 	@echo "    test_batl                  (run BATL tests if BATL/ is present)"
 	@echo "    test_comp                  (run component tests)"
 	@echo "    test_swmf                  (run SWMF tests below)"
+	@echo "    test_eeggl                 (run EEGGL test)"
 	@(if [ -d PW/PWOM    ]; then echo "    test_pw                    (run PW/PWOM test)"; fi)
 	@(if [ -d PS/DGCPM   ]; then echo "    test_ps                    (run PS/DGCPM test)"; fi)
 	@(if [ -d SP/MFLAMPA ]; then echo "    test_sp                    (run SP/MFLAMPA test)"; fi)
@@ -79,6 +80,7 @@ test_gpu:
 	-@(${MAKE} test_check)
 
 test_swmf:
+	${MAKE} test_eeggl TESTDIR=run_test_eeggl
 	-@(if [ -d PS/DGCPM   ]; then ${MAKE} test_ps TESTDIR=run_test_ps; fi)
 	-@(if [ -d SP/MFLAMPA ]; then ${MAKE} test_sp TESTDIR=run_test_sp; fi)
 	-@(if [ -d IM/RCM2    ]; then ${MAKE} test_swpc_gpu TESTDIR=run_test_swpc_gpu; fi)
@@ -2798,7 +2800,7 @@ test_eeggl:
 
 test_eeggl_compile:
 	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
-	cd ${EMPIRICALEEDIR};make FRM
+	cd ${EMPIRICALEEDIR}; make FRM
 
 test_eeggl_rundir:
 	rm -rf ${TESTDIR}
@@ -2807,17 +2809,17 @@ test_eeggl_rundir:
 
 test_eeggl_run:
 	cd ${TESTDIR}/SC; \
-	python3 remap_magnetogram.py fitsfile.fits map; \
-	python3  GLSETUP.py map.out -CMESpeed 600 \
+	   python3 remap_magnetogram.py fitsfile.fits map; \
+	   python3  GLSETUP.py map.out -CMESpeed 600 \
 		-LonPosIn 333.5 -LatPosIn 22.606750850296976 \
 		-LonNegIn 324.5 -LatNegIn 23.996973841730536 > runlog_eeggl
 
 test_eeggl_check:
 	-${DIFFNUM} -t -r=1e-7 -a=1e-9 \
-		${TESTDIR}/SC/CME.in ${MAGNETOGRAMDIR}/CME.ref > test_eeggl.diff
+	    ${TESTDIR}/SC/CME.in ${MAGNETOGRAMDIR}/CME.ref > test_eeggl.diff
 	-${DIFFNUM} -t -r=1e-7 -a=1e-9 \
-		${TESTDIR}/SC/FRMagnetogram.out \
-		${SCDIR}/data/output/FRMagnetogram.ref >> test_eeggl.diff
+	    ${TESTDIR}/SC/FRMagnetogram.out \
+	    ${SCDIR}/data/output/FRMagnetogram.ref >> test_eeggl.diff
 	@ls -l test_eeggl.diff
 
 ###############################################################################
@@ -2834,7 +2836,6 @@ test_td_compile:
 	cd ${MAGNETOGRAMDIR}; \
 	${MAKE} HARMONICS; \
 	${MAKE} CONVERTHARMONICS
-
 
 test_td_rundir:
 	./Config.pl -v=SC/BATSRUS
@@ -2865,5 +2866,6 @@ test_td_run:
 	cd ${TESTDIR}/SC; \
 	${MPIRUN} ./CONVERTHARMONICS.exe > convert.log
 	cd ${TESTDIR}/SC; \
-	python3 TDSETUP.py field_2d.out
-
+	python3 TDSETUP.py field_2d.out \
+		-LonPosIn 333.5 -LatPosIn 22.606750850296976 \
+		-LonNegIn 324.5 -LatNegIn 23.996973841730536 > tdsetup.log
