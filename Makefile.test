@@ -80,7 +80,7 @@ test_gpu:
 	-@(${MAKE} test_check)
 
 test_swmf:
-	${MAKE} test_eeggl TESTDIR=run_test_eeggl
+	-@(${MAKE} test_eeggl TESTDIR=run_test_eeggl)
 	-@(if [ -d PS/DGCPM   ]; then ${MAKE} test_ps TESTDIR=run_test_ps; fi)
 	-@(if [ -d SP/MFLAMPA ]; then ${MAKE} test_sp TESTDIR=run_test_sp; fi)
 	-@(if [ -d IM/RCM2    ]; then ${MAKE} test_swpc_gpu TESTDIR=run_test_swpc_gpu; fi)
