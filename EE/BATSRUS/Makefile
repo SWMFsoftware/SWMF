@@ -9,7 +9,7 @@ check_src:
 
 install:
 	@(if([ -f src/Makefile ]); then \
-		cp -f src/ModSize_orig.f90 src/ModSize.f90; \
+		cp -f src/ModOptimizeParam_orig.f90 src/ModOptimizeParam.f90; \
 		cp -f srcBATL/BATL_size_orig.f90 srcBATL/BATL_size.f90; \
 	fi)
 
