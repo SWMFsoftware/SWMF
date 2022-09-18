@@ -1339,7 +1339,8 @@ test7:
 
 test7_compile:
 	./Config.pl -v=Empty,IH/BATSRUS,OH/BATSRUS
-	./Config.pl -o=IH:u=Waves,e=Mhd,ng=2,g=4,4,4 -o=OH:u=Waves,e=Mhd,ng=2,g=4,4,4
+	./Config.pl -o=IH:u=Waves,e=Mhd,ng=2,g=4,4,4
+	./Config.pl -o=OH:u=Waves,e=Mhd,ng=2,g=4,4,4
 	${MAKE} SWMF
 	make PIDL
 
