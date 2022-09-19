@@ -2768,9 +2768,9 @@ test_chgl_compile:
 
 test_chgl_rundir:
 	rm -rf ${TESTDIR}
-	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR} COMPDIR=SC,IH
+	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR}
 	cp ${TESTDIR}/SC/Param/PARAM.in.ChGL_short  ${TESTDIR}/PARAM.in
-	cp SC/BATSRUS/data/input/Gong_ChGL.dat ${TESTDIR}/SC/.
+	cp SC/BATSRUS/data/input/Gong_ChGL.dat ${TESTDIR}/SC/
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_chgl_run:
@@ -2805,8 +2805,8 @@ test_eeggl_compile:
 
 test_eeggl_rundir:
 	rm -rf ${TESTDIR}
-	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR} COMPDIR=SC,IH
-	cp ${MAGNETOGRAMDIR}/fitsfile.fits ${TESTDIR}/SC/.
+	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR}
+	cp ${MAGNETOGRAMDIR}/fitsfile.fits ${TESTDIR}/SC/
 
 test_eeggl_run:
 	cd ${TESTDIR}/SC; \
@@ -2841,7 +2841,7 @@ test_td_compile:
 test_td_rundir:
 	./Config.pl -v=SC/BATSRUS
 	rm -rf ${TESTDIR}
-	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR} COMPDIR=SC
+	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR}
 	cd ${TESTDIR}/SC; \
 	perl -i -pe 's/dipole11uniform/fitsfile/; s/harmonics11uniform/harmonics/' \
 	     HARMONICS.in; \
