@@ -2862,6 +2862,6 @@ test_td_run:
 	cd ${TESTDIR}/SC; \
 	${MPIRUN} ./CONVERTHARMONICS.exe > convert.log
 	cd ${TESTDIR}/SC; \
-	python3 TDSETUP.py field_2d.out \
-		-LonPosIn 333.5 -LatPosIn 22.6 \
-		-LonNegIn 324.5 -LatNegIn 24.0 > tdsetup.log
+	python3 TDSETUP.py field_2d.out -LonPosIn 45.50 -LatPosIn 6.08 \
+		-LonNegIn 48.50 -LatNegIn 10.60 -LonFPPosIn 42.50 \
+		-LatFPPosIn 8.50 -LonFPNegIn 65.50 -LatFPNegIn 16.50
