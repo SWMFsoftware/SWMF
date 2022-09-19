@@ -501,7 +501,7 @@ IHBATSRUS: IH/BATSRUS/src/Makefile \
 		touch Makefile.DEPEND
 	cd IH/BATSRUS; \
 		perl -i -pe 's/GM/IH/' Config.pl; \
-		${CONFIG_PL} -u=Awsom -e=Awsom
+		${CONFIG_PL} -install=c -u=Awsom -e=Awsom
 
 #^CMP END IH
 
