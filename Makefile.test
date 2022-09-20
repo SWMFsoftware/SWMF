@@ -1339,7 +1339,8 @@ test7:
 
 test7_compile:
 	./Config.pl -v=Empty,IH/BATSRUS,OH/BATSRUS
-	./Config.pl -o=IH:u=Waves,e=Mhd,ng=2,g=4,4,4 -o=OH:u=Waves,e=Mhd,ng=2,g=4,4,4
+	./Config.pl -o=IH:u=Waves,e=Mhd,ng=2,g=4,4,4
+	./Config.pl -o=OH:u=Waves,e=Mhd,ng=2,g=4,4,4
 	${MAKE} SWMF
 	make PIDL
 
@@ -2143,7 +2144,7 @@ test16_compile:
 	
 test16_rundir:
 	rm -rf ${TESTDIR}
-	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR} COMPDIR=GM,PC
+	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/PARAM.in.test.GMPC.FLEKS.periodic  ${TESTDIR}/PARAM.in
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
 
@@ -2183,7 +2184,7 @@ test17_compile:
 	
 test17_rundir:
 	rm -rf ${TESTDIR}
-	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR} COMPDIR=GM,PC
+	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/PARAM.in.test.GMPC.FLEKS.2D.2steps  ${TESTDIR}/PARAM.in
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
 
@@ -2262,7 +2263,7 @@ test18_compile:
 	
 test18_rundir:
 	rm -rf ${TESTDIR}
-	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR} COMPDIR=GM,PC
+	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/PARAM.in.test.GMPC.FLEKS.3D  ${TESTDIR}/PARAM.in
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
 
@@ -2427,7 +2428,7 @@ test12_aniso_AMPS_dynamic_fluxrope_compile:
 
 test12_aniso_AMPS_dynamic_fluxrope_rundir:
 	rm -rf ${TESTDIR}
-	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR} COMPDIR=GM,PC
+	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/PARAM.in.test.GMPC.aniso.AMPS.fluxrope  ${TESTDIR}/PARAM.in
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
 
@@ -2463,7 +2464,7 @@ test12_aniso_AMPS_compile:
 	
 test12_aniso_AMPS_rundir:
 	rm -rf ${TESTDIR}
-	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR} COMPDIR=GM,PC
+	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/PARAM.in.test.GMPC.aniso.AMPS  ${TESTDIR}/PARAM.in
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
 
@@ -2512,7 +2513,7 @@ test12_aniso_AMPS_divE_corr_compile:
 	
 test12_aniso_AMPS_divE_corr_rundir:
 	rm -rf ${TESTDIR}
-	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR} COMPDIR=GM,PC
+	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/PARAM.in.test.GMPC.aniso.AMPS.corr  ${TESTDIR}/PARAM.in
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
 
@@ -2548,7 +2549,7 @@ test12_aniso_AMPS_openmp_compile:
 	
 test12_aniso_AMPS_openmp_rundir:
 	rm -rf ${TESTDIR}
-	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR} COMPDIR=GM,PC
+	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/PARAM.in.test.GMPC.aniso.AMPS  ${TESTDIR}/PARAM.in
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
 
@@ -2583,7 +2584,7 @@ test12_aniso_AMPS_dynamic_compile:
 	
 test12_aniso_AMPS_dynamic_rundir:
 	rm -rf ${TESTDIR}
-	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR} COMPDIR=GM,PC
+	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/PARAM.in.test.GMPC.aniso.AMPS.dynamic  ${TESTDIR}/PARAM.in
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
 
@@ -2624,7 +2625,7 @@ test12_aniso_compile:
 	
 test12_aniso_rundir:
 	rm -rf ${TESTDIR}
-	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR} COMPDIR=GM,PC
+	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/PARAM.in.test.GMPC.start.aniso  ${TESTDIR}/PARAM.in
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
 
@@ -2672,7 +2673,7 @@ test12_3d_compile:
 	
 test12_3d_rundir:
 	rm -rf ${TESTDIR}
-	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR} COMPDIR=GM,PC
+	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/PARAM.in.test.GMPC.3D.start  ${TESTDIR}/PARAM.in
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
 
@@ -2719,7 +2720,7 @@ test12_iso_compile:
 	
 test12_iso_rundir:
 	rm -rf ${TESTDIR}
-	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR} COMPDIR=GM,PC
+	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/PARAM.in.test.GMPC.start  ${TESTDIR}/PARAM.in
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
 
@@ -2767,9 +2768,9 @@ test_chgl_compile:
 
 test_chgl_rundir:
 	rm -rf ${TESTDIR}
-	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR} COMPDIR=SC,IH
+	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR}
 	cp ${TESTDIR}/SC/Param/PARAM.in.ChGL_short  ${TESTDIR}/PARAM.in
-	cp SC/BATSRUS/data/input/Gong_ChGL.dat ${TESTDIR}/SC/.
+	cp SC/BATSRUS/data/input/Gong_ChGL.dat ${TESTDIR}/SC/
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_chgl_run:
@@ -2804,8 +2805,8 @@ test_eeggl_compile:
 
 test_eeggl_rundir:
 	rm -rf ${TESTDIR}
-	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR} COMPDIR=SC,IH
-	cp ${MAGNETOGRAMDIR}/fitsfile.fits ${TESTDIR}/SC/.
+	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR}
+	cp ${MAGNETOGRAMDIR}/fitsfile.fits ${TESTDIR}/SC/
 
 test_eeggl_run:
 	cd ${TESTDIR}/SC; \
@@ -2840,7 +2841,7 @@ test_td_compile:
 test_td_rundir:
 	./Config.pl -v=SC/BATSRUS
 	rm -rf ${TESTDIR}
-	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR} COMPDIR=SC
+	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR}
 	cd ${TESTDIR}/SC; \
 	perl -i -pe 's/dipole11uniform/fitsfile/; s/harmonics11uniform/harmonics/' \
 	     HARMONICS.in; \
@@ -2861,6 +2862,6 @@ test_td_run:
 	cd ${TESTDIR}/SC; \
 	${MPIRUN} ./CONVERTHARMONICS.exe > convert.log
 	cd ${TESTDIR}/SC; \
-	python3 TDSETUP.py field_2d.out \
-		-LonPosIn 333.5 -LatPosIn 22.6 \
-		-LonNegIn 324.5 -LatNegIn 24.0 > tdsetup.log
+	python3 TDSETUP.py field_2d.out -LonPosIn 45.50 -LatPosIn 6.08 \
+		-LonNegIn 48.50 -LatNegIn 10.60 -LonFPPosIn 42.50 \
+		-LatFPPosIn 8.50 -LonFPNegIn 65.50 -LatFPNegIn 16.50
