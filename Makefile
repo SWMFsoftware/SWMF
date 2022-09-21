@@ -600,6 +600,52 @@ SCBATSRUS: SC/BATSRUS/src/Makefile \
 		perl -i -pe 's/GM/SC/' Config.pl; \
 		${CONFIG_PL} -install=c -u=Awsom -e=Awsom
 
+FITS=${SCDIR}/data/input/2135_026.fits
+
+TDSETUP:
+	${MAKE} td_compile
+	${MAKE} td_rundir
+	${MAKE} td_setup
+
+td_compile:
+	cd ${EMPIRICALEEDIR}; make FRM
+	cd ${MAGNETOGRAMDIR}; \
+		${MAKE} HARMONICS; \
+		${MAKE} CONVERTHARMONICS
+
+td_rundir:
+	./Config.pl -v=SC/BATSRUS
+	@echo "Directory ${RUNDIR} is erased!!!"
+	rm -rf ${RUNDIR}
+	$(MAKE) rundir
+	cd ${RUNDIR}/SC; \
+	perl -i -pe 's/dipole11uniform/fitsfile/; s/harmonics11uniform/harmonics/' \
+	     HARMONICS.in; \
+	perl -i -pe 's/\d+(\s+MaxOrder)/180$$1/' \
+	     HARMONICS.in; \
+	perl -i -pe 's/\d+(\s+MaxOrder)/180$$1/; s/\d+(\s+nR)/100$$1/' \
+	     HARMONICSGRID.in;  \
+	perl -i -pe 's/\d+(\s+nLon)/360$$1/; s/\d+(\s+nLat)/180$$1/' \
+	     HARMONICSGRID.in
+	@echo " Before stating td_setup, download the magnetogram"
+
+td_setup:
+	@echo "Copy fits file ${FITS} to  ${RUNDIR}/SC/fitsfile.fits"
+	cp -f ${FITS} ${RUNDIR}/SC/fitsfile.fits
+	cd ${RUNDIR}/SC; \
+	python3 remap_magnetogram.py fitsfile.fits fitsfile; \
+	./HARMONICS.exe |tee harmonics.log
+	@echo " Reconstruction of potential field takes a while, please, wait"
+	cd ${RUNDIR}/SC; \
+	${MPIRUN} ./CONVERTHARMONICS.exe > convert.log
+	@echo "-----------------------------------"
+	@echo "To start TDSETUP make the following:"
+	@echo "cd ${RUNDIR}/SC"
+	@echo "python3 TDSETUP.py field_2d.out"
+	@echo "-----------------------------------"
+	@echo "To start GLSETUP the second command should read:"
+	@echo "python3 GLSETUP.py field_2d.out -CMESpeed 600"
+
 #^CMP END SC
 
 include Makefile.test #^CMP IF TESTING
