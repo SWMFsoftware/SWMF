@@ -74,7 +74,7 @@ help:
 	@echo ' '
 	@echo ' '
 	@echo '    rundir      (create run directory "run/")'
-	@echo '    rundir RUNDIR=run_test  (create run directory "run_test/")'
+	@echo '    rundir RUNDIR=`pwd`/run_test  (create run directory "run_test/")'
 	@echo '    rundir MACHINE=frontera (select job scripts for frontera)'
 	@echo '    rundir_code (saves code archive in run directory)'
 	@echo ' '
