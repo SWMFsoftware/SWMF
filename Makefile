@@ -601,6 +601,15 @@ SCBATSRUS: SC/BATSRUS/src/Makefile \
 		${CONFIG_PL} -install=c -u=Awsom -e=Awsom
 
 FITS=${SCDIR}/data/input/2135_026.fits
+# Creates environment to run setup for TD erruptive event generator
+# It is also useful for EEGGL
+# To handle the input magnetogram_file.fits in directory run_td, run:
+# make TDSETUP FITS=magnetogram_file.fits RUNDIR=`pwd`/run_td
+# If more than two processorrs are available, use MPIRUN='mpiexec -n 4',
+# to speed up the process.
+# NOTE: the run directtory will be erased and creaated from scratch. To
+# avoid this (say, if only the magnetogram changes), use instead:
+# make td_setup FITS=new_magnetogram_file.fits RUNDIR=`pwd`/run_td
 
 TDSETUP:
 	${MAKE} td_compile
