@@ -2829,9 +2829,17 @@ test_td:
 	${MAKE} TDSETUP RUNDIR=${DIR}/${TESTDIR}
 	@echo "test_td_run..." >> test_td.diff
 	${MAKE} test_td_run
+	@echo "test_td_check..." >> test_td.diff
+	${MAKE} test_td_check
 
 test_td_run:
 	cd ${TESTDIR}/SC; \
 	python3 TDSETUP.py field_2d.out -LonPosIn 45.50 -LatPosIn 6.08 \
 		-LonNegIn 48.50 -LatNegIn 10.60 -LonFPPosIn 42.50 \
-		-LatFPPosIn 8.50 -LonFPNegIn 65.50 -LatFPNegIn 16.50
+		-LatFPPosIn 8.50 -LonFPNegIn 65.50 -LatFPNegIn 16.50 \
+		-a2r0Ratio 0.25 -ApexIn 0.18>run.log
+
+test_td_check:
+	diff ${TESTDIR}/SC/CME.in \
+	    ${SCDIR}/data/output/CME.test_td.ref > test_td.diff
+	@ls -l test_td.diff
