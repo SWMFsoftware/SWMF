@@ -2840,6 +2840,6 @@ test_td_run:
 		-a2r0Ratio 0.25 -ApexIn 0.18>run.log
 
 test_td_check:
-	diff ${TESTDIR}/SC/CME.in \
-	    ${SCDIR}/data/output/CME.test_td.ref > test_td.diff
+	-${DIFFNUM} ${TESTDIR}/SC/CME.in \
+	     output/test_td/CME.in > test_td.diff
 	@ls -l test_td.diff
