@@ -25,6 +25,7 @@ test_help:
 	@echo "    test_comp                  (run component tests)"
 	@echo "    test_swmf                  (run SWMF tests below)"
 	@echo "    test_eeggl                 (run EEGGL test)"
+	@echo "    test_td                    (run Titov-Demouline test)"
 	@(if [ -d PW/PWOM    ]; then echo "    test_pw                    (run PW/PWOM test)"; fi)
 	@(if [ -d PS/DGCPM   ]; then echo "    test_ps                    (run PS/DGCPM test)"; fi)
 	@(if [ -d SP/MFLAMPA ]; then echo "    test_sp                    (run SP/MFLAMPA test)"; fi)
@@ -81,6 +82,7 @@ test_gpu:
 
 test_swmf:
 	-@(${MAKE} test_eeggl TESTDIR=run_test_eeggl)
+	-@(${MAKE} test_td    TESTDIR=run_test_td)
 	-@(if [ -d PS/DGCPM   ]; then ${MAKE} test_ps TESTDIR=run_test_ps; fi)
 	-@(if [ -d SP/MFLAMPA ]; then ${MAKE} test_sp TESTDIR=run_test_sp; fi)
 	-@(if [ -d IM/RCM2    ]; then ${MAKE} test_swpc_gpu TESTDIR=run_test_swpc_gpu; fi)
@@ -2840,6 +2842,6 @@ test_td_run:
 		-a2r0Ratio 0.25 -ApexIn 0.18>run.log
 
 test_td_check:
-	diff ${TESTDIR}/SC/CME.in \
-	    ${SCDIR}/data/output/CME.test_td.ref > test_td.diff
+	-${DIFFNUM} ${TESTDIR}/SC/CME.in \
+	     output/test_td/CME.in > test_td.diff
 	@ls -l test_td.diff

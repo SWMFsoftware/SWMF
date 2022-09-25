@@ -1,0 +1,27 @@
+#LOOKUPTABLE 
+B0                  NameTable 
+load	            NameCommand 
+harmonics_bxyz.out	NameFile 
+real4	            TypeFile 
+
+#CME 
+T                   UseCme 
+T                   DoAddFluxRope 
+79.82               LongitudeCme 
+12.75               LatitudeCme 
+109.78              OrientationCme 
+TD22                TypeCme 
+-1                  iHelicity 
+0.21      	    RadiusMajor 
+0.05      	    RadiusMinor 
+0.03      	    Depth 
+1.0e-3              PlasmaBeta 
+5.0e5               EjectaTemperature 
+readbstrap          TypeBStrap 
+2.70      	     bStrappingDim 
+none                TypeCharge 
+ 
+#END 
+
+Angular Size            = 23.81
+ Poloidal flux: positive:   1.93 Poloidal flux: negative:  -2.21
