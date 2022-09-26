@@ -25,7 +25,7 @@ test_help:
 	@echo "    test_comp                  (run component tests)"
 	@echo "    test_swmf                  (run SWMF tests below)"
 	@echo "    test_eeggl                 (run EEGGL test)"
-	@echo "    test_td                    (run Titov-Demouline test)"
+	@echo "    test_eegtd                 (run Titov-Demouline test)"
 	@(if [ -d PW/PWOM    ]; then echo "    test_pw                    (run PW/PWOM test)"; fi)
 	@(if [ -d PS/DGCPM   ]; then echo "    test_ps                    (run PS/DGCPM test)"; fi)
 	@(if [ -d SP/MFLAMPA ]; then echo "    test_sp                    (run SP/MFLAMPA test)"; fi)
@@ -82,7 +82,7 @@ test_gpu:
 
 test_swmf:
 	-@(${MAKE} test_eeggl TESTDIR=run_test_eeggl)
-	-@(${MAKE} test_td    TESTDIR=run_test_td)
+	-@(${MAKE} test_eegtd TESTDIR=run_test_eegtd)
 	-@(if [ -d PS/DGCPM   ]; then ${MAKE} test_ps TESTDIR=run_test_ps; fi)
 	-@(if [ -d SP/MFLAMPA ]; then ${MAKE} test_sp TESTDIR=run_test_sp; fi)
 	-@(if [ -d IM/RCM2    ]; then ${MAKE} test_swpc_gpu TESTDIR=run_test_swpc_gpu; fi)
@@ -2826,22 +2826,22 @@ test_eeggl_check:
 	@ls -l test_eeggl.diff
 
 ###############################################################################
-test_td:
-	@echo "test_td_setup..." > test_td.diff
+test_eegtd:
+	@echo "test_eegtd_setup..." > test_eegtd.diff
 	${MAKE} TDSETUP RUNDIR=${DIR}/${TESTDIR}
-	@echo "test_td_run..." >> test_td.diff
-	${MAKE} test_td_run
-	@echo "test_td_check..." >> test_td.diff
-	${MAKE} test_td_check
+	@echo "test_eegtd_run..." >> test_eegtd.diff
+	${MAKE} test_eegtd_run
+	@echo "test_eegtd_check..." >> test_eegtd.diff
+	${MAKE} test_eegtd_check
 
-test_td_run:
+test_eegtd_run:
 	cd ${TESTDIR}/SC; \
 	python3 TDSETUP.py field_2d.out -LonPosIn 45.50 -LatPosIn 6.08 \
 		-LonNegIn 48.50 -LatNegIn 10.60 -LonFPPosIn 42.50 \
 		-LatFPPosIn 8.50 -LonFPNegIn 65.50 -LatFPNegIn 16.50 \
 		-a2r0Ratio 0.25 -ApexIn 0.18>run.log
 
-test_td_check:
+test_eegtd_check:
 	-${DIFFNUM} ${TESTDIR}/SC/CME.in \
-	     output/test_td/CME.in > test_td.diff
-	@ls -l test_td.diff
+	     output/test_eegtd/CME.in > test_eegtd.diff
+	@ls -l test_eegtd.diff
