@@ -45,7 +45,7 @@ if($umichgitlab){
 	"ALTOR"         => "PC", 
 	"IPIC3D2"       => "PC",
 	"FLEKS"         => "PC", 
-    "FLEKS_PT"      => "PT", 
+	"FLEKS_PT"      => "PT", 
 	"DGCPM"         => "PS", 
 	"AMPS_PT"       => "PT", 
 	"AMPS_PC"       => "PC", 
