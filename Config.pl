@@ -45,6 +45,7 @@ if($umichgitlab){
 	"ALTOR"         => "PC", 
 	"IPIC3D2"       => "PC",
 	"FLEKS"         => "PC", 
+	"FLEKS_PT"      => "PT", 
 	"DGCPM"         => "PS", 
 	"AMPS_PT"       => "PT", 
 	"AMPS_PC"       => "PC", 
@@ -95,6 +96,7 @@ foreach $repo ("share", "util", @models){
     my $component = ($component{$repo} or ".");
     my $repo1 = $repo;
     $repo1 =~ s/AMPS_P[TC]/AMPS/; # remove _PC, _PT
+    $repo1 =~ s/FLEKS_PT/FLEKS/; # remove _PT
     my $model = "$component/$repo1";
     `cd $component; $gitclone/$repo1` unless -d $model;
     if($model eq "GM/BATSRUS"){
