@@ -2160,8 +2160,12 @@ test16_check:
 	   output/test16/z=0.ref.gz \
 		> test16.diff)
 	-@(${DIFFNUM} -b -r=1e-12 \
-	   ${TESTDIR}/RESULTS/PC/log_n00000000.log \
+	   ${TESTDIR}/RESULTS/PC/log_pic_n00000000.log \
 	   output/test16/PC.log \
+		>> test16.diff)
+	-@(${DIFFNUM} -b -r=1e-12 \
+	   ${TESTDIR}/RESULTS/PC/log_pt_n00000000.log \
+	   output/test16/PT.log \
 		>> test16.diff)		
 	ls -l test16.diff
 
