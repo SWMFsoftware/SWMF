@@ -256,6 +256,16 @@ z=0 all idl_ascii		StringPlot
 #PARTICLESTAGGERING
 F			isStaggered
 
+#PARTICLETRACKER
+T			useParticleTracker
+
+#TPREGION
+uniform			region
+
+#SAVELOG
+1			dnSavePic
+1			dnSavePT
+
 #SMOOTHE
 F			doSmoothE
 
