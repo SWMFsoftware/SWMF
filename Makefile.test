@@ -2140,7 +2140,7 @@ test16:
 
 test16_compile:
 	./Config.pl -v=Empty,PC/FLEKS,GM/BATSRUS -amrex
-	./Config.pl -o=GM:u=Waves,e=MultiIonPe,ng=2,g=8,8,1
+	./Config.pl -o=GM:u=Default,e=MultiIonPe,ng=2,g=8,8,1
 	$(MAKE) SWMF
 	$(MAKE) PIDL
 	
@@ -2184,7 +2184,7 @@ test17:
 
 test17_compile:
 	./Config.pl -v=Empty,PC/FLEKS,GM/BATSRUS -amrex
-	./Config.pl -o=GM:u=Waves,e=MhdAnisoP,ng=2,g=8,8,1
+	./Config.pl -o=GM:u=Default,e=MhdAnisoP,ng=2,g=8,8,1
 	$(MAKE) SWMF
 	$(MAKE) PIDL
 	
@@ -2463,7 +2463,7 @@ test12_aniso_AMPS:
 
 test12_aniso_AMPS_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,PC/AMPS
-	./Config.pl -o=GM:u=Waves,e=MhdAnisoP,ng=2,g=8,8,8
+	./Config.pl -o=GM:u=Default,e=MhdAnisoP,ng=2,g=8,8,8
 	./Config.pl -o=PC:spice-path=nospice,spice-kernels=nospice,application=fluid-pic-coupler,amps-test=on 
 	$(MAKE) SWMF
 	$(MAKE) PIDL
@@ -2512,7 +2512,7 @@ test12_aniso_AMPS_divE_corr:
 
 test12_aniso_AMPS_divE_corr_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,PC/AMPS
-	./Config.pl -o=GM:u=Waves,e=MhdAnisoP,ng=2,g=8,8,8
+	./Config.pl -o=GM:u=Default,e=MhdAnisoP,ng=2,g=8,8,8
 	./Config.pl -o=PC:spice-path=nospice,spice-kernels=nospice,application=fluid-pic-coupler-with-correction,amps-test=on 
 	$(MAKE) SWMF
 	$(MAKE) PIDL
@@ -2548,7 +2548,7 @@ test12_aniso_AMPS_openmp:
 
 test12_aniso_AMPS_openmp_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,PC/AMPS
-	./Config.pl -o=GM:u=Waves,e=MhdAnisoP,ng=2,g=8,8,8
+	./Config.pl -o=GM:u=Default,e=MhdAnisoP,ng=2,g=8,8,8
 	./Config.pl -openmp -o=PC:spice-path=nospice,spice-kernels=nospice,application=fluid-pic-coupler,amps-test=on,openmp=on 
 	$(MAKE) SWMF
 	$(MAKE) PIDL
@@ -2583,7 +2583,7 @@ test12_aniso_AMPS_dynamic:
 
 test12_aniso_AMPS_dynamic_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,PC/AMPS
-	./Config.pl -o=GM:u=Waves,e=MhdAnisoP,ng=2,g=8,8,8
+	./Config.pl -o=GM:u=Default,e=MhdAnisoP,ng=2,g=8,8,8
 	./Config.pl -o=PC:spice-path=nospice,spice-kernels=nospice,application=fluid-pic-coupler-dynamic,amps-test=on 
 	$(MAKE) SWMF
 	$(MAKE) PIDL
@@ -2625,7 +2625,7 @@ test12_aniso:
 
 test12_aniso_compile:
 	./Config.pl -v=Empty,PC/IPIC3D2,GM/BATSRUS
-	./Config.pl -o=GM:u=Waves,e=MhdAnisoP,ng=2,g=8,8,1
+	./Config.pl -o=GM:u=Default,e=MhdAnisoP,ng=2,g=8,8,1
 	$(MAKE) SWMF
 	$(MAKE) PIDL
 	
@@ -2720,7 +2720,7 @@ test12_iso:
 
 test12_iso_compile:
 	./Config.pl -v=Empty,PC/IPIC3D2,GM/BATSRUS
-	./Config.pl -o=GM:u=Waves,e=MultiIonPe,ng=2,g=8,8,1
+	./Config.pl -o=GM:u=Default,e=MultiIonPe,ng=2,g=8,8,1
 	$(MAKE) SWMF
 	$(MAKE) PIDL
 	
