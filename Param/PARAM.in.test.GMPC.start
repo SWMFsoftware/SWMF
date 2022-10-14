@@ -37,10 +37,6 @@ F			UseImplicitEnergy
 #GRIDGEOMETRY
 rotatedcartesian		TypeGeometry
 
-USERMODULE
-Waves
- 1.30			VersionUserModule
-
 #CHECKGRIDSIZE
   8			nI
   8			nJ
@@ -79,13 +75,11 @@ T			UseNonConservative
 0.0			StateVar Uz2
 2.56e-4			StateVar p2
 
-#USERINPUTBEGIN -----------------------------------
-
 Whistler wave is cirularly polarized
 for both ion fluids.
 
 #WAVE
-3			UyIon1
+Uy			NameVar
 10000.0			Width
 -0.0090663280		Amplitude  -0.01 for Alfven
 32.0			LambdaX
@@ -94,7 +88,7 @@ for both ion fluids.
 -90.0			Phase
 
 #WAVE
-4			UzIon1
+Uz			NameVar
 1000.0			Width
 +0.0090663280		Amplitude  +0.01 for Alfven
 32.0			LambdaX
@@ -103,7 +97,7 @@ for both ion fluids.
 180.0			Phase
 
 #WAVE
-12			UyIon2
+OpUy			NameVar
 10000.0			Width
 -0.0090663280		Amplitude  -0.01 for Alfven
 32.0			LambdaX
@@ -112,7 +106,7 @@ for both ion fluids.
 -90.0			Phase
 
 #WAVE
-13			UzIon2
+OpUz			NameVar
 1000.0			Width
 +0.0090663280		Amplitude  +0.01 for Alfven
 32.0			LambdaX
@@ -121,7 +115,7 @@ for both ion fluids.
 180.0			Phase
 
 #WAVE
-6			By_
+By			NameVar
 1000.0			Width
 0.01			Amplitude
 32.0			LambdaX
@@ -130,7 +124,7 @@ for both ion fluids.
 -90.0			Phase
 
 #WAVE
-7			Bz_
+Bz			NameVar
 1000.0			Width
 -0.01			Amplitude
 32.0			LambdaX
@@ -142,7 +136,7 @@ Put perturbations into pressures, but keep
 total Pe+Pi1+Pi2 constant
 
 #WAVE
-8			Pe_
+Pe			NameVar
 1000.0			Width
 1e-4			Amplitude
 32.0			LambdaX
@@ -151,7 +145,7 @@ total Pe+Pi1+Pi2 constant
 180.0			Phase
 
 #WAVE
-9			Pion1
+p			NameVar
 1000.0			Width
 0.5e-4			Amplitude
 32.0			LambdaX
@@ -160,16 +154,13 @@ total Pe+Pi1+Pi2 constant
 0.0			Phase
 
 #WAVE
-14			Pion2
+OpP			NameVar
 1000.0			Width
 0.5e-4			Amplitude
 32.0			LambdaX
 -1.0			LambdaY
 -1.0			LambdaZ
 0.0			Phase
-
-
-#USERINPUTEND -------------------------------------
 
 The grid is rotated by atan(3/4), the original shocktube is by -atan(4/3)
 so now rotate by tan(atan(3/4)- atan(4/3))) = -7/24
