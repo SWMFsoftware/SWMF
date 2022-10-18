@@ -40,6 +40,7 @@ touch code.diff
 # Create manuals
 cd ~/Sites/SWMF
 Config.pl -install -compiler=gfortran >& ~/Sites/manual.log
+share/Scripts/gitall pull --depth 100
 make MANUAL >>& ~/Sites/manual.log
 
 chmod -R go+r doc/ Copyrights/

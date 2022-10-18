@@ -64,6 +64,8 @@ if($umichgitlab){
 my $History;
 my @models;
 my $Sleep = $ENV{GITLABSLEEP};
+
+my $AddAmrex;
 foreach (@Arguments){
     if( /^-(install|clone)/){
 	$CloneOnly = 1 if /^-clone/;
@@ -81,7 +83,11 @@ foreach (@Arguments){
     }
     if( /^-history$/ or /^-date=/){$History = 1; next;}
     if( /^-sleep=(\d+)/){$Sleep = $1; next;}
+    $AddAmrex = 1 if /^-v=.*FLEKS/;
+    $AddAmrex = 0 if /^-amrex/;
 }
+# Add -amrex if FLEKS is switched on
+push(@Arguments, '-amrex') if $AddAmrex;
 
 # Create Git clone command
 
