@@ -163,10 +163,10 @@ T			UseDtFixed
 
 
 
- 5.0			xMinCut
- 25.0			xMaxCut
--20.0			yMinCut
- 20.0			yMaxCut
+ 5.0			Coord1MinCut
+ 25.0			Coord1MaxCut
+-20.0			Coord2MinCut
+ 20.0			Coord2MaxCut
 1.25/3			DxPic
 1.25/3			DyPic
 

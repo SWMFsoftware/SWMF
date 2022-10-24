@@ -201,12 +201,12 @@ F			divECleanType
 cut all ascii planet		StringPlot
 1			DnSavePlot
 -1			DtSavePlot
--2			xMinCut
-2			xMaxCut
--1			yMinCut
-1			yMaxCut
--0.5			zMinCut
-0.5			zMaxCut
+-2			Coord1MinCut
+2			Coord1MaxCut
+-1			Coord2MinCut
+1			Coord2MaxCut
+-0.5			Coord3MinCut
+0.5			Coord3MaxCut
 2			DxSavePlot
 
 #END_COMP PC -----------------------------------------------------------------

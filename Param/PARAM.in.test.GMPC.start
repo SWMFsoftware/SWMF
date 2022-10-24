@@ -289,12 +289,12 @@ z=0 fluid ascii si		StringPlot
 cut particles1 ascii planet		StringPlot
 4			DnSavePlot
 -1			DtSavePlot
--1			xMinCut
-3			xMaxCut
-0			yMinCut
-2			yMaxCut
--1			zMinCut
-1			zMaxCut
+-1			Coord1MinCut
+3			Coord1MaxCut
+0			Coord2MinCut
+2			Coord2MaxCut
+-1			Coord3MinCut
+1			Coord3MaxCut
 1			DxSavePlot
 
 #END_COMP PC -----------------------------------------------------------------
