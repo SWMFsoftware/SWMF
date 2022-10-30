@@ -439,7 +439,8 @@ EE/BATSRUS/src/Makefile:
 	cp GM/BATSRUS/srcUser/*.f90 EE/BATSRUS/srcUser/
 	if [ -d GM/BATSRUS/srcUserExtra ]; then \
 		cp GM/BATSRUS/srcUserExtra/ModUserEe*.f90 \
-		   GM/BATSRUS/srcUserExtra/ModUserSwarm*.f90 EE/BATSRUS/srcUser/; \
+		   GM/BATSRUS/srcUserExtra/ModUserSwarm*.f90 \
+			EE/BATSRUS/srcUser/; \
 	fi
 	cp GM/BATSRUS/srcEquation/*.f90 EE/BATSRUS/srcEquation/
 	cd GM/BATSRUS; \
@@ -473,19 +474,15 @@ IH/BATSRUS/src/Makefile:
 		rm -rf src srcBATL srcUser srcEquation srcInterface/Mod*.f90; \
 		mkdir src srcBATL srcUser srcEquation
 	cd GM/BATSRUS/src; cp *.f90 *.h Makefile* ../../../IH/BATSRUS/src
-	cd GM/BATSRUS/srcBATL; cp BATL*.f90 Makefile* ../../../IH/BATSRUS/srcBATL
+	cd GM/BATSRUS/srcBATL; \
+		cp BATL*.f90 Makefile* ../../../IH/BATSRUS/srcBATL
 	cd GM/BATSRUS/srcInterface/; \
-		cp ModGridDescriptor.f90 \
-		../../../IH/BATSRUS/srcInterface
+		cp ModGridDescriptor.f90 ../../../IH/BATSRUS/srcInterface
 	cp GM/BATSRUS/srcUser/*.f90 IH/BATSRUS/srcUser/
-	if [ -d GM/BATSRUS/srcUserExtra ]; then \
-		cp GM/BATSRUS/srcUserExtra/ModUserAwsom*.f90 \
-		   GM/BATSRUS/srcUserExtra/ModUserIh*.f90 IH/BATSRUS/srcUser/; \
-	fi
 	cp GM/BATSRUS/srcEquation/*.f90 IH/BATSRUS/srcEquation/
 	cd GM/BATSRUS; \
 		cp Makefile.def Makefile.conf PARAM.XML Config.pl \
-			../../IH/BATSRUS/
+		../../IH/BATSRUS/
 	cd IH/BATSRUS/src; rm -f main.f90
 
 # rename IH source files to avoid name conflicts
@@ -521,10 +518,6 @@ OH/BATSRUS/src/Makefile:
 		cp ModGridDescriptor.f90 \
 		../../../OH/BATSRUS/srcInterface/
 	cp GM/BATSRUS/srcUser/*.f90 OH/BATSRUS/srcUser/
-	if [ -d GM/BATSRUS/srcUserExtra ]; then \
-		cp GM/BATSRUS/srcUser/ModUserOuterHelio*.f90 \
-		   GM/BATSRUS/srcUserExtra/ModUserOh*.f90 OH/BATSRUS/srcUser/; \
-	fi
 	cp GM/BATSRUS/srcEquation/*.f90 OH/BATSRUS/srcEquation/
 	cd GM/BATSRUS; \
 		cp Makefile.def Makefile.conf PARAM.XML Config.pl \
