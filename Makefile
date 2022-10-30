@@ -522,7 +522,7 @@ OH/BATSRUS/src/Makefile:
 		../../../OH/BATSRUS/srcInterface/
 	cp GM/BATSRUS/srcUser/*.f90 OH/BATSRUS/srcUser/
 	if [ -d GM/BATSRUS/srcUserExtra ]; then \
-		cp GM/BATSRUS/srcUserExtra/ModUserOuterHelio*.f90 \
+		cp GM/BATSRUS/srcUser/ModUserOuterHelio*.f90 \
 		   GM/BATSRUS/srcUserExtra/ModUserOh*.f90 OH/BATSRUS/srcUser/; \
 	fi
 	cp GM/BATSRUS/srcEquation/*.f90 OH/BATSRUS/srcEquation/
