@@ -284,6 +284,7 @@ flux-rope parameters
 #CME
 T			UseCme^
 T			DoAddFluxRope
+-1.0			tDecayCmeDim
 87.50			LongitudeCme^
 14.50			LatitudeCme^
 250.68			OrientationCme^
