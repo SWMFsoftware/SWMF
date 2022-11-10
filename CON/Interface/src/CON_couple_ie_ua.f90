@@ -203,7 +203,7 @@ contains
 
     ! Distribute through IE:
     if(is_proc(IE_)) call IE_put_from_ua(Buffer_IIBV,  &
-         nUaMagLon, nUaMagLat/2, nVarUaIe, NameVarUaIe_V)
+         nUaMagLon, nUaMagLat, nVarUaIe, NameVarUaIe_V)
 
     deallocate(Buffer_IIbV)
 
