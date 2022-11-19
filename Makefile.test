@@ -2347,7 +2347,7 @@ test19_check:
 		> test19_sc_los.diff)
 	cat ${TESTDIR}/RESULTS/SP/MH_data_*_*_t00000150_n000010.out \
 	    > ${TESTDIR}/RESULTS/SP/MH_data.outs
-	-(${DIFFNUM} -a=1e-6 -r=1e-6 -b \
+	-(${DIFFNUM} -a=1e-6 -r=3e-6 -b \
 		${TESTDIR}/RESULTS/SP/MH_data.outs \
 		output/test19/MH_data.ref.gz \
 		> test19_sp.diff)
