@@ -902,7 +902,7 @@ test_swpc_multispecies_check:
 		${TESTDIR}/IE/ionosphere/IE_t140410_000200.log \
 		Param/SWPC/TestOutputMultiSpecies/IE_t140410_000200.log \
 		> test_swpc_multispecies_ie.diff)
-	-@(${DIFFNUM} -b -r=2e-4 -a=5e-5 \
+	-@(${DIFFNUM} -b -r=2e-4 -a=1e-4 \
 		${TESTDIR}/IE/ionosphere/it140410_000300_000.idl \
 		Param/SWPC/TestOutputMultiSpecies/it140410_000300_000.idl.gz \
 		>> test_swpc_multispecies_ie.diff)
@@ -1212,7 +1212,7 @@ test_swpc_amps_check:
 		${TESTDIR}/IE/ionosphere/IE_t140410_000200.log \
 		Param/SWPC/TestOutput/IE_t140410_000200.log \
 		> test_swpc_amps_ie.diff)
-	-@(${DIFFNUM} -b -r=1e-4 -a=5e-5 \
+	-@(${DIFFNUM} -b -r=1e-4 -a=1e-4 \
 		${TESTDIR}/IE/ionosphere/it140410_000300_000.idl \
 		Param/SWPC/TestOutput/it140410_000300_000.idl.gz \
 		>> test_swpc_amps_ie.diff)
