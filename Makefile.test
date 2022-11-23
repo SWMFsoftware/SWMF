@@ -278,7 +278,7 @@ test_ps_check:
 		${PSDIR}/Output/PS_t20011021_000000_000.ref \
 		>> test_ps.diff)
 	-@(${DIFFNUM} -t -r=1e-8 \
-		${TESTDIR}/RESULTS/PS/slice_L6p60_t20011021_000000_000.dat \
+		${TESTDIR}/RESULTS/PS/slice_*_t20011021_000000_000.dat \
 		${PSDIR}/Output/slice_L6p60_t20011021_000000_000.ref \
 		>> test_ps.diff)
 	ls -ltr test_ps*.diff
