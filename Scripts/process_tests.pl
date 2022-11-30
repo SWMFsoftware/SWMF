@@ -19,6 +19,8 @@ my %WeightMachine = (
     "gfortran"     => "1.0",  # gfortran optimized
     "grid"         => "1.0",  # nagfor debug
     "mesh"         => "1.0",  # nagfor optimized
+    "nag_debug"    => "0.0",  # nagfor debug on M1
+    "nag"          => "0.0",  # nagfor on M1
     );
 
 # Conditions for merging into stable branch
@@ -49,11 +51,14 @@ my %HtmlMachine = (
     "gfortran"     => "gfortran<br>optimized",
     "grid"         => "nagfor<br>debug",
     "mesh"         => "nagfor<br>optimized",
+    "nag_debug"    => "nagfor M1<br>debug",
+    "nag"          => "nagfor M1<br>optimized",
     );
 
 # List of platforms in a logical order
 my @machines =
-    ("gfortran", "grid", "mesh", "pleiades", "nvidia_serial", "pgi", "mstemgcc", "mstemifort");
+    ("gfortran", "grid", "nag_debug", "mesh", "nag", "pleiades",
+     "nvidia_serial", "pgi", "mstemgcc", "mstemifort");
 
 my $ERROR = "ERROR in process_tests.pl";
 
