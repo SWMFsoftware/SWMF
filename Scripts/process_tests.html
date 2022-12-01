@@ -44,13 +44,13 @@ the results per year, month and day.
       <td>Environment settings</td>
   </tr>
   <tr>
-      <td><b>gfortran Mac</b></td>
-      <td>iMac with quad-core Intel i7</td>
+      <td><b>gfortran M1</b></td>
+      <td>Mac Studio with 8-core M1</td>
       <td>gfortran,gcc_mpicc</td>
-      <td>gfortran 10.2</td>
-      <td>openmpi 4.0.1</td>
+      <td>gfortran 12.2</td>
+      <td>openmpi 4.1.4</td>
       <td>NP=1, NTHREAD=2</td>
-      <td><font color=RED>OMPI_CXX=g++-mp-10, OMPI_CC=gcc-mp-10</font></td>
+      <td><font color=RED>OMPI_CXX=g++-mp-12, OMPI_CC=gcc-mp-12</font></td>
   </tr>
   <tr>
       <td><b>nagfor debug</b></td>
@@ -62,6 +62,15 @@ the results per year, month and day.
       <td></td>
   </tr>
   <tr>
+      <td><b>nagfor M1 debug</b></td>
+      <td>Mac Studio with 8-core M1</td>
+      <td>nagfor,gcc_mpicc</td>
+      <td>NAGFOR v7.1(7114) with gcc 11.3<br>-debug -O2</td>
+      <td>openmpi 4.1.4</td>
+      <td>NP=4, NTHREAD=1</td>
+      <td><font color=RED>OMPI_FC=nagfor, OMPI_F77=nagfor, OMPI_FFLAGS=, OMPI_FCFLAGS=</font></td>
+  </tr>
+  <tr>
       <td><b>nagfor optimized</b></td>
       <td>iMac with quad-core Intel i7</td>
       <td>nagfor,gcc_mpicc</td>
@@ -69,6 +78,15 @@ the results per year, month and day.
       <td>mpich-3.2.1</td>
       <td>NP=2, NTHREAD=2</td>
       <td></td>
+  </tr>
+  <tr>
+      <td><b>nagfor M1 optimized</b></td>
+      <td>Mac Studio with 8-core M1</td>
+      <td>nagfor,gcc_mpicc</td>
+      <td>NAGFOR v7.1(7114) with gcc 11.3<br>-debug -O2</td>
+      <td>openmpi 4.1.4</td>
+      <td>NP=2, NTHREAD=2</td>
+      <td><font color=RED>OMPI_FC=nagfor, OMPI_F77=nagfor, OMPI_FFLAGS=, OMPI_FCFLAGS=</font></td>
   </tr>
   <tr>
       <td><b>ifort pleiades</b></td>
@@ -82,7 +100,7 @@ the results per year, month and day.
   <tr>
       <td><b>nvfortran serial</b></td>
       <td>Skylake CPU, V100 GPU</td>
-      <td>nvfortran,nvc,-acc</td>
+      <td>nvfortran,nvc</td>
       <td>purge, use -a /nasa/nvidia/hpc_sdk/modulefiles<br>-O1</td>
       <td>nvhpc/20.9</td>
       <td>NP=1, NTHREAD=1</td>
@@ -91,7 +109,7 @@ the results per year, month and day.
   <tr>
       <td><b>nvfortran parallel</b></td>
       <td>Skylake CPU, V100 GPU</td>
-      <td>nvfortran,nvc,-acc</td>
+      <td>nvfortran,nvc</td>
       <td>purge, use -a /nasa/nvidia/hpc_sdk/modulefiles<br>-O1</td>
       <td>nvhpc/20.9</td>
       <td>NP=2, NTHREAD=1</td>
