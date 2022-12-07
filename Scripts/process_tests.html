@@ -44,7 +44,7 @@ the results per year, month and day.
       <td>Environment settings</td>
   </tr>
   <tr>
-      <td><b>gfortran M1</b></td>
+      <td><b>gfortran</b></td>
       <td>Mac Studio with 8-core M1</td>
       <td>gfortran,gcc_mpicc</td>
       <td>gfortran 12.2</td>
@@ -54,40 +54,23 @@ the results per year, month and day.
   </tr>
   <tr>
       <td><b>nagfor debug</b></td>
-      <td>iMac with quad-core Intel i7</td>
-      <td>nagfor,gcc_mpicc</td>
-      <td>NAGFOR v6.2(6210) with gcc 9.3<br>-debug -O2</td>
-      <td>mpich-3.2.1</td>
-      <td>NP=4, NTHREAD=1</td>
-      <td></td>
-  </tr>
-  <tr>
-      <td><b>nagfor M1 debug</b></td>
       <td>Mac Studio with 8-core M1</td>
       <td>nagfor,gcc_mpicc</td>
       <td>NAGFOR v7.1(7114) with gcc 11.3<br>-debug -O2</td>
       <td>openmpi 4.1.4</td>
-      <td>NP=4, NTHREAD=1</td>
-      <td><font color=RED>OMPI_FC=nagfor, OMPI_F77=nagfor, OMPI_FFLAGS=, OMPI_FCFLAGS=</font></td>
+      <td>NP=2, NTHREAD=1</td>
+      <td><font color=RED>OMPI_FC=nagfor, OMPI_F77=nagfor, OMPI_FFLAGS=, OMPI_FCFLAGS=</font>
   </tr>
+</td>
   <tr>
       <td><b>nagfor optimized</b></td>
-      <td>iMac with quad-core Intel i7</td>
-      <td>nagfor,gcc_mpicc</td>
-      <td>NAGFOR 6.2 (6210) with gcc 9.3</td>
-      <td>mpich-3.2.1</td>
-      <td>NP=2, NTHREAD=2</td>
-      <td></td>
-  </tr>
-  <tr>
-      <td><b>nagfor M1 optimized</b></td>
       <td>Mac Studio with 8-core M1</td>
       <td>nagfor,gcc_mpicc</td>
       <td>NAGFOR v7.1(7114) with gcc 11.3<br>-debug -O2</td>
       <td>openmpi 4.1.4</td>
-      <td>NP=2, NTHREAD=2</td>
-      <td><font color=RED>OMPI_FC=nagfor, OMPI_F77=nagfor, OMPI_FFLAGS=, OMPI_FCFLAGS=</font></td>
-  </tr>
+      <td>NP=4, NTHREAD=2</td>
+      <td><font color=RED>OMPI_FC=nagfor, OMPI_F77=nagfor, OMPI_FFLAGS=, OMPI_FCFLAGS=</font>  </tr>
+</td>
   <tr>
       <td><b>ifort pleiades</b></td>
       <td>SGI ICE</td>
