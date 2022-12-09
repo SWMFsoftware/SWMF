@@ -479,6 +479,10 @@ IH/BATSRUS/src/Makefile:
 	cd GM/BATSRUS/srcInterface/; \
 		cp ModGridDescriptor.f90 ../../../IH/BATSRUS/srcInterface
 	cp GM/BATSRUS/srcUser/*.f90 IH/BATSRUS/srcUser/
+	if [ -d GM/BATSRUS/srcUserExtra ]; then \
+		cp GM/BATSRUS/srcUserExtra/ModUserAwsom*.f90 \
+		   IH/BATSRUS/srcUser/; \
+	fi
 	cp GM/BATSRUS/srcEquation/*.f90 IH/BATSRUS/srcEquation/
 	cd GM/BATSRUS; \
 		cp Makefile.def Makefile.conf PARAM.XML Config.pl \

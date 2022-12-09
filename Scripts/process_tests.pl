@@ -12,13 +12,11 @@ my $SiteDir = `pwd`; chop($SiteDir);
 # weights for each platform to calculate skill scores
 my %WeightMachine = (
     "pleiades"     => "0.0",  # ifort pleiades
-    "pgi"          => "1.0",  # nvfortran pleiades 2 cores
+    "nvidia"       => "1.0",  # nvfortran pleiades 2 cores
     "nvidia_serial"=> "1.0",  # nvfortran pleiades 1 core
     "mstemgcc"     => "0.0",  # mstem-quda+gcc pleiades
     "mstemifort"   => "0.0",  # mstem-quda+ifort pleiades
     "gfortran"     => "1.0",  # gfortran optimized
-    "grid"         => "1.0",  # nagfor debug
-    "mesh"         => "1.0",  # nagfor optimized
     "nag_debug"    => "0.0",  # nagfor debug on M1
     "nag"          => "0.0",  # nagfor on M1
     );
@@ -26,12 +24,12 @@ my %WeightMachine = (
 # Conditions for merging into stable branch
 # minimum score (requires that most tests actually finished)
 my $MinScore =
-    10 *$WeightMachine{"pgi"}           + # GPU tests
-    10 *$WeightMachine{"nvidia_serial"} + # GPU tests
+    10 *$WeightMachine{"nvidia_serial"} + # 1 GPU tests
+    10 *$WeightMachine{"nvidia"}        + # multi-GPU tests
     150*($WeightMachine{"pleiades"}     + # CPU tests
 	 $WeightMachine{"gfortran"}     +
-	 $WeightMachine{"grid"}         +
-	 $WeightMachine{"mesh"}     );
+	 $WeightMachine{"nag_debug"}    +
+	 $WeightMachine{"nag"}          );
 
 # Required successrate
 my $MinRate  = 0.95; 
@@ -44,21 +42,19 @@ my $merge_stable =
 # Describe machine in the Html table
 my %HtmlMachine = (
     "pleiades"     => "ifort<br>pleiades",
-    "pgi"          => "nvfortran<br>parallel pleiades",
+    "nvidia"       => "nvfortran<br>parallel pleiades",
     "nvidia_serial"=> "nvfortran<br>serial pleiades",
     "mstemgcc"     => "MSTEM-QUDA<br>gfortran pleiades",
     "mstemifort"   => "MSTEM-QUDA<br>ifort pleiades",
     "gfortran"     => "gfortran<br>optimized",
-    "grid"         => "nagfor<br>debug",
-    "mesh"         => "nagfor<br>optimized",
-    "nag_debug"    => "nagfor M1<br>debug",
-    "nag"          => "nagfor M1<br>optimized",
+    "nag_debug"    => "nagfor<br>debug",
+    "nag"          => "nagfor<br>optimized",
     );
 
 # List of platforms in a logical order
 my @machines =
-    ("gfortran", "grid", "nag_debug", "mesh", "nag", "pleiades",
-     "nvidia_serial", "pgi", "mstemgcc", "mstemifort");
+    ("gfortran", "nag_debug", "nag", "pleiades",
+     "nvidia_serial", "nvidia", "mstemgcc", "mstemifort");
 
 my $ERROR = "ERROR in process_tests.pl";
 
