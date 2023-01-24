@@ -2354,6 +2354,41 @@ test19_check:
 	ls -l test19*.diff
 
 
+### test20: OH/BATSRUS (single-ion) coupled with PT/FLEKS in a shocktube ###
+
+test20:
+	@echo "test20_compile..." > test20.diff
+	${MAKE} test20_compile
+	@echo "test20_rundir..." >> test20.diff
+	${MAKE} test20_rundir
+	@echo "test20_run..." >> test20.diff
+	${MAKE} test20_run
+	@echo "test20_check..." >> test20.diff
+	${MAKE} test20_check
+
+test20_compile:
+	./Config.pl -v=Empty,OH/BATSRUS,PT/FLEKS
+	./Config.pl -o=OH:u=OuterHelio,e=Swh,ng=2,g=4,4,4
+	${MAKE} SWMF
+	make PIDL
+
+test20_rundir:
+	rm -rf ${TESTDIR}
+	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
+	cp Param/PARAM.in.test.OHPT.FLEKS.shocktube  ${TESTDIR}/PARAM.in
+	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
+
+test20_run:
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl RESULTS
+
+test20_check:
+	-(${DIFFNUM} -b -r=1e-10 -a=1e-21\
+                ${TESTDIR}/RESULTS/OH/z*005.out \
+                output/test20/z*005.out \
+		> test20.diff)
+	ls -l test20.diff
+
 ### test_ramscb: GM+IE+IM/RAMSCB ###
 
 test_ramscb:
