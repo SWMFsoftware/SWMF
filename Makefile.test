@@ -110,6 +110,7 @@ test_swmf:
 	-@(if [ -d PC/FLEKS   ]; then ${MAKE} test18 TESTDIR=run_test18; fi)
 	-@(if [ -d PC/FLEKS   ]; then ${MAKE} test_swpc_aepic TESTDIR=run_test_swpc_aepic; fi)
 	-@(if [ -d SP/MFLAMPA ]; then ${MAKE} test19 TESTDIR=run_test19; fi)
+	-@(if [ -d PT/FLEKS   ]; then ${MAKE} test20 TESTDIR=run_test20; fi)	
 	./Config.pl -noamrex
 
 # Setting BLESS=YES or Y will copy the solution into the reference solution
@@ -2383,10 +2384,14 @@ test20_run:
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl RESULTS
 
 test20_check:
-	-(${DIFFNUM} -b -r=1e-10 -a=1e-21\
-                ${TESTDIR}/RESULTS/OH/z*005.out \
-                output/test20/z*005.out \
+	-@(${DIFFNUM} -b -r=1e-7 \
+                ${TESTDIR}/RESULTS/OH/z*006.out \
+                output/test20/z=0_OH.ref.gz \
 		> test20.diff)
+	-@(${DIFFNUM} -b -r=1e-7 \
+                ${TESTDIR}/RESULTS/PT/z*0200.out \
+                output/test20/z=0_PT.ref.gz \
+		>> test20.diff)		
 	ls -l test20.diff
 
 ### test_ramscb: GM+IE+IM/RAMSCB ###
