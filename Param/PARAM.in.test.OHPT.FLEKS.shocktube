@@ -1,0 +1,221 @@
+#COMPONENTMAP
+OH 0 -1  1		CompMap runs on all PE-s
+PT 0  -1  1		CompMap runs on 1 or 2 PE-s
+
+#DESCRIPTION
+Param/PARAM.in.test.OHPTshocktube: Couple single-ion OH with PT		StringDescription
+
+#LOOKUPTABLE
+PT			StringCompTable
+ChargeExchange		NameTable
+load			NameCommand
+OH/Param/ExchangeRate.dat		NameFile
+ascii			TypeFile
+
+#TIMEACCURATE
+T			IsTimeAccurate
+
+#COUPLE2
+OH			NameComp1
+PT			NameComp2
+-1			DnCouple
+0.2 year			DtCouple
+
+#BEGIN_COMP OH ---------------------------------------------------------------
+
+#GRID
+4			nRootBlock1
+4			nRootBlock2
+4			nRootBlock3
+-81			xMin
+81			xMax
+-81			yMin
+81			yMax
+-81			zMin
+81			zMax
+
+#OUTERBOUNDARY
+periodic		TypeBc1
+periodic		TypeBc2
+periodic		TypeBc3
+periodic		TypeBc4
+periodic		TypeBc5
+periodic		TypeBc6
+
+#GRAVITY
+F			UseGravity
+
+#PLOTFILENAME
+year			NameMaxTimeUnit
+
+#SCHEME
+1			nOrder
+Rusanov			TypeFlux
+
+FIXEDTIMESTEP
+T			UseDtFixed
+0.2 year  		DtFixedDim
+
+#NONCONSERVATIVE
+F			UseNonConservative
+
+#CONSERVATIVECRITERIA
+0			nConservCrit
+
+#SAVELOGFILE
+T			DoSaveLogfile
+RAW			StringLog
+-1			DnSaveLogfile
+1 year  		DtSaveLogfile
+
+#SAVEINITIAL
+T			DoSaveInitial
+
+#SAVEPLOT
+1			nPlotFile
+z=0 MHD idl_ascii		StringPlot
+-1			DnSavePlot
+1 year			DtSavePlot
+-1.0			DxSavePlot
+
+#USERSWITCH
++init +Sexpl		StringSwitch
+
+#UNIFORMSTATE
+0.18			StateVar Rho
+-100			StateVar Ux
+0			StateVar Uy
+0			StateVar Uz
+0.01			StateVar Bx
+0.0			StateVar By
+0			StateVar Bz
+1.6E-13			StateVar P
+
+UNIFORMSTATE
+0.01			StateVar Rho
+-100			StateVar Ux
+0			StateVar Uy
+0			StateVar Uz
+0.01			StateVar Bx
+0.0			StateVar By
+0			StateVar Bz
+5.2E-13			StateVar P
+
+#USERINPUTBEGIN -----------------------------------
+
+#SOLARWINDH
+0.00874			SWH_rho_dim [n/cc]
+1.0868E5		SWH_T_dim [K]
+417.07			SWH_Ux_dim [km/s]
+0.0			SWH_Uy_dim [km/s]
+0.0			SWH_Uz_dim [km/s]
+7.17E-03		SWH_Bx_dim [nT]
+0.0			SWH_By_dim [nT]
+0.0			SWH_Bz_dim [nT]
+
+#VLISW
+0.06			VLISW_rho_dim [n/cc]
+6519.0			VLISW_T_dim
+0.0			VLISW_Ux_dim
+0.0			VLISW_Uy_dim
+0.0			VLISW_Uz_dim
+0.411			VLISW_Bx_dim
+-0.0748			VLISW_By_dim
+-0.1296			VLISW_Bz_dim
+
+#USERINPUTEND -------------------------------------
+
+#END_COMP OH -----------------------------------------------------------------
+
+#BEGIN_COMP PT ---------------------------------------------------------------
+
+#INITFROMSWMF
+F			initFromSWMF
+
+#TIMESTEPPING
+T			useFixedDt
+0.005 y			dt
+
+#NORMALIZATION
+1.495978707E11		lNorm [m]
+3.0e8			uNorm [m/s]
+
+#GEOMETRY
+-80			xMin
+80			xMax
+-80			yMin
+80			yMax
+-80			zMin
+80			zMax
+
+#PERIODICITY
+T			isPeriodicX
+T			isPeriodicY
+T			isPeriodicZ
+
+#MAXBLOCKSIZE
+4
+4
+4
+
+#NCELL
+8			nCellX
+8			nCellY
+8			nCellZ
+
+#PLASMA
+1			nS
+1			mass
+0			charge
+
+#UNIFORMSTATE
+3e-22			rho [kg/m^3] n=0.18e6
+0			ux  [m/s]
+0			uy  [m/s]
+0			uz  [m/s]
+1.62e-14		ppar [Pa] p = nkT, n=0.18e6, T = 6519k
+0			Bx [T]
+0			By [T]
+0			Bz [T]
+0			Ex [?]
+0			Ey [?]
+0			Ez [?]
+
+#PARTICLES
+5			nParticleX
+5			nParticleY
+4			nParticleZ
+
+#SOURCEPARTICLES
+1			nParticleX
+1			nParticleY
+1			nParticleZ
+
+RESAMPLING
+T                   doReSampling (rest is read if true)
+0.8                 splittingLimit 
+1.5                 mergingLimit 
+
+#MERGEEFFICIENCY
+1		mergeThresholdDistance
+T		fastMerge
+
+#SAVEPLOT
+2			nPlotFile
+z=0 var real4 planet		StringPlot
+-1			DnSavePlot
+1 y			DtSavePlot
+0			DxSavePlot
+{fluid} numS0		NameVars
+3d particles0 amrex planet        plotString
+-1                                dn
+1 y                               dt
+1                                 dx   
+
+#END_COMP PT -----------------------------------------------------------------
+
+#STOP
+-1			MaxIter
+5 year			TimeMax
+
+#END
