@@ -19,7 +19,7 @@ T			IsTimeAccurate
 OH			NameComp1
 PT			NameComp2
 -1			DnCouple
-0.2 year			DtCouple
+0.2 year		DtCouple
 
 #BEGIN_COMP OH ---------------------------------------------------------------
 
@@ -154,9 +154,9 @@ T			isPeriodicY
 T			isPeriodicZ
 
 #MAXBLOCKSIZE
-4
-4
-4
+4			nCellX
+4			nCellY
+4			nCellZ
 
 #NCELL
 8			nCellX
@@ -191,31 +191,27 @@ T			isPeriodicZ
 1			nParticleY
 1			nParticleZ
 
-RESAMPLING
-T                   doReSampling (rest is read if true)
-0.8                 splittingLimit 
-1.5                 mergingLimit 
 
 #MERGEEFFICIENCY
-1		mergeThresholdDistance
-T		fastMerge
+1			mergeThresholdDistance
+T			fastMerge
 
 #SAVEPLOT
 2			nPlotFile
-z=0 var real4 planet		StringPlot
+z=0 var ascii planet		StringPlot
 -1			DnSavePlot
 1 y			DtSavePlot
 0			DxSavePlot
 {fluid} numS0		NameVars
-3d particles0 amrex planet        plotString
--1                                dn
-1 y                               dt
-1                                 dx   
+3d particles0 amrex planet		StringPlot
+-1			DnSavePlot
+1 y			DtSavePlot
+1			DxSavePlot
 
 #END_COMP PT -----------------------------------------------------------------
 
 #STOP
 -1			MaxIter
-5 year			TimeMax
+1 year			TimeMax
 
 #END
