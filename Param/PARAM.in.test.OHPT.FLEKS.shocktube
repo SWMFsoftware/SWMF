@@ -23,6 +23,9 @@ PT			NameComp2
 
 #BEGIN_COMP OH ---------------------------------------------------------------
 
+#GRIDBLOCK
+100			MaxBlock (per processor)
+
 #GRID
 4			nRootBlock1
 4			nRootBlock2
@@ -169,11 +172,11 @@ T			isPeriodicZ
 0			charge
 
 #UNIFORMSTATE
-3e-22			rho [kg/m^3] n=0.18e6
-0			ux  [m/s]
-0			uy  [m/s]
-0			uz  [m/s]
-1.62e-14		ppar [Pa] p = nkT, n=0.18e6, T = 6519k
+0.18			rho [amu/cc]
+0			ux  [km/s]
+0			uy  [km/s]
+0			uz  [km/s]
+6519			T [K]
 0			Bx [T]
 0			By [T]
 0			Bz [T]
