@@ -95,22 +95,22 @@ all			StringShape
 #GRIDLEVEL
 3			nLevel
 box_gen			StringShape
-50.0			xMinBox
-320.			yMinBox
--40.			zMinBox
-2600.			xMaxBox
-360.			yMaxBox
-40.			zMaxBox
+50.0			Coord1MinBox
+320.			Coord2MinBox
+-40.			Coord3MinBox
+2600.			Coord1MaxBox
+360.			Coord2MaxBox
+40.			Coord3MaxBox
 
 #GRIDLEVEL
 3			nLevel
 box_gen			StringShape
-50.0			xMinBox
-0.			yMinBox
--40.			zMinBox
-2600.			xMaxBox
-40.			yMaxBox
-40.			zMaxBox
+50.0			Coord1MinBox
+0.			Coord2MinBox
+-40.			Coord3MinBox
+2600.			Coord1MaxBox
+40.			Coord2MaxBox
+40.			Coord3MaxBox
 
 #TIMESTEPPING
 2			nStage

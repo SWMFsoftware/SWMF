@@ -44,12 +44,12 @@ spherical_lnr		TypeGeometry
 #AMRREGION
 InnerShell		NameRegion
 box_gen			StringShape
-1.05			xMinBox
-0.0			yMinBox
--70.0			zMinBox
-1.7			xMaxBox
-360.0			yMaxBox
-70.0			zMaxBox
+1.05			Coord1MinBox
+0.0			Coord2MinBox
+-70.0			Coord3MinBox
+1.7			Coord1MaxBox
+360.0			Coord2MaxBox
+70.0			Coord3MaxBox
 
 #AMRCRITERIALEVEL
 3			nRefineCrit
