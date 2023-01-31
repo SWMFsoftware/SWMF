@@ -123,12 +123,12 @@ ascii			TypeFile
 #REGION
 test			NameRegion
 box_gen			StringShape
-5.0			xMinBox
-180.0			yMinBox
-0.0			zMinBox
-32.0			xMaxBox
-360.0			yMaxBox
-90.0			zMaxBox
+5.0			Coord1MinBox
+180.0			Coord2MinBox
+0.0			Coord3MinBox
+32.0			Coord1MaxBox
+360.0			Coord2MaxBox
+90.0			Coord3MaxBox
 
 #AMRCRITERIALEVEL
 2			nRefineCrit
