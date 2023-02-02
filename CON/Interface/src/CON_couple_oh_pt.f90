@@ -18,7 +18,7 @@ module CON_couple_oh_pt
        OH_get_for_pt_dt
   use PT_wrapper, ONLY: &
        PT_get_grid_info, PT_find_points, PT_get_for_oh, PT_put_from_oh, &
-       PT_put_from_oh_dt
+       PT_put_from_oh_dt,PT_divu_coupling_state 
 
   implicit none
   save
@@ -43,7 +43,7 @@ contains
     ! Initialize OH->PT coupler.
     ! This subroutine should be called from all PE-s
 
-    logical :: DoTest, DoTestMe
+    logical :: DoTest, DoTestMe,flag 
 
     character(len=*), parameter:: NameSub = 'couple_oh_pt_init'
     !--------------------------------------------------------------------------
@@ -57,6 +57,15 @@ contains
     ! OH sends all its variables to PT. Take information from Grid_C
     CouplerOhToPt%NameVar = Grid_C(OH_)%NameVar
     CouplerOhToPt%nVar    = Grid_C(OH_)%nVar
+
+    !Add divu to the list of communicated variables if needed
+    call PT_divu_coupling_state(flag)
+
+    if (flag) then
+      CouplerOhToPt%nVar=CouplerOhToPt%nVar+1
+      CouplerOhToPt%NameVar=trim(CouplerOhToPt%NameVar)//" divu"
+    endif
+
 
     call couple_points_init(CouplerOhToPt)
 
