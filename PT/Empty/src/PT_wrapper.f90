@@ -10,8 +10,21 @@ module PT_wrapper
 
   implicit none
 
+  !return state of calculating plasma div u
+  public:: PT_divu_coupling_state
+
 contains
   !===========================================================================
+  subroutine PT_divu_coupling_state(flag)
+    logical,intent(out)::flag
+    integer::f
+
+    flag=.true.
+    call amps_get_divu_flag(f)
+
+    if (f==0) flag=.false.
+  end subroutine
+
   subroutine PT_set_param(CompInfo, TypeAction)
 
     use CON_comp_info
