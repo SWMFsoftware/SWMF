@@ -15,16 +15,15 @@ module PT_wrapper
 
 contains
   !===========================================================================
-  subroutine PT_divu_coupling_state(flag)
-    logical,intent(out)::flag
-    integer::f
+  subroutine PT_divu_coupling_state(UseDivu)
 
-    flag=.true.
-    call amps_get_divu_flag(f)
+    logical, intent(out):: UseDivu
+    character(len=*), parameter :: NameSub='PT_divu_coupling_state'
+    !-------------------------------------------------------------------------
+    call CON_stop(NameSub//': PT_ERROR: empty version cannot be used!')
 
-    if (f==0) flag=.false.
-  end subroutine
-
+  end subroutine PT_divu_coupling_state
+  !===========================================================================
   subroutine PT_set_param(CompInfo, TypeAction)
 
     use CON_comp_info
