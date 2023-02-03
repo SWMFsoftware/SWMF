@@ -18,7 +18,7 @@ module CON_couple_ih_pt
        IH_get_for_pt_dt
   use PT_wrapper, ONLY: &
        PT_get_grid_info, PT_find_points, PT_put_from_ih, &
-       PT_put_from_ih_dt, PT_divu_coupling_state 
+       PT_put_from_ih_dt, PT_divu_coupling_state
 
   implicit none
   save
