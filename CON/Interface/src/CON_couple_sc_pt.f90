@@ -14,11 +14,9 @@ module CON_couple_sc_pt
   use CON_couple_points, ONLY: &
        couple_points_init, couple_points, CouplePointsType
   use SC_wrapper, ONLY: &
-       SC_get_grid_info, SC_find_points, SC_get_for_pt,  &
-       SC_get_for_pt_dt
+       SC_get_grid_info, SC_find_points, SC_get_for_pt
   use PT_wrapper, ONLY: &
-       PT_get_grid_info, PT_find_points, PT_put_from_sc, &
-       PT_put_from_sc_dt,PT_divu_coupling_state
+       PT_get_grid_info, PT_find_points, PT_put_from_sc
 
   implicit none
   save
@@ -53,17 +51,9 @@ contains
     CouplerScToPt%iCompTarget = PT_
     CouplerScToPt%iCompSource = SC_
 
-    ! SC sends all its variables to PT. Take information from Grid_C
-    CouplerScToPt%NameVar = Grid_C(SC_)%NameVar
-    CouplerScToPt%nVar    = Grid_C(SC_)%nVar
-
-    ! Add divu to the list of communicated variables if needed
-    call PT_divu_coupling_state(flag)
-
-    if (flag) then
-      CouplerScToPt%nVar=CouplerScToPt%nVar+1
-      CouplerScToPt%NameVar=trim(CouplerScToPt%NameVar)//" divu"
-    endif
+    ! Take information from Grid_C(PT_)
+    CouplerScToPt%NameVar = Grid_C(PT_)%NameVar
+    CouplerScToPt%nVar    = Grid_C(PT_)%nVar
 
     call couple_points_init(CouplerScToPt)
 
@@ -90,12 +80,6 @@ contains
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
     if(DoTest)write(*,*) NameSub,' starting iProc=', CouplerScToPt%iProcWorld
-
-    if(IsTightCouple_CC(SC_,PT_)) then
-       if(is_proc(SC_)) call SC_get_for_pt_dt(DtSi)
-       call transfer_real(SC_,PT_,DtSi)
-       if(is_proc(PT_)) call PT_put_from_sc_dt(DtSi)
-    endif
 
     call couple_points(CouplerScToPt, SC_get_grid_info, SC_find_points, &
          SC_get_for_pt, PT_get_grid_info, PT_put_from_sc)
