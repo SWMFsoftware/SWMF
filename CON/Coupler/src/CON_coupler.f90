@@ -826,7 +826,8 @@ contains
 
           ! Look up source variable name in the target
           do iVarTarget = 1, nVarTarget
-             if (NameVarSource_V(iVarSource) == NameVarTarget_V(iVarTarget)) then
+             if (NameVarSource_V(iVarSource) &
+                  == NameVarTarget_V(iVarTarget)) then
                 IsFoundVarSource_V(iVarSource) = .true.
                 CYCLE SOURCELOOP
              end if
@@ -861,7 +862,8 @@ contains
        elseif(iCompSource /= IM_ .and. iCompTarget /= IM_) then
           ! Both components have differing # of multiple densities or speeds
           write(*,*) 'SWMF error found in ', NameSub
-          write(*,*) 'Coupled SWMF components use different # of fluids/species!'
+          write(*,*) &
+               'Coupled SWMF components use different # of fluids/species!'
           call CON_stop(NameSub//': check ModEquation and recompile!')
        end if
     end if
@@ -969,6 +971,7 @@ contains
 
     ! For the point coupler find variables that occur both in
     ! source and target components. Store source and target indexes.
+    NameVarBuffer = ''
     nVarBuffer = 0
     do iVarSource = 1, nVarSource
        ! Look up source variable name in the target
@@ -983,16 +986,18 @@ contains
     ! Get rid of leading space
     NameVarBuffer = NameVarBuffer(2:len(NameVarBuffer))
 
+
     lCompSource = lComp_I(iCompSource)
     lCompTarget = lComp_I(iCompTarget)
     nVarBuffer_CC(lCompSource,lCompTarget)    = nVarBuffer
     iVarSource_VCC(:,lCompSource,lCompTarget) = iVarSource_V
     iVarTarget_VCC(:,lCompSource,lCompTarget) = iVarTarget_V
 
-    if( i_proc() ==0 ) then
+    if(i_proc() == 0) then
        write(*,*) '---------------------------------------------'
        write(*,*) NameSub,':'
-       write(*,*) 'Coupling ', NameComp_I(iCompSource),' to ', NameComp_I(iCompTarget)
+       write(*,*) 'Coupling ', NameComp_I(iCompSource), &
+            ' to ', NameComp_I(iCompTarget)
        write(*,*) 'nDensity(Source/Target/Couple):'
        write(*,*) nDensitySource, nDensityTarget,nDensityCouple
        write(*,*) 'nSpeed(Source/Target/Couple):'
