@@ -271,15 +271,15 @@ contains
     ! If DoSendAllVar is true, send all variables in State_VGB
     ! Otherwise send the variables defined by iVarSource_V
 
-    use IH_ModPhysics, ONLY: Si2No_V, UnitX_, No2Si_V, iUnitCons_V
+    use IH_ModPhysics, ONLY: Si2No_V, UnitX_, UnitU_, No2Si_V, iUnitCons_V
     use IH_ModAdvance, ONLY: State_VGB, Rho_, RhoUx_, RhoUz_, Bx_, Bz_
     use IH_ModVarIndexes, ONLY: nVar
     use IH_ModB0,      ONLY: UseB0, get_b0
     use IH_BATL_lib,   ONLY: nDim, MaxDim, MinIJK_D, MaxIJK_D, iProc, &
-         find_grid_block
+         nBlock, MaxBlock, Unused_B, find_grid_block
     use IH_ModIO, ONLY: iUnitOut
     use CON_coupler,    ONLY: iVarSource_V
-    use ModInterpolate, ONLY: interpolate_vector
+    use ModInterpolate, ONLY: interpolate_vector, interpolate_scalar
     use IH_ModSize,       ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nG
     use IH_ModCellGradient, ONLY: calc_divergence
 
@@ -303,15 +303,11 @@ contains
     real:: Dist_D(MaxDim), State_V(nVar)
     integer:: iCell_D(MaxDim)
 
-    !calcuation of divu
-    real::u_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
-    real::Var_GV(1,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
-    integer:: i,j,k
-    integer:: iBlockLast=-1
-    integer:: DivU_=-1
-    real::Interpolated_GV(1)
-    integer::pos
-
+    ! calculation of divu
+    logical:: UseDivU
+    real:: DivU
+    real, allocatable:: u_DG(:,:,:,:), DivU_GB(:,:,:,:)
+    integer:: i, j, k
 
     integer:: iPoint, iBlock, iProcFound, iVarBuffer, iVar
 
@@ -320,25 +316,29 @@ contains
     !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
-    !find the ndex of divu in NameVar
-    if (index(NameVar,"divu")>0) then
-      pos = 1
-      DivU_= 0
+    UseDivU = index(NameVar, "divu") > 0
+    ! calculate divu if needed 
+    if (UseDivU) then
+       allocate( &
+            u_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK), &
+            DivU_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+       
+       do iBlock = 1, nBlock
+          if(Unused_B(iBlock)) CYCLE
+          ! Calculate velocity
+          do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+             u_DG(:,i,j,k) = State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)/ &
+                  State_VGB(Rho_,i,j,k,iBlock)
+          end do; end do; end do
 
-      loop: do
-        if (index(NameVar(pos:),"divu")==0) exit loop
-
-        i = verify(NameVar(pos:), ' ')  !-- Find next non-blank.
-        if (i == 0) exit loop        !-- No word found.
-        DivU_= DivU_+1          !-- Found something.
-        pos=pos+i-1            !-- Move to start of the word.
-
-        i = scan(NameVar(pos:), ' ')    !-- Find next blank.
-        if (i == 0) exit loop        !-- No blank found.
-        pos = pos + i - 1            !-- Move to the blank.
-      end do loop
+          ! Calculate div(u) in physical cell centers
+          call calc_divergence(iBlock, u_DG, nG, DivU_GB(:,:,:,iBlock), &
+               UseBodyCellIn=.true.)
+       end do
+       deallocate(u_DG)
+       ! Fill in ghost cells
+       call IH_BATL_pass_cell(DivU_GB)
     end if
-
 
     DoSendAll = .false.
     if(present(DoSendAllVar)) DoSendAll = DoSendAllVar
@@ -387,6 +387,9 @@ contains
        State_V = interpolate_vector(State_VGB(:,:,:,:,iBlock), nVar, nDim, &
             MinIJK_D, MaxIJK_D, iCell_D=iCell_D, Dist_D=Dist_D)
 
+       if(UseDivU) DivU = interpolate_scalar(DivU_GB(:,:,:,iBlock), nDim, &
+            MinIJK_D, MaxIJK_D, iCell_D=iCell_D, Dist_D=Dist_D)
+
        ! Provide full B
        if(UseB0)then
           call get_b0(Xyz_D, B0_D)
@@ -395,37 +398,23 @@ contains
 
        ! Fill buffer with interpolated values converted to SI units
        if(DoSendAll)then
-          Data_VI(1:size(State_V),iPoint) = State_V*No2Si_V(iUnitCons_V)
+          Data_VI(:,iPoint) = State_V*No2Si_V(iUnitCons_V)
        else
-          do iVarBuffer = 1, size(iVarSource_V)
-             iVar = iVarSource_V(iVarBuffer)
-             Data_VI(iVarBuffer,iPoint) = &
-                  State_V(iVar)*No2Si_V(iUnitCons_V(iVar))
+          do iVarBuffer = 1, nVarIn
+             if(UseDivU .and. iVarBuffer == nVarIn)then
+                ! Put DivU into the last element
+                Data_VI(nVarIn,iPoint) = DivU*No2Si_V(UnitU_)
+             else
+                iVar = iVarSource_V(iVarBuffer)
+                Data_VI(iVarBuffer,iPoint) = &
+                     State_V(iVar)*No2Si_V(iUnitCons_V(iVar))
+             end if
           end do
        end if
-
-       !calculate divu if needed 
-       if (index(NameVar,"divu")>0) then
-         if (iBlock.ne.iBlockLast) then
-           ! Calculate velocity
-           do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-              u_DG(:,i,j,k) = State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)/ &
-                 State_VGB(Rho_,i,j,k,iBlock)
-           end do; end do; end do
-
-           ! Calculate div(u)
-           call calc_divergence(iBlock, u_DG,nG, Var_GV(1,:,:,:), UseBodyCellIn=.true.)
-           iBlockLast=iBlock
-         end if
-
-         Interpolated_GV=interpolate_vector(Var_GV(:,:,:,:), 1, nDim, &
-            MinIJK_D, MaxIJK_D, iCell_D=iCell_D, Dist_D=Dist_D)
-
-         Data_VI(DivU_,iPoint)=Interpolated_GV(1)
-       end if
-   
     end do
 
+    if(UseDivU) deallocate(DivU_GB)
+    
   end subroutine IH_get_point_data
   !============================================================================
   subroutine IH_set_grid
@@ -1508,9 +1497,7 @@ contains
   subroutine IH_get_for_pt(IsNew, NameVar, nVarIn, nDimIn, nPoint, Xyz_DI, &
        Data_VI)
 
-    ! This routine is actually for OH-PT coupling
-
-    ! Interpolate Data_VI from OH at the list of positions Xyz_DI
+    ! Interpolate Data_VI from IH at the list of positions Xyz_DI
     ! required by PT
 
     logical,          intent(in):: IsNew   ! true for new point array
@@ -1600,9 +1587,11 @@ contains
        ! Set units for density, momentum and energy source terms
        allocate(Si2No_I(nVarData))
        do iVar = 1, nVarData, 5
-          Si2No_I(iVar)          = Si2No_V(UnitRho_)/Si2No_V(UnitT_)/Si2No_V(UnitN_)
-          Si2No_I(iVar+1:iVar+3) = Si2No_V(UnitRhoU_)/Si2No_V(UnitT_)/Si2No_V(UnitN_)
-          Si2No_I(iVar+4)        = Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_)/Si2No_V(UnitN_)
+          Si2No_I(iVar) = Si2No_V(UnitRho_)/Si2No_V(UnitT_)/Si2No_V(UnitN_)
+          Si2No_I(iVar+1:iVar+3) &
+               = Si2No_V(UnitRhoU_)/Si2No_V(UnitT_)/Si2No_V(UnitN_)
+          Si2No_I(iVar+4) &
+               = Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_)/Si2No_V(UnitN_)
        end do
     end if
 
