@@ -531,7 +531,7 @@ OH/BATSRUS/src/Makefile:
 		OH/BATSRUS/srcInterface/OH_wrapper.f90
 
 	cd OH/BATSRUS/srcInterface/; perl -i -pe \
-	's/IH/OH/g;s/Ih/Oh/g;s/_sc/_ih/;s/SC/IH/g;s/Sc/Ih/g;s/Inner/Outer/' \
+	's/IH/OH/g;s/Ih/Oh/g;s/_sc\b/_ih/;s/SC/IH/g;s/Sc/Ih/g;s/Inner/Outer/' \
 		OH_wrapper.f90
 
 # rename OH source files to avoid name conflicts
