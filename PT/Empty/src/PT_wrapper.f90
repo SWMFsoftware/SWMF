@@ -10,7 +10,19 @@ module PT_wrapper
 
   implicit none
 
+  !return state of calculating plasma div u
+  public:: PT_divu_coupling_state
+
 contains
+  !===========================================================================
+  subroutine PT_divu_coupling_state(UseDivu)
+
+    logical, intent(out):: UseDivu
+    character(len=*), parameter :: NameSub='PT_divu_coupling_state'
+    !-------------------------------------------------------------------------
+    call CON_stop(NameSub//': PT_ERROR: empty version cannot be used!')
+
+  end subroutine PT_divu_coupling_state
   !===========================================================================
   subroutine PT_set_param(CompInfo, TypeAction)
 

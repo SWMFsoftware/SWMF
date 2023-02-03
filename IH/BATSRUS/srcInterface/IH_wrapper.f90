@@ -272,7 +272,7 @@ contains
     ! Otherwise send the variables defined by iVarSource_V
 
     use IH_ModPhysics, ONLY: Si2No_V, UnitX_, No2Si_V, iUnitCons_V
-    use IH_ModAdvance, ONLY: State_VGB, Bx_, Bz_
+    use IH_ModAdvance, ONLY: State_VGB, Rho_, RhoUx_, RhoUz_, Bx_, Bz_
     use IH_ModVarIndexes, ONLY: nVar
     use IH_ModB0,      ONLY: UseB0, get_b0
     use IH_BATL_lib,   ONLY: nDim, MaxDim, MinIJK_D, MaxIJK_D, iProc, &
@@ -280,6 +280,8 @@ contains
     use IH_ModIO, ONLY: iUnitOut
     use CON_coupler,    ONLY: iVarSource_V
     use ModInterpolate, ONLY: interpolate_vector
+    use IH_ModSize,       ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nG
+    use IH_ModCellGradient, ONLY: calc_divergence
 
     logical,          intent(in):: IsNew   ! true for new point array
     integer, allocatable, intent(inout):: iBlockCell_DI(:,:) ! interp. index
@@ -301,12 +303,42 @@ contains
     real:: Dist_D(MaxDim), State_V(nVar)
     integer:: iCell_D(MaxDim)
 
+    !calcuation of divu
+    real::u_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+    real::Var_GV(1,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+    integer:: i,j,k
+    integer:: iBlockLast=-1
+    integer:: DivU_=-1
+    real::Interpolated_GV(1)
+    integer::pos
+
+
     integer:: iPoint, iBlock, iProcFound, iVarBuffer, iVar
 
     logical:: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'IH_get_point_data'
     !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
+
+    !find the ndex of divu in NameVar
+    if (index(NameVar,"divu")>0) then
+      pos = 1
+      DivU_= 0
+
+      loop: do
+        if (index(NameVar(pos:),"divu")==0) exit loop
+
+        i = verify(NameVar(pos:), ' ')  !-- Find next non-blank.
+        if (i == 0) exit loop        !-- No word found.
+        DivU_= DivU_+1          !-- Found something.
+        pos=pos+i-1            !-- Move to start of the word.
+
+        i = scan(NameVar(pos:), ' ')    !-- Find next blank.
+        if (i == 0) exit loop        !-- No blank found.
+        pos = pos + i - 1            !-- Move to the blank.
+      end do loop
+    end if
+
 
     DoSendAll = .false.
     if(present(DoSendAllVar)) DoSendAll = DoSendAllVar
@@ -363,14 +395,35 @@ contains
 
        ! Fill buffer with interpolated values converted to SI units
        if(DoSendAll)then
-          Data_VI(:,iPoint) = State_V*No2Si_V(iUnitCons_V)
+          Data_VI(1:size(State_V),iPoint) = State_V*No2Si_V(iUnitCons_V)
        else
-          do iVarBuffer = 1, nVarIn
+          do iVarBuffer = 1, size(iVarSource_V)
              iVar = iVarSource_V(iVarBuffer)
              Data_VI(iVarBuffer,iPoint) = &
                   State_V(iVar)*No2Si_V(iUnitCons_V(iVar))
           end do
        end if
+
+       !calculate divu if needed 
+       if (index(NameVar,"divu")>0) then
+         if (iBlock.ne.iBlockLast) then
+           ! Calculate velocity
+           do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+              u_DG(:,i,j,k) = State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)/ &
+                 State_VGB(Rho_,i,j,k,iBlock)
+           end do; end do; end do
+
+           ! Calculate div(u)
+           call calc_divergence(iBlock, u_DG,nG, Var_GV(1,:,:,:), UseBodyCellIn=.true.)
+           iBlockLast=iBlock
+         end if
+
+         Interpolated_GV=interpolate_vector(Var_GV(:,:,:,:), 1, nDim, &
+            MinIJK_D, MaxIJK_D, iCell_D=iCell_D, Dist_D=Dist_D)
+
+         Data_VI(DivU_,iPoint)=Interpolated_GV(1)
+       end if
+   
     end do
 
   end subroutine IH_get_point_data
