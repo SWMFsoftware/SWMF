@@ -310,30 +310,12 @@ contains
     real:: DivU
     real, allocatable:: u_DG(:,:,:,:), DivU_GB(:,:,:,:)
     integer:: i, j, k
-
     integer:: iPoint, iBlock, iProcFound, iVarBuffer, iVar
-    integer::DivU_=-1
-    integer::DivUdX_=-1
-
-    character(len=10)::VarNameTable(20)
-    integer::VarNameTableLength
 
     logical:: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'IH_get_point_data'
     !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
-
-    call split_string(NameVar,VarNameTable,VarNameTableLength, " ", DoAddSeparator=.true.)
-
-    !determine whether DivU need to be calcualted
-    do i=0,VarNameTableLength
-      if ((index(trim(VarNameTable(i)),"DivU")>0).and.(index("DivU",trim(VarNameTable(i)))>0)) then 
-        DivU_=i
-        UseDivU=.true.
-      end if
-    end do 
-    
-
 
     ! calculate divu if needed 
     if (UseDivU) then
@@ -415,11 +397,10 @@ contains
        end if
 
        ! Fill buffer with interpolated values converted to SI units
-       Data_VI(1:size(State_V),iPoint) = State_V*No2Si_V(iUnitCons_V)
+       Data_VI(1:nVar,iPoint) = State_V*No2Si_V(iUnitCons_V)
 
-       if (UseDivU) then
-         Data_VI(DivU_,iPoint) = DivU*No2Si_V(UnitU_)
-       end if
+       if (UseDivU) Data_VI(nVar+1,iPoint) = DivU*No2Si_V(UnitU_)
+
     end do
 
     if(UseDivU) deallocate(DivU_GB)
@@ -764,8 +745,8 @@ contains
          *Si2No_V(UnitRho_)
     ! Transform to primitive variables
     BufferState_VG(RhoUx_:RhoUz_,:,1:nLon,1:nLat) = &
-         BufferIn_VG(iVar_V(RhoUxCouple_):iVar_V(RhoUzCouple_),:,1:nLon,1:nLat)&
-         *Si2No_V(UnitRhoU_)
+         BufferIn_VG(iVar_V(RhoUxCouple_):iVar_V(RhoUzCouple_),:,&
+         1:nLon,1:nLat)*Si2No_V(UnitRhoU_)
     if(DoCoupleVar_V(Bfield_))             &
          BufferState_VG(Bx_:Bz_,:,1:nLon,1:nLat) =  &
          BufferIn_VG(iVar_V(BxCouple_):iVar_V(BzCouple_),:,1:nLon,1:nLat)  &
@@ -1305,7 +1286,7 @@ contains
     ! 18JUL03     I.Sokolov <igorsok@umich.edu> - intial prototype/code
     ! 23AUG03                                     prolog
     ! 03SEP03     G.Toth    <gtoth@umich.edu>   - simplified
-    ! 05APR11     R. Oran   <oran@umich.edu>    - Use non-fixed coupling indices
+    ! 05APR11     R. Oran   <oran@umich.edu>    - Use coupling indices
     !                                          derived by the coupler according
     !                                           to actual variable names
     !                                           (see use CON_coupler).
@@ -1535,7 +1516,8 @@ contains
          nDim, nBlock, MaxBlock, Unused_B, nI, nJ, nK, Xyz_DGB, &
          iTest, jTest, kTest, iBlockTest
     use IH_ModPhysics, ONLY: &
-         No2Si_V, Si2No_V, UnitX_, UnitRho_, UnitN_, UnitRhoU_, UnitEnergyDens_, UnitT_
+         No2Si_V, Si2No_V, UnitX_, UnitRho_, UnitN_, UnitRhoU_, &
+         UnitEnergyDens_, UnitT_
     use IH_ModGeometry, ONLY: Used_GB
     use IH_ModAdvance, ONLY: ExtraSource_ICB
 
