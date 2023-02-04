@@ -986,7 +986,6 @@ contains
     ! Get rid of leading space
     NameVarBuffer = NameVarBuffer(2:len(NameVarBuffer))
 
-
     lCompSource = lComp_I(iCompSource)
     lCompTarget = lComp_I(iCompTarget)
     nVarBuffer_CC(lCompSource,lCompTarget)    = nVarBuffer
