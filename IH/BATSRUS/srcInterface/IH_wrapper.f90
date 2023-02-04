@@ -276,12 +276,14 @@ contains
     use IH_ModVarIndexes, ONLY: nVar
     use IH_ModB0,      ONLY: UseB0, get_b0
     use IH_BATL_lib,   ONLY: nDim, MaxDim, MinIJK_D, MaxIJK_D, iProc, &
-         nBlock, MaxBlock, Unused_B, find_grid_block
+         nBlock, MaxBlock, Unused_B, find_grid_block 
     use IH_ModIO, ONLY: iUnitOut
     use CON_coupler,    ONLY: iVarSource_V
     use ModInterpolate, ONLY: interpolate_vector, interpolate_scalar
     use IH_ModSize,       ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nG
     use IH_ModCellGradient, ONLY: calc_divergence
+    use IH_BATL_pass_cell, ONLY: message_pass_cell 
+    use ModUtilities, ONLY:split_string
 
     logical,          intent(in):: IsNew   ! true for new point array
     integer, allocatable, intent(inout):: iBlockCell_DI(:,:) ! interp. index
@@ -310,13 +312,29 @@ contains
     integer:: i, j, k
 
     integer:: iPoint, iBlock, iProcFound, iVarBuffer, iVar
+    integer::DivU_=-1
+    integer::DivUdX_=-1
+
+    character(len=10)::VarNameTable(20)
+    integer::VarNameTableLength
 
     logical:: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'IH_get_point_data'
     !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
-    UseDivU = index(NameVar, "divu") > 0
+    call split_string(NameVar,VarNameTable,VarNameTableLength, " ", DoAddSeparator=.true.)
+
+    !determine whether DivU need to be calcualted
+    do i=0,VarNameTableLength
+      if ((index(trim(VarNameTable(i)),"DivU")>0).and.(index("DivU",trim(VarNameTable(i)))>0)) then 
+        DivU_=i
+        UseDivU=.true.
+      end if
+    end do 
+    
+
+
     ! calculate divu if needed 
     if (UseDivU) then
        allocate( &
@@ -337,7 +355,7 @@ contains
        end do
        deallocate(u_DG)
        ! Fill in ghost cells
-       call IH_BATL_pass_cell(DivU_GB)
+       call message_pass_cell(DivU_GB)
     end if
 
     DoSendAll = .false.
@@ -397,19 +415,10 @@ contains
        end if
 
        ! Fill buffer with interpolated values converted to SI units
-       if(DoSendAll)then
-          Data_VI(:,iPoint) = State_V*No2Si_V(iUnitCons_V)
-       else
-          do iVarBuffer = 1, nVarIn
-             if(UseDivU .and. iVarBuffer == nVarIn)then
-                ! Put DivU into the last element
-                Data_VI(nVarIn,iPoint) = DivU*No2Si_V(UnitU_)
-             else
-                iVar = iVarSource_V(iVarBuffer)
-                Data_VI(iVarBuffer,iPoint) = &
-                     State_V(iVar)*No2Si_V(iUnitCons_V(iVar))
-             end if
-          end do
+       Data_VI(1:size(State_V),iPoint) = State_V*No2Si_V(iUnitCons_V)
+
+       if (UseDivU) then
+         Data_VI(DivU_,iPoint) = DivU*No2Si_V(UnitU_)
        end if
     end do
 
