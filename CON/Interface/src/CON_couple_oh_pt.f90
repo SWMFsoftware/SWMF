@@ -52,9 +52,10 @@ contains
     CouplerOhToPt%iCompTarget = PT_
     CouplerOhToPt%iCompSource = OH_
 
-    ! Take information from Grid_C(PT_)
-    CouplerOhToPt%NameVar = Grid_C(PT_)%NameVar
-    CouplerOhToPt%nVar    = Grid_C(PT_)%nVar
+    ! Take information from both Grid(OH_) and Grid_C(PT_)
+    CouplerOhToPt%NameVar = &
+         trim(Grid_C(OH_)%NameVar) //' '//Grid_C(PT_)%NameVar
+    CouplerOhToPt%nVar    = Grid_C(OH_)%nVar + Grid_C(PT_)%nVar
 
     call couple_points_init(CouplerOhToPt)
 
