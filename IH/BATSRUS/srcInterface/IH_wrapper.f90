@@ -416,15 +416,19 @@ contains
        if((DoSendAll).and.(nVarIn==nVar)) then
           Data_VI(:,iPoint) = State_V*No2Si_V(iUnitCons_V)
        else
-          do iVarBuffer = 1, nVar
-             iVar = iVarSource_V(iVarBuffer)
-             Data_VI(iVarBuffer,iPoint) = &
-                  State_V(iVar)*No2Si_V(iUnitCons_V(iVar))
+          do iVarBuffer = 1, nVarIn
+             if (UseDivU .and. iVarBuffer == nVar+1) then
+                ! After nVar state variables
+                Data_VI(nVar+1,iPoint) = DivU*No2Si_V(UnitU_)
+             elseif(UseDivUdX .and. iVarBuffer == nVarIn)then
+                ! Last one in the buffer
+                Data_VI(nVarIn,iPoint) = DivUdX*No2Si_V(UnitU_)
+             else
+                iVar = iVarSource_V(iVarBuffer)
+                Data_VI(iVarBuffer,iPoint) = &
+                     State_V(iVar)*No2Si_V(iUnitCons_V(iVar))
+             end if
           end do
-          ! After nVar state variables
-          if (UseDivU) Data_VI(nVar+1,iPoint) = DivU*No2Si_V(UnitU_)
-          ! Last one in buffer
-          if (UseDivUdX) Data_VI(nVarIn,iPoint) = DivUdX*No2Si_V(UnitU_)
        end if
     end do
 
