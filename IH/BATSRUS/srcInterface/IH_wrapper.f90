@@ -276,11 +276,11 @@ contains
     use IH_ModVarIndexes, ONLY: nVar
     use IH_ModB0,      ONLY: UseB0, get_b0
     use IH_BATL_lib,   ONLY: nDim, MaxDim, MinIJK_D, MaxIJK_D, iProc, &
-         nBlock, MaxBlock, Unused_B, find_grid_block 
+         nBlock, MaxBlock, Unused_B, find_grid_block, &
+         nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nG, Xyz_DNB
     use IH_ModIO, ONLY: iUnitOut
     use CON_coupler,    ONLY: iVarSource_V
     use ModInterpolate, ONLY: interpolate_vector, interpolate_scalar
-    use IH_ModSize,       ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nG
     use IH_ModCellGradient, ONLY: calc_divergence
     use IH_BATL_pass_cell, ONLY: message_pass_cell 
     use ModUtilities, ONLY:split_string
@@ -306,9 +306,9 @@ contains
     integer:: iCell_D(MaxDim)
 
     ! calculation of divu
-    logical:: UseDivU
-    real:: DivU
-    real, allocatable:: u_DG(:,:,:,:), DivU_GB(:,:,:,:)
+    logical:: UseDivU, UseDivUDx
+    real:: DivU, DivUDx
+    real, allocatable:: u_DG(:,:,:,:), DivU_GB(:,:,:,:), DivUDx_GB(:,:,:,:)
     integer:: i, j, k
     integer:: iPoint, iBlock, iProcFound, iVarBuffer, iVar
 
@@ -317,12 +317,16 @@ contains
     !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
+    UseDivU   = index(NameVar//' ',' divu ') > 0
+    UseDivUDx = index(NameVar,' divudx ') > 0
+    
     ! calculate divu if needed 
-    if (UseDivU) then
+    if (UseDivU .or. UseDivUDx) then
        allocate( &
             u_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK), &
             DivU_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
-       
+       if(UseDivUDx) allocate(DivUDx_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE
           ! Calculate velocity
@@ -334,10 +338,20 @@ contains
           ! Calculate div(u) in physical cell centers
           call calc_divergence(iBlock, u_DG, nG, DivU_GB(:,:,:,iBlock), &
                UseBodyCellIn=.true.)
+
+          if (UseDivUdX) then
+             ! Calculate DivU*CellSize
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI
+                DivUdX_GB(i,j,k,iBlock) = DivU_GB(i,j,k,iBlock) * norm2( &
+                     Xyz_DNB(:,i+1,j+1,k+1,iBlock)-Xyz_DNB(:,i,j,k,iBlock))
+             end do; end do; end do
+          end if
+
        end do
        deallocate(u_DG)
        ! Fill in ghost cells
-       call message_pass_cell(DivU_GB)
+       if(UseDivU)   call message_pass_cell(DivU_GB)
+       if(UseDivUDx) call message_pass_cell(DivUDx_GB)
     end if
 
     DoSendAll = .false.
@@ -389,6 +403,8 @@ contains
 
        if(UseDivU) DivU = interpolate_scalar(DivU_GB(:,:,:,iBlock), nDim, &
             MinIJK_D, MaxIJK_D, iCell_D=iCell_D, Dist_D=Dist_D)
+       if(UseDivUdX) DivUdX = interpolate_scalar(DivUdX_GB(:,:,:,iBlock), nDim, &
+            MinIJK_D, MaxIJK_D, iCell_D=iCell_D, Dist_D=Dist_D)
 
        ! Provide full B
        if(UseB0)then
@@ -397,14 +413,24 @@ contains
        end if
 
        ! Fill buffer with interpolated values converted to SI units
-       Data_VI(1:nVar,iPoint) = State_V*No2Si_V(iUnitCons_V)
-
-       if (UseDivU) Data_VI(nVar+1,iPoint) = DivU*No2Si_V(UnitU_)
-
+       if((DoSendAll).and.(nVarIn==nVar)) then
+          Data_VI(:,iPoint) = State_V*No2Si_V(iUnitCons_V)
+       else
+          do iVarBuffer = 1, nVar
+             iVar = iVarSource_V(iVarBuffer)
+             Data_VI(iVarBuffer,iPoint) = &
+                  State_V(iVar)*No2Si_V(iUnitCons_V(iVar))
+          end do
+          ! After nVar state variables
+          if (UseDivU) Data_VI(nVar+1,iPoint) = DivU*No2Si_V(UnitU_)
+          ! Last one in buffer
+          if (UseDivUdX) Data_VI(nVarIn,iPoint) = DivUdX*No2Si_V(UnitU_)
+       end if
     end do
 
-    if(UseDivU) deallocate(DivU_GB)
-    
+    if(allocated(DivU_GB))   deallocate(DivU_GB)
+    if(allocated(DivUDx_GB)) deallocate(DivUDx_GB)
+
   end subroutine IH_get_point_data
   !============================================================================
   subroutine IH_set_grid
