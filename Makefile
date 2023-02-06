@@ -90,6 +90,7 @@ help:
 	@echo '    tags        (create etags for emacs for easy look up in source code)'
 	@echo ' '
 	@echo '    FORMATF90   (format F90 code properly and report changes)'
+	@echo '    TDSETUP  FITS=magnetogram.fits (make directory to run TDSETUP.py'
 	@echo ' '
 #EOC
 #
