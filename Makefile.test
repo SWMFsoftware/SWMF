@@ -2889,3 +2889,33 @@ test_eegtd_check:
 	-${DIFFNUM} ${TESTDIR}/SC/CME.in \
 	     output/test_eegtd/CME.in > test_eegtd.diff
 	@ls -l test_eegtd.diff
+
+###############################################################################
+####### Test if TD configuration is in equiliblium
+test_tdequil:
+	@echo "test_tdequil_compile..." > test_tdequil.diff
+	${MAKE} test_tdequil_compile
+	@echo "test_tdequil_rundir..." >> test_tdequil.diff
+	${MAKE} test_tdequil_rundir
+	@echo "test_tdequil_run..." >> test_tdequil.diff
+	${MAKE} test_tdequil_run
+#	@echo "test_tdequil_check..." >> test_tdequil.diff
+#	${MAKE} test_tdequil_check
+
+test_tdequil_compile:
+	./Config.pl -v=Empty,SC/BATSRUS
+	./Config.pl -o=SC:u=Awsom,e=Mhd,ng=2,g=4,4,1
+	${MAKE} SWMF
+	make PIDL
+
+test_tdequil_rundir:
+	rm -rf ${TESTDIR}
+	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR}
+	cp Param/PARAM.in.test.SC.TDEquil ${TESTDIR}/PARAM.in
+	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
+
+test_tdequil_run:
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS
+
+#test_tdequil_check:
