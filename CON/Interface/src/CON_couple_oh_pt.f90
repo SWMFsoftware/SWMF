@@ -14,11 +14,9 @@ module CON_couple_oh_pt
   use CON_couple_points, ONLY: &
        couple_points_init, couple_points, CouplePointsType
   use OH_wrapper, ONLY: &
-       OH_get_grid_info, OH_find_points, OH_get_for_pt, OH_put_from_pt, &
-       OH_get_for_pt_dt
+       OH_get_grid_info, OH_find_points, OH_get_for_pt, OH_put_from_pt
   use PT_wrapper, ONLY: &
-       PT_get_grid_info, PT_find_points, PT_get_for_oh, PT_put_from_oh, &
-       PT_put_from_oh_dt,PT_divu_coupling_state
+       PT_get_grid_info, PT_find_points, PT_get_for_oh, PT_put_from_oh
 
   implicit none
   save
@@ -54,17 +52,10 @@ contains
     CouplerOhToPt%iCompTarget = PT_
     CouplerOhToPt%iCompSource = OH_
 
-    ! OH sends all its variables to PT. Take information from Grid_C
-    CouplerOhToPt%NameVar = Grid_C(OH_)%NameVar
-    CouplerOhToPt%nVar    = Grid_C(OH_)%nVar
-
-    ! Add divu to the list of communicated variables if needed
-    call PT_divu_coupling_state(flag)
-
-    if (flag) then
-      CouplerOhToPt%nVar=CouplerOhToPt%nVar+1
-      CouplerOhToPt%NameVar=trim(CouplerOhToPt%NameVar)//" divu"
-    endif
+    ! Take information from both Grid(OH_) and Grid_C(PT_)
+    CouplerOhToPt%NameVar = &
+         trim(Grid_C(OH_)%NameVar) //' '//Grid_C(PT_)%NameVar
+    CouplerOhToPt%nVar    = Grid_C(OH_)%nVar + Grid_C(PT_)%nVar
 
     call couple_points_init(CouplerOhToPt)
 
@@ -106,12 +97,6 @@ contains
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
     if(DoTest)write(*,*) NameSub,' starting iProc=', CouplerOhToPt%iProcWorld
-
-    if(IsTightCouple_CC(OH_,PT_)) then
-       if(is_proc(OH_)) call OH_get_for_pt_dt(DtSi)
-       call transfer_real(OH_,PT_,DtSi)
-       if(is_proc(PT_)) call PT_put_from_oh_dt(DtSi)
-    endif
 
     call couple_points(CouplerOhToPt, OH_get_grid_info, OH_find_points, &
          OH_get_for_pt, PT_get_grid_info, PT_put_from_oh)

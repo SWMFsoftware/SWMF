@@ -10,19 +10,7 @@ module PT_wrapper
 
   implicit none
 
-  !return state of calculating plasma div u
-  public:: PT_divu_coupling_state
-
 contains
-  !===========================================================================
-  subroutine PT_divu_coupling_state(UseDivu)
-
-    logical, intent(out):: UseDivu
-    character(len=*), parameter :: NameSub='PT_divu_coupling_state'
-    !-------------------------------------------------------------------------
-    call CON_stop(NameSub//': PT_ERROR: empty version cannot be used!')
-
-  end subroutine PT_divu_coupling_state
   !===========================================================================
   subroutine PT_set_param(CompInfo, TypeAction)
 
@@ -185,30 +173,6 @@ contains
     call CON_stop(NameSub//': PT_ERROR: empty version cannot be used!')
 
   end subroutine PT_put_from_oh
-  !============================================================================
-  subroutine PT_put_from_oh_dt(Dt)
-    implicit none
-    real,    intent(in):: Dt
-    character(len=*), parameter :: NameSub='PT_put_from_oh_dt'
-    !--------------------------------------------------------------------------
-    call CON_stop(NameSub//': PT_ERROR: empty version cannot be used!')
-  end subroutine PT_put_from_oh_dt
-  !============================================================================
-  subroutine PT_put_from_ih_dt(Dt)
-    implicit none
-    real,    intent(in):: Dt
-    character(len=*), parameter :: NameSub='PT_put_from_ih_dt'
-    !--------------------------------------------------------------------------
-    call CON_stop(NameSub//': PT_ERROR: empty version cannot be used!')
-  end subroutine PT_put_from_ih_dt
-  !============================================================================
-  subroutine PT_put_from_sc_dt(Dt)
-    implicit none
-    real,    intent(in):: Dt
-    character(len=*), parameter :: NameSub='PT_put_from_sc_dt'
-    !--------------------------------------------------------------------------
-    call CON_stop(NameSub//': PT_ERROR: empty version cannot be used!')
-  end subroutine PT_put_from_sc_dt
   !============================================================================
   subroutine PT_get_for_oh(IsNew, NameVar, nVarIn, nDimIn, nPoint, Xyz_DI, &
        Data_VI)

@@ -14,11 +14,9 @@ module CON_couple_ih_pt
   use CON_couple_points, ONLY: &
        couple_points_init, couple_points, CouplePointsType
   use IH_wrapper, ONLY: &
-       IH_get_grid_info, IH_find_points, IH_get_for_pt,  &
-       IH_get_for_pt_dt
+       IH_get_grid_info, IH_find_points, IH_get_for_pt
   use PT_wrapper, ONLY: &
-       PT_get_grid_info, PT_find_points, PT_put_from_ih, &
-       PT_put_from_ih_dt, PT_divu_coupling_state
+       PT_get_grid_info, PT_find_points, PT_put_from_ih
 
   implicit none
   save
@@ -36,7 +34,6 @@ module CON_couple_ih_pt
 
 contains
   !============================================================================
-
   subroutine couple_ih_pt_init
 
     ! Initialize IH->PT coupler.
@@ -53,17 +50,9 @@ contains
     CouplerIhToPt%iCompTarget = PT_
     CouplerIhToPt%iCompSource = IH_
 
-    ! IH sends all its variables to PT. Take information from Grid_C
-    CouplerIhToPt%NameVar = Grid_C(IH_)%NameVar
-    CouplerIhToPt%nVar    = Grid_C(IH_)%nVar
-
-    ! Add divu to the list of communicated variables if needed
-    call PT_divu_coupling_state(UseDivu)
-
-    if (UseDivu) then
-      CouplerIhToPt%nVar = CouplerIhToPt%nVar + 1
-      CouplerIhToPt%NameVar = trim(CouplerIhToPt%NameVar)//" divu"
-    endif
+    ! Take information from Grid_C(PT_)
+    CouplerIhToPt%NameVar = Grid_C(PT_)%NameVar
+    CouplerIhToPt%nVar    = Grid_C(PT_)%nVar
 
     call couple_points_init(CouplerIhToPt)
 
@@ -90,12 +79,6 @@ contains
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
     if(DoTest)write(*,*) NameSub,' starting iProc=', CouplerIhToPt%iProcWorld
-
-    if(IsTightCouple_CC(IH_,PT_)) then
-       if(is_proc(IH_)) call IH_get_for_pt_dt(DtSi)
-       call transfer_real(IH_,PT_,DtSi)
-       if(is_proc(PT_)) call PT_put_from_ih_dt(DtSi)
-    endif
 
     call couple_points(CouplerIhToPt, IH_get_grid_info, IH_find_points, &
          IH_get_for_pt, PT_get_grid_info, PT_put_from_ih)

@@ -262,13 +262,17 @@ contains
        iProc0=iProc0In
        iComm=iCommIn
     else
-       iProc0 = i_proc0(compid(GridID_))
+       if(done_dd_init(GridID_))then
+          iProc0 = i_proc0(compid(GridID_))
+          IsRoot=is_proc0(compid(GridID_))
+       else
+          iProc0 = i_proc0(GridID_)
+       end if
        iComm=i_comm()
+       IsRoot=is_proc0(GridID_)
     end if
 
     ThisGrid => Grid_C(GridID_)
-
-    IsRoot=is_proc0(compid(GridID_))
 
     ! Broadcast the coordinate type
     if(IsRoot)Thisgrid%TypeCoord=TypeCoord
@@ -826,7 +830,8 @@ contains
 
           ! Look up source variable name in the target
           do iVarTarget = 1, nVarTarget
-             if (NameVarSource_V(iVarSource) == NameVarTarget_V(iVarTarget)) then
+             if (NameVarSource_V(iVarSource) &
+                  == NameVarTarget_V(iVarTarget)) then
                 IsFoundVarSource_V(iVarSource) = .true.
                 CYCLE SOURCELOOP
              end if
@@ -861,7 +866,8 @@ contains
        elseif(iCompSource /= IM_ .and. iCompTarget /= IM_) then
           ! Both components have differing # of multiple densities or speeds
           write(*,*) 'SWMF error found in ', NameSub
-          write(*,*) 'Coupled SWMF components use different # of fluids/species!'
+          write(*,*) &
+               'Coupled SWMF components use different # of fluids/species!'
           call CON_stop(NameSub//': check ModEquation and recompile!')
        end if
     end if
@@ -969,6 +975,7 @@ contains
 
     ! For the point coupler find variables that occur both in
     ! source and target components. Store source and target indexes.
+    NameVarBuffer = ''
     nVarBuffer = 0
     do iVarSource = 1, nVarSource
        ! Look up source variable name in the target
@@ -989,10 +996,11 @@ contains
     iVarSource_VCC(:,lCompSource,lCompTarget) = iVarSource_V
     iVarTarget_VCC(:,lCompSource,lCompTarget) = iVarTarget_V
 
-    if( i_proc() ==0 ) then
+    if(i_proc() == 0) then
        write(*,*) '---------------------------------------------'
        write(*,*) NameSub,':'
-       write(*,*) 'Coupling ', NameComp_I(iCompSource),' to ', NameComp_I(iCompTarget)
+       write(*,*) 'Coupling ', NameComp_I(iCompSource), &
+            ' to ', NameComp_I(iCompTarget)
        write(*,*) 'nDensity(Source/Target/Couple):'
        write(*,*) nDensitySource, nDensityTarget,nDensityCouple
        write(*,*) 'nSpeed(Source/Target/Couple):'

@@ -90,6 +90,7 @@ help:
 	@echo '    tags        (create etags for emacs for easy look up in source code)'
 	@echo ' '
 	@echo '    FORMATF90   (format F90 code properly and report changes)'
+	@echo '    TDSETUP  FITS=magnetogram.fits (make directory to run TDSETUP.py'
 	@echo ' '
 #EOC
 #
@@ -531,7 +532,7 @@ OH/BATSRUS/src/Makefile:
 		OH/BATSRUS/srcInterface/OH_wrapper.f90
 
 	cd OH/BATSRUS/srcInterface/; perl -i -pe \
-	's/IH/OH/g;s/Ih/Oh/g;s/_sc/_ih/;s/SC/IH/g;s/Sc/Ih/g;s/Inner/Outer/' \
+	's/IH/OH/g;s/Ih/Oh/g;s/_sc\b/_ih/;s/SC/IH/g;s/Sc/Ih/g;s/Inner/Outer/' \
 		OH_wrapper.f90
 
 # rename OH source files to avoid name conflicts

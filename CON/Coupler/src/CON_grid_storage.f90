@@ -123,7 +123,7 @@ contains
     ! Note that if the decomposition is a tree decomposition and
     ! another order of children is accepted in the component,
     ! different from that assumed to be standard one
-    ! the array iShift\_DI should be reassigned in set\_root.
+    ! the array iShift_DI should be reassigned in set_root.
 
     integer,           intent(in) :: GridID_
     integer,           intent(in) :: CompID_,nDim
@@ -131,11 +131,11 @@ contains
     !--------------------------------------------------------------------------
     if(GridID_ > MaxGrid .or. GridID_ <=0 )call CON_stop(&
          'Prrohibited value for GridID_')
-    if(done_dd_init(GridID_))call CON_stop(&
-         'An attempt to reinitialize the GridID_')
+    if(done_dd_init(GridID_)) RETURN
     call init_grid_storage(Domain_I, GridID_)
     call init_decomposition_dd(Domain_I(GridID_)%Ptr, CompID_, nDim, IsTreeDD)
-    DoneDomainInit_C(GridID_) = .true.;  nDim_C(GridID_) = nDim
+    DoneDomainInit_C(GridID_) = .true.
+    nDim_C(GridID_) = nDim
 
   end subroutine init_decomposition_id
   !============================================================================
@@ -207,7 +207,7 @@ contains
     ! synchronized with the local one at the PE having the rank
     ! iProcUnion in the communicator iCommUnion.
     ! Recalculate local PE ranks (of the local grid) to their values
-    ! in the global communicator (i\_comm()).
+    ! in the global communicator (i_comm()).
 
     integer,           intent(in) :: GridID_      ! Global grid ID
     type(DomainType),  intent(in) :: LocalDomain  ! Local Grid with which the
