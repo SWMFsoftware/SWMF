@@ -35,13 +35,12 @@ module CON_couple_oh_pt
 
 contains
   !============================================================================
-
   subroutine couple_oh_pt_init
 
     ! Initialize OH->PT coupler.
     ! This subroutine should be called from all PE-s
 
-    logical :: DoTest, DoTestMe,flag
+    logical :: DoTest, DoTestMe
 
     character(len=*), parameter:: NameSub = 'couple_oh_pt_init'
     !--------------------------------------------------------------------------
@@ -52,9 +51,8 @@ contains
     CouplerOhToPt%iCompTarget = PT_
     CouplerOhToPt%iCompSource = OH_
 
-    ! Take information from both Grid(OH_) and Grid_C(PT_)
-    CouplerOhToPt%NameVar = &
-         trim(Grid_C(OH_)%NameVar) //' '//Grid_C(PT_)%NameVar
+    ! Take information from both Grid_C(OH_) and Grid_C(PT_)
+    CouplerOhToPt%NameVar = trim(Grid_C(OH_)%NameVar)//' '//Grid_C(PT_)%NameVar
     CouplerOhToPt%nVar    = Grid_C(OH_)%nVar + Grid_C(PT_)%nVar
 
     call couple_points_init(CouplerOhToPt)
@@ -78,7 +76,6 @@ contains
 
   end subroutine couple_oh_pt_init
   !============================================================================
-
   subroutine couple_oh_pt(tSimulation)
     use CON_transfer_data, ONLY: transfer_real
     real, intent(in) :: tSimulation
@@ -105,7 +102,6 @@ contains
 
   end subroutine couple_oh_pt
   !============================================================================
-
   subroutine couple_pt_oh(tSimulation)
 
     ! List of variables to pass
@@ -129,6 +125,5 @@ contains
 
   end subroutine couple_pt_oh
   !============================================================================
-
 end module CON_couple_oh_pt
 !==============================================================================
