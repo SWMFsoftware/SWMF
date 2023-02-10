@@ -320,6 +320,12 @@ contains
     UseDivU   = index(NameVar//' ',' divu ') > 0
     UseDivUDx = index(NameVar,' divudx ') > 0
     
+    if(DoTestMe)then
+       write(*,*)NameSub,': DoSendAllVar, nVar, nVarIn, NameVar=', &
+            DoSendAllVar, nVar, nVarIn, trim(NameVar)
+       write(*,*)NameSub,': UseDivU=', UseDivU,' UseDivUDx=', UseDivUDx
+    end if
+
     ! calculate divu if needed 
     if (UseDivU .or. UseDivUDx) then
        allocate( &
@@ -398,13 +404,12 @@ contains
        Dist_D(1:nDim)  = Dist_DI(:,iPoint)
 
        ! Interpolate
-       State_V = interpolate_vector(State_VGB(:,:,:,:,iBlock), nVar, nDim, &
-            MinIJK_D, MaxIJK_D, iCell_D=iCell_D, Dist_D=Dist_D)
-
-       if(UseDivU) DivU = interpolate_scalar(DivU_GB(:,:,:,iBlock), nDim, &
-            MinIJK_D, MaxIJK_D, iCell_D=iCell_D, Dist_D=Dist_D)
-       if(UseDivUdX) DivUdX = interpolate_scalar(DivUdX_GB(:,:,:,iBlock), nDim, &
-            MinIJK_D, MaxIJK_D, iCell_D=iCell_D, Dist_D=Dist_D)
+       State_V = interpolate_vector(State_VGB(:,:,:,:,iBlock), nVar, &
+            nDim, MinIJK_D, MaxIJK_D, iCell_D=iCell_D, Dist_D=Dist_D)
+       if(UseDivU) DivU = interpolate_scalar(DivU_GB(:,:,:,iBlock), &
+            nDim, MinIJK_D, MaxIJK_D, iCell_D=iCell_D, Dist_D=Dist_D)
+       if(UseDivUdX) DivUdX = interpolate_scalar(DivUDx_GB(:,:,:,iBlock), &
+            nDim, MinIJK_D, MaxIJK_D, iCell_D=iCell_D, Dist_D=Dist_D)
 
        ! Provide full B
        if(UseB0)then
@@ -413,23 +418,11 @@ contains
        end if
 
        ! Fill buffer with interpolated values converted to SI units
-       if((DoSendAll).and.(nVarIn==nVar)) then
-          Data_VI(:,iPoint) = State_V*No2Si_V(iUnitCons_V)
-       else
-          do iVarBuffer = 1, nVarIn
-             if (UseDivU .and. iVarBuffer == nVar+1) then
-                ! After nVar state variables
-                Data_VI(nVar+1,iPoint) = DivU*No2Si_V(UnitU_)
-             elseif(UseDivUdX .and. iVarBuffer == nVarIn)then
-                ! Last one in the buffer
-                Data_VI(nVarIn,iPoint) = DivUdX*No2Si_V(UnitU_)
-             else
-                iVar = iVarSource_V(iVarBuffer)
-                Data_VI(iVarBuffer,iPoint) = &
-                     State_V(iVar)*No2Si_V(iUnitCons_V(iVar))
-             end if
-          end do
-       end if
+       Data_VI(1:nVar,iPoint) = State_V*No2Si_V(iUnitCons_V)
+       ! DivU is right after the nVar variables
+       if(UseDivU) Data_VI(nVar+1,iPoint) = DivU*No2Si_V(UnitU_)
+       ! DivUDx is the last one in the buffer
+       if(UseDivUdX) Data_VI(nVarIn,iPoint) = DivUdX*No2Si_V(UnitU_)
     end do
 
     if(allocated(DivU_GB))   deallocate(DivU_GB)
