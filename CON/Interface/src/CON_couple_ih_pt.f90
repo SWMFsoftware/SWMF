@@ -39,7 +39,7 @@ contains
     ! Initialize IH->PT coupler.
     ! This subroutine should be called from all PE-s
 
-    logical :: DoTest, DoTestMe, UseDivu
+    logical :: DoTest, DoTestMe
 
     character(len=*), parameter:: NameSub = 'couple_ih_pt_init'
     !--------------------------------------------------------------------------
@@ -50,9 +50,9 @@ contains
     CouplerIhToPt%iCompTarget = PT_
     CouplerIhToPt%iCompSource = IH_
 
-    ! Take information from Grid_C(PT_)
-    CouplerIhToPt%NameVar = Grid_C(PT_)%NameVar
-    CouplerIhToPt%nVar    = Grid_C(PT_)%nVar
+    ! Take information from both Grid_C(IH_) and Grid_C(PT_)
+    CouplerIhToPt%NameVar = trim(Grid_C(IH_)%NameVar)//' '//Grid_C(PT_)%NameVar
+    CouplerIhToPt%nVar    = Grid_C(IH_)%nVar + Grid_C(PT_)%nVar
 
     call couple_points_init(CouplerIhToPt)
 
@@ -60,7 +60,6 @@ contains
 
   end subroutine couple_ih_pt_init
   !============================================================================
-
   subroutine couple_ih_pt(tSimulation)
     use CON_transfer_data, ONLY: transfer_real
     real, intent(in) :: tSimulation
@@ -87,6 +86,5 @@ contains
 
   end subroutine couple_ih_pt
   !============================================================================
-
 end module CON_couple_ih_pt
 !==============================================================================

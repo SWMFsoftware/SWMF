@@ -34,13 +34,12 @@ module CON_couple_sc_pt
 
 contains
   !============================================================================
-
   subroutine couple_sc_pt_init
 
     ! Initialize SC->PT coupler.
     ! This subroutine should be called from all PE-s
 
-    logical :: DoTest, DoTestMe,flag
+    logical :: DoTest, DoTestMe
 
     character(len=*), parameter:: NameSub = 'couple_sc_pt_init'
     !--------------------------------------------------------------------------
@@ -51,9 +50,9 @@ contains
     CouplerScToPt%iCompTarget = PT_
     CouplerScToPt%iCompSource = SC_
 
-    ! Take information from Grid_C(PT_)
-    CouplerScToPt%NameVar = Grid_C(PT_)%NameVar
-    CouplerScToPt%nVar    = Grid_C(PT_)%nVar
+    ! Take information from both Grid_C(SC_) and Grid_C(PT_)
+    CouplerScToPt%NameVar = trim(Grid_C(SC_)%NameVar)//' '//Grid_C(PT_)%NameVar
+    CouplerScToPt%nVar    = Grid_C(SC_)%nVar + Grid_C(PT_)%nVar
 
     call couple_points_init(CouplerScToPt)
 
