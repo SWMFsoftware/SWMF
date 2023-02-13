@@ -331,7 +331,8 @@ contains
        allocate( &
             u_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK), &
             DivU_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
-       if(UseDivUDx) allocate(DivUDx_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+       if(UseDivUDx) allocate( &
+            DivUDx_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
 
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE
