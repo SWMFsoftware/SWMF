@@ -4,15 +4,18 @@ IE 0 1 1		CompMap
 IM 0 0 1		CompMap
 UA 0 1 1 		CompMap
 
+#INCLUDE
+RESTART.in
+
 #TEST
-couple_ie_ua_init IE_get_for_ua UA_put_from_ie
+couple_ie_ua_init IE_get_for_ua UA_put_from_ie UA_init_session
 
 #PROGRESS
 1			DnProgressShort
 100			DnProgressLong
 
 #DESCRIPTION
-Test params for GM-IE-IM-UA Coupling		StringDescription
+Continue test for GM-IE-IM-UA Coupling		StringDescription
 
 #PLANET
 EARTH			NamePlanet
@@ -24,18 +27,6 @@ T			DoSaveRestart
 
 #TIMEACCURATE
 T			IsTimeAccurate
-
-#STARTTIME
-2000			iYear
-3			iMonth
-21			iDay
-10			iHour
-45			iMinute
-0			iSecond
-0.0			FracSecond
-
-#IDEALAXES
-! align rotation and magnetic axes with z axis
 
 ! Allow GM/IM and IE run in parallel. LAYOUT.in has to be properly set!
 #COUPLEORDER
@@ -79,94 +70,8 @@ F			DoCoupleOnTime
 
 #BEGIN_COMP GM ---------------------------------------------------------------
 
-#MAGNETOSPHERE
-T			UseBody
-2.5			rBody
-3.5			rCurrents
-10.0			BodyNDim
-25000.0			BodyTDim
-
-#GRID
-1			nRootBlock1
-1			nRootBlock2
-1			nRootBlock3
--224.			xMin
-  32.			xMax
--128.			yMin
- 128.			yMax
--128.			zMin
- 128.			zMax
-
-#GRIDBLOCKALL
-700			MaxBlock
-
-#GRIDRESOLUTION
-2.0			Resolution
-initial			StringShape
-
-!refine inside 1.5*rcurrents, rcurrents = 3.5
-#GRIDRESOLUTION
-1/8			Resolution
-sphere0			StringShape
- 5.25			Radius
-
-!refine inner magnetosphere
-#GRIDRESOLUTION
-1.0			Resolution
-sphere0			StringShape
-17.5			Radius
-
-!refine the magnetotail
-#GRIDRESOLUTION
-4.0			Resolution
-box			StringShape
--224.0			xMinBox
- -64.0			yMinBox
- -64.0			zMinBox
-  32.0			xMaxBox
-  64.0			yMaxBox
-  64.0			zMaxBox
-
-#GRIDRESOLUTION
-2.0			Resolution
-box			StringShape
- -96.0			xMinBox
- -32.0			yMinBox
- -32.0			zMinBox
-  32.0			xMaxBox
-  32.0			yMaxBox
-  32.0			zMaxBox
-
-#GRIDRESOLUTION
-1.0			Resolution
-box			StringShape
- -48.0			xMinBox
- -16.0			yMinBox
- -16.0			zMinBox
-  32.0			xMaxBox
-  16.0			yMaxBox
-  16.0			zMaxBox
-
-#GRIDRESOLUTION
-1/2			Resolution
-box			StringShape
- -32.0			xMinBox
-  -8.0			yMinBox
-  -8.0			zMinBox
-  32.0			xMaxBox
-   8.0			yMaxBox
-   8.0			zMaxBox
-
-#GRIDRESOLUTION
-1/4			Resolution
-box			StringShape
- -32.0			xMinBox
-  -8.0			yMinBox
-  -4.0			zMinBox
-   8.0			xMaxBox
-   8.0			yMaxBox
-   4.0			zMaxBox
-
+#INCLUDE
+GM/restartIN/restart.H
 
 #OUTERBOUNDARY
 outflow			TypeBc1
@@ -216,12 +121,15 @@ y=0 MHD idl		StringPlot
 -1.			DxSavePlot
 z=0 MHD idl		StringPlot
 -1			DnSavePlot
-30.			DtSavePlot
+5.			DtSavePlot
 -1.			DxSavePlot
 
 #END_COMP GM -----------------------------------------------------------------
 
 #BEGIN_COMP IE ---------------------------------------------------------------
+
+#RESTART
+T			DoRestart
 
 #IONOSPHERE
 5			iConductanceModel
@@ -242,13 +150,13 @@ max idl			StringPlot
 #BEGIN_COMP UA ---------------------------------------------------------------
 
 #DEBUG
-0
+1
 0
 -1
 F
 
 #RESTART
-F               need to think about how to stitch in initialization
+T               need to think about how to stitch in initialization
 
 #GRID
 1               nLonBlocks (low should be 2)
@@ -388,6 +296,9 @@ F               Whether to couple to GLOW
 
 #BEGIN_COMP IM ---------------------------------------------------------------
 
+#RESTART
+T			DoRestart
+
 ! Number density fractions for H+ and O+. Has to add up to 1.0
 #COMPOSITION
 FIXED                    NameCompModel
@@ -406,6 +317,6 @@ T                       UseDecay
 3                       iMonth
 21                      iDay
 10                      iHour
-45                      iMinute
-30                      iSecond
+46                      iMinute
+00                      iSecond
 0.0                     FracSecond
