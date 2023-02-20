@@ -317,12 +317,16 @@ contains
     !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
+    DoSendAll = .false.
+    if(present(DoSendAllVar)) DoSendAll = DoSendAllVar
     UseDivU   = index(NameVar//' ',' divu ') > 0
     UseDivUDx = index(NameVar,' divudx ') > 0
     
     if(DoTestMe)then
-       write(*,*)NameSub,': DoSendAllVar, nVar, nVarIn, NameVar=', &
-            DoSendAllVar, nVar, nVarIn, trim(NameVar)
+       write(*,*)NameSub,': DoSendAll, nVar, nVarIn, NameVar=', &
+            DoSendAll, nVar, nVarIn, trim(NameVar)
+       if(.not.DoSendAll) &
+            write(*,*)NameSub,': iVarSource_V=', iVarSource_V(1:nVarIn)
        write(*,*)NameSub,': UseDivU=', UseDivU,' UseDivUDx=', UseDivUDx
     end if
 
@@ -360,9 +364,6 @@ contains
        if(UseDivU)   call message_pass_cell(DivU_GB)
        if(UseDivUDx) call message_pass_cell(DivUDx_GB)
     end if
-
-    DoSendAll = .false.
-    if(present(DoSendAllVar)) DoSendAll = DoSendAllVar
 
     ! If nDim < MaxDim, make sure that all elements are initialized
     Dist_D = -1.0
@@ -418,13 +419,21 @@ contains
           State_V(Bx_:Bz_) = State_V(Bx_:Bz_) + B0_D
        end if
 
-       ! Fill buffer with interpolated values converted to SI units
-       Data_VI(1:nVar,iPoint) = State_V*No2Si_V(iUnitCons_V)
-       ! DivU is right after the nVar variables
-       if(UseDivU) Data_VI(nVar+1,iPoint) = DivU*No2Si_V(UnitU_)
-       ! DivUDx is the last one in the buffer
-       if(UseDivUdX) Data_VI(nVarIn,iPoint) = DivUdX*No2Si_V(UnitU_)
-    end do
+       if(DoSendAll)then
+          ! Fill buffer with interpolated values converted to SI units
+          Data_VI(1:nVar,iPoint) = State_V*No2Si_V(iUnitCons_V)
+          ! DivU is right after the nVar variables
+          if(UseDivU) Data_VI(nVar+1,iPoint) = DivU*No2Si_V(UnitU_)
+          ! DivUDx is the last one in the buffer
+          if(UseDivUdX) Data_VI(nVarIn,iPoint) = DivUdX*No2Si_V(UnitU_)
+       else
+          do iVarBuffer = 1, nVarIn
+             iVar = iVarSource_V(iVarBuffer)
+             Data_VI(iVarBuffer,iPoint) = &
+                  State_V(iVar)*No2Si_V(iUnitCons_V(iVar))
+          end do
+       end if
+    end do ! iPoint
 
     if(allocated(DivU_GB))   deallocate(DivU_GB)
     if(allocated(DivUDx_GB)) deallocate(DivUDx_GB)
