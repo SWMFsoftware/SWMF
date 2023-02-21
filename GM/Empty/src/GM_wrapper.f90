@@ -528,6 +528,23 @@ contains
     call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
   end function GM_is_right_boundary_d
   !============================================================================
+
+  subroutine GM_put_from_ua(NameVar, nVar, nPoint, Data_VI, iPoint_I, Pos_DI)
+
+    character(len=*), intent(inout):: NameVar
+    integer,          intent(inout):: nVar
+    integer,          intent(inout):: nPoint
+
+    real,    intent(in), optional:: Data_VI(:,:)
+    integer, intent(in), optional:: iPoint_I(nPoint)
+    real, intent(out), allocatable, optional:: Pos_DI(:,:)
+
+    character(len=*), parameter:: NameSub = 'GM_put_from_ua'
+    !--------------------------------------------------------------------------
+    call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
+    
+  end subroutine GM_put_from_ua
+
 end module GM_wrapper
 !==============================================================================
 

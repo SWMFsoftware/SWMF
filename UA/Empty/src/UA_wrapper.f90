@@ -23,6 +23,11 @@ module UA_wrapper
   public :: UA_get_for_ie
   public :: UA_put_from_ie
 
+  ! GM Coupler
+  public :: UA_find_points
+  public :: UA_get_for_gm
+  public :: UA_get_grid_info
+  
 contains
   !============================================================================
   subroutine UA_set_param(CompInfo, TypeAction)
@@ -98,7 +103,7 @@ contains
 
   !============================================================================
   subroutine UA_get_info_for_ie(nVar, NameVar_V, nMagLat, nMagLon)
-    
+
     !OUTPUT ARGUMENTS:
     integer, intent(out) :: nVar
     integer, intent(out), optional :: nMagLat, nMagLon
@@ -122,7 +127,7 @@ contains
     character (len=*), parameter :: NameSub='UA_put_from_ie'
 
     call CON_stop(NameSub//': UA_ERROR: empty version cannot be used!')
-    
+
   end subroutine UA_put_from_ie
 
   !============================================================================
@@ -131,15 +136,60 @@ contains
     ! INPUT ARGUMENTS:
     integer,          intent(in) :: nMltIn, nLatIn, nVarIn
     character(len=3), intent(in) :: NameVarIn_V(nVarIn)
-    
+
     ! OUTPUT ARGUMENTS:
     real, intent(out) :: BufferOut_IIBV(nMltIn, nLatIn, 2, nVarIn)
-    
+
     character (len=*), parameter :: NameSub='UA_get_for_ie'
 
     call CON_stop(NameSub//': UA_ERROR: empty version cannot be used!')
-    
+
   end subroutine UA_get_for_ie
+
+  !============================================================================
+  subroutine UA_find_points(nDimIn, nPoint, Xyz_DI, iProc_I)
+
+    integer, intent(in) :: nDimIn
+    integer, intent(in) :: nPoint
+    real,    intent(in) :: Xyz_DI(nDimIn,nPoint)
+    integer, intent(out):: iProc_I(nPoint)
+
+    character(len=*), parameter:: NameSub = 'UA_find_points'
+    !--------------------------------------------------------------------------
+    call CON_stop(NameSub//': UA_ERROR: empty version cannot be used!')
+    
+  end subroutine UA_find_points
+
+  !============================================================================
+  subroutine UA_get_for_gm(IsNew, NameVar, nVarIn, nDimIn, nPoint, Xyz_DI, &
+       Data_VI)
+
+    logical,          intent(in) :: IsNew
+    character(len=*), intent(in) :: NameVar
+    integer,          intent(in) :: nVarIn
+    integer,          intent(in) :: nDimIn
+    integer,          intent(in) :: nPoint
+    real,             intent(in) :: Xyz_DI(nDimIn,nPoint)
+    real, intent(out):: Data_VI(nVarIn,nPoint)
+
+    character(len=*), parameter :: NameSub='UA_get_for_gm'
+    !--------------------------------------------------------------------------
+    call CON_stop(NameSub//': UA_ERROR: empty version cannot be used!')
+
+  end subroutine UA_get_for_gm
+
+  !============================================================================
+  subroutine UA_get_grid_info(nDimOut, iGridOut, iDecompOut)
+
+    integer, intent(out):: nDimOut
+    integer, intent(out):: iGridOut
+    integer, intent(out):: iDecompOut
+
+    character(len=*), parameter :: NameSub = 'UA_get_grid_info'
+    !--------------------------------------------------------------------------
+    call CON_stop(NameSub//': UA_ERROR: empty version cannot be used!')
+
+  end subroutine UA_get_grid_info
   
 end module UA_wrapper
 !==============================================================================
