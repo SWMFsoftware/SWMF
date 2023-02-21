@@ -35,7 +35,7 @@ contains
 
     ! This subroutine should be called from all PE-s
 
-    character(len=*), parameter :: NameSub='couple_gm_ua_init'
+    character(len=*), parameter:: NameSub = 'couple_ua_gm_init'
     !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
 
@@ -48,15 +48,15 @@ contains
     call couple_points_init(CouplerUAtoGM)
 
   end subroutine couple_ua_gm_init
-
   !============================================================================
+
   subroutine couple_ua_gm(tSimulation)
 
     real, intent(in) :: tSimulation
 
     logical :: DoTest, DoTestMe
 
-    character(len=*), parameter :: NameSub='couple_ua_gm'
+    character(len=*), parameter:: NameSub = 'couple_ua_gm'
     !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
@@ -69,6 +69,6 @@ contains
 
   end subroutine couple_ua_gm
   !============================================================================
-  
+
 end module CON_couple_ua_gm
 !==============================================================================
