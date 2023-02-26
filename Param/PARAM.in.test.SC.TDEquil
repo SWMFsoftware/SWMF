@@ -1,0 +1,115 @@
+Parameter file for the relaxational MHD as applied to TD22. Configuration:
+./Config.pl -v=Empty,SC/BATSRUS
+./Config.pl -o=SC:u=Awsom,e=Mhd,ng=2,g=4,4,1
+
+#COMPONENTMAP
+SC 0 -1 1		CompMap
+
+#TIMEACCURATE
+T			IsTimeAccurate
+
+#BEGIN_COMP SC ---------------------------------------------------------------
+
+#GRIDBLOCKALL
+31250			MaxBlock
+
+#GRIDGEOMETRY
+rz			TypeGeometry
+
+#TIMESTEPPING
+2			nStage
+0.8			CflExpl
+
+#SCHEME
+2			nOrder (1 or 2)
+Sokolov			TypeFlux (Roe, Rusanov, Linde, Sokolov
+mc3			TypeLimiter
+1.2			LimiterBeta
+
+#USERINPUTBEGIN -----------------------------------
+
+#UNIFORMB0
+2.7e-4                  UniformB0Si
+0.0                     UniformB0Si
+0.0                     UniformB0Si
+
+#ROTATINGFRAME
+F			UseRotatingFrame
+
+#USERINPUTEND -------------------------------------
+
+! Use a true sphere, so box is made much larger
+#GRID
+250			nRootBlock1
+125			nRootBlock2
+1			nRootBlock3
+-0.5			xMin
+0.5			xMax
+0.0			yMin
+0.5			yMax
+0.0			zMin
+0.001			zMax
+
+#OUTERBOUNDARY
+coupled			TypeBc1
+reflect			TypeBc2
+coupled			TypeBc3
+coupled			TypeBc4
+
+
+#USERSWITCH
++init +perturb +b0		StringSwitch
+
+#SAVEPLOT
+1			nPlotFile
+z=0 VAR idl		StringPlot
+-1			DnSavePlot
+100.0			DtSavePlot
+0.001			DxSavePlot
+rho ux uy uz bx by bz p		NameVars
+g			NamePars
+
+B0
+T			UseB0
+
+#BODY
+T			UseBody
+0.0005			rBody
+2.0E+10			BodyNDim
+2.0E+4			BodyTDim
+
+#BODY
+F			UseBody
+
+#GRAVITY
+F			UseGravity
+
+#CME
+T			UseCme
+T			DoAddFluxRope
+-1.0			tDecayCme
+270.0			LongitudeCme
+90.0			LatitudeCme
+0.0			OrientationCme
+TD22			TypeCme
+-1			iHelicity
+0.20404040404		RadiusMajor
+0.040404040404		RadiusMinor
+1.0			Depth
+1.0e-1			PlasmaBeta
+5.0e5			EjectaTemperature
+readbstrap		TypeBStrap
+2.70			bStrappingDim
+none			TypeCharge
+
+#FRICTION
+0.001			FrictionSi [1/s] (rest read if larger than 0)
+0.0			FrictionUxDim
+0.0			FrictionUyDim
+0.0			FrictionUzDim
+
+#END_COMP SC -----------------------------------------------------------------
+
+#STOP
+-1			MaxIter
+6000.0			TimeMax
