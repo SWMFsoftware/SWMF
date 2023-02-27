@@ -42,8 +42,6 @@ if($umichgitlab){
 	"CIMI2"         => "IM", 
 	"HEIDI"         => "IM", 
 	"RCM2"          => "IM", 
-	"ALTOR"         => "PC", 
-	"IPIC3D2"       => "PC",
 	"FLEKS"         => "PC", 
 	"FLEKS_PT"      => "PT", 
 	"DGCPM"         => "PS", 
