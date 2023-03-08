@@ -5,7 +5,7 @@ IM 0 0 1		CompMap
 UA 0 1 1 		CompMap
 
 #TEST
-couple_ie_ua_init IE_get_for_ua UA_put_from_ie
+couple_ie_ua_init IE_get_for_ua UA_put_from_ie UA_get_for_ie
 
 #PROGRESS
 1			DnProgressShort

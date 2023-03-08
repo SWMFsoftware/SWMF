@@ -8,7 +8,7 @@ UA 0 1 1 		CompMap
 RESTART.in
 
 #TEST
-couple_ie_ua_init IE_get_for_ua UA_put_from_ie UA_init_session
+couple_ie_ua_init IE_get_for_ua UA_put_from_ie UA_get_for_ie
 
 #PROGRESS
 1			DnProgressShort
@@ -16,9 +16,6 @@ couple_ie_ua_init IE_get_for_ua UA_put_from_ie UA_init_session
 
 #DESCRIPTION
 Continue test for GM-IE-IM-UA Coupling		StringDescription
-
-#PLANET
-EARTH			NamePlanet
 
 #SAVERESTART
 T			DoSaveRestart
