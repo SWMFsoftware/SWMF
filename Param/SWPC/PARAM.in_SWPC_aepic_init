@@ -387,8 +387,8 @@ paraboloidx stretched		StringShape
  0.0			yPosition
  0.0			zPosition
 -250.0			Height
-30.0			Radius
-30.0			RadiusPerp
+31.0			Radius
+31.0			RadiusPerp
 
 #REGION
 near_earth_box		NameRegion
