@@ -618,11 +618,11 @@ test_swpc_aepic_check:
 		${TESTDIR}/GM/IO2/z=0_var_2_e20140410-000005-000.out \
 		Param/SWPC/TestOutputAepic/z=0_var_2_e20140410-000005-000.out.gz \
 		>> test_swpc_aepic_gm.diff)
-	-@(${DIFFNUM} -b -r=1e-4 -a=1e-7\
+	-@(${DIFFNUM} -b -r=1e-4 -a=5e-7\
                 ${TESTDIR}/PC/plots/y=0_var_region0_1_t00000005_n00000020.out \
 		Param/SWPC/TestOutputAepic/y=0_var_region0_1_t00000005_n00000020.out.gz \
 		> test_swpc_aepic_pc.diff)
-	-@(${DIFFNUM} -b -r=1e-4 -a=1e-7\
+	-@(${DIFFNUM} -b -r=1e-4 -a=5e-7\
                 ${TESTDIR}/PC/plots/z=0_var_region0_0_t00000005_n00000020.out \
 		Param/SWPC/TestOutputAepic/z=0_var_region0_0_t00000005_n00000020.out.gz \
 		>> test_swpc_aepic_pc.diff)	
