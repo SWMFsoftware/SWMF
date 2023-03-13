@@ -143,7 +143,7 @@ install: ENV_CHECK mkdir
 	@echo
 
 info:
-	@echo "NOTE: HYPRE, AMREX, BATSRUS clones and PC/AMPS should not be installed!"
+	@echo "NOTE: HYPRE, AMREX, BATSRUS clones, PT/FLEKS, PC/AMPS, PC/ALTOR/srcBATL* should not be counted!"
 	@echo "Total lines of Fortran: `wc -l */*/src*/*.f* */*/src*/*/*.f* | tail -1`"
 	@echo "Total lines of C++    : `wc -l */*/src*/*.c* */*/src*/*.h */*/src*/*/*.c* */*/src*/*/*.h | tail -1`"
 	@echo "share/Library/        : `wc -l share/Library/src/*.f* share/Library/test/*.f* | tail -1`"
@@ -158,6 +158,7 @@ info:
 	@echo "Makefile-s            : `wc -l Makefile* */[mM]akefile* */*/[mM]akefile* */*/*/[mM]akefile* */*/*/*/[mM]akefile* */*/*/*/*/[mM]akefile* PT/AMPS/MakefileTest/* | tail -1`"
 	@echo "Perl scripts          : `wc -l *.pl */*.pl */*/*.pl */*/*/*.pl */*/*/*/*.pl */*/*/*/*/*.pl | tail -1`"
 	@echo "Python scripts        : `wc -l */*/*.py */*/*/*.py */*/*/*/*.py */*/*/*/*/*.py | tail -1`"
+	@echo "Julia scripts         : `wc -l */*/*.jl */*/*/*.jl */*/*/*/*.jl */*/*/*/*/*.jl | tail -1`"
 	@echo "IDL scripts           : `wc -l */*/*/*.pro */*/*/*/*.pro | tail -1`"
 	@echo "Latex documentation   : `wc -l */*/*.tex */*/*/*.tex */*/*/*/*.tex | tail -1`"
 	@echo "XML descriptions      : `wc -l PARAM.XML */*/*.XML | tail -1`"
