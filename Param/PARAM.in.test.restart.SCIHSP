@@ -21,8 +21,8 @@ IH			NameSource
 19			RIhMin
 220			RIhMax
 
-#SAVERESTART
-F			DoSaveRestart
+SAVERESTART
+T			DoSaveRestart
 
 #TEST
 couple_mh_sp		StringTest

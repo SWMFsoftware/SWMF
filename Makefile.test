@@ -2883,7 +2883,7 @@ test_eegtd_run:
 	python3 TDSETUP.py field_2d.out -LonPosIn 45.50 -LatPosIn 6.08 \
 		-LonNegIn 48.50 -LatNegIn 10.60 -LonFPPosIn 42.50 \
 		-LatFPPosIn 8.50 -LonFPNegIn 65.50 -LatFPNegIn 16.50 \
-		-a2r0Ratio 0.25 -ApexIn 0.18>run.log
+		-a2r0Ratio 0.25 -ApexIn 0.18 -BStrapMax 8.0>run.log
 
 test_eegtd_check:
 	-${DIFFNUM} ${TESTDIR}/SC/CME.in \
