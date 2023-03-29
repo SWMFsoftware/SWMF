@@ -2398,6 +2398,38 @@ test20_check:
 
 ### test21: OH/BATSRUS coupled with PT/FLEKS  ###
 
+test21:
+	@echo "test21_4neu_compile..." > test21.diff
+	${MAKE} test21_4neu_compile
+	@echo "test21_4neu_rundir..." >> test21.diff
+	${MAKE} test21_4neu_rundir
+	@echo "test21_4neu_run..." >> test21.diff
+	${MAKE} test21_4neu_run
+	@echo "test21_oh_pt_compile..." >> test21.diff
+	${MAKE} test21_oh_pt_compile
+	@echo "test21_oh_pt_rundir..." >> test21.diff
+	${MAKE} test21_oh_pt_rundir
+	@echo "test21_oh_pt_run..." >> test21.diff
+	${MAKE} test21_oh_pt_run
+	@echo "test21_check..." >> test21.diff
+	${MAKE} test21_check
+
+
+test21_check:
+	-@(${DIFFNUM} -b -r=1e-7 \
+                ${TESTDIR}/RESULTS/neu_couple/OH/y*444.out \
+                output/test21/y=0_neu_OH.ref.gz \
+		> test21.diff)
+	-@(${DIFFNUM} -b -r=1e-7 \
+                ${TESTDIR}/RESULTS/swh/OH/z*453.out \
+                output/test21/z=0_OH.ref.gz \
+		>> test21.diff)
+	-@(${DIFFNUM} -b -r=1e-7 \
+                ${TESTDIR}/RESULTS/swh/PT/z*18.out \
+                output/test21/z=0_PT.ref.gz \
+		>> test21.diff)		
+	ls -l test21.diff
+
 test21_4neu:
 	@echo "test21_4neu_compile..." > test21_4neu.diff
 	${MAKE} test21_4neu_compile
@@ -2431,15 +2463,10 @@ test21_4neu_run:
 	
 test21_4neu_check:
 	-@(${DIFFNUM} -b -r=1e-7 \
-                ${TESTDIR}/RESULTS/OH/z*006.out \
-                output/test21_4neu/z=0_OH.ref.gz \
+                ${TESTDIR}/RESULTS/neu_couple/OH/y*444.out \
+                output/test21/y=0_neu_OH.ref.gz \
 		> test21_4neu.diff)
-	-@(${DIFFNUM} -b -r=1e-7 \
-                ${TESTDIR}/RESULTS/PT/z*0200.out \
-                output/test21_4neu/z=0_PT.ref.gz \
-		>> test21_4neu.diff)		
 	ls -l test21_4neu.diff
-
 
 test21_oh_pt:
 	@echo "test21_oh_pt_compile..." > test21_oh_pt.diff
@@ -2458,23 +2485,22 @@ test21_oh_pt_compile:
 	make PIDL
 
 test21_oh_pt_rundir:
-	rm -rf ${TESTDIR}
-	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
-	cp Param/PARAM.in.test.OHPT.FLEKS.shocktube  ${TESTDIR}/PARAM.in
+	cp Param/PARAM.in.test.OHPT.FLEKS.outerhelio.swh  ${TESTDIR}/PARAM.in
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test21_oh_pt_run:
+	cd ${TESTDIR}; ./Restart.pl -v -i RESULTS/neu_couple/RESTART
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl RESULTS
+	cd ${TESTDIR}; ./PostProc.pl RESULTS/swh
 
 test21_oh_pt_check:
 	-@(${DIFFNUM} -b -r=1e-7 \
-                ${TESTDIR}/RESULTS/OH/z*006.out \
-                output/test21_oh_pt/z=0_OH.ref.gz \
+                ${TESTDIR}/RESULTS/swh/OH/z*453.out \
+                output/test21/z=0_OH.ref.gz \
 		> test21_oh_pt.diff)
 	-@(${DIFFNUM} -b -r=1e-7 \
-                ${TESTDIR}/RESULTS/PT/z*0200.out \
-                output/test21_oh_pt/z=0_PT.ref.gz \
+                ${TESTDIR}/RESULTS/swh/PT/z*18.out \
+                output/test21/z=0_PT.ref.gz \
 		>> test21_oh_pt.diff)		
 	ls -l test21_oh_pt.diff
 

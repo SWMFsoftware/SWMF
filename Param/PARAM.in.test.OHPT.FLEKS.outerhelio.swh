@@ -8,9 +8,13 @@ RESTART.in
 #DESCRIPTION
 Param/OUTERHELIO/PARAM.in.restart: Restart outer heliosphere with 1 ion and 4 neutral fluids		StringDescription
 
-#COMPONENT
-PT
-F
+
+#COUPLE2
+OH			NameSource
+PT			NameTarget
+-1			DnCouple
+0.2 year		DtCouple
+
 
 #STARTTIME		for 1985.102
 1985			iYear
@@ -29,12 +33,22 @@ OH/Param/ExchangeRate.dat		NameFile
 ascii			TypeFile
 
 #TIMEACCURATE
-F  			IsTimeAccurate
+T  			IsTimeAccurate
+
+#SAVERESTART
+T			DoSaveRestart
+-1			DnSaveRestart
+1 y			DtSaveRestart
+
+
 
 #BEGIN_COMP OH ---------------------------------------------------------------
 
 #GRAVITY
 F			UseGravity (rest of parameters read if true)
+
+#CHANGEVARIABLES
+T			DoChangeRestartVariables
 
 #INCLUDE
 OH/restartIN/restart.H
@@ -98,20 +112,14 @@ RAW			StringLog
 T			DoSaveInitial
 
 #SAVEPLOT
-3			nPlotFile
+2			nPlotFile
 y=0 MHD idl_ascii		StringPlot
-10			DnSavePlot
--1.0			DtSavePlot
+-1			DnSavePlot
+1 y			DtSavePlot
 -1.0			DxSavePlot
-y=0 VAR idl_ascii		StringPlot
-10			DnSavePlot
--1.0			DtSavePlot
--1.0			DxSavePlot
-fluid mach		NameVars
-rbody			NamePars
 z=0 MHD idl_ascii		StringPlot
-10			DnSavePlot
--1.0			DtSavePlot
+-1			DnSavePlot
+1 y			DtSavePlot
 -1.0			DxSavePlot
 
 #OHBOUNDARY
@@ -134,7 +142,7 @@ T			UseOhNeutralBc
 1.0			mNeutral
 
 #USERSWITCH
-+init +source_expl +perturb +progress +update		StringSwitch
++init +source_expl +progress +update		StringSwitch
 
 #USERINPUTBEGIN -----------------------------------
 
@@ -180,116 +188,63 @@ T			UseNe4Source
 
 #END_COMP OH -----------------------------------------------------------------
 
-#STOP
-20			MaxIteration
--1.0			tSimulationMax
-
-#RUN ##########################################################################
-
-
-
-LOOKUPTABLE
-OH			StringCompTable
-solarwind2d		NameTable
-load			NameCommand
-OH/Param/solarwind2D.dat		NameFile
-ascii			TypeFile
-
-#TIMEACCURATE
-T  			IsTimeAccurate
-
-#SAVERESTART
-T			DoSaveRestart
--1			DnSaveRestart
-1 y			DtSaveRestart
-
-
-#BEGIN_COMP OH ---------------------------------------------------------------
-
-#SCHEME
-1			nOrder
-Linde			TypeFlux
-mc			TypeLimiter
-1.5			LimiterBeta
-
-! 0.8 works fine for higher resolution
-#TIMESTEPPING
-1			nStage
-0.4			CflExpl
-
-
-#SAVEPLOT
-1			nPlotFile
-y=0 MHD idl_ascii		StringPlot
--1			DnSavePlot
-1 year		DtSavePlot
--1.0			DxSavePlot
-
-#END_COMP OH -----------------------------------------------------------------
 
 #STOP
--1			MaxIteration
-0.1 year		tSimulationMax
+-1			MaxIter
+1 year		TimeMax
 
-#RUN
-
-
-
-#COMPONENT
-PT
-T
-
-
-#COUPLE1
-OH			NameComp1
-PT			NameComp2
--1			DnCouple
-0.2 year		DtCouple
 
 #BEGIN_COMP PT ---------------------------------------------------------------
 
-#RECEIVEICONLY
-T
+#INCLUDE
+PT/restartIN/FLEKS0_restart.H		NameIncludeFile
 
-PLASMA
-5			nS
-1			mass
-1			charge
-1			mass
-0			charge
-1			mass
-0			charge
-1			mass
-0			charge
-1			mass
-0			charge
+
+#INITFROMSWMF
+F			initFromSWMF
+
+#TIMESTEPPING
+T			useFixedDt
+0.05 y			dt
+
 
 #NORMALIZATION
 1.495978707E11		lNorm [m]
 3.0e8			uNorm [m/s]
 
-#GEOMETRY
--80			xMin
-80			xMax
--80			yMin
-80			yMax
--80			zMin
-80			zMax
+#PARTICLES
+1
+1
+1
 
-#NCELL
-8			nCellX
-8			nCellY
-8			nCellZ
+#SOURCEPARTICLES
+1
+1
+1
 
-#PERIODICITY
+PERIODICITY
 T			isPeriodicX
 T			isPeriodicY
 T			isPeriodicZ
 
+
+#SAVEPLOT
+3			nPlotFile
+y=0 var ascii planet		StringPlot
+-1			DnSavePlot
+1 y			DtSavePlot
+0			DxSavePlot
+{fluid} numS0		NameVars
+z=0 var ascii planet		StringPlot
+-1			DnSavePlot
+1 y			DtSavePlot
+0			DxSavePlot
+{fluid} numS0		NameVars
+3d particles0 amrex planet		StringPlot
+-1			DnSavePlot
+1 y			DtSavePlot
+0			DxSavePlot
+
+
 #END_COMP PT -----------------------------------------------------------------
 
-#STOP
--1			MaxIteration
-0.1001 year		tSimulationMax
-
-#END
