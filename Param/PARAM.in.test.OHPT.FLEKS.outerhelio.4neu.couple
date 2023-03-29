@@ -281,6 +281,11 @@ PLASMA
 8			nCellY
 8			nCellZ
 
+#MAXBLOCKSIZE
+4
+4
+4
+
 #PERIODICITY
 T			isPeriodicX
 T			isPeriodicY

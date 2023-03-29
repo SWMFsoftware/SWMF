@@ -10,8 +10,8 @@ Param/OUTERHELIO/PARAM.in.restart: Restart outer heliosphere with 1 ion and 4 ne
 
 
 #COUPLE2
-OH			NameSource
-PT			NameTarget
+OH			NameComp1
+PT			NameComp2
 -1			DnCouple
 0.2 year		DtCouple
 
@@ -191,14 +191,13 @@ T			UseNe4Source
 
 #STOP
 -1			MaxIter
-1 year		TimeMax
+1 year			TimeMax
 
 
 #BEGIN_COMP PT ---------------------------------------------------------------
 
 #INCLUDE
 PT/restartIN/FLEKS0_restart.H		NameIncludeFile
-
 
 #INITFROMSWMF
 F			initFromSWMF
@@ -213,14 +212,14 @@ T			useFixedDt
 3.0e8			uNorm [m/s]
 
 #PARTICLES
-1
-1
-1
+1			nParticleX
+1			nParticleY
+1			nParticleZ
 
 #SOURCEPARTICLES
-1
-1
-1
+1			nParticleX
+1			nParticleY
+1			nParticleZ
 
 PERIODICITY
 T			isPeriodicX
