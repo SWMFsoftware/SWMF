@@ -2857,7 +2857,7 @@ test_eeggl_rundir:
 test_eeggl_run:
 	cd ${TESTDIR}/SC; \
 	python3 remap_magnetogram.py fitsfile.fits map; \
-	python3  GLSETUP.py map.out -CMESpeed 600 \
+	python3  GLSETUP.py map_01.out -CMESpeed 600 \
 		-LonPosIn 333.5 -LatPosIn 22.6 \
 		-LonNegIn 324.5 -LatNegIn 24.0 > runlog_eeggl
 
@@ -2883,7 +2883,7 @@ test_eegtd_run:
 	python3 TDSETUP.py field_2d.out -LonPosIn 45.50 -LatPosIn 6.08 \
 		-LonNegIn 48.50 -LatNegIn 10.60 -LonFPPosIn 42.50 \
 		-LatFPPosIn 8.50 -LonFPNegIn 65.50 -LatFPNegIn 16.50 \
-		-a2r0Ratio 0.25 -ApexIn 0.18 -BStrapMax 8.0>run.log
+		-a2r0Ratio 0.25 -ApexIn 0.18 -BStrapMax 8.0 > run.log
 
 test_eegtd_check:
 	-${DIFFNUM} ${TESTDIR}/SC/CME.in \

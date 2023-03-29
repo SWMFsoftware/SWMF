@@ -342,6 +342,7 @@ F			UseFixedPrecip
 1 min			DtSavePlot
 -1			DnSavePlot
 T			DoSaveFirst
+F			DoAppendPlot
 
 #END_COMP PW -----------------------------------------------------------------
 
