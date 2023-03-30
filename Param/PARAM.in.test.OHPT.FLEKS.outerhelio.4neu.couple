@@ -9,8 +9,8 @@ RESTART.in
 Param/OUTERHELIO/PARAM.in.restart: Restart outer heliosphere with 1 ion and 4 neutral fluids		StringDescription
 
 #COMPONENT
-PT
-F
+PT			NameComp
+F			UseComp
 
 #STARTTIME		for 1985.102
 1985			iYear
@@ -162,6 +162,7 @@ T			UseOhNeutralBc
 -0.2988			VLISW_Bz_dim
 
 #REGIONS
+SingleIon		NameRegionFormula
 6.E5			TempPop1LimitDim
 100.0			uPop1LimitDim
 0.9			MachPop2Limit
@@ -181,8 +182,8 @@ T			UseNe4Source
 #END_COMP OH -----------------------------------------------------------------
 
 #STOP
-20			MaxIteration
--1.0			tSimulationMax
+20			MaxIter
+-1.0			TimeMax
 
 #RUN ##########################################################################
 
@@ -209,8 +210,6 @@ T			DoSaveRestart
 #SCHEME
 1			nOrder
 Linde			TypeFlux
-mc			TypeLimiter
-1.5			LimiterBeta
 
 ! 0.8 works fine for higher resolution
 #TIMESTEPPING
@@ -222,34 +221,34 @@ mc			TypeLimiter
 1			nPlotFile
 y=0 MHD idl_ascii		StringPlot
 -1			DnSavePlot
-1 year		DtSavePlot
+1 year			DtSavePlot
 -1.0			DxSavePlot
 
 #END_COMP OH -----------------------------------------------------------------
 
 #STOP
--1			MaxIteration
-0.1 year		tSimulationMax
+-1			MaxIter
+0.1 year		TimeMax
 
-#RUN
+#RUN ##########################################################################
 
 
 
 #COMPONENT
-PT
-T
+PT			NameComp
+T			UseComp
 
 
 #COUPLE1
-OH			NameComp1
-PT			NameComp2
+OH			NameSource
+PT			NameTarget
 -1			DnCouple
 0.2 year		DtCouple
 
 #BEGIN_COMP PT ---------------------------------------------------------------
 
 #RECEIVEICONLY
-T
+T			receiveICOnly
 
 PLASMA
 5			nS
@@ -282,9 +281,9 @@ PLASMA
 8			nCellZ
 
 #MAXBLOCKSIZE
-4
-4
-4
+4			nCellX
+4			nCellY
+4			nCellZ
 
 #PERIODICITY
 T			isPeriodicX
@@ -294,7 +293,7 @@ T			isPeriodicZ
 #END_COMP PT -----------------------------------------------------------------
 
 #STOP
--1			MaxIteration
-0.1001 year		tSimulationMax
+-1			MaxIter
+0.1001 year		TimeMax
 
 #END

@@ -4,7 +4,7 @@ PT 0  -1  1		CompMap runs on 1 or 2 PE-s
 
 #COMPONENT
 PT			NameComp
-F
+F			UseComp
 
 #DESCRIPTION
 Param/OUTERHELIO/PARAM.in: Outer heliosphere with 1 ion and 4 neutral fluids		StringDescription
@@ -30,6 +30,10 @@ T			UseUpdateCheck
 
 #BODY
 F			UseBody
+
+
+BODY
+T			UseBody
 30.0			rBody (AU)
 0.01			BodyNDim [/cc] number density for ions
 1.09E5			BodyTDim [K] temperature for ions
@@ -222,6 +226,7 @@ T			UseOhNeutralBc
 -0.2988			VLISW_Bz_dim
 
 #REGIONS
+SingleIon		NameRegionFormula
 6.E5			TempPop1LimitDim
 100.0			uPop1LimitDim
 0.9			MachPop2Limit
@@ -234,8 +239,8 @@ T			UseOhNeutralBc
 #END_COMP OH -----------------------------------------------------------------
 
 #STOP
-200			MaxIteration
--1.0			tSimulationMax
+200			MaxIter
+-1.0			TimeMax
 
 #RUN ##########################################################################
 
@@ -249,6 +254,6 @@ minmod			TypeLimiter
 #END_COMP OH -----------------------------------------------------------------
 
 #STOP
-400			MaxIteration
--1.0			tSimulationMax
+400			MaxIter
+-1.0			TimeMax
 

@@ -122,7 +122,7 @@ z=0 MHD idl_ascii		StringPlot
 1 y			DtSavePlot
 -1.0			DxSavePlot
 
-#OHBOUNDARY
+OHBOUNDARY
 T			UseOhNeutralBc
 0.05			RhoNeuFactor
 1.0			uNeuFactor
@@ -170,6 +170,7 @@ T			UseOhNeutralBc
 -0.2988			VLISW_Bz_dim
 
 #REGIONS
+SingleIon		NameRegionFormula
 6.E5			TempPop1LimitDim
 100.0			uPop1LimitDim
 0.9			MachPop2Limit

@@ -2459,8 +2459,8 @@ test21_4neu_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl RESULTS/neu_start
 	cp Param/PARAM.in.test.OHPT.FLEKS.outerhelio.4neu.couple  ${TESTDIR}/PARAM.in
-	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ./Restart.pl -v -i RESULTS/neu_start/RESTART
+	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in	
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl RESULTS/neu_couple
 	
@@ -2489,10 +2489,10 @@ test21_oh_pt_compile:
 
 test21_oh_pt_rundir:
 	cp Param/PARAM.in.test.OHPT.FLEKS.outerhelio.swh  ${TESTDIR}/PARAM.in
+	cd ${TESTDIR}; ./Restart.pl -v -i RESULTS/neu_couple/RESTART	
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test21_oh_pt_run:
-	cd ${TESTDIR}; ./Restart.pl -v -i RESULTS/neu_couple/RESTART
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl RESULTS/swh
 
