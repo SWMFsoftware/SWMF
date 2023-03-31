@@ -154,6 +154,9 @@ GEO			TypeCoordMagGrid
 -1			DnSaveMagGrid
 1 min			DtSaveMagGrid
 
+#SUPERMAGINDICES
+T			DoWriteSupermagIndices
+
 #NONCONSERVATIVE
 T			UseNonConservative
 
