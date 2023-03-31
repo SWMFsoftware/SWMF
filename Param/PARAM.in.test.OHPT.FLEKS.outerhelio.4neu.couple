@@ -1,0 +1,299 @@
+#COMPONENTMAP
+OH 0 -1  1		CompMap runs on all PE-s
+PT 0  -1  1		CompMap runs on 1 or 2 PE-s
+
+#INCLUDE
+RESTART.in
+
+#DESCRIPTION
+Param/OUTERHELIO/PARAM.in.restart: Restart outer heliosphere with 1 ion and 4 neutral fluids		StringDescription
+
+#COMPONENT
+PT			NameComp
+F			UseComp
+
+#STARTTIME		for 1985.102
+1985			iYear
+2			iMonth
+6			iDay
+5			iHour
+31			iMinute
+12			iSecond
+0.0			FracSecond
+
+#LOOKUPTABLE
+OH			StringCompTable
+ChargeExchange		NameTable
+load			NameCommand
+OH/Param/ExchangeRate.dat		NameFile
+ascii			TypeFile
+
+#TIMEACCURATE
+F  			IsTimeAccurate
+
+#BEGIN_COMP OH ---------------------------------------------------------------
+
+#GRAVITY
+F			UseGravity (rest of parameters read if true)
+
+#INCLUDE
+OH/restartIN/restart.H
+
+
+#UPDATECHECK
+T			UseUpdateCheck
+40.			RhoMinPercent
+400.			RhoMaxPercent
+40.			pMinPercent
+400.			pMaxPercent
+
+#PLOTFILENAME
+year			NameMaxTimeUnit
+
+#GRIDBLOCKALL
+3500			MaxBlock
+
+#INNERBOUNDARY
+user			TypeBcBody
+
+#OUTERBOUNDARY
+user			TypeBc1
+outflow			TypeBc2
+outflow			TypeBc3
+outflow			TypeBc4
+outflow			TypeBc5
+outflow			TypeBc6
+
+#NEUTRALFLUID
+F			DoConserveNeutrals
+Linde			TypeFluxNeutral
+
+#SCHEME
+2			nOrder
+Linde			TypeFlux
+mc			TypeLimiter
+1.5			LimiterBeta
+
+! 0.8 works fine for higher resolution
+#TIMESTEPPING
+2			nStage
+0.4			CflExpl
+
+! Applies to the ions only if DoConserveNeutrals is false in #MULTIFLUID
+#NONCONSERVATIVE
+F			UseNonConservative
+
+#SAVERESTART
+T			DoSaveRestart
+1000			DnSaveRestart
+-1.0			DtSaveRestart
+
+#SAVELOGFILE
+T			DoSaveLogfile
+RAW			StringLog
+10			DnSaveLogfile
+-1.			DtSaveLogfile
+
+#SAVEINITIAL
+T			DoSaveInitial
+
+#SAVEPLOT
+3			nPlotFile
+y=0 MHD idl_ascii		StringPlot
+10			DnSavePlot
+-1.0			DtSavePlot
+-1.0			DxSavePlot
+y=0 VAR idl_ascii		StringPlot
+10			DnSavePlot
+-1.0			DtSavePlot
+-1.0			DxSavePlot
+fluid mach		NameVars
+rbody			NamePars
+z=0 MHD idl_ascii		StringPlot
+10			DnSavePlot
+-1.0			DtSavePlot
+-1.0			DxSavePlot
+
+#OHBOUNDARY
+T			UseOhNeutralBc
+0.05			RhoNeuFactor
+1.0			uNeuFactor
+1.E-2			RhoNeuFactor Ne2
+0.2			uNeuFactor
+1.E-2			RhoNeuFactor Ne3
+1.0			uNeuFactor
+1.E-3			RhoNeuFactor Ne4
+0.1			uNeuFactor
+
+#OHNEUTRALS
+0.18			RhoNeutralsISW
+6519.0			TNeutralsISW
+26.3			UxNeutralsISW
+0.0			UyNeutralsISW
+-2.3			UzNeutralsISW
+1.0			mNeutral
+
+#USERSWITCH
++init +source_expl +perturb +progress +update		StringSwitch
+
+#USERINPUTBEGIN -----------------------------------
+
+#GLOBALHELIOSPHERE
+30.
+
+#SOLARWINDH
+0.00874			SWH_N_dim [n/cc]
+1.0868E5		SWH_T_dim [K]
+417.07			SWH_Ux_dim [km/s]
+0.0			SWH_Uy_dim [km/s]
+0.0			SWH_Uz_dim [km/s]
+7.17E-03		SWH_Bx_dim [nT]
+0.0			SWH_By_dim [nT]
+0.0			SWH_Bz_dim [nT]
+
+#VLISW
+0.06			VLISW_N_dim [n/cc]
+6519.0			VLISW_T_dim
+26.3			VLISW_Ux_dim
+0.0			VLISW_Uy_dim
+-2.3			VLISW_Uz_dim
+0.3093			VLISW_Bx_dim
+-0.080			VLISW_By_dim
+-0.2988			VLISW_Bz_dim
+
+#REGIONS
+SingleIon		NameRegionFormula
+6.E5			TempPop1LimitDim
+100.0			uPop1LimitDim
+0.9			MachPop2Limit
+1.5			MachPop3Limit
+50.0			rPop3Limit
+0.5			MachPop4Limit
+
+#SOURCES
+T			UseIonSource
+T			UseNeuSource
+T			UseNe2Source
+T			UseNe3Source
+T			UseNe4Source
+
+#USERINPUTEND -------------------------------------
+
+#END_COMP OH -----------------------------------------------------------------
+
+#STOP
+20			MaxIter
+-1.0			TimeMax
+
+#RUN ##########################################################################
+
+
+
+LOOKUPTABLE
+OH			StringCompTable
+solarwind2d		NameTable
+load			NameCommand
+OH/Param/solarwind2D.dat		NameFile
+ascii			TypeFile
+
+#TIMEACCURATE
+T  			IsTimeAccurate
+
+#SAVERESTART
+T			DoSaveRestart
+-1			DnSaveRestart
+1 y			DtSaveRestart
+
+
+#BEGIN_COMP OH ---------------------------------------------------------------
+
+#SCHEME
+1			nOrder
+Linde			TypeFlux
+
+! 0.8 works fine for higher resolution
+#TIMESTEPPING
+1			nStage
+0.4			CflExpl
+
+
+#SAVEPLOT
+1			nPlotFile
+y=0 MHD idl_ascii		StringPlot
+-1			DnSavePlot
+1 year			DtSavePlot
+-1.0			DxSavePlot
+
+#END_COMP OH -----------------------------------------------------------------
+
+#STOP
+-1			MaxIter
+0.1 year		TimeMax
+
+#RUN ##########################################################################
+
+
+
+#COMPONENT
+PT			NameComp
+T			UseComp
+
+
+#COUPLE1
+OH			NameSource
+PT			NameTarget
+-1			DnCouple
+0.2 year		DtCouple
+
+#BEGIN_COMP PT ---------------------------------------------------------------
+
+#RECEIVEICONLY
+T			receiveICOnly
+
+PLASMA
+5			nS
+1			mass
+1			charge
+1			mass
+0			charge
+1			mass
+0			charge
+1			mass
+0			charge
+1			mass
+0			charge
+
+#NORMALIZATION
+1.495978707E11		lNorm [m]
+3.0e8			uNorm [m/s]
+
+#GEOMETRY
+-80			xMin
+80			xMax
+-80			yMin
+80			yMax
+-80			zMin
+80			zMax
+
+#NCELL
+8			nCellX
+8			nCellY
+8			nCellZ
+
+#MAXBLOCKSIZE
+4			nCellX
+4			nCellY
+4			nCellZ
+
+#PERIODICITY
+T			isPeriodicX
+T			isPeriodicY
+T			isPeriodicZ
+
+#END_COMP PT -----------------------------------------------------------------
+
+#STOP
+-1			MaxIter
+0.1001 year		TimeMax
+
+#END
