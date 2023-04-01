@@ -558,6 +558,10 @@ test_swpc_check:
 		${TESTDIR}/GM/IO2/mag_grid_e20140410-000300.out \
 		Param/SWPC/TestOutput/mag_grid_e20140410-000300.out.gz \
 		>> test_swpc_rcm_gm.diff)
+	-@(${DIFFNUM} -b -r=2e-4 -a=2e-4 \
+		${TESTDIR}/GM/IO2/superindex_e20140410-000200.log \
+		Param/SWPC/TestOutput/superindex_e20140410-000200.log \
+		>> test_swpc_rcm_gm.diff)
 	-@(${DIFFNUM} -b -r=1e-5 -a=1e-8 \
 		${TESTDIR}/GM/IO2/geoindex_e20140410-000200.log \
 		Param/SWPC/TestOutput/geoindex_e20140410-000200.log \
@@ -2419,7 +2423,7 @@ test21:
 
 
 test21_check:
-	-@(${DIFFNUM} -b -r=1e-7 \
+	-@(${DIFFNUM} -b -a=1e-15 -r=1e-7 \
                 ${TESTDIR}/RESULTS/neu_couple/OH/y*444.out \
                 output/test21/y=0_neu_OH.ref.gz \
 		> test21.diff)
@@ -2465,7 +2469,7 @@ test21_4neu_run:
 	cd ${TESTDIR}; ./PostProc.pl RESULTS/neu_couple
 	
 test21_4neu_check:
-	-@(${DIFFNUM} -b -r=1e-7 \
+	-@(${DIFFNUM} -b -a=1e-15 -r=1e-7 \
                 ${TESTDIR}/RESULTS/neu_couple/OH/y*444.out \
                 output/test21/y=0_neu_OH.ref.gz \
 		> test21_4neu.diff)
