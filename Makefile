@@ -627,7 +627,7 @@ td_rundir:
 	rm -rf ${RUNDIR}
 	$(MAKE) rundir
 	cd ${RUNDIR}/SC; \
-	perl -i -pe 's/dipole11uniform/fitsfile/; s/harmonics11uniform/harmonics/' \
+	perl -i -pe 's/dipole11uniform/fitsfile_01/; s/harmonics11uniform/harmonics/' \
 	     HARMONICS.in; \
 	perl -i -pe 's/\d+(\s+MaxOrder)/180$$1/' \
 	     HARMONICS.in; \
