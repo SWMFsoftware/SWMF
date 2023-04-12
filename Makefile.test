@@ -368,21 +368,21 @@ test1_run:
 	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
 
 test1_check:
-	-@(${DIFFNUM} -b -r=1e-5 \
+	-@(${DIFFNUM} -b -r=1e-7 \
 		${TESTDIR}/RESULTS/PW/north_plots_iline0001.out \
-		PW/PWOM/data/output/Earth/PW_north_plots_iline0001.out \
+		output/test1/PW_north_plots_iline0001.out.gz \
 		> test01_pw.diff)
-	-@(${DIFFNUM} -b -a=1e-20 -r=1e-7 \
+	-@(${DIFFNUM} -b -r=1e-7 \
 		${TESTDIR}/RESULTS/PW/north_plots_iline0002.out \
-		PW/PWOM/data/output/Earth/PW_north_plots_iline0002.out \
+		output/test1/PW_north_plots_iline0002.out.gz \
 		>> test01_pw.diff)
-	-@(${DIFFNUM} -b -r=2e-7 \
+	-@(${DIFFNUM} -b -r=1e-7 \
 		${TESTDIR}/RESULTS/PW/north_plots_iline0003.out \
-		PW/PWOM/data/output/Earth/PW_north_plots_iline0003.out \
+		output/test1/PW_north_plots_iline0003.out.gz \
 		>> test01_pw.diff)
 	-@(${DIFFNUM} -b -r=1e-7 \
 		${TESTDIR}/RESULTS/PW/north_plots_iline0004.out \
-		PW/PWOM/data/output/Earth/PW_north_plots_iline0004.out \
+		output/test1/PW_north_plots_iline0004.out.gz \
 		>> test01_pw.diff)
 	-@(${DIFFNUM} -b -r=1e-3 -a=1e-8 \
 		${TESTDIR}/RESULTS/GM/log_n000001.log \
