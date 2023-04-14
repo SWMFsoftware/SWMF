@@ -15,9 +15,6 @@
 
 SHELL=/bin/sh
 
-#BOC
-VERSION = 2.3
-
 # Allow setting CONFIG_PL="./Config.pl -verbose" if desired
 CONFIG_PL = ./Config.pl
 
@@ -25,6 +22,9 @@ CONFIG_PL = ./Config.pl
 # The default target is SWMF so it is listed first
 #
 default : SWMF
+
+# Nothing should be done parallel in this Makefile
+.NOTPARALLEL:
 
 #
 # Make all common used executables.
@@ -113,7 +113,7 @@ ENV_CHECK:
 
 install: ENV_CHECK mkdir
 	@echo VERSION ${VERSION}
-	cd CON;			make install
+	cd CON;	make install
 	@if([ -d ESMF ]); then cd ESMF/ESMF_SWMF;make install; fi #^CMP IF ESMF
 	@if([ -d "GM/BATSRUS" ]); then \
 		if([ -d "EE/BATSRUS" ]); \
@@ -251,24 +251,6 @@ PIONO:	ENV_CHECK
 	@echo ' '
 
 #^CMP END IE
-#
-#	Graphical User Interface (GUI)
-#
-GUI:	ENV_CHECK
-	cd gui; make install
-	@echo ' '
-
-GUI_doc: 
-	cd gui; make doc
-	@echo ' '
-
-GUI_start: 
-	gui/start.sh
-	@echo 'GUI started.'
-
-GUI_stop:
-	gui/stop.sh
-	@echo 'GUI stopped.'
 
 #					^CMP IF DOC BEGIN
 #	Create the documentation files      ^CMP IF NOT REMOVEDOCTEX BEGIN
@@ -321,7 +303,8 @@ allclean: ENV_CHECK rmdir
 	for i in `ls -d [A-Z][A-Z]/Empty/`; \
 		do (echo Distcleaning $$i; cd $$i; make distclean); done
 	for i in `ls -d [A-Z][A-Z]/*/ | grep -v Empty`; \
-		do (echo Uninstalling $$i; cd $$i; ${CONFIG_PL} -uninstall); done
+		do (echo Uninstalling $$i; cd $$i; ${CONFIG_PL} -uninstall); \
+		done
 	@if([ -d ESMF ]); then cd ESMF/ESMF_SWMF;make distclean;fi #^CMP IF ESMF
 	cd CON;			make distclean
 	@#^CMP IF DOC BEGIN
@@ -647,7 +630,7 @@ td_setup:
 	cd ${RUNDIR}/SC; \
 	${MPIRUN} ./CONVERTHARMONICS.exe > convert.log
 	@echo "-----------------------------------"
-	@echo "To start TDSETUP make the following:"
+	@echo "To start TDSETUP do the following:"
 	@echo "cd ${RUNDIR}/SC"
 	@echo "python3 TDSETUP.py field_2d.out"
 	@echo "-----------------------------------"
