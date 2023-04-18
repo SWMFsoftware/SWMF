@@ -596,7 +596,7 @@ contains
     logical      :: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'set_couple_var_info'
     !--------------------------------------------------------------------------
-    call CON_set_do_test(NameSub,DoTest,DoTestMe)
+    call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
     iCompSourceCouple = iCompSource
     iCompTargetCouple = iCompTarget
@@ -763,9 +763,10 @@ contains
              call CON_stop(NameSub//': change nMaterial (use Config.pl).')
           end if
 
-       case('h1','he1','li1','be1','b1','c1','n1','o1','f01','ne01','na01',&
-            'mg01','al01','si01','p01','s01','cl01','ar01','k01','ca01','sc01',&
-            'ti01','v01','cr01','mn01','fe01','co01','ni01','cu01','zn01')
+       case('h1','he1','li1','be1','b1','c1','n1','o1','f01','ne01','na01', &
+            'mg01','al01','si01','p01','s01','cl01','ar01','k01','ca01', &
+            'sc01','ti01','v01','cr01','mn01','fe01','co01','ni01','cu01', &
+            'zn01')
           ! Verify if source charge state variables are all found in the target
           if(.not.any(NameVarSource_V(iVarSource) == &
                NameVarTarget_V(1:nVarTarget)))&
@@ -814,7 +815,7 @@ contains
     if (nMaterialSource >= 1) &
          IsFoundVarSource_V(MaterialFirstCouple_:MaterialLastCouple_) = .true.
     if (nChargeStateSource >= 1) &
-         IsFoundVarSource_V(ChargeStateFirstCouple_:ChargeStateLastCouple_) =&
+         IsFoundVarSource_V(ChargeStateFirstCouple_:ChargeStateLastCouple_) = &
          .true.
 
     ! Check multi fluid/specie variables.
@@ -830,8 +831,7 @@ contains
 
           ! Look up source variable name in the target
           do iVarTarget = 1, nVarTarget
-             if (NameVarSource_V(iVarSource) &
-                  == NameVarTarget_V(iVarTarget)) then
+             if(NameVarSource_V(iVarSource) == NameVarTarget_V(iVarTarget))then
                 IsFoundVarSource_V(iVarSource) = .true.
                 CYCLE SOURCELOOP
              end if
@@ -856,23 +856,22 @@ contains
     end if
     if(nDensitySource /= nDensityTarget .or. &
          nSpeedSource /= nSpeedTarget) then
-       if( (nDensitySource == 1 .and. nSpeedSource == 1) .or. &
+       if(  (nDensitySource == 1 .and. nSpeedSource == 1) .or. &
             (nDensityTarget == 1 .and. nSpeedTarget == 1) ) then
-          ! Coupling multi<-> single fluid is allowed.
+          ! Coupling multi-fluid with single fluid is allowed.
           ! In this case the additional fluid variables are not coupled, and
           ! their boundary conditions should be implemented separately.
-          DoCoupleVar_V(MultiFluid_) = .false.
-          DoCoupleVar_V(MultiSpecie_)   = .false.
+          DoCoupleVar_V(MultiFluid_)  = .false.
+          DoCoupleVar_V(MultiSpecie_) = .false.
        elseif(iCompSource /= IM_ .and. iCompTarget /= IM_) then
-          ! Both components have differing # of multiple densities or speeds
+          ! Components have different number of multiple densities or speeds
           write(*,*) 'SWMF error found in ', NameSub
-          write(*,*) &
-               'Coupled SWMF components use different # of fluids/species!'
+          write(*,*) 'Coupled components use different no. of fluids/species!'
           call CON_stop(NameSub//': check ModEquation and recompile!')
        end if
     end if
 
-    ! calculate  indices and # of variables transfered to buffer grid
+    ! calculate indices and number of variables transfered to buffer grid
     nDensityCouple = min(nDensitySource, nDensityTarget)
     nSpeedCouple   = min(nSpeedSource,   nSpeedTarget)
     nPCouple       = min(nPSource,       nPTarget)
@@ -891,9 +890,9 @@ contains
     end if
 
     if(DoCoupleVar_V(Momentum_))then
+       iVar_V(RhoUxCouple_) = nVarCouple + 1
+       iVar_V(RhoUzCouple_) = nVarCouple + 3
        nVarCouple = nVarCouple + 3
-       iVar_V(RhoUxCouple_) = nVarCouple - 2
-       iVar_V(RhoUzCouple_) = nVarCouple
     end if
 
     if(DoCoupleVar_V(Pressure_))then
@@ -947,17 +946,17 @@ contains
        iVar_V(ChGLCouple_) = nVarCouple
     end if
 
-    if (nVarCouple >  nVarSource) then
+    if (nVarCouple > nVarSource) then
        write(*,*) 'SWMF Error: # of coupled variables exceeds nVarSource'
        call CON_stop(NameSub//' error in calculating nVarCouple')
     end if
 
     ! Store coupling info to avoid recalculation at next coupling time
-    DoCoupleVar_VCC(:,iCompSource, iCompTarget) = DoCoupleVar_V
-    DoCoupleVar_VCC(:,iCompTarget, iCompSource) = DoCoupleVar_V
+    DoCoupleVar_VCC(:,iCompSource,iCompTarget) = DoCoupleVar_V
+    DoCoupleVar_VCC(:,iCompTarget,iCompSource) = DoCoupleVar_V
 
-    iVar_VCC(:,iCompSource, iCompTarget) = iVar_V
-    iVar_VCC(:,iCompTarget, iCompSource) = iVar_V
+    iVar_VCC(:,iCompSource,iCompTarget) = iVar_V
+    iVar_VCC(:,iCompTarget,iCompSource) = iVar_V
 
     nVarCouple_CC(iCompSource,iCompTarget) = nVarCouple
     nVarCouple_CC(iCompTarget,iCompSource) = nVarCouple
@@ -996,19 +995,19 @@ contains
     iVarSource_VCC(:,lCompSource,lCompTarget) = iVarSource_V
     iVarTarget_VCC(:,lCompSource,lCompTarget) = iVarTarget_V
 
-    if(i_proc() == 0) then
+    if(is_proc0(iCompSource))then
        write(*,*) '---------------------------------------------'
        write(*,*) NameSub,':'
        write(*,*) 'Coupling ', NameComp_I(iCompSource), &
-            ' to ', NameComp_I(iCompTarget)
+            ' to ',            NameComp_I(iCompTarget)
        write(*,*) 'nDensity(Source/Target/Couple):'
-       write(*,*) nDensitySource, nDensityTarget,nDensityCouple
+       write(*,*) nDensitySource, nDensityTarget, nDensityCouple
        write(*,*) 'nSpeed(Source/Target/Couple):'
-       write(*,*) nSpeedSource, nSpeedTarget,nSpeedCouple
+       write(*,*) nSpeedSource, nSpeedTarget, nSpeedCouple
        write(*,*) 'nP(Source/Target/Couple):'
-       write(*,*) nPSource, nPTarget,nPCouple
+       write(*,*) nPSource, nPTarget, nPCouple
        write(*,*) 'nPpar(Source/Target/Couple):'
-       write(*,*) nPparSource, nPparTarget,nPparCouple
+       write(*,*) nPparSource, nPparTarget, nPparCouple
        write(*,*) '---------------------------------------------'
        write(*,*) 'Coupling flags:'
        write(*,*) 'Magnetic field: ', DoCoupleVar_V(Bfield_)
@@ -1023,22 +1022,27 @@ contains
        write(*,*) '---------------------------------------------'
     end if
     if(DoTestMe) then
+       write(*,*) 'nVarCouple:   ', nVarCouple
+       write(*,*) 'nVarBuffer:   ', nVarBuffer
+       write(*,*) 'NameVarBuffer:', trim(NameVarBuffer)
+       write(*,*) 'iVarSource_V: ', iVarSource_V(1:nVarBuffer)
+       write(*,*) 'iVarTarget_V: ', iVarTarget_V(1:nVarBuffer)
+      
        write(*,*) 'Coupled variable indices in buffer grid:'
-       write(*,*) 'Rho: ',      iVar_V(RhoCouple_)
-       write(*,*) 'RhoUx: ',    iVar_V(RhoUxCouple_)
-       write(*,*) 'RhoUz: ',    iVar_V(RhoUzCouple_)
-       write(*,*) 'Bx: ',       iVar_V(BxCouple_)
-       write(*,*) 'Bz: ',       iVar_V(BzCouple_)
-       write(*,*) 'P: ',        iVar_V(PCouple_)
-       write(*,*) 'Pe: ',       iVar_V(PeCouple_)
-       write(*,*) 'Ppar: ',     iVar_V(PparCouple_)
-       write(*,*) 'Ehot: ',     iVar_V(EhotCouple_)
-       write(*,*) 'WaveFirst: ',iVar_V(WaveFirstCouple_)
-       write(*,*) 'WaveLast: ', iVar_V(WaveLastCouple_)
-       write(*,*) 'ChargeStateFirst: ',iVar_V(ChargeStateFirstCouple_)
-       write(*,*) 'ChargeStateLast: ',iVar_V(ChargeStateLastCouple_)
-       write(*,*) 'SignB:           ', iVar_V(ChGLCouple_)
-       write(*,*) 'nVarCouple: ',nVarCouple
+       write(*,*) 'Rho: ',              iVar_V(RhoCouple_)
+       write(*,*) 'RhoUx: ',            iVar_V(RhoUxCouple_)
+       write(*,*) 'RhoUz: ',            iVar_V(RhoUzCouple_)
+       write(*,*) 'Bx: ',               iVar_V(BxCouple_)
+       write(*,*) 'Bz: ',               iVar_V(BzCouple_)
+       write(*,*) 'P: ',                iVar_V(PCouple_)
+       write(*,*) 'Pe: ',               iVar_V(PeCouple_)
+       write(*,*) 'Ppar: ',             iVar_V(PparCouple_)
+       write(*,*) 'Ehot: ',             iVar_V(EhotCouple_)
+       write(*,*) 'WaveFirst: ',        iVar_V(WaveFirstCouple_)
+       write(*,*) 'WaveLast: ',         iVar_V(WaveLastCouple_)
+       write(*,*) 'ChargeStateFirst: ', iVar_V(ChargeStateFirstCouple_)
+       write(*,*) 'ChargeStateLast: ',  iVar_V(ChargeStateLastCouple_)
+       write(*,*) 'SignB:           ',  iVar_V(ChGLCouple_)
        write(*,*) '---------------------------------------------'
 
     end if
