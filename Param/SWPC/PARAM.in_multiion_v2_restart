@@ -3,6 +3,9 @@ IM  0  0  1		CompMap runs on first PE
 IE  0  1  1		CompMap runs on up to 2 PE-s
 GM  0 -1  1		CompMap runs on all PE-s
 
+#TEST
+set_couple_var_info		StringTest
+
 #INCLUDE
 RESTART.in
 
@@ -135,8 +138,6 @@ GEO			TypeCoordMagGrid
 -1			DnSaveMagGrid
 1 min			DtSaveMagGrid
 
-#NONCONSERVATIVE
-T			UseNonConservative
 
 #CONSERVATIVECRITERIA
 1			nConservCrit

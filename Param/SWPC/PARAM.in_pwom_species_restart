@@ -14,6 +14,9 @@ IM -2 -2  1		CompMap nProc-2 PE
 #INCLUDE
 RESTART.in
 
+#TEST
+set_couple_var_info		StringTest
+
 #DESCRIPTION
 Param/SWPC/PARAM.in_pwom_species_restart: restart multispecies Geospace with PWOM		StringDescription
 
@@ -146,9 +149,6 @@ GEO			TypeCoordMagGrid
 -1			DnSaveMagGrid
 1 min			DtSaveMagGrid
 
-#NONCONSERVATIVE
-T			UseNonConservative
-
 #CONSERVATIVECRITERIA
 1			nConservCrit
 parabola		TypeConservCrit
@@ -229,7 +229,7 @@ GEO			TypeCoordPlot
 0.			LatMin
 0.			LatMax
 lcb nul tec		StringPlot  !last closed field line plots
--1  			DnSavePlot  !Tecplot (ONLY!)
+-1			DnSavePlot  !Tecplot (ONLY!)
 5 min			DtSavePlot
 5.			Radius
 36			nLon
@@ -257,7 +257,7 @@ T			DoRestart
 
 ! Decay for RCM particle densities
 #DECAY
-T 			UseDecay
+T			UseDecay
 10 hour			DecayTimescale
 
 #END_COMP IM -----------------------------------------------------------------

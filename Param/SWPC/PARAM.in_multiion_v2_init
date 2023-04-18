@@ -148,8 +148,6 @@ T			DoReadAgain
 1			nOrder
 Rusanov			TypeFlux
 
-#NONCONSERVATIVE
-T			UseNonConservative
 
 #CONSERVATIVECRITERIA
 1			nConservCrit

@@ -14,6 +14,9 @@ IM -2 -2  1		CompMap nProc-2 PE
 #DESCRIPTION
 Param/SWPC/PARAM.in_pwom_species_init: start multispecies Geospace with PWOM		StringDescription
 
+#TEST
+set_couple_var_info		StringTest
+
 #TIMEACCURATE
 F			IsTimeAccurate
 
@@ -26,6 +29,7 @@ F			IsTimeAccurate
 00			iSecond
 0.0			FracSecond
 
+! Allow empty processor for IM and PW
 #STRICT
 F			UseStrict
 
@@ -101,7 +105,6 @@ box			StringShape
  22.0			yMaxBox
  10.0			zMaxBox
 
-
 #GRIDRESOLUTION
 1/8			Resolution
 shell0			StringShape
@@ -140,9 +143,6 @@ T			DoReadAgain
 #SCHEME
 1			nOrder
 Rusanov			TypeFlux
-
-#NONCONSERVATIVE
-T			UseNonConservative
 
 #CONSERVATIVECRITERIA
 1			nConservCrit
@@ -298,9 +298,6 @@ T			DoCheckStop
 CPUTIMEMAX
 47.5 hour		CpuTimeMax [sec]
 
-#STRICT
-T			UseStrict
-
 #COMPONENT
 IM			NameComp
 T			UseComp
@@ -308,6 +305,9 @@ T			UseComp
 #COMPONENT
 PW			NameComp
 T			UseComp
+
+#STRICT
+T			UseStrict
 
 ! Allow GM/IM and IE run in parallel. #COMPONENTMAP has to be properly set!
 #COUPLEORDER
@@ -432,7 +432,7 @@ T			UseBorisCorrection
 
 ! Decay for RCM particle densities
 #DECAY
-T 			UseDecay
+T			UseDecay
 10 hour			DecayTimescale
 
 #END_COMP IM -----------------------------------------------------------------
