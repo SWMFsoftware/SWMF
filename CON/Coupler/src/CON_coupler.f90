@@ -1027,7 +1027,7 @@ contains
        write(*,*) 'NameVarBuffer:', trim(NameVarBuffer)
        write(*,*) 'iVarSource_V: ', iVarSource_V(1:nVarBuffer)
        write(*,*) 'iVarTarget_V: ', iVarTarget_V(1:nVarBuffer)
-      
+
        write(*,*) 'Coupled variable indices in buffer grid:'
        write(*,*) 'Rho: ',              iVar_V(RhoCouple_)
        write(*,*) 'RhoUx: ',            iVar_V(RhoUxCouple_)
