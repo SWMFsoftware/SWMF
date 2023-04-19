@@ -151,8 +151,6 @@ GEO			TypeCoordMagGrid
 -1			DnSaveMagGrid
 1 min			DtSaveMagGrid
 
-#NONCONSERVATIVE
-T			UseNonConservative
 
 #CONSERVATIVECRITERIA
 1			nConservCrit

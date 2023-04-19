@@ -143,8 +143,6 @@ T			DoReadAgain
 1			nOrder
 Linde			TypeFlux
 
-#NONCONSERVATIVE
-T			UseNonConservative
 
 #CONSERVATIVECRITERIA
 1			nConservCrit

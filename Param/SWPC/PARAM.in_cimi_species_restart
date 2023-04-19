@@ -1,19 +1,23 @@
-#COMPONENTMAP
-IM  0  0  1		CompMap runs on first PE
-IE  0  1  1		CompMap runs on up to 2 PE-s
-GM  0 -1  1		CompMap runs on all PE-s
+Name Root Last Stride nThread
+COMPONENTMAP		For few cores like nightly test
+GM  0 -1 -1 -1		CompMap runs on all PE-s
+IM  0 24  1		CompMap runs on up to 24 PE-s
+IE -2 -1  1		CompMap runs on last 2 PEs
 
-#TEST
-set_couple_var_info		StringTest
+Name Root Last Stride nThread
+#COMPONENTMAP		For 128+ cores like production run
+GM  0 -26 -1 -1		CompMap runs on 0 to nProc-26 PE-s
+IM -25 -2  1		CompMap runs on nProc-25 to nProc-2
+IE  -1 -1  1		CompMap runs on the last PE
 
 #INCLUDE
 RESTART.in
 
-#DESCRIPTION
-Param/SWPC/PARAM.in_multiion_v2_restart: Example file to restart a run for the SWPC v2 code selection		StringDescription
+#TEST
+set_couple_var_info		StringTest
 
-#TIMEACCURATE
-T			IsTimeAccurate
+#DESCRIPTION
+Param/SWPC/PARAM.in_cimi_v2_restart: restart multispecies GM with IM/CIMI		StringDescription
 
 #PROGRESS
 100			DnProgressShort
@@ -22,7 +26,7 @@ T			IsTimeAccurate
 #SAVERESTART
 T			DoSaveRestart
 -1			DnSaveRestart
-10 min			DtSaveRestart
+1 min			DtSaveRestart
 
 #RESTARTOUTDIR
 SWMF_RESTART.YYYYMMDD_HHMMSS		NameRestartOutDir
@@ -36,7 +40,7 @@ T			DoCheckStop
 1 min			DtCheckStop
 
 CPUTIMEMAX
-47.5 hour		CpuTimeMax
+47.5 hour		CpuTimeMax [sec]
 
 #COUPLEORDER
 5			nCouple
@@ -68,6 +72,9 @@ IM			NameTarget
 GM			NameComp
 F			DoCoupleOnTime
 
+#UPDATEB0
+0.5			DtUpdateB0
+
 #BEGIN_COMP GM ---------------------------------------------------------------
 
 #INCLUDE
@@ -80,12 +87,6 @@ GM/restartIN/restart.H
 #MULTIFLUIDIM
 T			DoMultiFluidIMCoupling
 
-#COLLISION
--1.0			CollisionCoefDim
-1.0e3			TauCutOffDim [s]
-100.0			uCutOffDim [km/s] read if TauCutOffDim positive
-2			nPowerCutOff read if TauCutOffDim positive
-
 #OUTERBOUNDARY
 outflow			TypeBc1
 vary			TypeBc2
@@ -97,6 +98,7 @@ float			TypeBc6
 #INNERBOUNDARY
 ionosphere		TypeBcBody
 
+! Set the inner boundary density as Rho0Cpcp + RhoPerCpcp*CPCP[keV]
 ! Set the inner boundary density as Rho0Cpcp + RhoPerCpcp*CPCP[keV]
 #CPCPBOUNDARY
 T			UseCpcpBc  (rest is read if true)
@@ -124,7 +126,7 @@ single			TypeFileOut
 
 #GEOMAGINDICES
 180			nSizeKpWindow [min]
-1 min			DtOutput
+1 min			DtOutput      [sec]
 
 #MAGNETOMETERGRID
 ascii			TypeFileMagGrid
@@ -138,7 +140,6 @@ GEO			TypeCoordMagGrid
 -1			DnSaveMagGrid
 1 min			DtSaveMagGrid
 
-
 #CONSERVATIVECRITERIA
 1			nConservCrit
 parabola		TypeConservCrit
@@ -148,7 +149,7 @@ parabola		TypeConservCrit
 ! Setting 1
 #IMCOUPLING
 20.0			TauCoupleIm
-T			DoImSatTrace
+F			DoImSatTrace
 T			DoCoupleImPressure
 T			DoCoupleImDensity
 0.01			DensityCoupleFloor
@@ -175,8 +176,7 @@ End of setting 2
 
 ! Pressures below pMinDim are replaced with pMinDim.
 #MINIMUMPRESSURE
-1e-5			pMinDim [nPa] H+
-1e-5			pMinDim [nPa] O+
+1e-5			pMinDim [nPa]
 
 #SAVELOGNAME
 F			UseLogNameStep
@@ -209,7 +209,7 @@ z=0 MHD idl		StringPlot
 5 min			DtSavePlot
 -1.0			DxSavePlot
 shl MHD idl_ascii		StringPlot
--1  			DnSavePlot
+-1			DnSavePlot
 1 min			DtSavePlot
 GEO			TypeCoordPlot
 6.6			rMin
@@ -227,29 +227,44 @@ lcb nul tec		StringPlot  !last closed field line plots
 
 #SCHEME
 2			nOrder
-Rusanov			TypeFlux
+Sokolov			TypeFlux
 mc3			TypeLimiter
 1.2			LimiterBeta
 
 #BORIS
 T			UseBorisCorrection
-0.01			BorisClightFactor
+0.02			BorisClightFactor
 
 #TIMESTEPPING
 1			nStage
-0.3			CflExpl
+0.85			CflExpl
 
 #END_COMP GM -----------------------------------------------------------------
 
 #BEGIN_COMP IM ---------------------------------------------------------------
 
-#RESTART
-T			DoRestart
+#INCLUDE
+IM/restartIN/restart.H
 
-! Decay for RCM particle densities
+SAVEPLOT
+1			nCimiPlotType
+2d both			StringPlot
+1 min			DtOutput
+T			UseSeparatePlotFiles
+
+#TYPEBOUNDARY
+ellipse			TypeBoundary
+
+#SETBOUNDARYPARAMS
+2.0			DeltaRmax
+2.0			DeltaMLTmax
+
 #DECAY
-T 			UseDecay
+T			UseDecay
 10 hour			DecayTimescale
+
+#SAVELOG
+5.0			DtLogOut
 
 #END_COMP IM -----------------------------------------------------------------
 

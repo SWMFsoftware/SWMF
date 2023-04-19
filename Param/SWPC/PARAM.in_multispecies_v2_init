@@ -137,10 +137,7 @@ T			DoReadAgain
 1			nOrder
 Sokolov			TypeFlux
 
-#NONCONSERVATIVE
-T			UseNonConservative
-
-#CONSERVATIVECRITERIA
+xo#CONSERVATIVECRITERIA
 1			nConservCrit
 parabola		TypeConservCrit
  5.0			xParabolaConserv

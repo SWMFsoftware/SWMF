@@ -14,6 +14,9 @@ IM -2 -2  1		CompMap nProc-2 PE
 #INCLUDE
 RESTART.in
 
+#TEST
+set_couple_var_info		StringTest
+
 #DESCRIPTION
 Param/SWPC/PARAM.in_pwom_restart: Example file to restart Geospace with PWOM		StringDescription
 
@@ -144,8 +147,6 @@ GEO			TypeCoordMagGrid
 -1			DnSaveMagGrid
 1 min			DtSaveMagGrid
 
-#NONCONSERVATIVE
-T			UseNonConservative
 
 #CONSERVATIVECRITERIA
 1			nConservCrit

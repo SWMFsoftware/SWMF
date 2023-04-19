@@ -106,8 +106,6 @@ T			DoReadAgain
 1			nOrder
 Sokolov			TypeFlux
 
-#NONCONSERVATIVE
-T			UseNonConservative
 
 #CONSERVATIVECRITERIA
 1			nConservCrit

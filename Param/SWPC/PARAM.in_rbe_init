@@ -315,8 +315,6 @@ F			DoCoupleOnTime
 
 #BEGIN_COMP GM ---------------------------------------------------------------
 
-#NONCONSERVATIVE
-T			UseNonConservative
 
 #CONSERVATIVECRITERIA
 1			nConservCrit
