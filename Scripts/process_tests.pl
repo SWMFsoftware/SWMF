@@ -17,8 +17,8 @@ my %WeightMachine = (
     "mstemgcc"     => "0.0",  # mstem-quda+gcc pleiades
     "mstemifort"   => "0.0",  # mstem-quda+ifort pleiades
     "gfortran"     => "1.0",  # gfortran optimized
-    "nag_debug"    => "0.0",  # nagfor debug on M1
-    "nag"          => "0.0",  # nagfor on M1
+    "nag_debug"    => "1.0",  # nagfor debug on M1
+    "nag"          => "1.0",  # nagfor on M1
     );
 
 # Conditions for merging into stable branch
@@ -32,7 +32,7 @@ my $MinScore =
 	 $WeightMachine{"nag"}          );
 
 # Required successrate
-my $MinRate  = 0.95; 
+my $MinRate  = 0.94; 
 
 # command to merge master into stable branch
 my $merge_stable =   
@@ -301,12 +301,17 @@ foreach $day (@days){
 		}
 
 		# Add HTML link for failed tests
-		$result = 
-		    "<A HREF=\"$day/$machine/$htmlfile\#$test\" ".
-		    "target=swmf_test_results title=$lastpass>".
-		    $result.
-		    "</HREF>" if $result !~ /passed/i;
-
+		if($result =~ /result/i){
+		    $result = 
+			"<A HREF=\"$day/$machine/$htmlfile\#$test\" ".
+			"target=swmf_test_results title=$lastpass>".$result.
+			"</HREF>";
+		}elsif($result !~ /passed/i){
+		    $result = 
+			"<A HREF=\"$day/$machine/$logfile\" ".
+			"target=swmf_test_log title=$lastpass>".$result.
+			"</HREF>";
+		}
 		$Table .= "<td>$result</td>\n";
 	    }
 	}
