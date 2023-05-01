@@ -285,11 +285,6 @@ PLASMA
 4			nCellY
 4			nCellZ
 
-#PERIODICITY
-T			isPeriodicX
-T			isPeriodicY
-T			isPeriodicZ
-
 #END_COMP PT -----------------------------------------------------------------
 
 #STOP

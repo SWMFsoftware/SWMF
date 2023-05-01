@@ -365,6 +365,7 @@ F			UseHallResist
 
 #PICBALANCE
 F			DoBalancePicBlock
+F			DoBalanceActivePicBlock
 
 #PICGRID
 1			nPicGrid
