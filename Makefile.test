@@ -1660,7 +1660,7 @@ test10_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cd ${TESTDIR}/SC; perl -i -pe \
-	's/dipole11uniform/fitsfile/; s/harmonics11uniform/endmagnetogram/; s/\d+(\s+MaxOrder)/30$$1/' \
+	's/dipole11uniform/fitsfile_01/; s/harmonics11uniform/endmagnetogram/; s/\d+(\s+MaxOrder)/30$$1/' \
 	HARMONICS.in;  perl -i -pe \
 	's/harmonics/endmagnetogram/; s/\d+(\s+MaxOrder)/30$$1/; s/\d+(\s+nR)/30$$1/; s/\d+(\s+nLon)/90$$1/; s/\d+(\s+nLat)/90$$1/' \
 	HARMONICSGRID.in
@@ -1691,7 +1691,7 @@ test10_restart:
 	mv  harmonics_new_bxyz.out harmonics_bxyz.out
 	cd ${TESTDIR}/SC; \
 	rm -f STARTMAGNETOGRAMTIME.in startmagnetogram.dat PARAM.tmp; \
-	rm -f *.fits.gz *.fits harmonics.log fitsfile.out; \
+	rm -f *.fits.gz *.fits harmonics.log fitsfile_01.out; \
 	rm -f endmagnetogram*; \
 	cp ENDMAGNETOGRAMTIME.in STARTMAGNETOGRAMTIME.in
 	@echo "Download new magnetogram"
@@ -1701,7 +1701,7 @@ test10_restart:
 	python3 remap_magnetogram.py \
 	endmagnetogram fitsfile; \
 	perl -i -pe \
-	's/0.2270982/0.2164177/' fitsfile.out; \
+	's/0.2270982/0.2164177/' fitsfile_01.out; \
 	./HARMONICS.exe |tee harmonics.log; \
 	mv MAGNETOGRAMTIME.in ENDMAGNETOGRAMTIME.in; \
 	cp ${DIR}/Param/PARAM.in.realtime.restart.SCIH_threadbc \
