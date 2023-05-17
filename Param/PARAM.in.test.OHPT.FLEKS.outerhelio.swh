@@ -230,17 +230,17 @@ T			isPeriodicZ
 
 #SAVEPLOT
 3			nPlotFile
-y=0 var ascii planet		StringPlot
+y=0 var ascii planet year		StringPlot
 -1			DnSavePlot
 1 y			DtSavePlot
 0			DxSavePlot
 {fluid} numS0		NameVars
-z=0 var ascii planet		StringPlot
+z=0 var ascii planet year		StringPlot
 -1			DnSavePlot
 1 y			DtSavePlot
 0			DxSavePlot
 {fluid} numS0		NameVars
-3d particles0 amrex planet		StringPlot
+3d particles0 amrex planet year		StringPlot
 -1			DnSavePlot
 1 y			DtSavePlot
 0			DxSavePlot
