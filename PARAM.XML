@@ -1669,6 +1669,27 @@ F               IsMagAxisPrimary
 but much shorter.
 </command>
 
+<command name="ORBIT" if="$_IsFirstSession">
+        <parameter name="rOrbitPlanet" type="real" min="0" />
+	<parameter name="Excentricity"   type="real" min="0" />
+	<parameter name="RightAscension"  type="real" min="0" />
+	<parameter name="Inclination" type="real" min="0" />
+	<parameter name="ArgPeriapsis" type="real" min="0" />
+	
+
+#ORBIT
+1.49e11         rOrbitPlanet [m]
+0.016           Excentricity
+174.9           RightAscension [deg]
+7.155           Inclination    [deg]
+288.9           ArgPeriapsis   [deg]
+
+</command>
+
+
+
+
+
 </commandgroup>
 
 <commandgroup name="STUB COMPONENTS">
