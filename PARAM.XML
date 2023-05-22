@@ -1670,6 +1670,7 @@ but much shorter.
 </command>
 
 <command name="ORBIT" if="$_IsFirstSession">
+        <parameter name="OrbitalPeriodPlanet" type="real" min="0" />
         <parameter name="rOrbitPlanet" type="real" min="0" />
 	<parameter name="Excentricity"   type="real" min="0" />
 	<parameter name="RightAscension"  type="real" min="0" />
@@ -1678,6 +1679,7 @@ but much shorter.
 	
 
 #ORBIT
+3.14e7          OrbitalPeriodPlanet [s]	
 1.49e11         rOrbitPlanet [m]
 0.016           Excentricity
 174.9           RightAscension [deg]
