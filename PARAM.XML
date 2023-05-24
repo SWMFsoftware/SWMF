@@ -1688,8 +1688,22 @@ but much shorter.
 
 </command>
 
+<command name="TIMEEQUINOX" if="$_IsFirstSession">
+  <parameter name="iYear" type="integer" minimum="1965" default="2000"/>
+  <parameter name="iMonth" type="integer" minimum="1" default="1"/>
+  <parameter name="iDay" type="integer" minimum="1" default="1"/>
+  <parameter name="iHour" type="integer" minimum="0" default="0"/>
+  <parameter name="iMinute" type="integer" minimum="0" default="0"/>
 
+#TIMEEQUINOX
+2000                    iYear
+1                       iMonth
+1                       iDay
+0                       iHour
+0                       iMinute
 
+Reset the time of eqinox for any planet
+</command>
 
 
 </commandgroup>
