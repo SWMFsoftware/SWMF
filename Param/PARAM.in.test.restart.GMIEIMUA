@@ -136,6 +136,13 @@ F			UseFakeRegion2
 0.25			StarLightPedConductance
 0.25			PolarCapPedConductance
 
+#AURORALOVAL
+T                       UseOval (rest of parameters read if true)
+T                       UseOvalShift
+F                       UseSubOvalConductance
+T                       UseAdvancedOval
+F                       DoFitCircle (read if UseAdvancedOval is true)
+
 #SAVEPLOT
 1			nPlotFile
 max idl			StringPlot
@@ -147,7 +154,7 @@ max idl			StringPlot
 #BEGIN_COMP UA ---------------------------------------------------------------
 
 #DEBUG
-1
+0
 0
 -1
 F
@@ -202,15 +209,6 @@ F               if you want to run with msis and iri only (i.e. not GITM)
 100.0           minimum altitude to use
 600.0           maximum altitude to use (ignored unless the following is F)
 T               use stretched grid
-
-#INITIAL
-T               initialize thermosphere using MSIS
-T               initialize ionosphere using IRI
-100.0           if msis is false, then this is the temperature at the base
-1000.0          if msis is false, then this is the temperature at the top
-5.0e17          if msis is false, then this is the N(species1) at the base
-7.0e18          if msis is false, then this is the N(species2) at the base
-3.0e19          if msis is false, then this is the N(species3) at the base
 
 #TIDES
 F               UseMSISFlat

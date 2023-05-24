@@ -231,6 +231,13 @@ F			UseFakeRegion2
 0.25			StarLightPedConductance
 0.25			PolarCapPedConductance
 
+#AURORALOVAL
+T                       UseOval (rest of parameters read if true)
+T                       UseOvalShift
+F                       UseSubOvalConductance
+T                       UseAdvancedOval
+F                       DoFitCircle (read if UseAdvancedOval is true)
+
 #SAVEPLOT
 1			nPlotFile
 max idl			StringPlot
