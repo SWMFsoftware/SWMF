@@ -1724,9 +1724,28 @@ in heliospheric mode). Setting zero for the rotation period will
 switch off the rotation as shown by the example.
 
 By default the Sun is the central star.
+
 </command>
 
+<command name="HGRALIGNMENTTIME" if="$_IsFirstSession">
+  <parameter name="iYear" type="integer" minimum="1965" default="1965"/>
+  <parameter name="iMonth" type="integer" minimum="1" default="1"/>
+  <parameter name="iDay" type="integer" minimum="1" default="1"/>
+  <parameter name="iHour" type="integer" minimum="0" default="0"/>
+  <parameter name="iMinute" type="integer" minimum="0" default="0"/>
 
+#HGRALIGNMENTTIME
+1965                    iYear
+1                       iMonth
+1                       iDay
+0                       iHour
+0                       iMinute
+
+Reset the time at which HGR and HGI are aligned. In application to stars
+it may be needed to match the magnetogram (in HGR coords) to the
+exoplanet orbital elements (in HGI coords) 
+
+</command>
 
 
 
