@@ -615,7 +615,7 @@ contains
        case("#UPDATEB0")
           call read_planet_var(NameCommand)
 
-       case('#STAR')
+       case('#STAR','#HGRALIGNMENTTIME')
           if(.not.is_first_read())then
              if(UseStrict)RETURN
              CYCLE
