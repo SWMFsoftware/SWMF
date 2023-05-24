@@ -602,7 +602,7 @@ contains
                   ' SWMF_WARNING: end time cannot be set internally'
           end if
 
-       case('#PLANET', '#MOON', '#COMET', '#TIMEEQUINOX',   &
+       case('#PLANET', '#MOON', '#COMET', '#TIMEEQUINOX',   '#ORBIT',         &
             '#IDEALAXES', '#ROTATIONAXIS', '#MAGNETICAXIS', '#MAGNETICCENTER',&
             '#ROTATION', '#NONDIPOLE', '#DIPOLE', '#MULTIPOLEB0')
           if(.not.is_first_read())then
