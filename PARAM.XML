@@ -1694,6 +1694,45 @@ but much shorter.
 
 </commandgroup>
 
+<commandgroup name="STAR COMMANDS">
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!! STAR COMMANDS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+Several components share information about the star for which the
+simulation is done. It is important that the various components
+use compatible information about the star. It is also useful
+for the couplers that they can globally access this information,
+such as radius and rotation period. The SWMF is designed to work for
+an arbitrary star.
+
+By default the SWMF works with the Sun and its real parameters.
+Another star can be selected with the #STAR command.
+
+<command name="STAR" if="$_IsFirstSession">
+  <parameter name="RadiusStar" type="real" minimum="0" default="1"/>
+  <parameter name="MassStar"   type="real" minimum="0" default="1"/>
+  <parameter name="RotPeriodStar" type="real"/>
+
+#STAR
+1.0                     RadiusStar (in solar radii)
+1.0                     MassStar   (in solar masses)
+0.0                     RotPeriodStar (in days)
+
+Modify the parameters of the central star (when BATSRUS is running
+in heliospheric mode). Setting zero for the rotation period will
+switch off the rotation as shown by the example.
+
+By default the Sun is the central star.
+</command>
+
+
+
+
+
+</commandgroup>
+
+
 <commandgroup name="STUB COMPONENTS">
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!! STUB COMPONENTS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
