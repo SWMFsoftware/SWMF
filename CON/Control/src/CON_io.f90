@@ -11,7 +11,7 @@ module CON_io
   use CON_comp_param
   use CON_wrapper, ONLY: set_param_comp, save_restart_comp
   use CON_planet, ONLY: NamePlanet, read_planet_var, check_planet_var
-  use CON_star,   ONLY: NameStar, read_star_var
+  use CON_star,   ONLY: read_star_var
   use CON_time
   use ModNumConst, ONLY: cDegToRad, cTiny, nByteReal
   use CON_axes, ONLY: dLongitudeHgr, dLongitudeHgrDeg, &
