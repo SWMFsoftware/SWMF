@@ -12,7 +12,7 @@ T			IsTimeAccurate
 #STAR
 1.0			RadiusStar
 1.0			MassStar
-25.38			RotationPeriodStar
+0.0			RotationPeriodStar
 
 #BEGIN_COMP EE ---------------------------------------------------------------
 
