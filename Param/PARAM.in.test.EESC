@@ -13,6 +13,11 @@ RESTART.in
 #DESCRIPTION
 Param/PARAM.in.test.EESC: restart EE+SC		StringDescription
 
+#STAR
+1.0			RadiusStar
+1.0			MassStar
+0.0			RotationPeriodStar
+
 #BEGIN_COMP EE ---------------------------------------------------------------
 
 #INCLUDE
@@ -28,11 +33,6 @@ EE/restartIN/restart.H
 
 #TIMESIMULATION
 0.0			tSimulation
-
-#STAR
-1.0			RadiusStar
-1.0			MassStar
-0.0			RotationPeriodStar
 
 #OUTERBOUNDARY
 userfixvalue		TypeBc1
