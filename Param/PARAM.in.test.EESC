@@ -16,7 +16,7 @@ Param/PARAM.in.test.EESC: restart EE+SC		StringDescription
 #STAR
 1.0			RadiusStar
 1.0			MassStar
-0.0			RotationPeriodStar
+25.38			RotationPeriodStar
 
 #BEGIN_COMP EE ---------------------------------------------------------------
 
