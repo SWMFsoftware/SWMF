@@ -1688,11 +1688,83 @@ but much shorter.
 
 </command>
 
+<command name="TIMEEQUINOX" if="$_IsFirstSession">
+  <parameter name="iYear" type="integer" minimum="1965" default="2000"/>
+  <parameter name="iMonth" type="integer" minimum="1" default="1"/>
+  <parameter name="iDay" type="integer" minimum="1" default="1"/>
+  <parameter name="iHour" type="integer" minimum="0" default="0"/>
+  <parameter name="iMinute" type="integer" minimum="0" default="0"/>
 
+#TIMEEQUINOX
+2000                    iYear
+1                       iMonth
+1                       iDay
+0                       iHour
+0                       iMinute
+
+Reset the time of eqinox for any planet
+</command>
+
+
+</commandgroup>
+
+<commandgroup name="STAR COMMANDS">
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!! STAR COMMANDS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+Several components share information about the star for which the
+simulation is done. It is important that the various components
+use compatible information about the star. It is also useful
+for the couplers that they can globally access this information,
+such as radius and rotation period. The SWMF is designed to work for
+an arbitrary star.
+
+By default the SWMF works with the Sun and its real parameters.
+Another star can be selected with the #STAR command.
+
+<command name="STAR" if="$_IsFirstSession">
+  <parameter name="RadiusStar" type="real" minimum="0" default="1"/>
+  <parameter name="MassStar"   type="real" minimum="0" default="1"/>
+  <parameter name="RotPeriodStar" type="real"/>
+
+#STAR
+1.0                     RadiusStar (in solar radii)
+1.0                     MassStar   (in solar masses)
+0.0                     RotPeriodStar (in days)
+
+Modify the parameters of the central star (when BATSRUS is running
+in heliospheric mode). Setting zero for the rotation period will
+switch off the rotation as shown by the example.
+
+By default the Sun is the central star.
+
+</command>
+
+<command name="HGRALIGNMENTTIME" if="$_IsFirstSession">
+  <parameter name="iYear" type="integer" minimum="1965" default="1965"/>
+  <parameter name="iMonth" type="integer" minimum="1" default="1"/>
+  <parameter name="iDay" type="integer" minimum="1" default="1"/>
+  <parameter name="iHour" type="integer" minimum="0" default="0"/>
+  <parameter name="iMinute" type="integer" minimum="0" default="0"/>
+
+#HGRALIGNMENTTIME
+1965                    iYear
+1                       iMonth
+1                       iDay
+0                       iHour
+0                       iMinute
+
+Reset the time at which HGR and HGI are aligned. In application to stars
+it may be needed to match the magnetogram (in HGR coords) to the
+exoplanet orbital elements (in HGI coords) 
+
+</command>
 
 
 
 </commandgroup>
+
 
 <commandgroup name="STUB COMPONENTS">
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
