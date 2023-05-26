@@ -98,8 +98,8 @@ contains
          Router=Router)                 ! OUT
     SC_iGridRealization=-1
     GM_iGridRealization=-1
-
-    ! Set buffer grid location and size in IH, and retrieve them for coupler
+    call set_couple_var_info(iCompSource=GM_, iCompTarget=SC_)
+    ! Set buffer grid location and size in SC, and retrieve them for coupler
     if(is_proc(SC_)) then
        call SC_set_buffer_grid_get_info(iSize, jSize, kSize, BufferMinMaxGm_DI)
 
