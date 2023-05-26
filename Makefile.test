@@ -1482,17 +1482,17 @@ test5_check:
 ### test6: SC + IH with stream aligned field lines ###
 
 test6:
-	@echo "test6_compile..." > test6_sc.diff
-	@echo "test6_compile..." > test6_ih.diff
+	@echo "test6_compile..." > test06_sc_sa.diff
+	@echo "test6_compile..." > test06_ih_sa.diff
 	${MAKE} test6_compile
-	@echo "test6_rundir..." >> test6_sc.diff
-	@echo "test6_rundir..." >> test6_ih.diff
+	@echo "test6_rundir..." >> test06_sc_sa.diff
+	@echo "test6_rundir..." >> test06_ih_sa.diff
 	${MAKE} test6_rundir
-	@echo "test6_run..." >> test6_sc.diff
-	@echo "test6_run..." >> test6_ih.diff
+	@echo "test6_run..." >> test06_sc_sa.diff
+	@echo "test6_run..." >> test06_ih_sa.diff
 	${MAKE} test6_run
-	@echo "test6_check..." >> test6_sc.diff
-	@echo "test6_check..." >> test6_ih.diff
+	@echo "test6_check..." >> test06_sc_sa.diff
+	@echo "test6_check..." >> test06_ih_sa.diff
 	${MAKE} test6_check
 
 test6_compile:
