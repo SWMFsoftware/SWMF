@@ -10,10 +10,6 @@ Param/PARAM.in.test.EE: restart EE only		StringDescription
 #TIMEACCURATE
 T			IsTimeAccurate
 
-#STAR
-1.0			RadiusStar
-1.0			MassStar
-0.0			RotationPeriodStar
 
 #BEGIN_COMP EE ---------------------------------------------------------------
 
@@ -30,6 +26,9 @@ periodic		TypeBc6
 
 #USERSWITCH
 +init +ic +perturb +source +update		StringSwitch
+
+#ROTPERIOD
+0.0			RotPeriodSI
 
 #USERINPUTBEGIN -----------------------------------
 

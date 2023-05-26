@@ -9,12 +9,11 @@ Param/PARAM.in.test.EE.3D:		StringDescription
 #TIMEACCURATE
 T			IsTimeAccurate
 
-#STAR
-1.0			RadiusStar
-1.0			MassStar
-0.0			RotationPeriodStar
 
 #BEGIN_COMP EE ---------------------------------------------------------------
+
+#ROTPERIOD
+0.0			RotPeriodSi
 
 #GRIDGEOMETRYLIMIT
 spherical		TypeGeometry
