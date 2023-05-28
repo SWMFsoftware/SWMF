@@ -91,7 +91,8 @@ y=0 MHD idl		StringPlot
 0			StateVar Uz
 0.01			StateVar Bx
 0.0			StateVar By
-0			StateVar Bz
+0.0			StateVar Bz
+0.0			StateVar HpLim
 5.2E-13			StateVar P
 
 #USERINPUTBEGIN -----------------------------------
