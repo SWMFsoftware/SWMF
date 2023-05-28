@@ -91,7 +91,8 @@ y=0 MHD idl		StringPlot
 0			StateVar Uz
 0.01			StateVar Bx
 0.0			StateVar By
-0			StateVar Bz
+0.0			StateVar Bz
+0.0			StateVar HpLim
 2.6E-13			StateVar P
 1E-3			StateVar Pu3Rho
 -100			StateVar Pu3Ux
