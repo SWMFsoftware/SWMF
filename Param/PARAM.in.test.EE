@@ -28,7 +28,7 @@ periodic		TypeBc6
 +init +ic +perturb +source +update		StringSwitch
 
 #ROTPERIOD
-0.0			RotPeriodSI
+0.0			RotPeriodSi
 
 #USERINPUTBEGIN -----------------------------------
 
