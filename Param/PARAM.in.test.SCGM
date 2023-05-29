@@ -1,0 +1,482 @@
+For a two-temperature solar wind simulation, configure SWMF with
+./Config.pl -v=Empty,SC/BATSRUS,GM/BATSRUS
+./Config.pl -o=SC:u=Awsom,e=Awsom,g=4,4,4,ng=2
+./Config.pl -o=GM:g=4,4,4,ng=2
+
+Begin session: 1
+
+#COMPONENTMAP
+SC  0 -1  1		CompMap
+GM  0 -1  1		CompMap
+
+
+
+#COMPONENT
+GM			NameComp
+T			UseComp
+
+#COMPONENT
+SC			NameComp
+T			UseComp
+
+#TIMEACCURATE
+F			IsTimeAccurate
+
+! Start time should be the time of the middle of the Carrington Rotation
+! and the time of the EIT image
+
+#STARTTIME
+2000			iYear
+1			iMonth
+1			iDay
+0			iHour
+0			iMinute
+0			iSecond
+0.0			FracSecond
+
+#TEST
+init_axes CON_couple_sc_gm		StringTest
+
+#SAVERESTART
+F			DoSaveRestart
+
+#STAR
+New			NameStar
+1.			RadiusStar
+1.			MassStar
+25.38			RotPeriodStar
+
+#PLANET
+New			NamePlanet
+6378.0e3		RadiusPlanet [m]
+5.0e+24			MassPlanet   [kg]
+0.0			OmegaPlanet  [radian/s]
+0.0			TiltRotation [degree]
+DIPOLE			TypeBField
+0.0			MagAxisThetaGeo [degree]
+0.0			MagAxisPhiGeo   [degree]
+0.0			DipoleStrength  [T]
+
+#ORBIT
+1.728e5			OrbitalPeriodPlanet [s]
+6.96e9			rOrbitPlanet  [m]
+0.0			Excentricity
+0.0			RightAscension [deg]
+0.0			Inclination [deg]
+0.0			ArgPeriapsis [deg]
+
+#TIMEEQUINOX
+2000			iYear
+1			iMonth
+1			iDay
+0			iHour
+0			iMinute
+
+#HGRALIGNMENTTIME
+2000			iYear
+1			iMonth
+1			iDay
+0			iHour
+0			iMinute
+
+TEST
+CON_couple_sc_gm
+
+#BEGIN_COMP SC ---------------------------------------------------------------
+
+INCLUDE
+SC/restartIN/restart.H
+
+#GRIDGEOMETRY
+spherical_lnr		TypeGeometry
+
+! Use a true sphere, so box is made much larger
+#GRID
+1			nRootBlock1
+2			nRootBlock2
+1			nRootBlock3
+-30.0			xMin
+ 30.0			xMax
+-30.0			yMin
+ 30.0			yMax
+-30.0			zMin
+ 30.0			zMax
+
+#LIMITRADIUS
+1.05			rMin
+30.0			rMax
+
+#GRIDLEVEL
+4			nLevel
+initial			StringShape
+
+#GRIDLEVEL
+3			nLevel
+shell0			StringShape
+1.05			RadiusInner
+30.			Radius
+
+#GRIDLEVEL
+4			nLevel
+ringz0			StringShape
+1.			Height
+9.4			RadiusInner
+10.6			Radius
+
+
+#TIMESTEPPING
+2			nStage
+0.8			CflExpl
+
+#COORDSYSTEM
+HGR			TypeCoordSystem
+
+#GRIDBLOCKALL
+9000			MaxBlock
+
+#FIELDLINETHREAD
+T			UseFieldLineThreads
+180			nPointThreadMax
+1.0e-3			DsThreadMin
+
+#BODY
+T			UseBody
+1.0			rBody
+1.5e8			BodyNDim
+1.5e6			BodyTDim
+
+#BODY
+F			UseBody
+
+#SECONDBODY
+T			UseBody2 ! Rest of the parameters read if .true.
+0.2			rBody2
+0.0			MassBody2Si
+1.e7			Body2NDim (/ccm) density for fixed BC for rho_BLK
+10000.0			Body2TDim (K) temperature for fixed BC for P_BL
+T			UseBody2Orbit
+
+#DIPOLEBODY2
+0.0			BdpDimBody2x [nT]
+0.0			BdpDimBody2y [nT]
+0.3			BdpDimBody2z [nT]
+
+#HARMONICSFILE
+SC/Param/CR1962_MDI.dat		NameHarmonicsFile
+
+#HARMONICSGRID
+1.0			rMagnetogram
+2.5			rSourceSurface
+F			IsLogRadius
+90			MaxOrder
+30			nR
+90			nLon
+90			nLat
+
+#FACTORB0
+2.			FactorB0
+
+#CURLB0
+T			UseCurlB0
+2.5			rCurrentFreeB0
+F			UseB0MomentumFlux
+
+#USERSWITCH
++init +ic		StringSwitch
+
+#POYNTINGFLUX
+1.1e6			PoyntingFluxPerBSi [J/m^2/s/T]
+
+#CORONALHEATING
+turbulentcascade		TypeCoronalHeating
+T			UseWaveReflection (read for turbulentcascade only)
+1.5e5			LperpTimesSqrtBSi (read for turbulentcascade only)
+1.2			rMinWaveReflection (read if UseWaveReflection is true)
+T			UseSurfaceWaveRefl (read if UseWaveReflection is true)
+
+#HEATCONDUCTION
+T			UseHeatConduction
+spitzer			TypeHeatConduction
+
+#PLASMA
+1.0			FluidMass [amu]
+1.0			IonCharge [e]
+1.0			ElectronTemperatureRatio
+
+#SEMIIMPLICIT
+T			UseSemiImplicit
+parcond			TypeSemiImplicit
+
+#SEMIKRYLOV
+GMRES			TypeKrylov
+1.0e-5			ErrorMaxKrylov
+10			MaxMatvecKrylov
+
+#RADIATIVECOOLING
+T			UseRadCooling
+
+#LOOKUPTABLE
+radcool			NameTable
+load			NameCommand
+SC/Param/RadCoolCorona_8.0.dat		NameFile
+ascii			TypeFile
+
+#MINIMUMPRESSURE
+1.0E-9			pMinDim
+1.0e-9			PeMinDim
+
+#MINIMUMTEMPERATURE
+5.0e4			TminDim
+5.0e4			TeMinDim
+
+#BUFFERBODY2
+2			nRBuff
+90			nLonBuff
+45			nLatBuff
+0.15			RBuffMin
+0.25			RBuffMax
+0.0			LonBuffMin
+360.0			LonBuffMax
+-90.0			LatBuffMin
+90.0			LatBuffMax
+
+MINIMUMRADIALSPEED
+T			UseSpeedMin
+10			rSpeedMin
+250			SpeedMinDim
+10 h			TauSpeedMinDim
+
+#SCHEME
+2			nOrder (1 or 2)
+Sokolov			TypeFlux (Roe, Rusanov, Linde, Sokolov
+mc3			TypeLimiter
+1.2			LimiterBeta
+
+LIMITER
+T			UseLogRhoLimiter
+T			UseLogPLimiter
+F			UseRhoRatioLimiter
+
+#NONCONSERVATIVE
+T			UseNonConservative
+
+#MESSAGEPASS
+all			TypeMessagePass
+
+#RESCHANGE
+T			UseAccurateReschange
+
+TVDRESCHANGE
+T			UseTvdReschange
+
+#RESTARTOUTFILE
+one			StringRestartOutFile
+
+#SAVELOGFILE
+T			DoSaveLogfile
+RAW			StringLog
+20			DnSaveLogfile
+-1.			DtSaveLogfile
+
+#COARSEAXIS
+T			UseCoarseAxis
+2			nCoarseLayer
+
+#OUTERBOUNDARY
+fieldlinethreads		TypeBc1   user for spherical and user_outerbcs
+float			TypeBc2
+float			TypeBc3
+float			TypeBc4
+float			TypeBc5
+float			TypeBc6
+
+
+#INNERBOUNDARY
+user			TypeBcBody
+body2orbit		TypeBcBody2
+
+
+#SAVEPLOT
+1			nPlotFile
+y=0 MHD tcp		StringPlot
+20000			DnSavePlot
+-1			DtSavePlot
+
+#SAVEINITIAL
+F			DoSaveInitial
+
+#END_COMP SC -----------------------------------------------------------------
+
+#BEGIN_COMP GM ---------------------------------------------------------------
+
+#GRIDBLOCKALL
+4500			MaxBlock
+
+#COORDSYSTEM
+GSE			TypeCoordSystem
+
+#GRID
+4			nRootBlock1
+1			nRootBlock2
+1			nRootBlock3
+-224.			xMin
+ 32.			xMax
+-32.			yMin
+ 32.			yMax
+-32.			zMin
+ 32.			zMax
+
+! Maximum resolution initially
+#GRIDRESOLUTION
+2.0			Resolution
+initial			StringShape
+
+! Minimum resolution in the computational domain
+#GRIDRESOLUTION
+8.0			Resolution
+all			StringShape
+
+GRIDRESOLUTION
+2.0			Resolution
+box			NameArea
+-100.0			xMinBox
+ -16.0			yMinBox
+ -16.0			zMinBox
+  22.0			xMaxBox
+  16.0			yMaxBox
+  16.0			zMaxBox
+
+! Better res at geosync and near tail.
+GRIDRESOLUTION
+1/4			Resolution
+box			NameArea
+-8.0			xMinBox
+-8.0			yMinBox
+-8.0			zMinBox
+ 8.0			xMaxBox
+ 8.0			yMaxBox
+ 8.0			zMaxBox
+
+! Close tail and bow shock resolution
+GRIDRESOLUTION
+1/2			Resolution
+box			NameArea
+-32.0			xMinBox
+-22.0			yMinBox
+-10.0			zMinBox
+ 20.0			xMaxBox
+ 22.0			yMaxBox
+ 10.0			zMaxBox
+
+#GRIDRESOLUTION
+4.0			Resolution
+shell0			StringShape
+2.5			RadiusInner
+3.5			Radius
+
+#BODY
+T			UseBody
+1.2			rBody     (in planet radius)
+2.0			rCurrents (in planet radius)
+28.0			BodyNDim  (/cc)
+25000.0			BodyTDim  (K)
+
+#OUTERBOUNDARY
+outflow			TypeBc1
+vary			TypeBc2
+float			TypeBc3
+float			TypeBc4
+float			TypeBc5
+float			TypeBc6
+
+#INNERBOUNDARY
+ionosphere		TypeBcBody
+
+#SOLARWIND
+2000.			SwNDim
+1.e+6			SwTDim
+-500.			SwUxDim
+0.			SwUyDim
+0.			SwUzDim
+1000.0			SwBxDim
+0.0			SwByDim
+0.0			SwBzDim
+
+#SCHEME
+1			nOrder
+Sokolov			TypeFlux
+
+#TIMESTEPPING
+1			nStage
+0.80			CflExpl
+
+#SAVELOGFILE
+T			DoSaveLogfile
+VAR step date		StringLog
+100			DnSaveLogfile
+-1			DtSaveLogfile
+dt rho mx my mz p bx by bz pmin pmax dst_sm dstflx		NameLogVars
+3.0			StringLogRadii
+
+#SAVEPLOT
+1			nPlotFile
+y=0 MHD tcp		StringPlot
+20000			DnSavePlot
+-1.			DtSavePlot
+
+#SAVEINITIAL
+T			DoSaveInitial
+
+#END_COMP GM -----------------------------------------------------------------
+
+#STOP
+50			MaxIter
+-1.0			TimeMax
+
+End session: 1
+#RUN ##########################################################################
+Begin session: 2
+
+#TIMEACCURATE
+T			IsTimeAccurate
+
+#COUPLE1
+SC			NameSource
+GM			NameTarget
+-1			DnCouple
+1.0			DtCouple
+
+#BEGIN_COMP SC ---------------------------------------------------------------
+
+#SAVEPLOT
+1			nPlotFile
+z=0 MHD tcp		StringPlot
+-1			DnSavePlot
+1800.			DtSavePlot
+
+#END_COMP SC -----------------------------------------------------------------
+
+#BEGIN_COMP GM ---------------------------------------------------------------
+
+#OUTERBOUNDARY
+outflow			TypeBc1
+coupled			TypeBc2
+float			TypeBc3
+float			TypeBc4
+float			TypeBc5
+float			TypeBc6
+
+#SAVEPLOT
+1			nPlotFile
+y=0 MHD tcp		StringPlot
+-1			DnSavePlot
+1800.			DtSavePlot
+
+#END_COMP GM -----------------------------------------------------------------
+
+#STOP
+-1			MaxIter
+5.0			TimeMax
+
+#END
+
