@@ -44,6 +44,7 @@ test_help:
 	@(if [ -d UA/GITM    ]; then echo "    test3                      (run GM-IE-IM-UA test)"; fi)
 	@(if [ -d IM/HEIDI   ]; then echo "    test4                      (run GM-IE-HEIDI test)"; fi)
 	@(if [ -d GM/BATSRUS/srcUserExtra ]; then echo "    test5                      (run EE-SC test)"; fi)
+	@(if [ -d GM/BATSRUS ]; then echo "    test6                      (run SC-IH coupling test: stream-aligned)"; fi)
 	@(if [ -d GM/BATSRUS/srcUserExtra ]; then echo "    test7                      (run IH-OH test)"; fi)
 	@(if [ -d GM/BATSRUS ]; then echo "    test8                      (run SC-IH coupling test with AWSoM-R)"; fi)
 	@(if [ -d GM/BATSRUS ]; then echo "    test9                      (run SC-IH coupling test with AWSoM)"; fi)
@@ -55,13 +56,14 @@ test_help:
 	@(if [ -d PT/AMPS    ]; then echo "    test14                     (run OH-PT/AMPS test)"; fi)
 	@(if [ -d PT/AMPS    ]; then echo "    test14_1d                  (run OH-PT/AMPS test in 1D)"; fi)
 	@(if [ -d PT/AMPS    ]; then echo "    test14pui                  (run OH-PT/AMPS test with PUI)"; fi)
-	@(if [ -d PT/AMPS    ]; then echo "    test14pui1d                (run OH-PT/AMPS test with PUI in 1D)"; fi)
 	@(if [ -d SP/MFLAMPA ]; then echo "    test15                     (run SC-IH-SP/MFLAMPA test)"; fi)
 	@(if [ -d SP/MFLAMPA ]; then echo "    test15_build               (configure SC-IH-SP/MFLAMPA, run test15)"; fi)
 	@(if [ -d PT/AMPS    ]; then echo "    test15_pt                  (run SC-IH-PT/AMPS test)"; fi)
 	@(if [ -d PC/FLEKS   ]; then echo "    test16                     (run GM-PC/FLEKS test: periodic FLEKS)"; fi)
 	@(if [ -d PC/FLEKS   ]; then echo "    test17                     (run GM-PC/FLEKS test: 2D Alfven wave)"; fi)
 	@(if [ -d PC/FLEKS   ]; then echo "    test18                     (run GM-PC/FLEKS test: 3D reconnection)"; fi)
+	@(if [ -d PT/FLEKS   ]; then echo "    test20                     (run OH-PT/FLEKS test: shocktube)"; fi)
+	@(if [ -d PT/FLEKS   ]; then echo "    test21                     (run OH-PT/FLEKS test: OuterHelio)"; fi)
 	@echo "    test_check                 (collect test results into test_swmf.res)"
 
 # Nothing should be done parallel in this Makefile
@@ -99,6 +101,7 @@ test_swmf:
 	-@(if [ -d PW/PWOM    ]; then ${MAKE} test1 TESTDIR=run_test01; fi)
 	-@(if [ -d IM/HEIDI   ]; then ${MAKE} test4 TESTDIR=run_test04; fi)
 	-@(if [ -d GM/BATSRUS/srcUserExtra ]; then ${MAKE} test5 TESTDIR=run_test05; fi)
+	-@(if [ -d GM/BATSRUS ]; then ${MAKE} test6 TESTDIR=run_test06; fi)
 	-@(if [ -d GM/BATSRUS/srcUserExtra ]; then ${MAKE} test7 TESTDIR=run_test07; fi)
 	-@(if [ -d GM/BATSRUS ]; then ${MAKE} test8 TESTDIR=run_test08; fi)
 	-@(if [ -d GM/BATSRUS ]; then ${MAKE} test9 TESTDIR=run_test09; fi)
@@ -106,7 +109,6 @@ test_swmf:
 	-@(if [ -d PT/AMPS    ]; then ${MAKE} test14_1d TESTDIR=run_test14_1d; fi)
 	-@(if [ -d PT/AMPS    ]; then ${MAKE} test14 TESTDIR=run_test14; fi)
 	-@(if [ -d PT/AMPS    ]; then ${MAKE} test14pui TESTDIR=run_test14pui; fi)
-	-@(if [ -d PT/AMPS    ]; then ${MAKE} test14pui1d TESTDIR=run_test14pui1d; fi)
 	-@(if [ -d SP/MFLAMPA ]; then ${MAKE} test15 TESTDIR=run_test15; fi)
 	-@(if [ -d PC/FLEKS   ]; then ${MAKE} test16 TESTDIR=run_test16; fi)
 	-@(if [ -d PC/FLEKS   ]; then ${MAKE} test17 TESTDIR=run_test17; fi)
@@ -1476,6 +1478,51 @@ test5_check:
 		> test05_sc.diff)
 	ls -l test05_*.diff
 
+
+### test6: SC + IH with stream aligned field lines ###
+
+test6:
+	@echo "test6_compile..." > test06_sc_sa.diff
+	@echo "test6_compile..." > test06_ih_sa.diff
+	${MAKE} test6_compile
+	@echo "test6_rundir..." >> test06_sc_sa.diff
+	@echo "test6_rundir..." >> test06_ih_sa.diff
+	${MAKE} test6_rundir
+	@echo "test6_run..." >> test06_sc_sa.diff
+	@echo "test6_run..." >> test06_ih_sa.diff
+	${MAKE} test6_run
+	@echo "test6_check..." >> test06_sc_sa.diff
+	@echo "test6_check..." >> test06_ih_sa.diff
+	${MAKE} test6_check
+
+test6_compile:
+	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
+	./Config.pl -o=SC:u=Awsom,e=AwsomChGL,ng=2,g=6,4,4
+	./Config.pl -o=IH:u=Awsom,e=AwsomChGL,ng=2,g=4,4,4
+	${MAKE} SWMF
+	make PIDL
+
+test6_rundir:
+	rm -rf ${TESTDIR}
+	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR}
+	cp Param/PARAM.in.test.SCIH_streamaligned ${TESTDIR}/PARAM.in
+	cp SC/BATSRUS/data/input/Gong_harmonics.dat ${TESTDIR}/SC/
+	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
+
+test6_run:
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS
+
+test6_check:
+	-(${DIFFNUM} -b -r=1e-5 -a=1e-26 \
+		${TESTDIR}/RESULTS/SC/log_n000000.log \
+		output/test6/SC_log_n000000.log \
+		> test06_sc_sa.diff)
+	-(${DIFFNUM} -b -r=1e-5 \
+		${TESTDIR}/RESULTS/IH/log_n000000.log \
+		output/test6/IH_log_n000000.log \
+		> test06_ih_sa.diff)
+	ls -l test06_*.diff
 
 ### test7: IH+OH test ###
 
@@ -3052,51 +3099,6 @@ test12_iso_check:
 	   output/test12/cut_particles1.out.ref.iso.gz \
 		>> test12_iso_pc.diff)
 	ls -l test12_iso*.diff
-
-### test_chgl: test SC/BATSRUS + IH/BATSRUS with aligned field and stream lines ###
-
-test_chgl:
-	@echo "test_chgl_compile..." > test_chgl_sc.diff
-	@echo "test_chgl_compile..." > test_chgl_ih.diff
-	${MAKE} test_chgl_compile
-	@echo "test_chgl_rundir..." >> test_chgl_sc.diff
-	@echo "test_chgl_rundir..." >> test_chgl_ih.diff
-	${MAKE} test_chgl_rundir
-	@echo "test_chgl_run..." >> test_chgl_sc.diff
-	@echo "test_chgl_run..." >> test_chgl_ih.diff
-	${MAKE} test_chgl_run
-	@echo "test_chgl_check..." >> test_chgl_sc.diff
-	@echo "test_chgl_check..." >> test_chgl_ih.diff
-	${MAKE} test_chgl_check
-
-test_chgl_compile:
-	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
-	./Config.pl -o=SC:u=Awsom,e=AwsomChGL,ng=2,g=6,4,4
-	./Config.pl -o=IH:u=Awsom,e=AwsomChGL,ng=2,g=4,4,4
-	${MAKE} SWMF
-	make PIDL
-
-test_chgl_rundir:
-	rm -rf ${TESTDIR}
-	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR}
-	cp ${TESTDIR}/SC/Param/PARAM.in.ChGL_short  ${TESTDIR}/PARAM.in
-	cp SC/BATSRUS/data/input/Gong_ChGL.dat ${TESTDIR}/SC/
-	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
-
-test_chgl_run:
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS
-
-test_chgl_check:
-	-(${DIFFNUM} -b -r=1e-5 -a=1e-26 \
-		${TESTDIR}/RESULTS/SC/log_n000000.log \
-		SC/BATSRUS/data/output/test_chgl/SC_log_n000000.log \
-		> test_chgl_sc.diff)
-	-(${DIFFNUM} -b -r=1e-5 \
-		${TESTDIR}/RESULTS/IH/log_n000000.log \
-		SC/BATSRUS/data/output/test_chgl/IH_log_n000000.log \
-		> test_chgl_ih.diff)
-	ls -l test_chgl_*.diff
 
 ###############################################################################
 test_eeggl:

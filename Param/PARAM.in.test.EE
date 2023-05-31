@@ -10,15 +10,11 @@ Param/PARAM.in.test.EE: restart EE only		StringDescription
 #TIMEACCURATE
 T			IsTimeAccurate
 
+
 #BEGIN_COMP EE ---------------------------------------------------------------
 
 #INCLUDE
 EE/restartIN/restart.H
-
-#STAR
-1.0			RadiusStar
-1.0			MassStar
-0.0			RotationPeriodStar
 
 #OUTERBOUNDARY
 userfixvalue		TypeBc1
@@ -30,6 +26,9 @@ periodic		TypeBc6
 
 #USERSWITCH
 +init +ic +perturb +source +update		StringSwitch
+
+#ROTPERIOD
+0.0			RotPeriodSi
 
 #USERINPUTBEGIN -----------------------------------
 

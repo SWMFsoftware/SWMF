@@ -26,13 +26,11 @@ EE/restartIN/restart.H
       26		iMinute
        0		iSecond
 
+#ROTPERIOD
+0.0			RotPeriodSi
+
 #TIMESIMULATION
 0.0			tSimulation
-
-#STAR
-1.0			RadiusStar
-1.0			MassStar
-0.0			RotationPeriodStar
 
 #OUTERBOUNDARY
 userfixvalue		TypeBc1
