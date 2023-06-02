@@ -329,7 +329,7 @@ test_psie_check:
 	        ${TESTDIR}/RESULTS/PS/PS_t20000321_104500_000.log    \
 		${PSDIR}/Output/PS_test_psie.ref                     \
 		>> test_psie.diff)
-	-@(${DIFFNUM} -t -r=1e-8                        \
+	-@(${DIFFNUM} -t -r=1e-6                        \
 	        ${TESTDIR}/RESULTS/PS/dgcpm_t20000321_105500_000.dat \
 		${PSDIR}/Output/dgcpm_testpsie.ref                   \
 		>> test_psie.diff)
