@@ -92,7 +92,7 @@ T                       DoSaveIELogFile
 -1
 -1
 
-#MHD_INDICES
+#SOLARWINDFILE
 IMF_NSturning_10nT.dat
 
 #SAVEPLOT
