@@ -3185,3 +3185,29 @@ test_tdequil_run:
 	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS
 
 #test_tdequil_check:
+
+test_scgm:
+	@echo "test_scgm_compile..." > test_scgm.diff
+	${MAKE} test_scgm_compile
+	@echo "test_scgm_rundir..." >> test_scgm.diff
+	${MAKE} test_scgm_rundir
+	@echo "test_scgm_run..." >> test_scgm.diff
+	${MAKE} test_scgm_run
+#	@echo "test_scgm_check..." >> test_scgm.diff
+#	${MAKE} test_scgm_check
+
+test_scgm_compile:
+	./Config.pl -v=Empty,SC/BATSRUS,GM/BATSRUS
+	./Config.pl -o=SC:u=Awsom,e=Awsom,g=4,4,4,ng=2
+	./Config.pl -o=GM:g=4,4,4,ng=2
+	${MAKE} SWMF
+
+test_scgm_rundir:
+	rm -rf ${TESTDIR}
+	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR}
+	cp Param/PARAM.in.test.SCGM ${TESTDIR}/PARAM.in
+	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
+
+test_scgm_run:
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS
