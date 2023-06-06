@@ -44,7 +44,7 @@ F			DoSaveRestart
 New			NameStar
 1.			RadiusStar
 1.			MassStar
-25.38			RotPeriodStar
+25.38			RotationPeriodStar
 
 #PLANET
 New			NamePlanet
