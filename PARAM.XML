@@ -1724,17 +1724,20 @@ By default the SWMF works with the Sun and its real parameters.
 Another star can be selected with the #STAR command.
 
 <command name="STAR" if="$_IsFirstSession">
+  <parameter name="NameStar" type="string" case="upper" default="SUN"/>
   <parameter name="RadiusStar" type="real" minimum="0" default="1"/>
   <parameter name="MassStar"   type="real" minimum="0" default="1"/>
   <parameter name="RotationPeriodStar" type="real"/>
 
 #STAR
+SUN                     NameStar (upper case, up to 3 letters) 
 1.0                     RadiusStar (in solar radii)
 1.0                     MassStar   (in solar masses)
 0.0                     RotationPeriodStar (in days)
 
-Modify the parameters of the central star.
-Setting zero for the rotation period will
+
+Modify the parameters of the central star (when SWMF or BATSRUS is running
+in corona/heliospheric mode). Setting zero for the rotation period will
 switch off the rotation as shown by the example.
 
 By default the Sun is the central star.

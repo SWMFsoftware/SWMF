@@ -28,7 +28,7 @@ module CON_couple_sc_gm
   use CON_axes, ONLY: transform_matrix, vPlanetHgi_D, XyzPlanetHgi_D
 
   use SC_wrapper, ONLY: SC_synchronize_refinement, SC_get_for_gm, &
-       SC_save_global_buffer, SC_set_buffer_grid_get_info
+       SC_save_global_buffer, SC_set_buffer_grid_get_info, SC_xyz_to_coord
 
   use GM_wrapper, ONLY: GM_synchronize_refinement, GM_put_from_mh, &
        GM_is_right_boundary_d, GM_get_for_global_buffer
@@ -56,8 +56,10 @@ module CON_couple_sc_gm
   integer :: SC_iGridRealization=-2
   integer :: GM_iGridRealization=-2
 
-  real, dimension(3)   :: XyzPlanetSc_D, vPlanetSc_D
-  real, dimension(3,3) :: GmToSc_DD, ScToGm_DD, HgiToSc_DD
+  ! Three-dimensional coordinate vector
+  integer, parameter :: nDim = 3
+  real, dimension(nDim)   :: XyzPlanetSc_D, vPlanetSc_D
+  real, dimension(nDim,nDim) :: GmToSc_DD, ScToGm_DD, HgiToSc_DD
 
   ! Maximum time difference [s] without remap
   ! The 600 s corresponds to about 0.1 degree rotation between SC and GM
@@ -72,7 +74,7 @@ module CON_couple_sc_gm
 
   ! Size and limits of the 3D spherical buffer grid
   integer :: iSize, jSize, kSize
-  real    :: BufferMinMaxGm_DI(3,2)
+  real    :: BufferMinMaxGm_DI(nDim,2)
 
   character(len=*), parameter :: NameMod='CON_couple_sc_gm'
 
@@ -133,7 +135,7 @@ contains
     call GM_synchronize_refinement(Router%iProc0Target,Router%iCommUnion)
 
     CouplingTimeScGm=TimeCoupling
-
+    call set_couple_var_info(SC_, GM_)
     if(SC_iGridRealization/=i_realization(SC_).or.&
          GM_iGridRealization/=i_realization(GM_).or.&
          TimeCoupling - TimeCouplingLast > dTimeMappingMax)then
@@ -211,7 +213,7 @@ contains
     integer,intent(inout)       :: i_D(nIndex)
     logical,intent(out)         :: IsInterfacePoint
 
-    logical,dimension(3)::IsLeftFace_D, IsRightFace_D
+    logical,dimension(nDim)::IsLeftFace_D, IsRightFace_D
     integer,parameter::x_=1,y_=2,z_=3
 
     !--------------------------------------------------------------------------
@@ -224,18 +226,19 @@ contains
   !============================================================================
 
   subroutine map_gm_sc(&
-       GM_nDim,GM_Xyz_D,SC_nDim,SC_Xyz_D,IsInterfacePoint)
+       GM_nDim, XyzGm_D, SC_nDim, CoordSc_D, IsInterfacePoint)
 
-    integer,intent(in)::GM_nDim,SC_nDim
-    real,dimension(GM_nDim),intent(in)::GM_Xyz_D
-    real,dimension(SC_nDim),intent(out)::SC_Xyz_D
+    integer,intent(in) :: GM_nDim, SC_nDim
+    real,   intent(in) :: XyzGm_D(GM_nDim)
+    real,   intent(out):: CoordSc_D(SC_nDim)
     logical,intent(out)::IsInterfacePoint
     ! In each mapping the corrdinates of the TARGET grid point (GM)
     ! shoud be be transformed to the SOURCE (SC) generalized coords.
-
+    real :: XyzSc_D(nDim)
     !--------------------------------------------------------------------------
-    SC_Xyz_D = XyzPlanetSc_D + matmul(GmToSc_DD, GM_Xyz_D)*&
+    XyzSc_D = XyzPlanetSc_D + matmul(GmToSc_DD, XyzGm_D)*&
          Grid_C(GM_)%UnitX/Grid_C(SC_)%UnitX
+    call SC_xyz_to_coord(XyzSc_D, CoordSc_D)
     IsInterfacePoint=.true.
 
   end subroutine map_gm_sc

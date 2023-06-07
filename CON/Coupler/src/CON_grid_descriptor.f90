@@ -404,9 +404,9 @@ contains
 
     type(LocalGridType), intent(inout):: Grid
     !--------------------------------------------------------------------------
-    deallocate(Grid%iPointMin_D)
-    deallocate(Grid%iPointMax_D)
-    deallocate(Grid%Displacement_D)
+    nullify(Grid%iPointMin_D)
+    nullify(Grid%iPointMax_D)
+    nullify(Grid%Displacement_D)
     deallocate(Grid%iIndex_IB)
     deallocate(Grid%CoordBlock_DB)
     deallocate(Grid%DCoord_DB)
