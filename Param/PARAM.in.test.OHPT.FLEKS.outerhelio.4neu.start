@@ -67,7 +67,7 @@ year			NameMaxTimeUnit
 400			MaxBlock
 
 #GRIDLEVEL
-3			nLevel
+5			nLevel
 initial			StringShape
 
 #GRIDRESOLUTION
@@ -80,7 +80,7 @@ box			StringShape
 1500			yMaxBox
 1500			zMaxBox
 
-#GRIDRESOLUTION
+GRIDRESOLUTION
 93.75			Resolution
 box			StringShape
 -1500			xMinBox
@@ -90,7 +90,7 @@ box			StringShape
 1500			yMaxBox
 1500			zMaxBox
 
-#GRIDRESOLUTION
+GRIDRESOLUTION
 46.875			Resolution
 box			StringShape
 -1125			xMinBox
@@ -100,7 +100,7 @@ box			StringShape
 1125			yMaxBox
 1125			zMaxBox
 
-#GRIDRESOLUTION
+GRIDRESOLUTION
 23.4375			Resolution
 box			StringShape
 -750			xMinBox
@@ -113,12 +113,12 @@ box			StringShape
 #GRIDRESOLUTION
 23.4375			Resolution
 box			StringShape
-0			xMinBox
--187.5			yMinBox
--187.5			zMinBox
-187.5			xMaxBox
-187.5			yMaxBox
-187.5			zMaxBox
+-80			xMinBox
+-80			yMinBox
+-80			zMinBox
+80			xMaxBox
+80			yMaxBox
+80			zMaxBox
 
 #INNERBOUNDARY
 user			TypeBcBody
@@ -143,6 +143,20 @@ Linde			TypeFlux
 1			nStage (1 or 2)
 0.10			CflExpl
 
+#MINIMUMPRESSURE
+1.E-18			pMinDim for fluid SW
+1.E-23			pMinDim for Neu
+1.E-23			pMinDim for Ne2
+1.E-23			pMinDim for Ne3
+1.E-23			pMinDim for Ne4
+
+#MINIMUMDENSITY
+1.E-4			RhoMinDim for fluid SW
+1.E-9			RhoMinDim for Neu
+1.E-9			RhoMinDim for Ne2
+1.E-9			RhoMinDim for Ne3
+1.E-9			RhoMinDim for Ne4
+
 #NONCONSERVATIVE
 T			UseNonConservative
 
@@ -161,19 +175,15 @@ RAW			StringLog
 F			DoSaveInitial
 
 #SAVEPLOT
-3			nPlotFile
-y=0 MHD idl		StringPlot
-10			DnSavePlot
--1.0			DtSavePlot
--1.0			DxSavePlot
+2			nPlotFile
 y=0 VAR idl		StringPlot
-10			DnSavePlot
+1000			DnSavePlot
 -1.0			DtSavePlot
 -1.0			DxSavePlot
-fluid mach		NameVars
+{MHD} fluid mach		NameVars
 rbody			NamePars
 z=0 MHD idl		StringPlot
-10			DnSavePlot
+1000			DnSavePlot
 -1.0			DtSavePlot
 -1.0			DxSavePlot
 
@@ -239,7 +249,7 @@ SingleIon		NameRegionFormula
 #END_COMP OH -----------------------------------------------------------------
 
 #STOP
-200			MaxIter
+2000			MaxIter
 -1.0			TimeMax
 
 #RUN ##########################################################################
@@ -254,6 +264,6 @@ minmod			TypeLimiter
 #END_COMP OH -----------------------------------------------------------------
 
 #STOP
-400			MaxIter
+3000			MaxIter
 -1.0			TimeMax
 
