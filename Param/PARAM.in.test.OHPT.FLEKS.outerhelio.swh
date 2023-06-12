@@ -200,7 +200,7 @@ T			UseNe4Source
 
 #STOP
 -1			MaxIter
-10 year			TimeMax
+2 year			TimeMax
 
 
 #BEGIN_COMP PT ---------------------------------------------------------------

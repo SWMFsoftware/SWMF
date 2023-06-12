@@ -2621,11 +2621,11 @@ test21_check:
                 output/test21/y=0_neu_OH.ref.gz \
 		> test21.diff)
 	-@(${DIFFNUM} -b -r=1e-7 \
-                ${TESTDIR}/RESULTS/swh/OH/z*05212.out \
+                ${TESTDIR}/RESULTS/swh/OH/z*04206.out \
                 output/test21/z=0_OH.ref.gz \
 		>> test21.diff)
 	-@(${DIFFNUM} -b -r=1e-7 \
-                ${TESTDIR}/RESULTS/swh/PT/z*050.out \
+                ${TESTDIR}/RESULTS/swh/PT/z*010.out \
                 output/test21/z=0_PT.ref.gz \
 		>> test21.diff)		
 	ls -l test21.diff
@@ -2695,11 +2695,11 @@ test21_oh_pt_run:
 
 test21_oh_pt_check:
 	-@(${DIFFNUM} -b -r=1e-7 \
-                ${TESTDIR}/RESULTS/swh/OH/z*05212.out \
+                ${TESTDIR}/RESULTS/swh/OH/z*04206.out \
                 output/test21/z=0_OH.ref.gz \
 		> test21_oh_pt.diff)
 	-@(${DIFFNUM} -b -r=1e-7 \
-                ${TESTDIR}/RESULTS/swh/PT/z*050.out \
+                ${TESTDIR}/RESULTS/swh/PT/z*010.out \
                 output/test21/z=0_PT.ref.gz \
 		>> test21_oh_pt.diff)		
 	ls -l test21_oh_pt.diff
