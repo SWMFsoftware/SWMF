@@ -77,7 +77,22 @@ mc			TypeLimiter
 ! 0.8 works fine for higher resolution
 #TIMESTEPPING
 2			nStage
-0.4			CflExpl
+0.1			CflExpl
+
+#MINIMUMPRESSURE
+1.E-18			pMinDim for fluid SW
+1.E-23			pMinDim for Neu
+1.E-23			pMinDim for Ne2
+1.E-23			pMinDim for Ne3
+1.E-23			pMinDim for Ne4
+
+#MINIMUMDENSITY
+1.E-4			RhoMinDim for fluid SW
+1.E-9			RhoMinDim for Neu
+1.E-9			RhoMinDim for Ne2
+1.E-9			RhoMinDim for Ne3
+1.E-9			RhoMinDim for Ne4
+
 
 ! Applies to the ions only if DoConserveNeutrals is false in #MULTIFLUID
 #NONCONSERVATIVE
@@ -98,19 +113,15 @@ RAW			StringLog
 T			DoSaveInitial
 
 #SAVEPLOT
-3			nPlotFile
-y=0 MHD idl_ascii		StringPlot
-10			DnSavePlot
--1.0			DtSavePlot
--1.0			DxSavePlot
+2			nPlotFile
 y=0 VAR idl_ascii		StringPlot
-10			DnSavePlot
+100			DnSavePlot
 -1.0			DtSavePlot
 -1.0			DxSavePlot
-fluid mach		NameVars
+{MHD} fluid mach		NameVars
 rbody			NamePars
 z=0 MHD idl_ascii		StringPlot
-10			DnSavePlot
+100			DnSavePlot
 -1.0			DtSavePlot
 -1.0			DxSavePlot
 
@@ -145,17 +156,17 @@ T			UseOhNeutralBc
 0.00874			SWH_N_dim [n/cc]
 1.0868E5		SWH_T_dim [K]
 417.07			SWH_Ux_dim [km/s]
-0.0			SWH_Uy_dim [km/s]
-0.0			SWH_Uz_dim [km/s]
+0.0			    SWH_Uy_dim [km/s]
+0.0			    SWH_Uz_dim [km/s]
 7.17E-03		SWH_Bx_dim [nT]
-0.0			SWH_By_dim [nT]
-0.0			SWH_Bz_dim [nT]
+0.0			    SWH_By_dim [nT]
+0.0			    SWH_Bz_dim [nT]
 
 #VLISW
 0.06			VLISW_N_dim [n/cc]
 6519.0			VLISW_T_dim
 26.3			VLISW_Ux_dim
-0.0			VLISW_Uy_dim
+0.0			    VLISW_Uy_dim
 -2.3			VLISW_Uz_dim
 0.3093			VLISW_Bx_dim
 -0.080			VLISW_By_dim
@@ -165,24 +176,24 @@ T			UseOhNeutralBc
 SingleIon		NameRegionFormula
 6.E5			TempPop1LimitDim
 100.0			uPop1LimitDim
-0.9			MachPop2Limit
-1.5			MachPop3Limit
+0.9			    MachPop2Limit
+1.5			    MachPop3Limit
 50.0			rPop3Limit
-0.5			MachPop4Limit
+0.5			    MachPop4Limit
 
 #SOURCES
-T			UseIonSource
-T			UseNeuSource
-T			UseNe2Source
-T			UseNe3Source
-T			UseNe4Source
+T			    UseIonSource
+T			    UseNeuSource
+T			    UseNe2Source
+T			    UseNe3Source
+T			    UseNe4Source
 
 #USERINPUTEND -------------------------------------
 
 #END_COMP OH -----------------------------------------------------------------
 
 #STOP
-20			MaxIter
+1000			MaxIter
 -1.0			TimeMax
 
 #RUN ##########################################################################
@@ -207,16 +218,6 @@ T			DoSaveRestart
 
 #BEGIN_COMP OH ---------------------------------------------------------------
 
-#SCHEME
-1			nOrder
-Linde			TypeFlux
-
-! 0.8 works fine for higher resolution
-#TIMESTEPPING
-1			nStage
-0.4			CflExpl
-
-
 #SAVEPLOT
 1			nPlotFile
 y=0 MHD idl_ascii		StringPlot
@@ -231,8 +232,6 @@ y=0 MHD idl_ascii		StringPlot
 0.1 year		TimeMax
 
 #RUN ##########################################################################
-
-
 
 #COMPONENT
 PT			NameComp
@@ -268,22 +267,22 @@ PLASMA
 3.0e8			uNorm [m/s]
 
 #GEOMETRY
--80			xMin
-80			xMax
--80			yMin
-80			yMax
--80			zMin
-80			zMax
+-800			xMin
+800			xMax
+-800			yMin
+800			yMax
+-800			zMin
+800			zMax
 
 #NCELL
+32			nCellX
+32			nCellY
+32			nCellZ
+
+MAXBLOCKSIZE
 8			nCellX
 8			nCellY
 8			nCellZ
-
-#MAXBLOCKSIZE
-4			nCellX
-4			nCellY
-4			nCellZ
 
 #END_COMP PT -----------------------------------------------------------------
 

@@ -91,7 +91,15 @@ mc			TypeLimiter
 ! 0.8 works fine for higher resolution
 #TIMESTEPPING
 2			nStage
-0.4			CflExpl
+0.1			CflExpl
+
+
+#MINIMUMPRESSURE
+1.E-18			pMinDim for fluid SW
+
+#MINIMUMDENSITY
+1.E-4			RhoMinDim for fluid SW
+
 
 ! Applies to the ions only if DoConserveNeutrals is false in #MULTIFLUID
 #NONCONSERVATIVE
@@ -115,11 +123,11 @@ T			DoSaveInitial
 2			nPlotFile
 y=0 MHD idl_ascii		StringPlot
 -1			DnSavePlot
-1 y			DtSavePlot
+5 y			DtSavePlot
 -1.0			DxSavePlot
 z=0 MHD idl_ascii		StringPlot
 -1			DnSavePlot
-1 y			DtSavePlot
+5 y			DtSavePlot
 -1.0			DxSavePlot
 
 OHBOUNDARY
@@ -192,7 +200,7 @@ T			UseNe4Source
 
 #STOP
 -1			MaxIter
-1 year			TimeMax
+10 year			TimeMax
 
 
 #BEGIN_COMP PT ---------------------------------------------------------------
@@ -205,7 +213,7 @@ F			initFromSWMF
 
 #TIMESTEPPING
 T			useFixedDt
-0.05 y			dt
+0.2 y			dt
 
 
 #NORMALIZATION
@@ -213,9 +221,9 @@ T			useFixedDt
 3.0e8			uNorm [m/s]
 
 #PARTICLES
-1			nParticleX
-1			nParticleY
-1			nParticleZ
+4			nParticleX
+4			nParticleY
+4			nParticleZ
 
 #SOURCEPARTICLES
 1			nParticleX
@@ -232,17 +240,17 @@ T			isPeriodicZ
 3			nPlotFile
 y=0 var ascii planet year		StringPlot
 -1			DnSavePlot
-1 y			DtSavePlot
+5 y			DtSavePlot
 0			DxSavePlot
-{fluid} numS0		NameVars
+{fluid} neuregion numS0 numS1 numS2 numS3		NameVars
 z=0 var ascii planet year		StringPlot
 -1			DnSavePlot
-1 y			DtSavePlot
+5 y			DtSavePlot
 0			DxSavePlot
-{fluid} numS0		NameVars
+{fluid} neuregion numS0 numS1 numS2 numS3		NameVars
 3d particles0 amrex planet year		StringPlot
 -1			DnSavePlot
-1 y			DtSavePlot
+10 y			DtSavePlot
 0			DxSavePlot
 
 
