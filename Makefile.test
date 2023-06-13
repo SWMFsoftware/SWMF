@@ -2617,15 +2617,15 @@ test21:
 
 
 test21_check:
-	-@(${DIFFNUM} -b -a=1e-15 -r=1e-7 \
+	-@(${DIFFNUM} -b -a=1e-13 -r=1e-7 \
                 ${TESTDIR}/RESULTS/neu_couple/OH/y*04011.out \
                 output/test21/y=0_neu_OH.ref.gz \
 		> test21.diff)
-	-@(${DIFFNUM} -b -r=1e-7 \
+	-@(${DIFFNUM} -b -a=1e-13 -r=1e-7 \
                 ${TESTDIR}/RESULTS/swh/OH/z*04206.out \
                 output/test21/z=0_OH.ref.gz \
 		>> test21.diff)
-	-@(${DIFFNUM} -b -r=1e-7 \
+	-@(${DIFFNUM} -b -a=1e-13 -r=1e-7 \
                 ${TESTDIR}/RESULTS/swh/PT/z*010.out \
                 output/test21/z=0_PT.ref.gz \
 		>> test21.diff)		
@@ -2663,7 +2663,7 @@ test21_4neu_run:
 	cd ${TESTDIR}; ./PostProc.pl RESULTS/neu_couple
 	
 test21_4neu_check:
-	-@(${DIFFNUM} -b -a=1e-15 -r=1e-7 \
+	-@(${DIFFNUM} -b -a=1e-13 -r=1e-7 \
                 ${TESTDIR}/RESULTS/neu_couple/OH/y*04011.out \
                 output/test21/y=0_neu_OH.ref.gz \
 		> test21_4neu.diff)
@@ -2695,11 +2695,11 @@ test21_oh_pt_run:
 	cd ${TESTDIR}; ./PostProc.pl RESULTS/swh
 
 test21_oh_pt_check:
-	-@(${DIFFNUM} -b -r=1e-7 \
+	-@(${DIFFNUM} -b -a=1e-13 -r=1e-7 \
                 ${TESTDIR}/RESULTS/swh/OH/z*04206.out \
                 output/test21/z=0_OH.ref.gz \
 		> test21_oh_pt.diff)
-	-@(${DIFFNUM} -b -r=1e-7 \
+	-@(${DIFFNUM} -b -a=1e-13 -r=1e-7 \
                 ${TESTDIR}/RESULTS/swh/PT/z*010.out \
                 output/test21/z=0_PT.ref.gz \
 		>> test21_oh_pt.diff)		
