@@ -192,7 +192,7 @@ turbulentcascade		TypeCoronalHeating
 T			UseWaveReflection (read for turbulentcascade only)
 1.5e5			LperpTimesSqrtBSi (read for turbulentcascade only)
 1.2			rMinWaveReflection (read if UseWaveReflection is true)
-T			UseSurfaceWaveRefl (read if UseWaveReflection is true)
+T			UseReynoldsDecomposition (read if UseWaveReflection is true)
 
 #HEATCONDUCTION
 T			UseHeatConduction

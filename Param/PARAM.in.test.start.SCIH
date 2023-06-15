@@ -5,7 +5,7 @@ For a three-temperature solar wind simulation, configure SWMF with
 ./Config.pl -o=IH:u=Awsom,e=AwsomAnisoPi,g=8,8,8,nG=3
 
 Default rMinWaveReflection is 0.0
-Default UseSurfaceWaveRefl is F
+Default UseReynoldsDecomposition is F
 
 For changing the distance of the source surface, rMax in FDIPS.in
 needs to change if using FDIPS and rSourceSurface in this file
@@ -105,7 +105,7 @@ turbulentcascade		TypeCoronalHeating
 T			UseWaveReflection
 1.5e5			LperpTimesSqrtBSi^
 0.0			rMinWaveReflection^
-F			UseSurfaceWaveRefl^
+F			UseReynoldsDecomposition^
 
 #HEATPARTITIONING
 stochasticheating		TypeHeatPartitioning
@@ -532,7 +532,7 @@ turbulentcascade		TypeCoronalHeating
 T			UseWaveReflection
 1.5e5			LperpTimesSqrtBSi^
 0.0			rMinWaveReflection^
-F			UseSurfaceWaveRefl^
+F			UseReynoldsDecomposition^
 
 #HEATPARTITIONING
 stochasticheating		TypeHeatPartitioning
