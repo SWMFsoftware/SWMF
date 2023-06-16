@@ -6,7 +6,7 @@ For a three-temperature solar wind simulation, configure SWMF with
 
 Inner boundary is 1.1 Rs
 Default rMinWaveReflection is 0.0
-Default UseSurfaceWaveRefl is F
+Default UseReynoldsDecomposition is F
 
 
 Begin session: 1
@@ -108,7 +108,7 @@ turbulentcascade		TypeCoronalHeating
 T			UseWaveReflection
 1.5e5			LperpTimesSqrtBSi
 0.0			rMinWaveReflection
-F			UseSurfaceWaveRefl
+F			UseReynoldsDecomposition
 
 #HEATPARTITIONING
 stochasticheating		TypeHeatPartitioning
@@ -459,7 +459,7 @@ turbulentcascade		TypeCoronalHeating
 T			UseWaveReflection
 1.5e5			LperpTimesSqrtBSi
 0.0			rMinWaveReflection
-F			UseSurfaceWaveRefl
+F			UseReynoldsDecomposition
 
 #HEATPARTITIONING
 stochasticheating		TypeHeatPartitioning
