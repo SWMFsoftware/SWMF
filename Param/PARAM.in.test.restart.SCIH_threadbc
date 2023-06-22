@@ -139,7 +139,7 @@ T			DoSaveLogfile
 VAR			StringLog
 1			DnSaveLogfile
 -1.			DtSaveLogfile
-dt Rho Mx My Mz Bx By Bz Ehot Ew Pe E Pmin Pmax
+dt Rho Mx My Mz Bx By Bz Ehot Ew Pe E Pmin Pmax		NameLogVars
 
 #COARSEAXIS
 T			UseCoarseAxis

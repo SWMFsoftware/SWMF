@@ -6,7 +6,7 @@ IM -2 -2  1		CompMap nProc-2 PE
 PC  0 -1 -1		CompMap
 
 #DESCRIPTION
-Param/SWPC/PARAM.in_SWPC_v2_init: Example file to start a run for the SWPC Version 2 code selection		StringDescription
+Param/SWPC/PARAM.in_SWPC_aepic_init		StringDescription
 
 #TIMEACCURATE
 F			IsTimeAccurate
@@ -468,7 +468,7 @@ T			useFixedDt
 0.1			ratioDivC2C
 
 #MONITOR
-1
+1			dnReport
 
 #PARTICLES
 3			nParticleX
