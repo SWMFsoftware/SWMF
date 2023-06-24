@@ -477,7 +477,8 @@ contains
            call IM_get_for_gm(Buffer_IIV, iSize, jSize, nVarImGm, NameVar)
       call transfer_real_array(IM_, GM_, size(Buffer_IIV), Buffer_IIV)
       if(is_proc(GM_)) &
-           call GM_put_from_im_cimi(Buffer_IIV, iSize, jSize, nVarImGm, NameVar)
+           call GM_put_from_im_cimi(Buffer_IIV, iSize, jSize, nVarImGm, &
+           NameVar)
       deallocate(Buffer_IIV)
 
       if(DoTest)write(*,*)NameSub,': finished iProc=', i_proc()
