@@ -120,7 +120,7 @@ module CON_coupler
   integer, public :: nVarCouple, nVarCouple_CC(MaxComp,MaxComp)
 
   ! no. of state variable groups for which coupling is implemented
-  integer, parameter, public     :: nCoupleVarGroup = 13
+  integer, parameter, public     :: nCoupleVarGroup = 15
 
   ! named indices for variable groups for coupling
   integer, parameter, public :: &
@@ -136,14 +136,16 @@ module CON_coupler
        Material_              = 10, &
        ChargeState_           = 11, &
        CollisionlessHeatFlux_ = 12, &
-       ChGL_                  = 13
+       ChGL_                  = 13, &
+       DoLPerp_               = 14, &
+       DoSigmaD_              = 15
 
   logical, public :: &
        DoCoupleVar_V(nCoupleVarGroup) = .false. , &
        DoCoupleVar_VCC(nCoupleVarGroup,MaxComp,MaxComp) = .false.
 
   ! number of variable types known to the coupler
-  integer, parameter, public  :: nVarIndexCouple = 16
+  integer, parameter, public  :: nVarIndexCouple = 18
 
   ! Fixed indices for mapping actual variable indices
   integer, parameter,public :: &
@@ -162,7 +164,9 @@ module CON_coupler
        ChargeStateFirstCouple_ = 13, &
        ChargeStateLastCouple_  = 14, &
        EhotCouple_             = 15, &
-       ChGLCouple_             = 16
+       ChGLCouple_             = 16, &
+       LperpCouple_            = 17, &
+       Z2SigmaDCouple_         = 18
 
   ! vector storing the actual values of variable indices inside a
   ! coupled component
@@ -727,6 +731,10 @@ contains
           DoCoupleVar_V(ElectronPressure_) = any(NameVarTarget_V=='Pe')
        case('Sign')
           DoCoupleVar_V(ChGL_) = any(NameVarTarget_V=='Sign')
+       case('Z2SD')
+          DoCoupleVar_V(DoSigmaD_) = any(NameVarTarget_V=='Z2SD')
+       case('Lpepr')
+          DoCoupleVar_V(DoLperp_) = any(NameVarTarget_V=='Lperp')
        case('Ppar')
           DoCoupleVar_V(AnisoPressure_) = any(NameVarTarget_V=='Ppar')
 
@@ -946,6 +954,16 @@ contains
        iVar_V(ChGLCouple_) = nVarCouple
     end if
 
+    if(DoCoupleVar_V(DoLperp_))then
+       nVarCouple = nVarCouple + 1
+       iVar_V(LperpCouple_) = nVarCouple
+    end if
+
+    if(DoCoupleVar_V(DoSigmaD_))then
+       nVarCouple = nVarCouple + 1
+       iVar_V(Z2SigmaDCouple_) = nVarCouple
+    end if
+
     if (nVarCouple > nVarSource) then
        write(*,*) 'SWMF Error: # of coupled variables exceeds nVarSource'
        call CON_stop(NameSub//' error in calculating nVarCouple')
@@ -1019,6 +1037,8 @@ contains
        write(*,*) 'Fluids:         ', DoCoupleVar_V(MultiFluid_)
        write(*,*) 'Species:        ', DoCoupleVar_V(MultiSpecie_)
        write(*,*) 'SignB:          ', DoCoupleVar_V(ChGL_)
+       write(*,*) 'Lperp:          ', DoCoupleVar_V(DoLperp_)
+       write(*,*) 'Z2SigmaD:       ', DoCoupleVar_V(DoSigmaD_)
        write(*,*) '---------------------------------------------'
     end if
     if(DoTestMe) then
@@ -1043,6 +1063,8 @@ contains
        write(*,*) 'ChargeStateFirst: ', iVar_V(ChargeStateFirstCouple_)
        write(*,*) 'ChargeStateLast: ',  iVar_V(ChargeStateLastCouple_)
        write(*,*) 'SignB:           ',  iVar_V(ChGLCouple_)
+       write(*,*) 'Lperp:           ',  iVar_V(LperpCouple_)
+       write(*,*) 'Z2SigmaD:        ',  iVar_V(Z2SigmaDCouple_)
        write(*,*) '---------------------------------------------'
 
     end if
