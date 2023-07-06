@@ -1498,8 +1498,8 @@ test6:
 
 test6_compile:
 	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
-	./Config.pl -o=SC:u=Awsom,e=AwsomChGL,ng=2,g=6,4,4
-	./Config.pl -o=IH:u=Awsom,e=AwsomChGL,ng=2,g=4,4,4
+	./Config.pl -o=SC:u=Awsom,e=AwsomSA,ng=2,g=6,4,4
+	./Config.pl -o=IH:u=Awsom,e=AwsomSA,ng=2,g=4,4,4
 	${MAKE} SWMF
 	make PIDL
 
