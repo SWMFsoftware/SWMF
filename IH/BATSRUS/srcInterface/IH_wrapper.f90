@@ -756,11 +756,11 @@ contains
     use IH_ModVarIndexes,     ONLY: &
          Rho_, Ux_, Uz_, RhoUx_, RhoUz_, Bx_, Bz_, p_,             &
          WaveFirst_, WaveLast_, Pe_, Ppar_, nFluid, SignB_, Ehot_, &
-         ChargeStateFirst_, ChargeStateLast_, Z2SigmaD_, Lperp_
+         ChargeStateFirst_, ChargeStateLast_, WDiff_, Lperp_
     use CON_coupler,   ONLY:                                       &
          Bfield_, ElectronPressure_, AnisoPressure_, Wave_,        &
          MultiFluid_, MultiSpecie_, CollisionlessHeatFlux_, ChGL_, &
-         DoLperp_, DoSigmaD_, LperpCouple_, Z2SigmaDCouple_,       &
+         DoLperp_, DoWDiff_, LperpCouple_, WDiffCouple_,       &
          RhoCouple_, RhoUxCouple_, RhoUzCouple_, PCouple_,         &
          BxCouple_, BzCouple_, PeCouple_, PparCouple_, ChGLCouple_,&
          WaveFirstCouple_, WaveLastCouple_, EhotCouple_,           &
@@ -808,9 +808,9 @@ contains
             BufferIn_VG(iVar_V(LperpCouple_),:,1:nLon,1:nLat)*&
             Si2No_V(UnitX_)
     end if
-    if(DoCoupleVar_V(DoSigmaD_))then
-       BufferState_VG(Z2SigmaD_,:,1:nLon,1:nLat) = &
-            BufferIn_VG(iVar_V(Z2SigmaDCouple_),:,1:nLon,1:nLat)*&
+    if(DoCoupleVar_V(DoWDiff_))then
+       BufferState_VG(WDiff_,:,1:nLon,1:nLat) = &
+            BufferIn_VG(iVar_V(WDiffCouple_),:,1:nLon,1:nLat)*&
             Si2No_V(UnitEnergyDens_)
     end if
 
@@ -915,7 +915,7 @@ contains
     use IH_ModVarIndexes,     ONLY: &
          Rho_, RhoUx_, RhoUz_, Bx_, Bz_, P_, Pe_, &
          Ppar_, WaveFirst_, WaveLast_, Ehot_, nVar, &
-         ChargeStateFirst_, ChargeStateLast_, SignB_, Z2SigmaD_, Lperp_
+         ChargeStateFirst_, ChargeStateLast_, SignB_, WDiff_, Lperp_
     use CON_coupler,       ONLY: &
          RhoCouple_, RhoUxCouple_,&
          RhoUzCouple_, PCouple_, BxCouple_, BzCouple_,  &
@@ -925,7 +925,7 @@ contains
          CollisionlessHeatFlux_, ChargeStateFirstCouple_, &
          ChargeStateLastCouple_, ChargeState_, iVar_V, &
          DoCoupleVar_V, nVarCouple, ChGL_, ChGLCouple_ ,&
-         DoLperp_, DoSigmaD_, LperpCouple_, Z2SigmaDCouple_
+         DoLperp_, DoWDiff_, LperpCouple_, WDiffCouple_
     use ModCoordTransform, ONLY: rlonlat_to_xyz
     use ModInterpolate,    ONLY: trilinear
     use IH_BATL_lib,       ONLY: iProc, &
@@ -1084,8 +1084,8 @@ contains
             StateInPoint_V(SignB_)*No2Si_V(UnitB_)/No2Si_V(UnitU_)
        if(DoCoupleVar_V(DoLperp_))Buffer_V(iVar_V(LperpCouple_)) = &
             StateInPoint_V(Lperp_)*No2Si_V(UnitX_)
-       if(DoCoupleVar_V(DoSigmaD_))Buffer_V(iVar_V(Z2SigmaDCouple_)) = &
-            StateInPoint_V(Z2SigmaD_)*No2Si_V(UnitEnergydens_)
+       if(DoCoupleVar_V(DoWDiff_))Buffer_V(iVar_V(WDiffCouple_)) = &
+            StateInPoint_V(WDiff_)*No2Si_V(UnitEnergydens_)
 
        ! DONE - fill the buffer grid
        Buffer_VG(:,iR, iLon,iLat) = Buffer_V
@@ -1164,7 +1164,7 @@ contains
     use IH_ModPhysics, ONLY: UnitEnergyDens_
     use IH_ModAdvance, ONLY: Rho_, RhoUx_, RhoUz_, Bx_, Bz_, P_, WaveFirst_, &
          WaveLast_, Pe_, Ppar_, Ehot_, ChargeStateFirst_, ChargeStateLast_, &
-         SignB_, Lperp_, Z2SigmaD_
+         SignB_, Lperp_, WDiff_
     use IH_ModMain,    ONLY: UseB0
 
     use CON_router, ONLY: IndexPtrType, WeightPtrType
@@ -1175,7 +1175,7 @@ contains
          ElectronPressure_, EhotCouple_, Momentum_, &
          CollisionlessHeatFlux_, ChargeStateFirstCouple_, &
          ChargeStateLastCouple_, ChargeState_, ChGL_, ChGLCouple_,&
-         DoLperp_, DoSigmaD_, LperpCouple_, Z2SigmaDCouple_
+         DoLperp_, DoWDiff_, LperpCouple_, WDiffCouple_
 
     integer,            intent(in)  :: nPartial, iGetStart, nVarIn
     type(IndexPtrType), intent(in)  :: Get
@@ -1227,8 +1227,8 @@ contains
          No2Si_V(UnitB_)/No2Si_V(UnitU_)
     if(DoCoupleVar_V(DoLperp_))Buff_V(iVar_V(LperpCouple_)) = State_V(Lperp_)*&
          No2Si_V(UnitX_)
-    if(DoCoupleVar_V(DoSigmaD_))Buff_V(iVar_V(Z2SigmaDCouple_)) = &
-         State_V(Z2SigmaD_)*No2Si_V(UnitEnergydens_)
+    if(DoCoupleVar_V(DoWDiff_))Buff_V(iVar_V(WDiffCouple_)) = &
+         State_V(WDiff_)*No2Si_V(UnitEnergydens_)
     if(DoCoupleVar_V(ElectronPressure_))then
        Buff_V(iVar_V(PeCouple_)) = State_V(Pe_)*No2Si_V(UnitP_)
        Buff_V(iVar_V(PCouple_ )) = State_V(P_ )*No2Si_V(UnitP_)
@@ -1318,7 +1318,7 @@ contains
          Bfield_, Wave_, ElectronPressure_, AnisoPressure_, &
          CollisionlessHeatFlux_, ChargeStateFirstCouple_, &
          ChargeStateLastCouple_, ChargeState_, ChGL_, ChGLCouple_,&
-         DoLperp_, DoSigmaD_, Z2SigmaDCouple_, LperpCouple_
+         DoLperp_, DoWDiff_, WDiffCouple_, LperpCouple_
     use IH_ModAdvance,    ONLY: State_VGB, UseElectronPressure, &
          UseAnisoPressure
     use IH_ModB0,         ONLY: B0_DGB
@@ -1328,7 +1328,7 @@ contains
     use IH_ModChGL,       ONLY: UseChGL, get_chgl_state
     use IH_ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, Bx_, Bz_, P_, &
          WaveFirst_, WaveLast_, Pe_, Ppar_, Ehot_, ChargeStateFirst_, &
-         ChargeStateLast_, nVar, SignB_, Ux_, Uz_, Lperp_, Z2SigmaD_
+         ChargeStateLast_, nVar, SignB_, Ux_, Uz_, Lperp_, WDiff_
     use IH_ModGeometry,   ONLY: Xyz_DGB
 
     integer,             intent(in) :: nPartial, iPutStart, nVarIn
@@ -1405,8 +1405,8 @@ contains
     end if
     if(DoCoupleVar_V(DoLperp_))State_V(Lperp_) = Buff_V(iVar_V(LperpCouple_))*&
          Si2No_V(UnitX_)
-    if(DoCoupleVar_V(DoSigmaD_))State_V(Z2SigmaD_) = &
-         Buff_V(iVar_V(Z2SigmaDCouple_))*&
+    if(DoCoupleVar_V(DoWDiff_))State_V(WDiff_) = &
+         Buff_V(iVar_V(WDiffCouple_))*&
             Si2No_V(UnitEnergydens_)
 
     !
