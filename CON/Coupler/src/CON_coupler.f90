@@ -731,8 +731,8 @@ contains
           DoCoupleVar_V(ElectronPressure_) = any(NameVarTarget_V=='Pe')
        case('Sign')
           DoCoupleVar_V(ChGL_) = any(NameVarTarget_V=='Sign')
-       case('WDiff')
-          DoCoupleVar_V(DoWDiff_) = any(NameVarTarget_V=='WDiff')
+       case('wD')
+          DoCoupleVar_V(DoWDiff_) = any(NameVarTarget_V=='wD')
        case('Lpepr')
           DoCoupleVar_V(DoLperp_) = any(NameVarTarget_V=='Lperp')
        case('Ppar')
@@ -1038,7 +1038,7 @@ contains
        write(*,*) 'Species:        ', DoCoupleVar_V(MultiSpecie_)
        write(*,*) 'SignB:          ', DoCoupleVar_V(ChGL_)
        write(*,*) 'Lperp:          ', DoCoupleVar_V(DoLperp_)
-       write(*,*) 'Z2SigmaD:       ', DoCoupleVar_V(DoWDiff_)
+       write(*,*) 'WDiff:          ', DoCoupleVar_V(DoWDiff_)
        write(*,*) '---------------------------------------------'
     end if
     if(DoTestMe) then
@@ -1064,7 +1064,7 @@ contains
        write(*,*) 'ChargeStateLast: ',  iVar_V(ChargeStateLastCouple_)
        write(*,*) 'SignB:           ',  iVar_V(ChGLCouple_)
        write(*,*) 'Lperp:           ',  iVar_V(LperpCouple_)
-       write(*,*) 'Z2SigmaD:        ',  iVar_V(WDiffCouple_)
+       write(*,*) 'wD:              ',  iVar_V(WDiffCouple_)
        write(*,*) '---------------------------------------------'
 
     end if
