@@ -812,6 +812,8 @@ contains
        BufferState_VG(WDiff_,:,1:nLon,1:nLat) = &
             BufferIn_VG(iVar_V(WDiffCouple_),:,1:nLon,1:nLat)*&
             Si2No_V(UnitEnergyDens_)
+    elseif(WDiff_>1)then
+        BufferState_VG(WDiff_,:,1:nLon,1:nLat) = 0.0
     end if
 
     BufferState_VG(p_,:,1:nLon,1:nLat)  = &
