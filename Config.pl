@@ -25,9 +25,22 @@ our $CloneOnly;
 
 # Figure out remote git server
 my $remote = `git config remote.origin.url`; $remote =~ s/\/SWMF(\.git)?\n//;
-my $umichgitlab = ($remote =~ /gitlab\.umich\.edu/);
+my $SWMFsoftware = ($remote =~ /SWMFsoftware/);
 
-#print "remote=$remote umichgitlab=$umichgitlab\n";
+my $config = "share/Scripts/Config.pl";
+my $gitclone = `pwd`; chop $gitclone;
+if($SWMFsoftware){
+    $gitclone .= "/share/Scripts/gitclone -s";
+}else{
+    $gitclone .= "/share/Scripts/githubclone";
+}
+
+# Git clone missing directories as needed. Start with share/ to get $gitclone.
+if (not -f $config){
+    `git clone $remote/share; git clone $remote/util`;
+}
+
+#print "remote=$remote SWMFsoftware=$SWMFsoftware\n";
 
 # Fix component Makefile.def and .conf files if they exist
 &set_version_makefile_comp;
@@ -35,7 +48,7 @@ my $umichgitlab = ($remote =~ /gitlab\.umich\.edu/);
 # Hash of model names with corresponding component name
 my %component;
 
-if($umichgitlab){
+if($SWMFsoftware){
     %component = (
 	"BATSRUS"       => "GM", 
 	"Ridley_serial" => "IE", 
@@ -88,13 +101,7 @@ foreach (@Arguments){
 # Add -amrex if FLEKS is switched on
 push(@Arguments, '-amrex') if $AddAmrex;
 
-# Create Git clone command
-
-my $gitclone;
-$gitclone  = "sleep $Sleep; " if $Sleep;
-$gitclone .= "git clone";
-$gitclone .= " --depth=1 --no-single-branch" unless $History;
-$gitclone .= ' '.$remote;
+$gitclone .= " -history" if $History;
 
 my $repo;
 foreach $repo ("share", "util", @models){
@@ -103,16 +110,16 @@ foreach $repo ("share", "util", @models){
     $repo1 =~ s/AMPS_P[TC]/AMPS/; # remove _PC, _PT
     $repo1 =~ s/FLEKS_PT/FLEKS/; # remove _PT
     my $model = "$component/$repo1";
-    `cd $component; $gitclone/$repo1` unless -d $model;
+    `cd $component; $gitclone $repo1` unless -d $model;
     if($model eq "GM/BATSRUS"){
-	`cd GM/BATSRUS; $gitclone/srcBATL` 
+	`cd GM/BATSRUS; $gitclone srcBATL`
 			    if not -d "$model/srcBATL";
-	`cd GM/BATSRUS; $gitclone/srcUserExtra` 
-			    if not -d "$model/srcUserExtra" and $umichgitlab;
+	`cd GM/BATSRUS; $gitclone srcUserExtra`
+			    if not -d "$model/srcUserExtra" and $SWMFsoftware;
     }
 }
 
-my $config     = "share/Scripts/Config.pl";
+my $config = "share/Scripts/Config.pl";
 require $config or die "Could not find $config!\n";
 
 if($CloneOnly){
