@@ -126,6 +126,9 @@ float			TypeBc6
 #INNERBOUNDARY
 ionosphere		TypeBcBody
 
+#MAGNETICINNERBOUNDARY
+1.0		B1rCoef
+
 #SOLARWINDFILE
 T			UseSolarWindFile
 IMF.dat			NameSolarWindFile
@@ -475,13 +478,13 @@ F			IsFullyImplicit
 F			IsPointImplicit
 F			IsPointImplicitAll
 
-#SE
+SE
 T			DoCoupleSE
 T			UseFeedbackFromSE
 F			IsVerboseSE
 60			DtGetSe  120
 
-#SETPRECIP
+SETPRECIP
 F			UseFixedPrecip
 
 100.0			PrecipEnergyMin [eV]
