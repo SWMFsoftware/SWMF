@@ -3,7 +3,7 @@ name: Mirroring
 on: [push, delete]
 
 jobs:
-  to_github:
+  to_mstem_quda:
     runs-on: ubuntu-latest
     steps:                                              # <-- must use actions/checkout before mirroring!
       - uses: actions/checkout@v3
@@ -14,4 +14,4 @@ jobs:
           target_repo_url:
             git@github.com:MSTEM-QUDA/SWMF.git
           ssh_private_key:                              # <-- use 'secrets' to pass credential information.
-            ${{ secrets.MIRROR_SSH_PRIVATE_KEY }}
+            ${{ secrets.MIRROR_SSH_PRIVATE_KEY_SWMF }}
