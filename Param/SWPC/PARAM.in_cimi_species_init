@@ -1,7 +1,7 @@
 Name Root Last Stride nThread
 COMPONENTMAP		For few cores like nightly test
 GM  0 -1 -1 -1		CompMap runs on all PE-s
-IM  0 24  1		CompMap runs on up to 24 PE-s
+IM  0 23  1		CompMap runs on up to 24 PE-s
 IE -2 -1  1		CompMap runs on last 2 PEs
 
 Name Root Last Stride nThread
