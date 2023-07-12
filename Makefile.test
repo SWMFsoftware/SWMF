@@ -26,44 +26,45 @@ test_help:
 	@echo "    test_swmf                  (run SWMF tests below)"
 	@echo "    test_eeggl                 (run EEGGL test)"
 	@echo "    test_eegtd                 (run Titov-Demouline test)"
-	@(if [ -d PW/PWOM    ]; then echo "    test_pw                    (run PW/PWOM test)"; fi)
-	@(if [ -d PS/DGCPM   ]; then echo "    test_ps                    (run PS/DGCPM test)"; fi)
-	@(if [ -d SP/MFLAMPA ]; then echo "    test_sp                    (run SP/MFLAMPA test)"; fi)
-	@(if [ -d IM/RCM2    ]; then echo "    test_swpc                  (run GM-IE-RCM2 test as used by SWPC)"; fi)
-	@(if [ -d IM/RCM2    ]; then echo "    test_swpc_build            (create SWPC_build and run test_swpc)"; fi)
-	@(if [ -d IM/RCM2    ]; then echo "    test_swpc_gpu              (run GM-IE-RCM2 test on GPU)"; fi)
-	@(if [ -d IM/RCM2    ]; then echo "    test_swpc_large_gpu        (run large GM-IE-RCM2 test on GPU)"; fi)
-	@(if [ -d IM/RCM2    ]; then echo "    test_swpc_multiion         (run multiion GM-IE-RCM2 SWPC test)"; fi)
-	@(if [ -d IM/RCM2    ]; then echo "    test_swpc_multispecies     (run multispecies GM-IE-RCM2 SWPC test)"; fi)
-	@(if [ -d IM/CIMI2   ]; then echo "    test_swpc_cimi             (run anisotropic GM-IE-CIMI2 SWPC test)"; fi)
-	@(if [ -d IM/CIMI2   ]; then echo "    test_swpc_cimi_species     (run multispecies GM-IE-CIMI2 SWPC test)"; fi)
-	@(if [ -d PW/PWOM    ]; then echo "    test_swpc_pwom             (run GM-IE-RCM2-PWOM SWPC test)"; fi)
-	@(if [ -d PW/PWOM    ]; then echo "    test_swpc_pwom_species     (run multispecies GM-IE-RCM2-PWOM SWPC test)"; fi)
-	@(if [ -d PC/FLEKS   ]; then echo "    test_swpc_aepic            (run MHD-AEPIC GM-IE-RCM2-PC SWPC test)"; fi)	
-	@(if [ -d PW/PWOM    ]; then echo "    test1                      (run GM-IE-PWOM test)"; fi)
-	@(if [ -d UA/GITM    ]; then echo "    test3                      (run GM-IE-IM-UA test)"; fi)
-	@(if [ -d IM/HEIDI   ]; then echo "    test4                      (run GM-IE-HEIDI test)"; fi)
+	@(if [ -d PW/PWOM    ]; then echo "    test_pw                     (run PW/PWOM test)"; fi)
+	@(if [ -d PS/DGCPM   ]; then echo "    test_ps                     (run PS/DGCPM test)"; fi)
+	@(if [ -d SP/MFLAMPA ]; then echo "    test_sp                     (run SP/MFLAMPA test)"; fi)
+	@(if [ -d IM/RCM2    ]; then echo "    test_swpc                   (run GM-IE-RCM2 test as used by SWPC)"; fi)
+	@(if [ -d IM/RCM2    ]; then echo "    test_swpc_build             (create SWPC_build and run test_swpc)"; fi)
+	@(if [ -d IM/RCM2    ]; then echo "    test_swpc_gpu               (run GM-IE-RCM2 test on GPU)"; fi)
+	@(if [ -d IM/RCM2    ]; then echo "    test_swpc_large_gpu         (run large GM-IE-RCM2 test on GPU)"; fi)
+	@(if [ -d IM/RCM2    ]; then echo "    test_swpc_multiion          (run multiion GM-IE-RCM2 SWPC test)"; fi)
+	@(if [ -d IM/RCM2    ]; then echo "    test_swpc_multispecies      (run multispecies GM-IE-RCM2 SWPC test)"; fi)
+	@(if [ -d IM/CIMI2   ]; then echo "    test_swpc_cimi              (run anisotropic GM-IE-CIMI2 SWPC test)"; fi)
+	@(if [ -d IM/CIMI2   ]; then echo "    test_swpc_cimi_species      (run multispecies GM-IE-CIMI2 SWPC test)"; fi)
+	@(if [ -d PW/PWOM    ]; then echo "    test_swpc_pwom              (run GM-IE-RCM2-PWOM SWPC test)"; fi)
+	@(if [ -d PW/PWOM    ]; then echo "    test_swpc_pwom_species      (run multispecies GM-IE-RCM2-PWOM SWPC test)"; fi)
+	@(if [ -d PW/PWOM    ]; then echo "    test_swpc_cimi_pwom_species (run multispecies GM-IE-CIMI2-PWOM SWPC test)"; fi)
+	@(if [ -d PC/FLEKS   ]; then echo "    test_swpc_aepic             (run MHD-AEPIC GM-IE-RCM2-PC SWPC test)"; fi)	
+	@(if [ -d PW/PWOM    ]; then echo "    test1                       (run GM-IE-PWOM test)"; fi)
+	@(if [ -d UA/GITM    ]; then echo "    test3                       (run GM-IE-IM-UA test)"; fi)
+	@(if [ -d IM/HEIDI   ]; then echo "    test4                       (run GM-IE-HEIDI test)"; fi)
 	@(if [ -d GM/BATSRUS/srcUserExtra ]; then echo "    test5                      (run EE-SC test)"; fi)
-	@(if [ -d GM/BATSRUS ]; then echo "    test6                      (run SC-IH coupling test: stream-aligned)"; fi)
+	@(if [ -d GM/BATSRUS ]; then echo "    test6                       (run SC-IH coupling test: stream-aligned)"; fi)
 	@(if [ -d GM/BATSRUS/srcUserExtra ]; then echo "    test7                      (run IH-OH test)"; fi)
-	@(if [ -d GM/BATSRUS ]; then echo "    test8                      (run SC-IH coupling test with AWSoM-R)"; fi)
-	@(if [ -d GM/BATSRUS ]; then echo "    test9                      (run SC-IH coupling test with AWSoM)"; fi)
-	@(if [ -d GM/BATSRUS ]; then echo "    test10                     (run SC-IH like in a real-time)"; fi)
-	@(if [ -d PT/AMPS    ]; then echo "    test11                     (run GM-PT/AMPS coupler test)"; fi)
-	@(if [ -d PC/AMPS    ]; then echo "    test12                     (run GM-PC/AMPS tests)"; fi)
-	@(if [ -d PC/IPIC3D2 ]; then echo "    test12_ipic3d              (run GM-PC/IPIC3D2 tests)"; fi)
-	@(if [ -d PT/AMPS    ]; then echo "    test13                     (run GM-PT/AMPS test: Europa)"; fi)
-	@(if [ -d PT/AMPS    ]; then echo "    test14                     (run OH-PT/AMPS test)"; fi)
-	@(if [ -d PT/AMPS    ]; then echo "    test14_1d                  (run OH-PT/AMPS test in 1D)"; fi)
-	@(if [ -d PT/AMPS    ]; then echo "    test14pui                  (run OH-PT/AMPS test with PUI)"; fi)
-	@(if [ -d SP/MFLAMPA ]; then echo "    test15                     (run SC-IH-SP/MFLAMPA test)"; fi)
-	@(if [ -d SP/MFLAMPA ]; then echo "    test15_build               (configure SC-IH-SP/MFLAMPA, run test15)"; fi)
-	@(if [ -d PT/AMPS    ]; then echo "    test15_pt                  (run SC-IH-PT/AMPS test)"; fi)
-	@(if [ -d PC/FLEKS   ]; then echo "    test16                     (run GM-PC/FLEKS test: periodic FLEKS)"; fi)
-	@(if [ -d PC/FLEKS   ]; then echo "    test17                     (run GM-PC/FLEKS test: 2D Alfven wave)"; fi)
-	@(if [ -d PC/FLEKS   ]; then echo "    test18                     (run GM-PC/FLEKS test: 3D reconnection)"; fi)
-	@(if [ -d PT/FLEKS   ]; then echo "    test20                     (run OH-PT/FLEKS test: shocktube)"; fi)
-	@(if [ -d PT/FLEKS   ]; then echo "    test21                     (run OH-PT/FLEKS test: OuterHelio)"; fi)
+	@(if [ -d GM/BATSRUS ]; then echo "    test8                       (run SC-IH coupling test with AWSoM-R)"; fi)
+	@(if [ -d GM/BATSRUS ]; then echo "    test9                       (run SC-IH coupling test with AWSoM)"; fi)
+	@(if [ -d GM/BATSRUS ]; then echo "    test10                      (run SC-IH like in a real-time)"; fi)
+	@(if [ -d PT/AMPS    ]; then echo "    test11                      (run GM-PT/AMPS coupler test)"; fi)
+	@(if [ -d PC/AMPS    ]; then echo "    test12                      (run GM-PC/AMPS tests)"; fi)
+	@(if [ -d PC/IPIC3D2 ]; then echo "    test12_ipic3d               (run GM-PC/IPIC3D2 tests)"; fi)
+	@(if [ -d PT/AMPS    ]; then echo "    test13                      (run GM-PT/AMPS test: Europa)"; fi)
+	@(if [ -d PT/AMPS    ]; then echo "    test14                      (run OH-PT/AMPS test)"; fi)
+	@(if [ -d PT/AMPS    ]; then echo "    test14_1d                   (run OH-PT/AMPS test in 1D)"; fi)
+	@(if [ -d PT/AMPS    ]; then echo "    test14pui                   (run OH-PT/AMPS test with PUI)"; fi)
+	@(if [ -d SP/MFLAMPA ]; then echo "    test15                      (run SC-IH-SP/MFLAMPA test)"; fi)
+	@(if [ -d SP/MFLAMPA ]; then echo "    test15_build                (configure SC-IH-SP/MFLAMPA, run test15)"; fi)
+	@(if [ -d PT/AMPS    ]; then echo "    test15_pt                   (run SC-IH-PT/AMPS test)"; fi)
+	@(if [ -d PC/FLEKS   ]; then echo "    test16                      (run GM-PC/FLEKS test: periodic FLEKS)"; fi)
+	@(if [ -d PC/FLEKS   ]; then echo "    test17                      (run GM-PC/FLEKS test: 2D Alfven wave)"; fi)
+	@(if [ -d PC/FLEKS   ]; then echo "    test18                      (run GM-PC/FLEKS test: 3D reconnection)"; fi)
+	@(if [ -d PT/FLEKS   ]; then echo "    test20                      (run OH-PT/FLEKS test: shocktube)"; fi)
+	@(if [ -d PT/FLEKS   ]; then echo "    test21                      (run OH-PT/FLEKS test: OuterHelio)"; fi)
 	@echo "    test_check                 (collect test results into test_swmf.res)"
 
 # Nothing should be done parallel in this Makefile
@@ -1288,6 +1289,78 @@ test_swpc_pwom_species_check:
 		Param/SWPC/TestOutputPwomSpecies/it140410_000300_000.idl.gz \
 		>> test_swpc_pwom_species_ie.diff)
 	ls -l test_swpc_pwom_species_*.diff
+
+### test_swpc_cimi_pwom_species: GM+IE+IM/CIMI2 ###
+
+test_swpc_cimi_pwom_species:
+	@echo "test_swpc_cimi_pwom_species_compile..." > test_swpc_cimi_pwom_species_gm.diff
+	@echo "test_swpc_cimi_pwom_species_compile..." > test_swpc_cimi_pwom_species_ie.diff
+	${MAKE} test_swpc_cimi_pwom_species_compile
+	@echo "test_swpc_cimi_pwom_species_rundir..." >> test_swpc_cimi_pwom_species_gm.diff
+	@echo "test_swpc_cimi_pwom_species_rundir..." >> test_swpc_cimi_pwom_species_ie.diff
+	${MAKE} test_swpc_cimi_pwom_species_rundir
+	@echo "test_swpc_cimi_pwom_species_run..." >> test_swpc_cimi_pwom_species_gm.diff
+	@echo "test_swpc_cimi_pwom_species_run..." >> test_swpc_cimi_pwom_species_ie.diff
+	${MAKE} test_swpc_cimi_pwom_species_run
+	@echo "test_swpc_cimi_pwom_species_restart..." >> test_swpc_cimi_pwom_species_gm.diff
+	@echo "test_swpc_cimi_pwom_species_restart..." >> test_swpc_cimi_pwom_species_ie.diff
+	${MAKE} test_swpc_cimi_pwom_species_restart
+	@echo "test_swpc_cimi_pwom_species_check..." >> test_swpc_cimi_pwom_species_gm.diff
+	@echo "test_swpc_cimi_pwom_species_check..." >> test_swpc_cimi_pwom_species_ie.diff
+	${MAKE} test_swpc_cimi_pwom_species_check
+
+test_swpc_cimi_pwom_species_compile:
+	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/CIMI2,PW/PWOM
+	./Config.pl -o=GM:u=Default,e=MhdHpOp,ng=2,g=8,8,8,IE:g=181,361
+	./Config.pl -o=IM:EarthHO,GridExpanded
+	${MAKE} SWMF
+	make PIDL
+
+test_swpc_cimi_pwom_species_rundir:
+	rm -rf ${TESTDIR}
+	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
+	cd Param/SWPC/; cp PARAM.in_*cimi_pwom_species* *.in *.dat ../../${TESTDIR}/
+	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in_cimi_pwom_species_init
+	perl -pi -e 'if(/MaxIter|MaxBlock|nTotalLine/){s/700/70/; s/1500/200/; s/5000/350/; s/252/4/;}; s/#BORIS/BORIS/; s/^\#(COMPONENTMAP.*production)/$$1/i; s/^(COMPONENTMAP.*nightly)/\#$$1/i' ${TESTDIR}/PARAM.in_cimi_pwom_species_init
+	cp ${TESTDIR}/PARAM.in_cimi_pwom_species_init ${TESTDIR}/PARAM.in
+
+test_swpc_cimi_pwom_species_run:
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./Restart.pl -i SWMF_RESTART.20140410_000200
+
+test_swpc_cimi_pwom_species_restart:
+	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in_cimi_pwom_species_restart
+	perl -pi -e 's/252/4/; s/#BORIS/BORIS/; s/^\#(COMPONENTMAP.*production)/$$1/i; s/^(COMPONENTMAP.*nightly)/\#$$1/i' ${TESTDIR}/PARAM.in_cimi_pwom_species_restart
+	cd ${TESTDIR}; cp PARAM.in_cimi_pwom_species_restart PARAM.in
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_restart
+	cd ${TESTDIR}; ./PostProc.pl -noptec
+
+test_swpc_cimi_pwom_species_check:
+	-@(${DIFFNUM} -b -r=1e-5 -a=1e-8 \
+		${TESTDIR}/GM/IO2/log_e20140410-000200.log \
+		Param/SWPC/TestOutputCimiPwomSpecies/log_e20140410-000200.log \
+		> test_swpc_cimi_pwom_species_gm.diff)
+	-@(${DIFFNUM} -b -r=2e-4 -a=1e-5 \
+		${TESTDIR}/GM/IO2/magnetometers_e20140410-000200.mag \
+		Param/SWPC/TestOutputCimiPwomSpecies/magnetometers_e20140410-000200.mag \
+		>> test_swpc_cimi_pwom_species_gm.diff)
+	-@(${DIFFNUM} -b -r=2e-4 -a=1e-5 \
+		${TESTDIR}/GM/IO2/mag_grid_e20140410-000300.out \
+		Param/SWPC/TestOutputCimiPwomSpecies/mag_grid_e20140410-000300.out \
+		>> test_swpc_cimi_pwom_species_gm.diff)
+	-@(${DIFFNUM} -b -r=1e-5 -a=1e-8 \
+		${TESTDIR}/GM/IO2/geoindex_e20140410-000200.log \
+		Param/SWPC/TestOutputCimiPwomSpecies/geoindex_e20140410-000200.log \
+		>> test_swpc_cimi_pwom_species_gm.diff)
+	-@(${DIFFNUM} -b -r=1e-5 \
+		${TESTDIR}/IE/ionosphere/IE_t140410_000200.log \
+		Param/SWPC/TestOutputCimiPwomSpecies/IE_t140410_000200.log \
+		> test_swpc_cimi_pwom_species_ie.diff)
+	-@(${DIFFNUM} -b -r=2e-4 -a=5e-5 \
+		${TESTDIR}/IE/ionosphere/it140410_000300_000.idl \
+		Param/SWPC/TestOutputCimiPwomSpecies/it140410_000300_000.idl.gz \
+		>> test_swpc_cimi_pwom_species_ie.diff)
+	ls -l test_swpc_cimi_pwom_species_*.diff
 
 ### test_swpc_amps_build: Configure SWMF with GM+IE+IM+PT+RB ###
 
