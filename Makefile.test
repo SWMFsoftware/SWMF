@@ -35,11 +35,11 @@ test_help:
 	@(if [ -d IM/RCM2    ]; then echo "    test_swpc_large_gpu         (run large GM-IE-RCM2 test on GPU)"; fi)
 	@(if [ -d IM/RCM2    ]; then echo "    test_swpc_multiion          (run multiion GM-IE-RCM2 SWPC test)"; fi)
 	@(if [ -d IM/RCM2    ]; then echo "    test_swpc_multispecies      (run multispecies GM-IE-RCM2 SWPC test)"; fi)
-	@(if [ -d IM/CIMI2   ]; then echo "    test_swpc_cimi              (run anisotropic GM-IE-CIMI2 SWPC test)"; fi)
-	@(if [ -d IM/CIMI2   ]; then echo "    test_swpc_cimi_species      (run multispecies GM-IE-CIMI2 SWPC test)"; fi)
+	@(if [ -d IM/CIMI    ]; then echo "    test_swpc_cimi              (run anisotropic GM-IE-CIMI SWPC test)"; fi)
+	@(if [ -d IM/CIMI    ]; then echo "    test_swpc_cimi_species      (run multispecies GM-IE-CIMI SWPC test)"; fi)
 	@(if [ -d PW/PWOM    ]; then echo "    test_swpc_pwom              (run GM-IE-RCM2-PWOM SWPC test)"; fi)
 	@(if [ -d PW/PWOM    ]; then echo "    test_swpc_pwom_species      (run multispecies GM-IE-RCM2-PWOM SWPC test)"; fi)
-	@(if [ -d PW/PWOM    ]; then echo "    test_swpc_cimi_pwom_species (run multispecies GM-IE-CIMI2-PWOM SWPC test)"; fi)
+	@(if [ -d PW/PWOM    ]; then echo "    test_swpc_cimi_pwom_species (run multispecies GM-IE-CIMI-PWOM SWPC test)"; fi)
 	@(if [ -d PC/FLEKS   ]; then echo "    test_swpc_aepic             (run MHD-AEPIC GM-IE-RCM2-PC SWPC test)"; fi)	
 	@(if [ -d PW/PWOM    ]; then echo "    test1                       (run GM-IE-PWOM test)"; fi)
 	@(if [ -d UA/GITM    ]; then echo "    test3                       (run GM-IE-IM-UA test)"; fi)
@@ -96,8 +96,8 @@ test_swmf:
 	-@(if [ -d IM/RCM2    ]; then ${MAKE} test_swpc TESTDIR=run_test_swpc; fi)
 	-@(if [ -d IM/RCM2    ]; then ${MAKE} test_swpc_multiion TESTDIR=run_test_swpc_multiion; fi)
 	-@(if [ -d IM/RCM2    ]; then ${MAKE} test_swpc_multispecies TESTDIR=run_test_swpc_multispecies; fi)
-	-@(if [ -d IM/CIMI2   ]; then ${MAKE} test_swpc_cimi TESTDIR=run_test_swpc_cimi; fi)
-	-@(if [ -d IM/CIMI2   ]; then ${MAKE} test_swpc_cimi_species TESTDIR=run_test_swpc_cimi_species; fi)
+	-@(if [ -d IM/CIMI    ]; then ${MAKE} test_swpc_cimi TESTDIR=run_test_swpc_cimi; fi)
+	-@(if [ -d IM/CIMI    ]; then ${MAKE} test_swpc_cimi_species TESTDIR=run_test_swpc_cimi_species; fi)
 	-@(if [ -d PW/PWOM    ]; then ${MAKE} test_swpc_pwom TESTDIR=run_test_swpc_pwom; fi)
 	-@(if [ -d PW/PWOM    ]; then ${MAKE} test_swpc_pwom_species TESTDIR=run_test_swpc_pwom_species; fi)
 	-@(if [ -d PW/PWOM    ]; then ${MAKE} test1 TESTDIR=run_test01; fi)
@@ -994,7 +994,7 @@ test_swpc_multispecies_check:
 		>> test_swpc_multispecies_ie.diff)
 	ls -l test_swpc_multispecies_*.diff
 
-### test_swpc_cimi: GM+IE+IM/CIMI2 ###
+### test_swpc_cimi: GM+IE+IM/CIMI ###
 
 test_swpc_cimi:
 	@echo "test_swpc_cimi_compile..." > test_swpc_cimi_gm.diff
@@ -1014,7 +1014,7 @@ test_swpc_cimi:
 	${MAKE} test_swpc_cimi_check
 
 test_swpc_cimi_compile:
-	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/CIMI2
+	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/CIMI
 	./Config.pl -o=GM:u=Default,e=MhdAnisoP,ng=2,g=8,8,8,IE:g=181,361
 	./Config.pl -o=IM:EarthHO,GridExpanded
 	${MAKE} SWMF
@@ -1066,7 +1066,7 @@ test_swpc_cimi_check:
 		>> test_swpc_cimi_ie.diff)
 	ls -l test_swpc_cimi_*.diff
 
-### test_swpc_cimi_species: GM+IE+IM/CIMI2 ###
+### test_swpc_cimi_species: GM+IE+IM/CIMI ###
 
 test_swpc_cimi_species:
 	@echo "test_swpc_cimi_species_compile..." > test_swpc_cimi_species_gm.diff
@@ -1086,7 +1086,7 @@ test_swpc_cimi_species:
 	${MAKE} test_swpc_cimi_species_check
 
 test_swpc_cimi_species_compile:
-	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/CIMI2
+	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/CIMI
 	./Config.pl -o=GM:u=Default,e=MhdHpOp,ng=2,g=8,8,8,IE:g=181,361
 	./Config.pl -o=IM:EarthHO,GridExpanded
 	${MAKE} SWMF
@@ -1290,7 +1290,7 @@ test_swpc_pwom_species_check:
 		>> test_swpc_pwom_species_ie.diff)
 	ls -l test_swpc_pwom_species_*.diff
 
-### test_swpc_cimi_pwom_species: GM+IE+IM/CIMI2 ###
+### test_swpc_cimi_pwom_species: GM+IE+IM/CIMI ###
 
 test_swpc_cimi_pwom_species:
 	@echo "test_swpc_cimi_pwom_species_compile..." > test_swpc_cimi_pwom_species_gm.diff
@@ -1310,7 +1310,7 @@ test_swpc_cimi_pwom_species:
 	${MAKE} test_swpc_cimi_pwom_species_check
 
 test_swpc_cimi_pwom_species_compile:
-	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/CIMI2,PW/PWOM
+	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/CIMI,PW/PWOM
 	./Config.pl -o=GM:u=Default,e=MhdHpOp,ng=2,g=8,8,8,IE:g=181,361
 	./Config.pl -o=IM:EarthHO,GridExpanded
 	${MAKE} SWMF

@@ -56,7 +56,7 @@ rm -rf SWMF BATL HYPRE
 # Checkout and install the latest code
 gitclone SWMF
 
-# Install part of the code. CIMI2 does not work with pgf90
+# Install part of the code. CIMI does not work with pgf90
 cd SWMF
 ./Config.pl -install=BATSRUS,RCM2,Ridley_serial,RBE,FLEKS,PWOM -compiler=nvfortran,nvc -O1 >& test_swmf.log
 perl -i -pe 's/(^\t\-\@\(\$\{MAKE\} test_share)/#$$1/' Makefile.test

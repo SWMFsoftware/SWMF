@@ -260,7 +260,7 @@ MANUAL: ENV_CHECK
 	@if([ -d "util/CRASH" ]); then cd util/CRASH/doc/Tex; make PDF; fi
 	@if([ -d "GM/BATSRUS" ]); then cd GM/BATSRUS; make PDF; fi #^CMP IF GM
 	@if([ -d "PW/PWOM"    ]); then cd PW/PWOM;    make PDF; fi #^CMP IF PW
-	@if([ -d "IM/CIMI2"   ]); then cd IM/CIMI2;   make PDF; fi #^CMP IF IM
+	@if([ -d "IM/CIMI "   ]); then cd IM/CIMI;    make PDF; fi #^CMP IF IM
 	@if([ -d "PT/AMPS"    ]); then cd PT/AMPS;    make PDF; fi #^CMP IF PT
 
 PDF:	ENV_CHECK

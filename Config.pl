@@ -52,7 +52,7 @@ if($SWMFsoftware){
     %component = (
 	"BATSRUS"       => "GM", 
 	"Ridley_serial" => "IE", 
-	"CIMI2"         => "IM", 
+	"CIMI"          => "IM", 
 	"HEIDI"         => "IM", 
 	"RCM2"          => "IM",
 	"ALTOR"         => "PC",
