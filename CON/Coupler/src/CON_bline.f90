@@ -47,7 +47,8 @@ module CON_bline
   public :: BL_put_from_mh            ! put MHD values from MH to SP
   public :: BL_interface_point_coords ! points rMinInterface<R<rMaxInterface
   public :: BL_put_line               ! points rMin < R < rMax
-  public :: BL_set_line_foot_b
+  public :: BL_is_interface_block     ! to mark unusable lines
+  public :: BL_set_line_foot_b        
   public :: save_mhd
 
   real,    public  :: TimeBl = -1.0   ! Time of the model! Time of the model
@@ -129,6 +130,9 @@ module CON_bline
 
   integer, parameter :: Length_=4
   real,    allocatable, target :: FootPoint_VB(:, :)
+
+  ! To mark unusable lines (too short or those with negative VDF)
+  logical, allocatable, target :: Used_B(:)
 
   ! coupling parameters:
   ! domain boundaries
@@ -280,7 +284,8 @@ contains
   end subroutine BL_read_param
   !============================================================================
   subroutine BL_init(nParticleIn, nLonIn, nLatIn, &
-       rPointer_VIB,  nPointer_B,  nVarIn, StateIO_VIB, FootPointIn_VB)
+       rPointer_VIB,  nPointer_B,  nVarIn, StateIO_VIB, FootPointIn_VB, &
+       lPointer_B)
     use ModUtilities, ONLY: join_string
     real,    intent(inout), pointer :: rPointer_VIB(:,:,:)
     integer, intent(inout), pointer :: nPointer_B(:)
@@ -288,7 +293,7 @@ contains
     integer, optional, intent(in)   :: nVarIn
     real,    intent(inout), optional, pointer :: &
          StateIO_VIB(:,:,:), FootPointIn_VB(:,:)
-
+    logical, intent(inout), optional, pointer :: lPointer_B(:)
     !
     ! Loop variable
 
@@ -340,6 +345,10 @@ contains
     ! Set iOffset_B array
 
     allocate(iOffset_B(nLine)); iOffset_B = 0
+
+    ! set array to mark unusable line
+    allocate(Used_B(nLine)); Used_B = .true.
+    if(present(lPointer_B))lPointer_B => Used_B
 
     ! Set plot variable names
 
@@ -658,11 +667,18 @@ contains
     DoAdjustLo = Source_ == Lower_
     DoAdjustUp = Source_ == Upper_
     line:do iLine = 1, nLine
+       if(.not. Used_B(iLine))CYCLE line
        iBegin = 1
        if(DoAdjustLo)then
           iOffset_B(iLine) = 0
        end if
        iEnd   = nVertex_B(  iLine)
+       if(iEnd < 10)then
+          ! Remove too short lines
+          Used_B(iLine) = .false.
+          nVertex_B(iLine)=0
+          CYCLE line
+       end if
        iParticle_I(:) = [iBegin, iEnd]
        if(DoAdjustUp) then
           iLoop = Up_
@@ -1004,7 +1020,12 @@ contains
       end do
   end subroutine save_mhd
   !============================================================================
-
+  logical function BL_is_interface_block(iBlockLocal)
+    integer, intent(in) :: iBlockLocal
+    !--------------------------------------------------------------------------
+    BL_is_interface_block = Used_B(iBlockLocal)
+  end function BL_is_interface_block
+  !============================================================================
 end module CON_bline
 !==============================================================================
 

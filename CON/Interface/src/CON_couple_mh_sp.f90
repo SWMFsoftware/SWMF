@@ -51,6 +51,7 @@ module CON_couple_mh_sp
        BL_get_bounds            ,&  ! Provides RScMin/Max and/or RIhMin/Max
        BL_n_particle            ,&  ! Number of "points" in a given line in SP
        BL_put_from_mh           ,&  ! Put MHD info from SC or IH to SP
+       BL_is_interface_block    ,&  ! Skips unused block
        BL_interface_point_coords,&  ! Check if the point is within interface
        BL_put_line              ,&  ! Put particle Xyz from SC/IH to SP
        BL_Grid, BL_LocalGrid        ! Grid descriptors (global and local)
@@ -205,6 +206,7 @@ contains
          Router                = RouterScBl               ,&
          n_interface_point_in_block = BL_n_particle       ,&
          interface_point_coords= BL_interface_point_coords,&! Xyz_D in BL
+         is_interface_block    = BL_is_interface_block    ,&! used line  
          mapping               = mapping_sp_to_sc         ,&!=>Coord_D in SC
          interpolate           = interpolation_amr_gc)
     if(is_proc(SC_))then
@@ -309,6 +311,7 @@ contains
          Router                 = RouterScBl               ,&
          n_interface_point_in_block = BL_n_particle        ,&
          interface_point_coords = BL_interface_point_coords,&
+         is_interface_block     = BL_is_interface_block    ,&
          mapping                = mapping_sp_to_sc         ,&
          interpolate            = interpolation_amr_gc)
     call couple_comp(RouterScBl                            ,&
@@ -372,6 +375,7 @@ contains
          Router                     = RouterIhBl               ,&
          n_interface_point_in_block = BL_n_particle            ,&
          interface_point_coords     = BL_interface_point_coords,&
+         is_interface_block         = BL_is_interface_block    ,&
          mapping                    = mapping_sp_to_ih         ,&
          interpolate                = interpolation_amr_gc)
     ! Now in IH are 1 point above RScMax per each line
@@ -473,6 +477,7 @@ contains
          Router                     = RouterIHBl               ,&
          n_interface_point_in_block = BL_n_particle            ,&
          interface_point_coords     = BL_interface_point_coords,&
+         is_interface_block         = BL_is_interface_block    ,&
          mapping                    = mapping_sp_to_ih         ,&
          interpolate                = interpolation_amr_gc)
     call couple_comp(                 RouterIhBl               ,&
@@ -557,6 +562,7 @@ contains
          Router                     = RouterOhBl               ,&
          n_interface_point_in_block = BL_n_particle            ,&
          interface_point_coords     = BL_interface_point_coords,&
+         is_interface_block         = BL_is_interface_block    ,&
          mapping                    = mapping_sp_to_OH         ,&
          interpolate                = interpolation_amr_gc)
     ! Now in OH-semi-router is 1 point above RRIhMax per each line
@@ -658,6 +664,7 @@ contains
          Router                     = RouterOhBl               ,&
          n_interface_point_in_block = BL_n_particle            ,&
          interface_point_coords     = BL_interface_point_coords,&
+         is_interface_block         = BL_is_interface_block    ,&
          mapping                    = mapping_sp_to_oh         ,&
          interpolate                = interpolation_amr_gc)
     call couple_comp(                 RouterOhBl               ,&
