@@ -1664,8 +1664,8 @@ test8:
 
 test8_compile:
 	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
-	./Config.pl -o=SC:u=Awsom,e=AwsomWDiff,ng=2,g=4,4,4
-	./Config.pl -o=IH:u=Awsom,e=AwsomWDiff,ng=2,g=4,4,4
+	./Config.pl -o=SC:u=Awsom,e=Awsom,ng=2,g=4,4,4
+	./Config.pl -o=IH:u=Awsom,e=Awsom,ng=2,g=4,4,4
 	${MAKE} SWMF
 	make PIDL
 
@@ -1687,7 +1687,7 @@ test8_restart:
 	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS
 
 test8_check:
-	-(${DIFFNUM} -b -r=1e-4 -a=1e-26 \
+	-(${DIFFNUM} -b -r=1e-5 -a=1e-26 \
 		${TESTDIR}/RESULTS/SC/log_n000000.log \
 		output/test8/SC_log_n000000.log \
 		> test08_sc_thread.diff)
