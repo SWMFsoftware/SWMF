@@ -189,10 +189,9 @@ F			UseB0MomentumFlux
 
 #CORONALHEATING
 turbulentcascade		TypeCoronalHeating
-T			UseReflectionParam (read for turbulentcascade only)
-1.5e5			LperpTimesSqrtBSi (read for turbulentcascade only)
-1.2			rMinWaveReflection (read if UseReflectionParam is true)
-T			UseReynoldsDecomposition (read if UseReflectionParam is true)
+1.5e5			LperpTimesSqrtBSi
+1.2			rMinWaveReflection
+F			UseReynoldsDecomposition
 
 #HEATCONDUCTION
 T			UseHeatConduction
