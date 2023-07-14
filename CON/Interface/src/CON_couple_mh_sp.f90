@@ -206,7 +206,7 @@ contains
          Router                = RouterScBl               ,&
          n_interface_point_in_block = BL_n_particle       ,&
          interface_point_coords= BL_interface_point_coords,&! Xyz_D in BL
-         is_interface_block    = BL_is_interface_block    ,&! used line  
+         is_interface_block    = BL_is_interface_block    ,&! used line
          mapping               = mapping_sp_to_sc         ,&!=>Coord_D in SC
          interpolate           = interpolation_amr_gc)
     if(is_proc(SC_))then

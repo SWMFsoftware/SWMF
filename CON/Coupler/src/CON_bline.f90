@@ -48,7 +48,7 @@ module CON_bline
   public :: BL_interface_point_coords ! points rMinInterface<R<rMaxInterface
   public :: BL_put_line               ! points rMin < R < rMax
   public :: BL_is_interface_block     ! to mark unusable lines
-  public :: BL_set_line_foot_b        
+  public :: BL_set_line_foot_b
   public :: save_mhd
 
   real,    public  :: TimeBl = -1.0   ! Time of the model! Time of the model
