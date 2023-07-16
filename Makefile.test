@@ -1915,15 +1915,6 @@ test10_check:
 		output/test10/IH_log_n000000.log \
 		> test10_ih.diff)
 	ls -l test10_*.diff
-#	-(${DIFFNUM} -b -r=1e-5 -a=1e-26 \
-#		${TESTDIR}/RESULTS/SC/rfr_rwi_4_*.outs \
-#		output/test8/SC_rfr.ref.gz \
-#		>> test08_sc_thread.diff)
-#	-(${DIFFNUM} -b -r=1e-5 \
-#		${TESTDIR}/RESULTS/SC/los_sdo_aia*.out \
-#		SC/BATSRUS/data/output/test8/SC_los_sdo_aia.out.gz \
-#		> test08_sc_los.diff)
-#	
 
 ### test11: Dipole field with solar wind coupled with an exosphere model, to test the GM/PT coupler ###
 
@@ -2271,10 +2262,6 @@ test15_long_check:
 		${TESTDIR}/RESULTS/SC/log_n000000.log \
 		output/test15_long/SC_log_n000000.log \
 		> test15_long_sc.diff)
-	-(${DIFFNUM} -b -r=1e-5 -a=1e-26 \
-		${TESTDIR}/RESULTS/SC/rfr_rwi_4_*.outs \
-		output/test8/SC_rfr.ref.gz \
-		> test15_long_sc_rfr.diff)
 	-(${DIFFNUM} -b -r=1e-5 \
 		${TESTDIR}/RESULTS/IH/log_n000000.log \
 		output/test15_long/IH_log_n000000.log \
@@ -2606,12 +2593,8 @@ test19_restart:
 test19_check:
 	-(${DIFFNUM} -b -r=1e-5 -a=1e-26 \
 		${TESTDIR}/RESULTS/SC/log_n000000.log \
-		output/test15_long/SC_log_n000000.log \
+		output/test19/SC_log_n000000.log \
 		> test19_sc.diff)
-	-(${DIFFNUM} -b -r=1e-5 -a=1e-26 \
-		${TESTDIR}/RESULTS/SC/rfr_rwi_4_*.outs \
-		output/test8/SC_rfr.ref.gz \
-		> test19_sc_rfr.diff)
 	-(${DIFFNUM} -b -r=1e-5 \
 		${TESTDIR}/RESULTS/IH/log_n000000.log \
 		output/test19/IH_log_n000000.log \
