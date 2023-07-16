@@ -1,15 +1,15 @@
 Name Root Last Stride nThread
 #COMPONENTMAP		For production run
-GM  +0 -47 -1 -1		CompMap 0:nProc-23 multithreaded
-IM -46 -23  1		CompMap nProc-2 PE
+GM  0  -47 -1 -1		CompMap 0:nProc-23 multithreaded
+IM -46 -23  1  1		CompMap nProc-2 PE
 PW -22  -3 -1 -1		CompMap nProc-22:nProc-3
-IE  -2  -1  1  		CompMap last 2 PEs
+IE  -2  -1  1  1  		CompMap last 2 PEs
 
 COMPONENTMAP		For nightly test
 GM  0 -1 -1 -1		CompMap 0:nProc-1 multithreaded
-IM  0 23  1		CompMap first 24 PEs
+IM  0 23  1  1		CompMap first 24 PEs
 PW  0  3 -1 -1		CompMap 0:3 multithreaded
-IE -2 -1  1  		CompMap last 2 PEs
+IE -2 -1  1  1		CompMap last 2 PEs
 
 #INCLUDE
 RESTART.in
