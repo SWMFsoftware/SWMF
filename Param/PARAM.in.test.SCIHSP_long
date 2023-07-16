@@ -454,8 +454,8 @@ T			UseParticles
 -1			SpaceStepMin
 -1			SpaceStepMax
 import			InitMode
-F                       UseBRAlignment
-F                       UseBUAlignment
+F			UseBRAlignment
+F			UseBUAlignment
 
 #END_COMP IH -----------------------------------------------------------------
 
@@ -531,7 +531,8 @@ AiaXrt			NameTable
 load			NameCommand
 SC/Param/los_tbl.dat		NameFile
 ascii			TypeFile
-#LOOKUPTABLE		nPix
+
+#LOOKUPTABLE
 euv			NameTable
 load			NameCommand
 SC/Param/los_Eit_cor.dat		NameFile
