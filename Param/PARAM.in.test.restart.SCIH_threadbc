@@ -14,7 +14,7 @@ T			IsTimeAccurate
 #BEGIN_COMP SC ---------------------------------------------------------------
 
 #INCLUDE
-SC/restartIN/restart.H	
+SC/restartIN/restart.H
 
 
 #PLASMA

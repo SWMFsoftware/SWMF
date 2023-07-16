@@ -142,7 +142,7 @@ uniform			TypeHeatPartitioning
 0.6			QionRatio
 
 #TEST
-krylov radiative_cooling		StringTest
+radiative_cooling		StringTest
 
 #RADIATIVECOOLING
 T			UseRadCooling
