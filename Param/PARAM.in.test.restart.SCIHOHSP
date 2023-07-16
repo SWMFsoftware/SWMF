@@ -258,7 +258,7 @@ T			UseAccurateReschange
 turbulentcascade		TypeCoronalHeating
 1.5e5			LperpTimesSqrtBSi
 0.0			rMinWaveReflection
-F			UseReynoldsDecomposition
+T			UseReynoldsDecomposition
 
 #SCHEME
 2			nOrder
@@ -338,7 +338,7 @@ T			UseAccurateReschange
 turbulentcascade		TypeCoronalHeating
 1.5e5			LperpTimesSqrtBSi
 0.0			rMinWaveReflection
-F			UseReynoldsDecomposition
+T			UseReynoldsDecomposition
 
 #SCHEME
 2			nOrder
