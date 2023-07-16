@@ -263,9 +263,9 @@ T			UseParticles
 -1			SpaceStepMin
 -1			SpaceStepMax
 import			InitMode
-T                       UseBRAlignment
-0.7                     ConBRAngleMax
-F                       UseBUAlignment
+T			UseBRAlignment
+0.7			CosBRAngleMax
+F			UseBUAlignment
 
 
 #END_COMP SC -----------------------------------------------------------------
