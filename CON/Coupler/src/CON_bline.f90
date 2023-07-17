@@ -32,7 +32,7 @@ module CON_bline
   real,    public :: RIhMin = 1000.0, RIhMax = 0.0
   ! Boundaries of coupled domains in OH
   real,    public :: ROhMin = 1000.0, ROhMax = 0.0
-  ! Transformation matrrix
+  ! Transformation matrix
   real,    public :: BlMh_DD(3,3)
   !===== The rest is available on the BL_ processors =========================
   public :: BL_read_param
@@ -746,7 +746,10 @@ contains
              do iVertex = iBegin,iEnd
                 write(*,*)MHData_VIB(X_:Z_,iVertex,iLine)
              end do
-             call CON_stop(NameSub//": particle has been lost")
+             write(*,'(a)')NameSub//": particle has been lost"
+             Used_B(iLine)  = .false.
+             nVertex_B(iLine) = 0
+             CYCLE line
           end if
           ! missing point in the upper part of the domain -> IGNORE;
           ! if needed to adjust beginning, then it is done,
