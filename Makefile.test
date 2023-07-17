@@ -2268,7 +2268,7 @@ test15_long_check:
 		> test15_long_ih.diff)
 	-(${DIFFNUM} -b -r=1e-5 \
 		${TESTDIR}/RESULTS/SC/los_sdo_aia*.out \
-		SC/BATSRUS/data/output/test8/SC_los_sdo_aia.out.gz \
+		SC/BATSRUS/data/output/test15/SC_los_sdo_aia.out.gz \
 		> test15_long_sc_los.diff)
 	cat ${TESTDIR}/RESULTS/SP/MH_data_*_*_t00000150_n000010.out \
 	    > ${TESTDIR}/RESULTS/SP/MH_data.outs
@@ -2601,7 +2601,7 @@ test19_check:
 		> test19_ih.diff)
 	-(${DIFFNUM} -b -r=1e-5 \
 		${TESTDIR}/RESULTS/SC/los_sdo_aia*.out \
-		SC/BATSRUS/data/output/test8/SC_los_sdo_aia.out.gz \
+		SC/BATSRUS/data/output/test19/SC_los_sdo_aia.out.gz \
 		> test19_sc_los.diff)
 	cat ${TESTDIR}/RESULTS/SP/MH_data_*_*_t00000150_n000010.out \
 	    > ${TESTDIR}/RESULTS/SP/MH_data.outs
@@ -2610,7 +2610,6 @@ test19_check:
 		output/test19/MH_data.ref.gz \
 		> test19_sp.diff)
 	ls -l test19*.diff
-
 
 ### test20: OH/BATSRUS (single-ion) coupled with PT/FLEKS in a shocktube ###
 
