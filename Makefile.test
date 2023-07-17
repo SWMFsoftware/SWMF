@@ -2268,7 +2268,7 @@ test15_long_check:
 		> test15_long_ih.diff)
 	-(${DIFFNUM} -b -r=1e-5 \
 		${TESTDIR}/RESULTS/SC/los_sdo_aia*.out \
-		SC/BATSRUS/data/output/test15/SC_los_sdo_aia.out.gz \
+		SC/BATSRUS/data/output/test15_long/SC_los_sdo_aia.out.gz \
 		> test15_long_sc_los.diff)
 	cat ${TESTDIR}/RESULTS/SP/MH_data_*_*_t00000150_n000010.out \
 	    > ${TESTDIR}/RESULTS/SP/MH_data.outs
