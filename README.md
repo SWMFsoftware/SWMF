@@ -10,7 +10,8 @@ the instructions below.
 
 # Obtain SWMF
 
-Get the source code from GitLab or GitHub.
+Get the full source code from GitHub/SWMFsoftware or the open-source code from
+GitHub/MSTEM-QUDA.
 
 The minimum requirement is the `SWMF` repository. 
 
@@ -20,7 +21,7 @@ the SWMF directory):
 
 ```
 cd
-git clone https://gitlab.umich.edu/SWMF_software/SWMF_data --depth=1
+git clone https://github.com/SWMFsoftware/SWMF_data --depth=1
 ```
 
 For solar applications (solar corona, inner heliosphere, CMEs) the
@@ -29,16 +30,16 @@ into the SWMF directory, or to the (scratch/nobackup...) disk of
 a supercomputer where the runs are performed:
 ```
 cd
-git clone https://gitlab.umich.edu/SWMF_software/SWMF_data --depth=1
+git clone https://github.com/SWMFsoftware/SWMFSOLAR --depth=1
 ```
 
 Some data files used by the Center for Radiative Shock Hydrodynamics (CRASH)
 are in the `CRASH_data` repository that is available to registered users.
 If needed, it has to be placed into the home directory. 
 
-# Getting the open-source MSTEM-QUDA/SWMF from GitHub
+# Getting the open-source MSTEM-QUDA/SWMF:
 
-Clone the SWMF from GitHub
+Clone the SWMF from GitHub/MSTEM-QUDA
 
 ```
 cd {where_you_want_to_have_mstem-quda}
@@ -46,14 +47,14 @@ git clone https://github.com/MSTEM-QUDA/SWMF
 ```
 
 The rest of the repositories (share, util, BATSRUS ...)
-will be cloned from GitHub during the installation.
+will be cloned from GitHub/MSTEM-QUDA during the installation.
 
-# Getting the full SWMF from UM GitLab (requires access)
+# Getting the full SWMF from GitHub/SWMFsoftware (requires access)
 
 Read the
-[GitLab instructions](http://herot.engin.umich.edu/~gtoth/SWMF/doc/GitLab_instructions.pdf)
+[Git instructions](http://herot.engin.umich.edu/~gtoth/SWMF/doc/Git_instructions.pdf)
 about registering, passwordless access, mail notifications, and
-using the [gitclone](https://gitlab.umich.edu/swmf_software/share/-/blob/master/Scripts/gitclone) script.
+using the [gitclone](https://github.com/SWMFsoftware/share/blob/master/Scripts/gitclone) script.
 
 ## Clone the SWMF repository
 
@@ -84,7 +85,7 @@ To see available choices, type
 ```
 Then install the code with the selected Fortran (and default C) compiler, e.g.
 ```
-Config.pl -install -compiler=gfortran
+./Config.pl -install -compiler=gfortran
 ```
 A non-default C compiler can be added after a comma, e.g.
 ```
@@ -98,7 +99,7 @@ This will only allow serial execution, of course.
 
 The ifort compiler (and possibly others too) use the stack for temporary
 arrays, so the stack size should be large. For csh/tcsh add the following
-to `.cshrc`: 
+to `.cshrc`:
 ```
 unlimit stacksize
 ```
