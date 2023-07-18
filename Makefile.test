@@ -2320,7 +2320,7 @@ test16:
 
 test16_compile:
 	./Config.pl -v=Empty,PC/FLEKS,GM/BATSRUS -amrex
-	./Config.pl -o=GM:u=Default,e=MultiIonPe,ng=2,g=8,8,1
+	./Config.pl -o=GM:u=Default,e=MultiIonPe,ng=2,g=8,8,1 -o=PC:lev=9
 	$(MAKE) SWMF
 	$(MAKE) PIDL
 	
@@ -2595,7 +2595,7 @@ test21_check:
                 output/test21/y=0_neu_OH.ref.gz \
 		> test21.diff)
 	-@(${DIFFNUM} -b -a=1e-13 -r=1e-7 \
-                ${TESTDIR}/RESULTS/swh/OH/z*04206.out \
+                ${TESTDIR}/RESULTS/swh/OH/z*04207.out \
                 output/test21/z=0_OH.ref.gz \
 		>> test21.diff)
 	-@(${DIFFNUM} -b -a=1e-13 -r=1e-7 \
@@ -2616,7 +2616,7 @@ test21_4neu:
 
 test21_4neu_compile:
 	./Config.pl -v=Empty,OH/BATSRUS,PT/FLEKS
-	./Config.pl -o=OH:u=OuterHelio,e=OuterHelio,ng=2,g=4,4,4
+	./Config.pl -o=OH:u=OuterHelio,e=OuterHelio,ng=2,g=4,4,4 -o=PT:lev=5
 	${MAKE} SWMF
 	make PIDL
 
@@ -2654,7 +2654,7 @@ test21_oh_pt:
 
 test21_oh_pt_compile:
 	./Config.pl -v=Empty,OH/BATSRUS,PT/FLEKS
-	./Config.pl -o=OH:u=OuterHelio,e=Swh,ng=2,g=4,4,4
+	./Config.pl -o=OH:u=OuterHelio,e=Swh,ng=2,g=4,4,4 -o=PT:lev=5
 	${MAKE} SWMF
 	make PIDL
 
@@ -2669,7 +2669,7 @@ test21_oh_pt_run:
 
 test21_oh_pt_check:
 	-@(${DIFFNUM} -b -a=1e-13 -r=1e-7 \
-                ${TESTDIR}/RESULTS/swh/OH/z*04206.out \
+                ${TESTDIR}/RESULTS/swh/OH/z*04207.out \
                 output/test21/z=0_OH.ref.gz \
 		> test21_oh_pt.diff)
 	-@(${DIFFNUM} -b -a=1e-13 -r=1e-7 \
