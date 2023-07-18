@@ -52,7 +52,7 @@ if($SWMFsoftware){
     %component = (
 	"BATSRUS"       => "GM", 
 	"Ridley_serial" => "IE", 
-	"CIMI2"         => "IM", 
+	"CIMI"          => "IM", 
 	"HEIDI"         => "IM", 
 	"RCM2"          => "IM",
 	"ALTOR"         => "PC",
@@ -104,7 +104,7 @@ push(@Arguments, '-amrex') if $AddAmrex;
 $gitclone .= " -history" if $History;
 
 my $repo;
-foreach $repo ("share", "util", @models){
+foreach $repo ("util", @models){
     my $component = ($component{$repo} or ".");
     my $repo1 = $repo;
     $repo1 =~ s/AMPS_P[TC]/AMPS/; # remove _PC, _PT

@@ -23,9 +23,9 @@ if(-d SWMF)then
 endif
 
 # Get current version of SWMF+BATL and make it unreadable for the web
-gitclone SWMF >> ~/Sites/process_swmf.log
+gitclone -s SWMF >>& ~/Sites/process_swmf.log
 cd SWMF; Config.pl -clone >>& ~/Sites/process_swmf.log
-gitclone BATL >> ~/Sites/process_swmf.log
+gitclone -s BATL >>& ~/Sites/process_swmf.log
 cd BATL; Config.pl -clone >>& ~/Sites/process_swmf.log
 cd $HOME/Sites
 chmod -R go-r SWMF >>& ~/Sites/process_swmf.log

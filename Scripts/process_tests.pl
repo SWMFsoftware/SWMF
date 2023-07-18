@@ -2,6 +2,7 @@
 
 # Number of days to show on web page
 my $nDay = ($n or $nday or 7);
+my $Stable = $stable;
 
 use strict;
 
@@ -36,7 +37,7 @@ my $MinRate  = 0.94;
 
 # command to merge master into stable branch
 my $merge_stable =   
-    'cd SWMF && share/Scripts/gitall "checkout stable && sleep 10; ' . 
+    'cd SWMF && share/Scripts/gitall "checkout stable && sleep 30; ' .
     'git pull --depth=100; git merge master && git push"';
 
 # Describe machine in the Html table
@@ -323,7 +324,7 @@ foreach $day (@days){
     my $score2 = sprintf("%.1f", 100*$ScoreMstem/($MaxScoreMstem+1e-30)). '%';
 
     print "day=$day score=$score MaxScores=$MaxScores\n";
-    if($MaxScores > $MinScore and $Scores > $MinRate*$MaxScores){
+    if($MaxScores > $MinScore and $Scores > $MinRate*$MaxScores or $Stable){
 	$Table =~ s/_SCORE_/$score/; # stable score is green
 	# Merge last day into stable branch if it has not been done yet
 	if($day eq $days[0] and not -f "$day/stable.txt"){
@@ -366,8 +367,8 @@ foreach my $machine (@machines){
     $Error .= `grep -C2 '/PARAM.in_orig_' $file`;
     next unless $Error;
     open ERR, ">$paramerrorfile";
-    print ERR $Error;
-    close ERR;    
+    print ERR "$machine:\n$Error";
+    close ERR;
     print FILE "
 <h3><A HREF=$paramerrorfile TARGET=swmf_param_error>
 <font color=red>Errors in PARAM.in and/or PARAM.XML files</font></A> See the 

@@ -133,7 +133,6 @@ T			UseDivFullBSource
 
 #CORONALHEATING
 turbulentcascade		TypeCoronalHeating
-T			UseWaveReflection
 1.5e5			LperpTimesSqrtBSi
 1.1			rMinWaveReflection
 T			UseReynoldsDecomposition
@@ -143,7 +142,7 @@ uniform			TypeHeatPartitioning
 0.6			QionRatio
 
 #TEST
-krylov radiative_cooling		StringTest
+radiative_cooling		StringTest
 
 #RADIATIVECOOLING
 T			UseRadCooling
@@ -374,7 +373,6 @@ T			UseAccurateReschange
 
 #CORONALHEATING
 turbulentcascade		TypeCoronalHeating
-T			UseWaveReflection
 1.5e5			LperpTimesSqrtBSi
 0.0			rMinWaveReflection
 T			UseReynoldsDecomposition

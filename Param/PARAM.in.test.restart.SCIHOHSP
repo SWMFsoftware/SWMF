@@ -87,7 +87,6 @@ T			UseDivFullBSource
 
 #CORONALHEATING
 turbulentcascade		TypeCoronalHeating
-T			UseWaveReflection
 1.5e5			LperpTimesSqrtBSi
 0.0			rMinWaveReflection
 F			UseReynoldsDecomposition
@@ -257,10 +256,9 @@ T			UseAccurateReschange
 
 #CORONALHEATING
 turbulentcascade		TypeCoronalHeating
-T			UseWaveReflection
 1.5e5			LperpTimesSqrtBSi
 0.0			rMinWaveReflection
-F			UseReynoldsDecomposition
+T			UseReynoldsDecomposition
 
 #SCHEME
 2			nOrder
@@ -338,10 +336,9 @@ T			UseAccurateReschange
 
 #CORONALHEATING
 turbulentcascade		TypeCoronalHeating
-T			UseWaveReflection
 1.5e5			LperpTimesSqrtBSi
 0.0			rMinWaveReflection
-F			UseReynoldsDecomposition
+T			UseReynoldsDecomposition
 
 #SCHEME
 2			nOrder

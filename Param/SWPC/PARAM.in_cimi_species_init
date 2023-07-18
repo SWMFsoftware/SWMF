@@ -1,7 +1,7 @@
 Name Root Last Stride nThread
 COMPONENTMAP		For few cores like nightly test
 GM  0 -1 -1 -1		CompMap runs on all PE-s
-IM  0 24  1		CompMap runs on up to 24 PE-s
+IM  0 23  1		CompMap runs on up to 24 PE-s
 IE -2 -1  1		CompMap runs on last 2 PEs
 
 Name Root Last Stride nThread
@@ -11,7 +11,7 @@ IM -25 -2  1		CompMap runs on nProc-25 to nProc-2
 IE  -1 -1  1		CompMap runs on the last PE
 
 #DESCRIPTION
-Param/SWPC/PARAM.in_cimi_species_init: multispecies GM with IM/CIMI2		StringDescription
+Param/SWPC/PARAM.in_cimi_species_init: multispecies GM with IM/CIMI		StringDescription
 
 #TEST
 set_couple_var_info		StringTest

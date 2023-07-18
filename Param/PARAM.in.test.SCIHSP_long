@@ -135,10 +135,9 @@ T			UseDivFullBSource
 
 #CORONALHEATING
 turbulentcascade		TypeCoronalHeating
-T			UseWaveReflection
 1.5e5			LperpTimesSqrtBSi
 1.1			rMinWaveReflection
-F			UseReynoldsDecomposition
+T			UseReynoldsDecomposition
 
 #HEATPARTITIONING
 uniform			TypeHeatPartitioning
@@ -264,9 +263,9 @@ T			UseParticles
 -1			SpaceStepMin
 -1			SpaceStepMax
 import			InitMode
-T                       UseBRAlignment
-0.7                     ConBRAngleMax
-F                       UseBUAlignment
+T			UseBRAlignment
+0.7			CosBRAngleMax
+F			UseBUAlignment
 
 
 #END_COMP SC -----------------------------------------------------------------
@@ -391,10 +390,9 @@ T			UseAccurateReschange
 
 #CORONALHEATING
 turbulentcascade		TypeCoronalHeating
-T			UseWaveReflection
 1.5e5			LperpTimesSqrtBSi
 0.0			rMinWaveReflection
-F			UseReynoldsDecomposition
+T			UseReynoldsDecomposition
 
 #SCHEME
 2			nOrder
@@ -456,8 +454,8 @@ T			UseParticles
 -1			SpaceStepMin
 -1			SpaceStepMax
 import			InitMode
-F                       UseBRAlignment
-F                       UseBUAlignment
+F			UseBRAlignment
+F			UseBUAlignment
 
 #END_COMP IH -----------------------------------------------------------------
 
@@ -533,7 +531,8 @@ AiaXrt			NameTable
 load			NameCommand
 SC/Param/los_tbl.dat		NameFile
 ascii			TypeFile
-#LOOKUPTABLE		nPix
+
+#LOOKUPTABLE
 euv			NameTable
 load			NameCommand
 SC/Param/los_Eit_cor.dat		NameFile
