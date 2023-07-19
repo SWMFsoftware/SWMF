@@ -240,17 +240,16 @@ y=0 var ascii planet year		StringPlot
 -1			DnSavePlot
 5 y			DtSavePlot
 -1			DxSavePlot
-{fluid} neuregion ppcS0 ppcS1 ppcS2 ppcS3		NameVars
+{fluid} neuregion ppcPop1 ppcPop2 ppcPop3 ppcPop4		NameVars
 z=0 var ascii planet year		StringPlot
 -1			DnSavePlot
 5 y			DtSavePlot
 -1			DxSavePlot
-{fluid} neuregion ppcS0 ppcS1 ppcS2 ppcS3		NameVars
-3d particles0 amrex planet year		StringPlot
+{fluid} neuregion ppcPop1 ppcPop2 ppcPop3 ppcPop4		NameVars
+3d fluid amrex planet year		StringPlot
 -1			DnSavePlot
 10 y			DtSavePlot
 0			DxSavePlot
-
 
 #END_COMP PT -----------------------------------------------------------------
 
