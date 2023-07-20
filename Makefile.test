@@ -1710,9 +1710,11 @@ test8_check:
 test9:
 	@echo "test9_compile..." > test09_sc.diff
 	@echo "test9_compile..." > test09_ih.diff
+	@echo "test9_compile..." > test09_gm.diff
 	${MAKE} test9_compile
 	@echo "test9_rundir..." >> test09_sc.diff
 	@echo "test9_rundir..." >> test09_ih.diff
+	@echo "test9_rundir..." >> test09_gm.diff
 	${MAKE} test9_rundir
 	@echo "test9_run..." >> test09_sc.diff
 	@echo "test9_run..." >> test09_ih.diff
@@ -1723,14 +1725,19 @@ test9:
 	@echo "test9_restart..." >> test09_sc.diff
 	@echo "test9_restart..." >> test09_ih.diff
 	${MAKE} test9_restart
+	@echo "test9_ihgm..." >> test09_ih.diff
+	@echo "test9_ihgm..." >> test09_gm.diff 
+	${MAKE} test9_ihgm
 	@echo "test9_check..." >> test09_sc.diff
 	@echo "test9_check..." >> test09_ih.diff
+	@echo "test9_check..." >> test09_gm.diff
 	${MAKE} test9_check
 
 test9_compile:
-	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
+	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS,GM/BATSRUS
 	./Config.pl -o=SC:u=Awsom,e=AwsomAnisoPi,ng=2,g=6,8,8
 	./Config.pl -o=IH:u=Awsom,e=AwsomAnisoPi,ng=2,g=8,8,8
+	./Config.pl -o=GM:u=Default,e=Mhd,ng=2,g=8,8,8
 	${MAKE} SWMF
 	make PIDL
 	make FDIPS
@@ -1762,11 +1769,19 @@ test9_cme:
 	cd ${TESTDIR}; ./Restart.pl -i RESULTS/run_cme/RESTART
 
 test9_restart:
-	cd ${TESTDIR}; mv PARAM.in PARAM.in_cme; rm -f PARAM.in_cme_
+	cd ${TESTDIR}; mv PARAM.in PARAM.in_cme; rm -f PARAM.in_orig_
 	cd ${TESTDIR}; cp Param/PARAM.in.test.restart.SCIH PARAM.in
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl -m RESULTS/run_restart
+	cd ${TESTDIR}; ./Restart.pl -i RESULTS/run_restart/RESTART
+
+test9_ihgm:
+	cd ${TESTDIR}; mv PARAM.in PARAM.in.restart; rm -f PARAM.in_orig_
+	cd ${TESTDIR}; cp Param/PARAM.in.test.IHGM PARAM.in
+	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl -m RESULTS/run_ihgm
 
 test9_check:
 	-(${DIFFNUM} -b -r=1e-5 -a=1e-27 \
@@ -1808,11 +1823,15 @@ test9_check:
 	-(${DIFFNUM} -b -r=2e-5 -a=1e-27 \
 		${TESTDIR}/RESULTS/run_restart/IH/sat_earth_n00000012.sat \
 		output/test9/IH_sat_earth_n00000012.sat \
-		> test09_ih_trj_earth.diff)	
+		> test09_ih_trj_earth.diff)
 	-(${DIFFNUM} -b -r=1e-5 \
 		${TESTDIR}/RESULTS/run_restart/IH/log_n000011.log \
 		output/test9/IH_log_n000011.log \
-		> test09_ih.diff)	
+		> test09_ih.diff)
+	-(${DIFFNUM} -b -r=1e-5 \
+		${TESTDIR}/RESULTS/run_ihgm/GM/log_n000000.log \
+		output/test9/GM_log_n000000.log \
+		> test09_gm.diff)
 	ls -l test09_*.diff
 
 ### test10: real-time SC + IH test ###
