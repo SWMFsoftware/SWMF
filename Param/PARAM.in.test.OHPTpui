@@ -35,9 +35,6 @@ T			UseBody
 9.45E-4			BodyNDim for PUIs
 8.20E6			BodyTDim
 
-#NORMALIZATION
-USER			TypeNormalization
-
 #PLOTFILENAME
 year			NameMaxTimeUnit
 

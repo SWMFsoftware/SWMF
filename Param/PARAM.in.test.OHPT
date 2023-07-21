@@ -32,9 +32,6 @@ T			UseBody
 0.01			BodyNDim [/cc] number density for ions
 1.09E5			BodyTDim [K] temperature for ions
 
-#NORMALIZATION
-USER			TypeNormalization
-
 #PLOTFILENAME
 year			NameMaxTimeUnit
 
