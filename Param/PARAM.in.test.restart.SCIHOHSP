@@ -88,13 +88,9 @@ T			UseDivFullBSource
 #CORONALHEATING
 turbulentcascade		TypeCoronalHeating
 1.5e5			LperpTimesSqrtBSi
-0.0			rMinWaveReflection
-F			UseReynoldsDecomposition
-
-#HEATPARTITIONING
-stochasticheating		TypeHeatPartitioning
-0.34			StochasticExponent
-0.18			StochasticAmplitude
+1.1			rMinWaveReflection
+T			UseReynoldsDecomposition
+0.0			KarmanTaylorBeta
 
 #TEST
 radiative_cooling		StringTest
@@ -259,6 +255,7 @@ turbulentcascade		TypeCoronalHeating
 1.5e5			LperpTimesSqrtBSi
 0.0			rMinWaveReflection
 T			UseReynoldsDecomposition
+0.0			KarmanTaylorBeta
 
 #SCHEME
 2			nOrder
@@ -338,7 +335,7 @@ T			UseAccurateReschange
 turbulentcascade		TypeCoronalHeating
 1.5e5			LperpTimesSqrtBSi
 0.0			rMinWaveReflection
-T			UseReynoldsDecomposition
+F			UseReynoldsDecomposition
 
 #SCHEME
 2			nOrder

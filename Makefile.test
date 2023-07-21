@@ -1710,9 +1710,11 @@ test8_check:
 test9:
 	@echo "test9_compile..." > test09_sc.diff
 	@echo "test9_compile..." > test09_ih.diff
+	@echo "test9_compile..." > test09_gm.diff
 	${MAKE} test9_compile
 	@echo "test9_rundir..." >> test09_sc.diff
 	@echo "test9_rundir..." >> test09_ih.diff
+	@echo "test9_rundir..." >> test09_gm.diff
 	${MAKE} test9_rundir
 	@echo "test9_run..." >> test09_sc.diff
 	@echo "test9_run..." >> test09_ih.diff
@@ -1723,14 +1725,19 @@ test9:
 	@echo "test9_restart..." >> test09_sc.diff
 	@echo "test9_restart..." >> test09_ih.diff
 	${MAKE} test9_restart
+	@echo "test9_ihgm..." >> test09_ih.diff
+	@echo "test9_ihgm..." >> test09_gm.diff 
+	${MAKE} test9_ihgm
 	@echo "test9_check..." >> test09_sc.diff
 	@echo "test9_check..." >> test09_ih.diff
+	@echo "test9_check..." >> test09_gm.diff
 	${MAKE} test9_check
 
 test9_compile:
-	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
+	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS,GM/BATSRUS
 	./Config.pl -o=SC:u=Awsom,e=AwsomAnisoPi,ng=2,g=6,8,8
 	./Config.pl -o=IH:u=Awsom,e=AwsomAnisoPi,ng=2,g=8,8,8
+	./Config.pl -o=GM:u=Default,e=Mhd,ng=2,g=8,8,8
 	${MAKE} SWMF
 	make PIDL
 	make FDIPS
@@ -1762,11 +1769,19 @@ test9_cme:
 	cd ${TESTDIR}; ./Restart.pl -i RESULTS/run_cme/RESTART
 
 test9_restart:
-	cd ${TESTDIR}; mv PARAM.in PARAM.in_cme; rm -f PARAM.in_cme_
+	cd ${TESTDIR}; mv PARAM.in PARAM.in_cme; rm -f PARAM.in_orig_
 	cd ${TESTDIR}; cp Param/PARAM.in.test.restart.SCIH PARAM.in
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl -m RESULTS/run_restart
+	cd ${TESTDIR}; ./Restart.pl -i RESULTS/run_restart/RESTART
+
+test9_ihgm:
+	cd ${TESTDIR}; mv PARAM.in PARAM.in.restart; rm -f PARAM.in_orig_
+	cd ${TESTDIR}; cp Param/PARAM.in.test.IHGM PARAM.in
+	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl -m RESULTS/run_ihgm
 
 test9_check:
 	-(${DIFFNUM} -b -r=1e-5 -a=1e-27 \
@@ -1808,11 +1823,15 @@ test9_check:
 	-(${DIFFNUM} -b -r=2e-5 -a=1e-27 \
 		${TESTDIR}/RESULTS/run_restart/IH/sat_earth_n00000012.sat \
 		output/test9/IH_sat_earth_n00000012.sat \
-		> test09_ih_trj_earth.diff)	
+		> test09_ih_trj_earth.diff)
 	-(${DIFFNUM} -b -r=1e-5 \
 		${TESTDIR}/RESULTS/run_restart/IH/log_n000011.log \
 		output/test9/IH_log_n000011.log \
-		> test09_ih.diff)	
+		> test09_ih.diff)
+	-(${DIFFNUM} -b -r=1e-5 \
+		${TESTDIR}/RESULTS/run_ihgm/GM/log_n000000.log \
+		output/test9/GM_log_n000000.log \
+		> test09_gm.diff)
 	ls -l test09_*.diff
 
 ### test10: real-time SC + IH test ###
@@ -2221,88 +2240,6 @@ test15_check:
 		> test15_scihsp.diff)
 	ls -l test15_scihsp.diff
 
-### test15_long: same as test15, but SC/IH start from scratch ###
-
-test15_long:
-	rm -f test15_long*.diff
-	@echo "test15_compile..." > test15_long_sp.diff
-	${MAKE} test15_compile
-	@echo "test15_long_rundir..." >> test15_long_sp.diff
-	${MAKE} test15_long_rundir
-	@echo "test15_long_run..." >> test15_long_sp.diff
-	${MAKE} test15_long_run
-	@echo "test15_long_restart..." >> test15_long_sp.diff
-	${MAKE} test15_long_restart
-	@echo "test15_long_check..." >> test15_long_sp.diff
-	${MAKE} test15_long_check
-
-
-test15_long_rundir:
-	rm -rf ${TESTDIR}
-	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
-	cp Param/PARAM.in.test.SCIHSP_long ${TESTDIR}/PARAM.in
-	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
-
-test15_long_run:
-	cd ${TESTDIR}; rm -rf RESTART
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}; ./Restart.pl -o -W RESTART
-	
-test15_long_restart:
-	cd ${TESTDIR}; rm -rf RESULTS runlog_restart
-	cd ${TESTDIR}; ./Restart.pl -i RESTART
-	cd ${TESTDIR}; mv PARAM.in PARAM.in_start; rm -f PARAM.in_orig_
-	cd ${TESTDIR}; cp Param/PARAM.in.test.restart.SCIHSP_long PARAM.in
-	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_restart
-	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS
-
-test15_long_check:
-	-(${DIFFNUM} -b -r=1e-5 -a=1e-26 \
-		${TESTDIR}/RESULTS/SC/log_n000000.log \
-		output/test15_long/SC_log_n000000.log \
-		> test15_long_sc.diff)
-	-(${DIFFNUM} -b -r=1e-5 \
-		${TESTDIR}/RESULTS/IH/log_n000000.log \
-		output/test15_long/IH_log_n000000.log \
-		> test15_long_ih.diff)
-	-(${DIFFNUM} -b -r=1e-5 \
-		${TESTDIR}/RESULTS/SC/los_sdo_aia*.out \
-		SC/BATSRUS/data/output/test15_long/SC_los_sdo_aia.out.gz \
-		> test15_long_sc_los.diff)
-	cat ${TESTDIR}/RESULTS/SP/MH_data_*_*_t00000150_n000010.out \
-	    > ${TESTDIR}/RESULTS/SP/MH_data.outs
-	-(${DIFFNUM} -a=1e-6 -r=1e-6 -b \
-		${TESTDIR}/RESULTS/SP/MH_data.outs \
-		output/test15_long/MH_data.ref.gz \
-		> test15_long_sp.diff)
-	ls -l test15_long*.diff
-
-### test15_single: same as test15_long, but with no restart ###
-
-test15_single:
-	rm -f test15_long*.diff
-	@echo "test15_compile..." > test15_long_sp.diff
-	${MAKE} test15_compile
-	@echo "test15_single_rundir..." >> test15_long_sp.diff
-	${MAKE} test15_single_rundir
-	@echo "test15_single_run..." >> test15_long_sp.diff
-	${MAKE} test15_single_run
-	@echo "test15_long_check..." >> test15_long_sp.diff
-	${MAKE} test15_long_check
-
-test15_single_rundir:
-	rm -rf ${TESTDIR}
-	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
-	share/Scripts/ParamConvert.pl \
-	Param/PARAM.in.test.SCIHSP_single ${TESTDIR}/PARAM.in
-	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
-
-test15_single_run:
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
-
-
 ### test15_pt: same as test15, but PT/AMPS coupled with SC and IH ###
 
 test15_pt:
@@ -2402,7 +2339,7 @@ test16:
 
 test16_compile:
 	./Config.pl -v=Empty,PC/FLEKS,GM/BATSRUS -amrex
-	./Config.pl -o=GM:u=Default,e=MultiIonPe,ng=2,g=8,8,1
+	./Config.pl -o=GM:u=Default,e=MultiIonPe,ng=2,g=8,8,1 -o=PC:lev=9
 	$(MAKE) SWMF
 	$(MAKE) PIDL
 	
@@ -2563,8 +2500,8 @@ test19:
 
 test19_compile:
 	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS,OH/BATSRUS,SP/MFLAMPA
-	./Config.pl -o=SC:u=Awsom,e=Awsom,ng=2,g=4,4,4
-	./Config.pl -o=IH:u=Awsom,e=Awsom,ng=2,g=4,4,4
+	./Config.pl -o=SC:u=Awsom,e=AwsomWDiff,ng=2,g=4,4,4
+	./Config.pl -o=IH:u=Awsom,e=AwsomWDiff,ng=2,g=4,4,4
 	./Config.pl -o=OH:u=Awsom,e=Awsom,ng=2,g=4,4,4
 	./Config.pl -o=SP:g=2000
 	${MAKE} SWMF
@@ -2677,7 +2614,7 @@ test21_check:
                 output/test21/y=0_neu_OH.ref.gz \
 		> test21.diff)
 	-@(${DIFFNUM} -b -a=1e-13 -r=1e-7 \
-                ${TESTDIR}/RESULTS/swh/OH/z*04206.out \
+                ${TESTDIR}/RESULTS/swh/OH/z*04207.out \
                 output/test21/z=0_OH.ref.gz \
 		>> test21.diff)
 	-@(${DIFFNUM} -b -a=1e-13 -r=1e-7 \
@@ -2698,7 +2635,7 @@ test21_4neu:
 
 test21_4neu_compile:
 	./Config.pl -v=Empty,OH/BATSRUS,PT/FLEKS
-	./Config.pl -o=OH:u=OuterHelio,e=OuterHelio,ng=2,g=4,4,4
+	./Config.pl -o=OH:u=OuterHelio,e=OuterHelio,ng=2,g=4,4,4 -o=PT:lev=5
 	${MAKE} SWMF
 	make PIDL
 
@@ -2736,7 +2673,7 @@ test21_oh_pt:
 
 test21_oh_pt_compile:
 	./Config.pl -v=Empty,OH/BATSRUS,PT/FLEKS
-	./Config.pl -o=OH:u=OuterHelio,e=Swh,ng=2,g=4,4,4
+	./Config.pl -o=OH:u=OuterHelio,e=Swh,ng=2,g=4,4,4 -o=PT:lev=5
 	${MAKE} SWMF
 	make PIDL
 
@@ -2751,7 +2688,7 @@ test21_oh_pt_run:
 
 test21_oh_pt_check:
 	-@(${DIFFNUM} -b -a=1e-13 -r=1e-7 \
-                ${TESTDIR}/RESULTS/swh/OH/z*04206.out \
+                ${TESTDIR}/RESULTS/swh/OH/z*04207.out \
                 output/test21/z=0_OH.ref.gz \
 		> test21_oh_pt.diff)
 	-@(${DIFFNUM} -b -a=1e-13 -r=1e-7 \

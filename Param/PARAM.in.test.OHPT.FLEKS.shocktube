@@ -207,7 +207,7 @@ z=0 var ascii planet		StringPlot
 -1			DnSavePlot
 1 y			DtSavePlot
 0			DxSavePlot
-{fluid} numS0		NameVars
+{fluid} ppcS0		NameVars
 3d particles0 amrex planet		StringPlot
 -1			DnSavePlot
 1 y			DtSavePlot

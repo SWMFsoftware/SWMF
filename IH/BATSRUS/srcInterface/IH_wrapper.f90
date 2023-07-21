@@ -806,7 +806,7 @@ contains
     if(DoCoupleVar_V(DoLperp_))then
        BufferState_VG(Lperp_,:,1:nLon,1:nLat) = &
             BufferIn_VG(iVar_V(LperpCouple_),:,1:nLon,1:nLat)*&
-            Si2No_V(UnitX_)
+            Si2No_V(UnitX_)*sqrt(Si2No_V(UnitB_))
     end if
     if(DoCoupleVar_V(DoWDiff_))then
        BufferState_VG(WDiff_,:,1:nLon,1:nLat) = &
@@ -1085,7 +1085,7 @@ contains
        if(DoCoupleVar_V(ChGL_))Buffer_V(iVar_V(ChGLCouple_)) = &
             StateInPoint_V(SignB_)*No2Si_V(UnitB_)/No2Si_V(UnitU_)
        if(DoCoupleVar_V(DoLperp_))Buffer_V(iVar_V(LperpCouple_)) = &
-            StateInPoint_V(Lperp_)*No2Si_V(UnitX_)
+            StateInPoint_V(Lperp_)*No2Si_V(UnitX_)*sqrt(No2Si_V(UnitB_))
        if(DoCoupleVar_V(DoWDiff_))Buffer_V(iVar_V(WDiffCouple_)) = &
             StateInPoint_V(WDiff_)*No2Si_V(UnitEnergydens_)
 
@@ -1228,7 +1228,7 @@ contains
     if(DoCoupleVar_V(ChGL_))Buff_V(iVar_V(ChGLCouple_)) = State_V(SignB_)*&
          No2Si_V(UnitB_)/No2Si_V(UnitU_)
     if(DoCoupleVar_V(DoLperp_))Buff_V(iVar_V(LperpCouple_)) = State_V(Lperp_)*&
-         No2Si_V(UnitX_)
+         No2Si_V(UnitX_)*sqrt(No2Si_V(UnitB_))
     if(DoCoupleVar_V(DoWDiff_))Buff_V(iVar_V(WDiffCouple_)) = &
          State_V(WDiff_)*No2Si_V(UnitEnergydens_)
     if(DoCoupleVar_V(ElectronPressure_))then
@@ -1406,7 +1406,7 @@ contains
        State_V(RhoUx_:RhoUz_) = State_V(Ux_:Uz_)*State_V(Rho_)
     end if
     if(DoCoupleVar_V(DoLperp_))State_V(Lperp_) = Buff_V(iVar_V(LperpCouple_))*&
-         Si2No_V(UnitX_)
+         Si2No_V(UnitX_)*sqrt(Si2No_V(UnitB_))
     if(DoCoupleVar_V(DoWDiff_))State_V(WDiff_) = &
          Buff_V(iVar_V(WDiffCouple_))*&
             Si2No_V(UnitEnergydens_)

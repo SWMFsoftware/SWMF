@@ -249,18 +249,6 @@ PT			NameTarget
 #RECEIVEICONLY
 T			receiveICOnly
 
-PLASMA
-5			nS
-1			mass
-1			charge
-1			mass
-0			charge
-1			mass
-0			charge
-1			mass
-0			charge
-1			mass
-0			charge
 
 #NORMALIZATION
 1.495978707E11		lNorm [m]
@@ -275,14 +263,64 @@ PLASMA
 800			zMax
 
 #NCELL
-32			nCellX
-32			nCellY
-32			nCellZ
+16			nCellX
+16			nCellY
+16			nCellZ
 
 MAXBLOCKSIZE
 8			nCellX
 8			nCellY
 8			nCellZ
+
+!===== Mesh Refinement=========
+#REGION
+pouter			regionName
+paraboloid		shape
+1			iAxis
+-300			centerX
+0			centerY
+0			centerZ
+600			height
+500			radius1
+800			radius2
+
+#REGION
+sphere1			regionName
+sphere			shape
+0			centerX
+0			centerY
+0			centerZ
+50			radius
+
+#REGION
+box1			regionName
+box			shape
+-2000			xMinBox
+2000			xMaxBox
+-2000			yMinBox
+2000			yMaxBox
+-2000			zMinBox
+-300			zMaxBox
+
+#REGION
+box2			regionName
+box			shape
+-200			xMinBox
+-60			xMaxBox
+-200			yMinBox
+200			yMaxBox
+-150			zMinBox
+200			zMaxBox
+
+#REFINEREGION
+0			refineLev
++pouter -sphere1 -box1		refineArea
+
+#REFINEREGION
+1			refineLev
++box2			refineArea
+
+!==========================
 
 #END_COMP PT -----------------------------------------------------------------
 

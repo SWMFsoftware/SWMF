@@ -1,33 +1,38 @@
 #COMPONENTMAP
-IH  0 -1 1
-GM  0 -1 1
+IH  0 -1 1		CompMap
+GM  0 -1 1		CompMap
 
 ! Useful to see the location of the Earth in the heliosphere
 #TEST
-CON_axes::init_axes
+CON_axes::init_axes		StringTest
 
 #INCLUDE
 RESTART.in
 
 #DESCRIPTION
-Param/PARAM.in.test.IHGM: Couple IH to GM
+Param/PARAM.in.test.IHGM: Couple IH to GM		StringDescription
 
 #TIMEACCURATE
-F			DoTimeAccurate
+F			IsTimeAccurate
 
 #SAVERESTART
 T			DoSaveRestart
 2000			DnSaveRestart
 -1.0			DtSaveRestart
 
-#BEGIN_COMP IH -------------------------------------------------------------
+#BEGIN_COMP IH ---------------------------------------------------------------
+
+! IH is in HGI, which is not really valid in steady state mode
+! but OK for initializing GM
+#STRICT
+F			UseStrict
 
 #INCLUDE
 IH/restartIN/restart.H
 
 ! Note: cannot use "buffergrid" if there is no SC component
 #INNERBOUNDARY
-float			TypeBcInner
+float			TypeBcBody
 
 #OUTERBOUNDARY
 float			TypeBc1
@@ -37,27 +42,85 @@ float			TypeBc4
 float			TypeBc5
 float			TypeBc6
 
-#END_COMP IH ---------------------------------------------------------------
+#SAVEINITIAL
+T			DoSaveInitial
 
-#BEGIN_COMP GM --------------------------------------------------------------
+#SAVEPLOT
+1			nPlotFile
+y=0 MHD idl		StringPlot
+10			DnSavePlot
+-1.			DtSavePlot
+-1.			DxSavePlot
+
+#END_COMP IH -----------------------------------------------------------------
+
+#BEGIN_COMP GM ---------------------------------------------------------------
+
+#GRIDBLOCKALL
+5000			MaxBlock
 
 #GRID
-2			nRootBlock1
+1			nRootBlock1
 1			nRootBlock2
 1			nRootBlock3
--224.                   xMin
- +32.                   xMax
- -64.                   yMin
- +64.                   yMax
- -64.                   zMin
- +64.                   zMax
+-224.			xMin
+ 32.			xMax
+-128.			yMin
+ 128.			yMax
+-128.			zMin
+ 128.			zMax
 
-#INCLUDE
-GM/Param/EARTH/Grid
+! Maximum resolution initially
+#GRIDRESOLUTION
+2.0			Resolution
+initial			StringShape
+
+! Minimum resolution in the computational domain
+#GRIDRESOLUTION
+8.0			Resolution
+all			StringShape
+
+#GRIDRESOLUTION
+1.0			Resolution
+box			StringShape
+-100.0			xMinBox
+ -16.0			yMinBox
+ -16.0			zMinBox
+  22.0			xMaxBox
+  16.0			yMaxBox
+  16.0			zMaxBox
+
+! Better res at geosync and near tail.
+#GRIDRESOLUTION
+1/4			Resolution
+box			StringShape
+-20.0			xMinBox
+-8.0			yMinBox
+-8.0			zMinBox
+ 8.0			xMaxBox
+ 8.0			yMaxBox
+ 8.0			zMaxBox
+
+! Close tail and bow shock resolution
+#GRIDRESOLUTION
+1/2			Resolution
+box			StringShape
+-32.0			xMinBox
+-22.0			yMinBox
+-10.0			zMinBox
+ 20.0			xMaxBox
+ 22.0			yMaxBox
+ 10.0			zMaxBox
+
+#GRIDRESOLUTION
+1/8			Resolution
+shell0			StringShape
+2.5			RadiusInner
+3.5			Radius
 
 #GRIDRESOLUTION
 2.0			Resolution
-initial
+initial			StringShape
 
 #DOAMR
 T			DoAmr
@@ -74,14 +137,14 @@ T			UseBody
 
 ! This is used to initialize the domain
 #SOLARWIND
-    5.0                 SwNDim   [/cc]
-250000.0                SwTDim   [K]
-  -400.0                SwUxDim  [km/s]
-     0.0                SwUyDim  [km/s]
-     0.0                SwUzDim  [km/s]
-     0.0                SwBxDim  [nT]
-     0.0                SwByDim  [nT]
-    -5.0                SwBzDim  [nT]
+    5.0			SwNDim   [/cc]
+250000.0		SwTDim   [K]
+  -400.0		SwUxDim  [km/s]
+     0.0		SwUyDim  [km/s]
+     0.0		SwUzDim  [km/s]
+     0.0		SwBxDim  [nT]
+     0.0		SwByDim  [nT]
+    -5.0		SwBzDim  [nT]
 
 ! The upstream boundary condition is obtained from IH
 #OUTERBOUNDARY
@@ -93,11 +156,7 @@ float			TypeBc5
 float			TypeBc6
 
 #INNERBOUNDARY
-ionosphere		TypeInnerBc
-
-#TIMESTEPPING
-1			nStage
-0.8			CflExlp
+ionosphere		TypeBcBody
 
 #SCHEME
 1			nOrder
@@ -105,29 +164,32 @@ Rusanov			TypeFlux
 
 #SAVELOGFILE
 T			DoSaveLogfile
-RAW			StringLogfile
+RAW			StringLog
 1			DnSaveLogfile
 -1.			DtSaveLogfile
 
+#SAVEINITIAL
+T			DoSaveInitial
+
 #SAVEPLOT
-2                       nPlotFiles
-y=0 MHD idl             StringPlot
-10                      DnSavePlot
+2			nPlotFile
+y=0 MHD idl		StringPlot
+10			DnSavePlot
 -1.			DtSavePlot
 -1.			DxSavePlot
-z=0 MHD idl             StringPlot
-10                      DnSavePlot
+z=0 MHD idl		StringPlot
+10			DnSavePlot
 -1.			DtSavePlot
 -1.			DxSavePlot
 
-#END_COMP GM ------------------------------------------------------------------
+#END_COMP GM -----------------------------------------------------------------
 
 ! Only need to couple at the beginning and after AMRs in GM (if any)
 #COUPLE1
-IH                      NameSource
-GM                      NameTarget
-60                      DnCouple
--1.0                    DtCouple
+IH			NameSource
+GM			NameTarget
+60			DnCouple
+-1.0			DtCouple
 
 ! Note: the GM->IH coupling does not work if IH is not active!
 ! The following command makes sure that IH is not evolving
@@ -136,7 +198,7 @@ IH			NameComp
 100000			DnRun
 
 #STOP
-100			MaxIteration
--1.0			tSimulationMax
+100			MaxIter
+-1.0			TimeMax
 
 

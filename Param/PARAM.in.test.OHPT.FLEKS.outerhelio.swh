@@ -221,38 +221,35 @@ T			useFixedDt
 3.0e8			uNorm [m/s]
 
 #PARTICLES
-4			nParticleX
-4			nParticleY
-4			nParticleZ
+3			nParticleX
+3			nParticleY
+3			nParticleZ
 
 #SOURCEPARTICLES
 1			nParticleX
 1			nParticleY
 1			nParticleZ
 
-PERIODICITY
-T			isPeriodicX
-T			isPeriodicY
-T			isPeriodicZ
-
+#MERGEEFFICIENCY
+1.0			mergeThresholdDistance
+T			fastMerge
 
 #SAVEPLOT
 3			nPlotFile
 y=0 var ascii planet year		StringPlot
 -1			DnSavePlot
 5 y			DtSavePlot
-0			DxSavePlot
-{fluid} neuregion numS0 numS1 numS2 numS3		NameVars
+-1			DxSavePlot
+{fluid} neuregion ppcPop1 ppcPop2 ppcPop3 ppcPop4		NameVars
 z=0 var ascii planet year		StringPlot
 -1			DnSavePlot
 5 y			DtSavePlot
-0			DxSavePlot
-{fluid} neuregion numS0 numS1 numS2 numS3		NameVars
-3d particles0 amrex planet year		StringPlot
+-1			DxSavePlot
+{fluid} neuregion ppcPop1 ppcPop2 ppcPop3 ppcPop4		NameVars
+3d fluid amrex planet year		StringPlot
 -1			DnSavePlot
 10 y			DtSavePlot
 0			DxSavePlot
-
 
 #END_COMP PT -----------------------------------------------------------------
 

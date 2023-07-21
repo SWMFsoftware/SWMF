@@ -75,7 +75,7 @@ if($SWMFsoftware){
 
 my $History;
 my @models;
-my $Sleep = $ENV{GITLABSLEEP};
+my $Sleep = $ENV{GITHUBSLEEP};
 
 my $AddAmrex;
 foreach (@Arguments){
@@ -475,7 +475,7 @@ sub print_help{
 -sleep=VALUE   Sleep VALUE number of seconds after each git clone, so
 	       the server does not reject the ssh connection. Only useful
 	       in combination with the -install and -clone options. 
-               Default is set by the \$GITLABSLEEP environment variable.
+               Default is set by the \$GITHUBSLEEP environment variable.
 
 -o=ID:OPTIONS  set options OPTIONS for the component identified with ID.
                This flag can occur multiple times and/or options for
