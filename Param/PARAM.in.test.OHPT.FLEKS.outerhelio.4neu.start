@@ -1,17 +1,16 @@
 #COMPONENTMAP
 OH 0 -1  1		CompMap runs on all PE-s
-PT 0  -1  1		CompMap runs on 1 or 2 PE-s
+PT 0 -1  1		CompMap runs on 1 or 2 PE-s
 
 #COMPONENT
 PT			NameComp
 F			UseComp
 
 #DESCRIPTION
-Param/OUTERHELIO/PARAM.in: Outer heliosphere with 1 ion and 4 neutral fluids		StringDescription
+Param/PARAM.in.test.OHPT.FLEKS.outerhelio.4neu.start		StringDescription
 
 #PLANET
 NONE			NamePlanet
-
 
 #TIMEACCURATE
 F  			IsTimeAccurate
@@ -30,24 +29,6 @@ T			UseUpdateCheck
 
 #BODY
 F			UseBody
-
-
-BODY
-T			UseBody
-30.0			rBody (AU)
-0.01			BodyNDim [/cc] number density for ions
-1.09E5			BodyTDim [K] temperature for ions
-0.18			BodyNDim for 1st neutral fluid
-6519.0			BodyTDim
-7.E-5			BodyNDim for 2nd neutral fluid
-6519.0			BodyTDim
-7.8E-3			BodyNDim for 3rd neutral fluid
-1.609E3			BodyTDim
-0.18			BodyNDim for 4th neutral fluid
-6519.0			BodyTDim
-
-#NORMALIZATION
-USER			TypeNormalization
 
 #PLOTFILENAME
 year			NameMaxTimeUnit
@@ -266,4 +247,3 @@ minmod			TypeLimiter
 #STOP
 3000			MaxIter
 -1.0			TimeMax
-

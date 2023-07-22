@@ -1,20 +1,18 @@
 #COMPONENTMAP
 OH 0 -1  1		CompMap runs on all PE-s
-PT 0  -1  1		CompMap runs on 1 or 2 PE-s
+PT 0 -1  1		CompMap runs on 1 or 2 PE-s
 
 #INCLUDE
 RESTART.in
 
 #DESCRIPTION
-Param/OUTERHELIO/PARAM.in.restart: Restart outer heliosphere with 1 ion and 4 neutral fluids		StringDescription
-
+Param/PARAM.in.test.OHPT.FLEKS.outerhelio.swh		StringDescription
 
 #COUPLE2
 OH			NameComp1
 PT			NameComp2
 -1			DnCouple
 0.2 year		DtCouple
-
 
 #STARTTIME		for 1985.102
 1985			iYear
@@ -214,7 +212,6 @@ F			initFromSWMF
 #TIMESTEPPING
 T			useFixedDt
 0.2 y			dt
-
 
 #NORMALIZATION
 1.495978707E11		lNorm [m]

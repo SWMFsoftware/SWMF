@@ -1,12 +1,12 @@
 #COMPONENTMAP
 OH 0 -1  1		CompMap runs on all PE-s
-PT 0  -1  1		CompMap runs on 1 or 2 PE-s
+PT 0 -1  1		CompMap runs on 1 or 2 PE-s
 
 #INCLUDE
 RESTART.in
 
 #DESCRIPTION
-Param/OUTERHELIO/PARAM.in.restart: Restart outer heliosphere with 1 ion and 4 neutral fluids		StringDescription
+Param/PARAM.in.test.OHPT.FLEKS.outerhelio.4neu.couple		StringDescription
 
 #COMPONENT
 PT			NameComp
@@ -248,7 +248,6 @@ PT			NameTarget
 
 #RECEIVEICONLY
 T			receiveICOnly
-
 
 #NORMALIZATION
 1.495978707E11		lNorm [m]
