@@ -33,9 +33,6 @@ IH/restartIN/restart.H
 #INNERBOUNDARY
 buffergrid		TypeBcBody
 
-#USERSWITCH
-+init			StringSwitch
-
 #OUTERBOUNDARY
 float			TypeBc1
 float			TypeBc2
