@@ -2504,8 +2504,8 @@ test19:
 
 test19_compile:
 	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS,OH/BATSRUS,SP/MFLAMPA
-	./Config.pl -o=SC:u=Awsom,e=AwsomWDiff,ng=2,g=4,4,4
-	./Config.pl -o=IH:u=Awsom,e=AwsomWDiff,ng=2,g=4,4,4
+	./Config.pl -o=SC:u=Awsom,e=AwsomWdiff,ng=2,g=4,4,4
+	./Config.pl -o=IH:u=Awsom,e=AwsomWdiff,ng=2,g=4,4,4
 	./Config.pl -o=OH:u=Awsom,e=Awsom,ng=2,g=4,4,4
 	./Config.pl -o=SP:g=2000
 	${MAKE} SWMF
