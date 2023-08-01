@@ -11,6 +11,7 @@ module IH_wrapper
        BATS_init_session, BATS_setup, BATS_advance, BATS_save_files, &
        BATS_finalize
   use IH_ModBatsrusUtility, ONLY: stop_mpi, error_report
+  use IH_ModVarIndexes,     ONLY: nLcorr, Lperp_
 
   implicit none
   SAVE
@@ -282,7 +283,7 @@ contains
     use CON_coupler,    ONLY: iVarSource_V
     use ModInterpolate, ONLY: interpolate_vector, interpolate_scalar
     use IH_ModCellGradient, ONLY: calc_divergence
-    use IH_BATL_pass_cell, ONLY: message_pass_cell 
+    use IH_BATL_pass_cell, ONLY: message_pass_cell
     use ModUtilities, ONLY:split_string
 
     logical,          intent(in):: IsNew   ! true for new point array
@@ -321,7 +322,7 @@ contains
     if(present(DoSendAllVar)) DoSendAll = DoSendAllVar
     UseDivU   = index(NameVar//' ',' divu ') > 0
     UseDivUDx = index(NameVar,' divudx ') > 0
-    
+
     if(DoTestMe)then
        write(*,*)NameSub,': DoSendAll, nVar, nVarIn, NameVar=', &
             DoSendAll, nVar, nVarIn, trim(NameVar)
@@ -330,7 +331,7 @@ contains
        write(*,*)NameSub,': UseDivU=', UseDivU,' UseDivUDx=', UseDivUDx
     end if
 
-    ! calculate divu if needed 
+    ! calculate divu if needed
     if (UseDivU .or. UseDivUDx) then
        allocate( &
             u_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK), &
@@ -756,11 +757,13 @@ contains
     use IH_ModVarIndexes,     ONLY: &
          Rho_, Ux_, Uz_, RhoUx_, RhoUz_, Bx_, Bz_, p_,             &
          WaveFirst_, WaveLast_, Pe_, Ppar_, nFluid, SignB_, Ehot_, &
-         ChargeStateFirst_, ChargeStateLast_, WDiff_, Lperp_
+         ChargeStateFirst_, ChargeStateLast_, WDiff_, Lperp_,      &
+         LcorrFirst_, LcorrLast_
     use CON_coupler,   ONLY:                                       &
          Bfield_, ElectronPressure_, AnisoPressure_, Wave_,        &
          MultiFluid_, MultiSpecie_, CollisionlessHeatFlux_, ChGL_, &
-         DoLperp_, DoWDiff_, LperpCouple_, WDiffCouple_,       &
+         DoLcorr_, DoWDiff_,                                       &
+         LcorrFirstCouple_, LcorrLastCouple_, WDiffCouple_,        &
          RhoCouple_, RhoUxCouple_, RhoUzCouple_, PCouple_,         &
          BxCouple_, BzCouple_, PeCouple_, PparCouple_, ChGLCouple_,&
          WaveFirstCouple_, WaveLastCouple_, EhotCouple_,           &
@@ -771,6 +774,7 @@ contains
     integer,intent(in) :: nVarCouple, nR, nLon, nLat
     real,intent(in)    :: BufferIn_VG(nVarCouple,nR,nLon,nLat)
 
+    integer :: iVar
     ! Convert from SI units to normalized units
     character(len=*), parameter:: NameSub = 'IH_save_global_buffer'
     !--------------------------------------------------------------------------
@@ -803,10 +807,28 @@ contains
     elseif(UseChGL.and.SignB_>1)then
        BufferState_VG(SignB_,:,1:nLon,1:nLat) = 0.0
     end if
-    if(DoCoupleVar_V(DoLperp_))then
-       BufferState_VG(Lperp_,:,1:nLon,1:nLat) = &
-            BufferIn_VG(iVar_V(LperpCouple_),:,1:nLon,1:nLat)*&
-            Si2No_V(UnitX_)*sqrt(Si2No_V(UnitB_))
+    if(DoCoupleVar_V(DoLcorr_))then
+       if(Lperp_>1)then
+          ! Couple a single state variable Lperp_
+          BufferState_VG(Lperp_,:,1:nLon,1:nLat) = &
+               BufferIn_VG(iVar_V(LcorrFirstCouple_),:,1:nLon,1:nLat)*&
+               Si2No_V(UnitX_)*sqrt(Si2No_V(UnitB_))
+       elseif(nLcorr - 1 == &
+            iVar_V(LcorrLastCouple_) - iVar_V(LcorrFirstCouple_))then
+          ! Couple all nLcorr state variables (correlation lengths)
+          BufferState_VG(LcorrFirst_:LcorrLast_,:,1:nLon,1:nLat) = &
+               BufferIn_VG(iVar_V(LcorrFirstCouple_):&
+               iVar_V(LcorrLastCouple_),:,1:nLon,1:nLat)*&
+               Si2No_V(UnitX_)*sqrt(Si2No_V(UnitB_))
+       else
+          ! Assign all nLcorr state variables (correlation lengths)
+          ! equal to a single buffer value
+          do iVar = LcorrFirst_, LcorrLast_
+             BufferState_VG(iVar,:,1:nLon,1:nLat) = &
+               BufferIn_VG(iVar_V(LcorrFirstCouple_),:,1:nLon,1:nLat)*&
+               Si2No_V(UnitX_)*sqrt(Si2No_V(UnitB_))
+          end do
+       end if
     end if
     if(DoCoupleVar_V(DoWDiff_))then
        BufferState_VG(WDiff_,:,1:nLon,1:nLat) = &
@@ -915,8 +937,8 @@ contains
     use IH_ModPhysics, ONLY: UnitX_,&
          No2Si_V, UnitRho_, UnitP_, UnitRhoU_, UnitB_, UnitEnergyDens_, UnitU_
     use IH_ModVarIndexes,     ONLY: &
-         Rho_, RhoUx_, RhoUz_, Bx_, Bz_, P_, Pe_, &
-         Ppar_, WaveFirst_, WaveLast_, Ehot_, nVar, &
+         Rho_, RhoUx_, RhoUz_, Bx_, Bz_, P_, Pe_, Ppar_,                    &
+         WaveFirst_, WaveLast_, nWave, Ehot_, nVar, LcorrFirst_, LcorrLast_,&
          ChargeStateFirst_, ChargeStateLast_, SignB_, WDiff_, Lperp_
     use CON_coupler,       ONLY: &
          RhoCouple_, RhoUxCouple_,&
@@ -926,8 +948,8 @@ contains
          AnisoPressure_, ElectronPressure_,&
          CollisionlessHeatFlux_, ChargeStateFirstCouple_, &
          ChargeStateLastCouple_, ChargeState_, iVar_V, &
-         DoCoupleVar_V, nVarCouple, ChGL_, ChGLCouple_ ,&
-         DoLperp_, DoWDiff_, LperpCouple_, WDiffCouple_
+         DoCoupleVar_V, nVarCouple, ChGL_, ChGLCouple_, WDiffCouple_,&
+         DoLcorr_, DoWDiff_, LcorrFirstCouple_, LcorrLastCouple_
     use ModCoordTransform, ONLY: rlonlat_to_xyz
     use ModInterpolate,    ONLY: trilinear
     use IH_BATL_lib,       ONLY: iProc, &
@@ -974,12 +996,14 @@ contains
          iBzCouple,               &
          iWaveFirstCouple,        &
          iWaveLastCouple,         &
+         iLcorrFirst,             &
+         iLcorrLast,              &
          iChargeStateFirstCouple, &
          iChargeStateLastCouple,  &
          iEhotCouple
 
     integer   :: iBlock, iPe, iR, iLon, iLat
-    logical   :: DoTest, DoTestMe
+    logical   :: DoTest, DoTestMe, DoAllLcorr, DoAvrLcorr
 
     character(len=*), parameter:: NameSub = 'IH_get_for_global_buffer'
     !--------------------------------------------------------------------------
@@ -1001,6 +1025,16 @@ contains
     iEhotCouple             = iVar_V(EhotCouple_)
     iChargeStateFirstCouple = iVar_V(ChargeStateFirstCouple_)
     iChargeStateLastCouple  = iVar_V(ChargeStateLastCouple_)
+    iLcorrFirst             = iVar_V(LcorrFirstCouple_)
+    iLcorrLast              = iVar_V(LcorrLastCouple_)
+    DoAllLcorr              = DoCoupleVar_V(DoLcorr_).and.&
+         nLcorr - 1 == iLcorrLast - iLcorrFirst
+    DoAvrLcorr              = DoCoupleVar_V(DoLcorr_).and.&
+         iLcorrLast == iLcorrFirst.and.nWave==nLcorr
+    if(DoCoupleVar_V(DoLcorr_).and..not.(&
+         Lperp_>1.or.DoAllLcorr.or.DoAvrLCorr))&
+         call CON_stop(NameSub//&
+        ': to couple Lcorr should be Lperp>1.or.DoAllLcorr.or.DoAvrLcorr')
 
     ! Calculate buffer grid spacing
     nCell_D  = [nR, nLon, nLat]
@@ -1037,6 +1071,14 @@ contains
        ! Interpolate from the true solution block to the buffer grid point
        StateInPoint_V = trilinear(State_VGB(:,:,:,:,iBlock),      &
             nVar, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, BufferNorm_D)
+       if(UseB0)then
+          B0_D = &
+               trilinear(B0_DGB(:,:,:,:,iBlock), &
+               3, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
+               BufferNorm_D, DoExtrapolate = .TRUE.)
+          StateInPoint_V(Bx_:Bz_) = &
+                  StateInPoint_V(Bx_:Bz_) + B0_D
+       end if
 
        ! Fill in the coupled state variables, convert to SI units
 
@@ -1044,20 +1086,8 @@ contains
        Buffer_V(iRhoUxCouple:iRhoUzCouple) = &
             StateInPoint_V(rhoUx_:rhoUz_)*No2Si_V(UnitRhoU_)
 
-       if(DoCoupleVar_V(Bfield_)) then
-          if(UseB0)then
-             B0_D = &
-                  trilinear(B0_DGB(:,:,:,:,iBlock), &
-                  3, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
-                  BufferNorm_D, DoExtrapolate = .TRUE.)
-             Buffer_V(iBxCouple:iBzCouple) = &
-                  (StateInPoint_V(Bx_:Bz_) + B0_D)*No2Si_V(UnitB_)
-          else
-             Buffer_V(iBxCouple:iBzCouple) = &
+       if(DoCoupleVar_V(Bfield_))Buffer_V(iBxCouple:iBzCouple) = &
                   StateInPoint_V(Bx_:Bz_)*No2Si_V(UnitB_)
-          end if
-       end if
-
        Buffer_V(iPCouple)  = StateInPoint_V(p_)*No2Si_V(UnitP_)
 
        if(DoCoupleVar_V(Wave_)) &
@@ -1084,8 +1114,25 @@ contains
             StateInPoint_V(Ehot_)*No2Si_V(UnitEnergyDens_)
        if(DoCoupleVar_V(ChGL_))Buffer_V(iVar_V(ChGLCouple_)) = &
             StateInPoint_V(SignB_)*No2Si_V(UnitB_)/No2Si_V(UnitU_)
-       if(DoCoupleVar_V(DoLperp_))Buffer_V(iVar_V(LperpCouple_)) = &
-            StateInPoint_V(Lperp_)*No2Si_V(UnitX_)*sqrt(No2Si_V(UnitB_))
+       if(DoCoupleVar_V(DoLcorr_))then
+          if(Lperp_>1) then
+             Buffer_V(iLcorrFirst) = StateInPoint_V(Lperp_)* &
+                  sqrt(norm2(StateInPoint_V(Bx_:Bz_)))/StateInPoint_V(Rho_)* &
+                  No2Si_V(UnitX_)*sqrt(No2Si_V(UnitB_))
+          elseif(DoAllLcorr)then
+             ! Couple all nLcorr components
+             Buffer_V(iLcorrFirst:iLcorrLast) = &
+                  StateInPoint_V(LcorrFirst_:LcorrLast_)* &
+                  No2Si_V(UnitX_)*sqrt(No2Si_V(UnitB_))
+          elseif(DoAvrLcorr)then
+             ! Couple weighted average of Lcorr components
+             Buffer_V(iLcorrFirst) = &
+                  sum(StateInPoint_V(LcorrFirst_:LcorrFirst_+nWave-1)* &
+                  StateInPoint_V(WaveFirst_:WaveLast_))/      &
+                  sum(StateInPoint_V(WaveFirst_:WaveLast_))*  &
+                  No2Si_V(UnitX_)*sqrt(No2Si_V(UnitB_))
+          end if
+       end if
        if(DoCoupleVar_V(DoWDiff_))Buffer_V(iVar_V(WDiffCouple_)) = &
             StateInPoint_V(WDiff_)*No2Si_V(UnitEnergydens_)
 
@@ -1166,7 +1213,7 @@ contains
     use IH_ModPhysics, ONLY: UnitEnergyDens_
     use IH_ModAdvance, ONLY: Rho_, RhoUx_, RhoUz_, Bx_, Bz_, P_, WaveFirst_, &
          WaveLast_, Pe_, Ppar_, Ehot_, ChargeStateFirst_, ChargeStateLast_, &
-         SignB_, Lperp_, WDiff_
+         SignB_, Lperp_, WDiff_, LcorrFirst_, LcorrLast_, nWave
     use IH_ModMain,    ONLY: UseB0
 
     use CON_router, ONLY: IndexPtrType, WeightPtrType
@@ -1177,7 +1224,7 @@ contains
          ElectronPressure_, EhotCouple_, Momentum_, &
          CollisionlessHeatFlux_, ChargeStateFirstCouple_, &
          ChargeStateLastCouple_, ChargeState_, ChGL_, ChGLCouple_,&
-         DoLperp_, DoWDiff_, LperpCouple_, WDiffCouple_
+         DoLcorr_, DoWDiff_, LcorrFirstCouple_, LcorrLastCouple_, WDiffCouple_
 
     integer,            intent(in)  :: nPartial, iGetStart, nVarIn
     type(IndexPtrType), intent(in)  :: Get
@@ -1185,18 +1232,39 @@ contains
     real,               intent(out) :: Buff_V(nVarIn)
 
     integer   :: iGet, i, j, k, iBlock
-    real      :: Weight, State_V(nVar)
-
+    real      :: Weight, State_V(nVar), StateTmp_V(nVar)
+    logical   :: DoAllLcorr, DoAvrLcorr
     character(len=*), parameter:: NameSub = 'IH_get_for_mh'
     !--------------------------------------------------------------------------
+    DoAllLcorr              = DoCoupleVar_V(DoLcorr_).and.&
+         nLcorr - 1 == iVar_V(LcorrLastCouple_) - &
+         iVar_V(LcorrFirstCouple_)
+    DoAvrLcorr              = DoCoupleVar_V(DoLcorr_).and.&
+         iVar_V(LcorrLastCouple_) == iVar_V(LcorrFirstCouple_)&
+         .and.nWave==nLcorr
+    if(DoCoupleVar_V(DoLcorr_).and..not.(&
+         Lperp_>1.or.DoAllLcorr.or.DoAvrLCorr))&
+         call CON_stop(NameSub//&
+        ': to couple Lcorr should be Lperp>1.or.DoAllLcorr.or.DoAvrLcorr')
     i      = Get%iCB_II(1,iGetStart)
     j      = Get%iCB_II(2,iGetStart)
     k      = Get%iCB_II(3,iGetStart)
     iBlock = Get%iCB_II(4,iGetStart)
     Weight = W%Weight_I(iGetStart)
-    State_V = State_VGB(:,i,j,k,iBlock)*Weight
-    if(UseB0)State_V(Bx_:Bz_) = State_V(Bx_:Bz_) + &
-         B0_DGB(:,i,j,k,iBlock)*Weight
+    StateTmp_V = State_VGB(:,i,j,k,iBlock)
+    if(UseB0)StateTmp_V(Bx_:Bz_) = StateTmp_V(Bx_:Bz_) + B0_DGB(:,i,j,k,iBlock)
+    if(DoAvrLcorr)then
+       ! Weigthed average of Lcorr is calculated if needed
+       StateTmp_V(LcorrFirst_) = &
+            sum(StateTmp_V(LcorrFirst_:LcorrFirst_+nWave-1)*&
+            StateTmp_V(WaveFirst_:WaveLast_))/max(1.0e-30,&
+            sum(StateTmp_V(WaveFirst_:WaveLast_)))
+    elseif(Lperp_>1)then
+       ! Lperp_ state variable is multiplied by Rho rather than by sqrt(B)
+       StateTmp_V(Lperp_) = StateTmp_V(Lperp_)*&
+            sqrt(norm2(StateTmp_V(Bx_:Bz_)))/StateTmp_V(Rho_)
+    end if
+    State_V = StateTmp_V*Weight
 
     do iGet=iGetStart+1,iGetStart+nPartial-1
        i      = Get%iCB_II(1,iGet)
@@ -1204,9 +1272,21 @@ contains
        k      = Get%iCB_II(3,iGet)
        iBlock = Get%iCB_II(4,iGet)
        Weight = W%Weight_I(iGet)
-       State_V = State_V + State_VGB(:,i,j,k,iBlock)*Weight
-       if(UseB0)State_V(Bx_:Bz_) = State_V(Bx_:Bz_) + &
-            B0_DGB(:,i,j,k,iBlock)*Weight
+       StateTmp_V = State_VGB(:,i,j,k,iBlock)
+       if(UseB0)StateTmp_V(Bx_:Bz_) = StateTmp_V(Bx_:Bz_) + &
+            B0_DGB(:,i,j,k,iBlock)
+       if(DoAvrLcorr)then
+          ! Weigthed average of Lcorr is calculated if needed
+          StateTmp_V(LcorrFirst_) = &
+               sum(StateTmp_V(LcorrFirst_:LcorrFirst_+nWave-1)*&
+               StateTmp_V(WaveFirst_:WaveLast_))/max(1.0e-30,&
+               sum(StateTmp_V(WaveFirst_:WaveLast_)))
+       elseif(Lperp_>1)then
+          ! Lperp_ state variable is multiplied by Rho rather than by sqrt(B)
+          StateTmp_V(Lperp_) = StateTmp_V(Lperp_)*norm2(StateTmp_V(Bx_:Bz_))/&
+               StateTmp_V(Rho_)
+       end if
+       State_V = State_V + StateTmp_V*Weight
     end do
     Buff_V = 0.0
     ! Put variables into a buffer, convert to SI units
@@ -1227,8 +1307,19 @@ contains
          State_V(Ehot_)*No2Si_V(UnitEnergyDens_)
     if(DoCoupleVar_V(ChGL_))Buff_V(iVar_V(ChGLCouple_)) = State_V(SignB_)*&
          No2Si_V(UnitB_)/No2Si_V(UnitU_)
-    if(DoCoupleVar_V(DoLperp_))Buff_V(iVar_V(LperpCouple_)) = State_V(Lperp_)*&
-         No2Si_V(UnitX_)*sqrt(No2Si_V(UnitB_))
+    if(DoCoupleVar_V(DoLcorr_))then
+       if(Lperp_>1)then
+          Buff_V(iVar_V(LcorrFirstCouple_)) = State_V(Lperp_)*&
+               No2Si_V(UnitX_)*sqrt(No2Si_V(UnitB_))
+       elseif(DoAvrLcorr)then
+          Buff_V(iVar_V(LcorrFirstCouple_)) = State_V(LcorrFirst_)*&
+               No2Si_V(UnitX_)*sqrt(No2Si_V(UnitB_))
+       elseif(DoAllLcorr)then
+          Buff_V(iVar_V(LcorrFirstCouple_):iVar_V(LcorrLastCouple_)) = &
+               State_V(LcorrFirst_:LcorrLast_)*&
+               No2Si_V(UnitX_)*sqrt(No2Si_V(UnitB_))
+       end if
+    end if
     if(DoCoupleVar_V(DoWDiff_))Buff_V(iVar_V(WDiffCouple_)) = &
          State_V(WDiff_)*No2Si_V(UnitEnergydens_)
     if(DoCoupleVar_V(ElectronPressure_))then
@@ -1320,7 +1411,7 @@ contains
          Bfield_, Wave_, ElectronPressure_, AnisoPressure_, &
          CollisionlessHeatFlux_, ChargeStateFirstCouple_, &
          ChargeStateLastCouple_, ChargeState_, ChGL_, ChGLCouple_,&
-         DoLperp_, DoWDiff_, WDiffCouple_, LperpCouple_
+         DoLcorr_, DoWDiff_, WDiffCouple_, LcorrFirstCouple_, LcorrLastCouple_
     use IH_ModAdvance,    ONLY: State_VGB, UseElectronPressure, &
          UseAnisoPressure
     use IH_ModB0,         ONLY: B0_DGB
@@ -1330,7 +1421,8 @@ contains
     use IH_ModChGL,       ONLY: UseChGL, get_chgl_state
     use IH_ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, Bx_, Bz_, P_, &
          WaveFirst_, WaveLast_, Pe_, Ppar_, Ehot_, ChargeStateFirst_, &
-         ChargeStateLast_, nVar, SignB_, Ux_, Uz_, Lperp_, WDiff_
+         ChargeStateLast_, nVar, SignB_, Ux_, Uz_, Lperp_, WDiff_, &
+         LcorrFirst_, LcorrLast_
     use IH_ModGeometry,   ONLY: Xyz_DGB
 
     integer,             intent(in) :: nPartial, iPutStart, nVarIn
@@ -1405,8 +1497,24 @@ contains
        ! Convert back to conservative variables
        State_V(RhoUx_:RhoUz_) = State_V(Ux_:Uz_)*State_V(Rho_)
     end if
-    if(DoCoupleVar_V(DoLperp_))State_V(Lperp_) = Buff_V(iVar_V(LperpCouple_))*&
-         Si2No_V(UnitX_)*sqrt(Si2No_V(UnitB_))
+    if(DoCoupleVar_V(DoLcorr_))then
+       if(Lperp_>1)then
+          State_V(Lperp_) = Buff_V(iVar_V(LcorrFirstCouple_))*&
+               Si2No_V(UnitX_)*sqrt(Si2No_V(UnitB_))/&
+               sqrt(norm2(State_V(Bx_:Bz_)))*State_V(Rho_)
+       elseif(LcorrLast_ - LcorrFirst_ == &
+            iVar_V(LcorrLastCouple_) - iVar_V(LcorrFirstCouple_))then
+          ! Couple all Lcorr_ components
+          State_V(LcorrFirst_:LcorrLast_) = &
+               Buff_V(iVar_V(LcorrFirstCouple_):iVar_V(LcorrLastCouple_))*&
+               Si2No_V(UnitX_)*sqrt(Si2No_V(UnitB_))
+       elseif(iVar_V(LcorrLastCouple_) == iVar_V(LcorrFirstCouple_))then
+          ! Assign all Lcorr_ components equal to a single buffer value
+          State_V(LcorrFirst_:LcorrLast_) = &
+               Buff_V(iVar_V(LcorrFirstCouple_))*&
+               Si2No_V(UnitX_)*sqrt(Si2No_V(UnitB_))
+       end if
+    end if
     if(DoCoupleVar_V(DoWDiff_))State_V(WDiff_) = &
          Buff_V(iVar_V(WDiffCouple_))*&
             Si2No_V(UnitEnergydens_)
