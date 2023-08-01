@@ -137,7 +137,7 @@ module CON_coupler
        ChargeState_           = 11, &
        CollisionlessHeatFlux_ = 12, &
        ChGL_                  = 13, &
-       DoLcorr_               = 14, &
+       DoLPerp_               = 14, &
        DoWDiff_               = 15
 
   logical, public :: &
@@ -145,7 +145,7 @@ module CON_coupler
        DoCoupleVar_VCC(nCoupleVarGroup,MaxComp,MaxComp) = .false.
 
   ! number of variable types known to the coupler
-  integer, parameter, public  :: nVarIndexCouple = 19
+  integer, parameter, public  :: nVarIndexCouple = 18
 
   ! Fixed indices for mapping actual variable indices
   integer, parameter,public :: &
@@ -165,9 +165,8 @@ module CON_coupler
        ChargeStateLastCouple_  = 14, &
        EhotCouple_             = 15, &
        ChGLCouple_             = 16, &
-       LcorrFirstCouple_       = 17, &
-       Lcorrlastcouple_        = 18, &
-       WDiffCouple_            = 19
+       LperpCouple_            = 17, &
+       WDiffCouple_         = 18
 
   ! vector storing the actual values of variable indices inside a
   ! coupled component
@@ -594,7 +593,6 @@ contains
     integer      :: nPSource, nPTarget, nPCouple
     integer      :: nPparSource, nPparTarget, nPparCouple
     integer      :: nWaveSource, nWaveTarget, nWaveCouple
-    integer      :: nLcorrSource, nLcorrTarget, nLcorrCouple
     integer      :: nMaterialSource, nMaterialTarget, nMaterialCouple
     integer      :: nChargeStateSource,nChargeStateTarget,nChargeStateCouple
     integer:: lCompSource, lCompTarget
@@ -630,7 +628,6 @@ contains
     nPSource           = 0 ; nPTarget           = 0 ; nPCouple           = 0
     nPparSource        = 0 ; nPpartarget        = 0 ; nPparCouple        = 0
     nWaveSource        = 0 ; nWaveTarget        = 0 ; nWaveCouple        = 0
-    nLcorrSource       = 0 ; nLcorrTarget       = 0 ; nLcorrCouple       = 0
     nMaterialSource    = 0 ; nMaterialTarget    = 0 ; nMaterialCouple    = 0
     nChargeStateSource = 0 ; nChargeStateTarget = 0 ; nChargeStateCouple = 0
 
@@ -667,9 +664,7 @@ contains
     end if
     call process_var_name(nVarSource, NameVarSource_V, &
          nDensitySource, nSpeedSource, nPSource, nPparSource, &
-         nWaveSource, nMaterialSource, nChargeStateSource, nLcorrSource)
-    if(nLcorrSource>0.and.any(NameVarSource_V=='Lperp'))call CON_stop(&
-               NameSub//': both Lperp and Lcorr are used in the source!')
+         nWaveSource, nMaterialSource, nChargeStateSource)
     call join_string(nVarSource, NameVarSource_V,NameVarSource)
     if(DoTestMe) then
        write(*,*) ' '
@@ -685,9 +680,7 @@ contains
     end if
     call process_var_name(nVarTarget, NameVarTarget_V, &
          nDensityTarget, nSpeedTarget, nPTarget, nPparTarget, &
-         nWaveTarget, nMaterialTarget, nChargeStateTarget, nLcorrTarget)
-    if(nLcorrTarget>0.and.any(NameVarTarget_V=='Lperp'))call CON_stop(&
-         NameSub//': both Lperp and Lcorr are used in the target!')
+         nWaveTarget, nMaterialTarget, nChargeStateTarget)
     call join_string(nVarTarget, NameVarTarget_V, NameVarTarget)
     if (DoTestMe) then
        write(*,*) ' '
@@ -741,9 +734,7 @@ contains
        case('wD')
           DoCoupleVar_V(DoWDiff_) = any(NameVarTarget_V=='wD')
        case('Lpepr')
-          DoCoupleVar_V(DoLcorr_) = &
-               any(NameVarTarget_V=='Lperp').or.nLcorrTarget > 0
-          if(DoCoupleVar_V(DoLcorr_))nLcorrCouple = 1
+          DoCoupleVar_V(DoLperp_) = any(NameVarTarget_V=='Lperp')
        case('Ppar')
           DoCoupleVar_V(AnisoPressure_) = any(NameVarTarget_V=='Ppar')
 
@@ -760,33 +751,11 @@ contains
              nWaveCouple  = nWaveSource
              DoCoupleVar_V(Wave_) = .true.
           else if (nWaveTarget == 0) then
-             if(i_proc()==0)&
-                write(*,*) 'Coupling components with and without Lcorr!!!'
+             if(i_proc()==0) &
+                  write(*,*) 'Coupling components with and without waves!!!'
           else
              write(*,*) 'SWMF error found by ',NameSub
              write(*,*) 'Cannot couple components with different nWave>0!'
-             call CON_stop(NameSub//': change nWave (use Config.pl).')
-          end if
-
-       case('l1')
-          ! Enumerated names for waves
-          ! Coupling components with and without waves is allowed.
-          ! If waves are present in both source and target, they should have
-          ! the same number. Otherwise a CON_stop is issued.
-          if(nLcorrSource == nLcorrTarget)then
-             nLcorrCouple  = nLcorrSource
-             DoCoupleVar_V(DoLcorr_) = .true.
-          elseif(nLCorrTarget == 0)then
-             if(any(NameVarTarget_V=='Lperp'))then
-                nLcorrCouple  = 1
-                DoCoupleVar_V(DoLcorr_) = .true.
-             else
-                if(i_proc()==0) write(*,*) &
-                     'Coupling components with and without waves!!!'
-             end if
-          else
-             write(*,*) 'SWMF error found by ',NameSub
-             write(*,*) 'Cannot couple components with different nLcorr>0!'
              call CON_stop(NameSub//': change nWave (use Config.pl).')
           end if
 
@@ -832,7 +801,7 @@ contains
           !   - charge states of elements.
           if(nDensitySource == 1 .and. &
                nWaveSource < 1 .and. nMaterialSource < 1 .and. &
-               nChargeStateSource < 1.and.nLcorrSource<1) then
+               nChargeStateSource < 1) then
              ! Source variable name is unknown, stop.
              write(*,*) 'SWMF error found in ', NameSub
              write(*,*) 'Coupling of variable ', NameVarSource_V(iVarSource)
@@ -851,8 +820,6 @@ contains
     ! Correct "found" status for waves and materials
     if (nWaveSource >= 1) &
          IsFoundVarSource_V(WaveFirstCouple_:WaveLastCouple_) = .true.
-    if (nLcorrSource >= 1) &
-         IsFoundVarSource_V(LcorrFirstCouple_:LcorrLastCouple_) = .true.
     if (nMaterialSource >= 1) &
          IsFoundVarSource_V(MaterialFirstCouple_:MaterialLastCouple_) = .true.
     if (nChargeStateSource >= 1) &
@@ -987,10 +954,9 @@ contains
        iVar_V(ChGLCouple_) = nVarCouple
     end if
 
-    if(DoCoupleVar_V(DoLcorr_))then
-       iVar_V(LcorrFirstCouple_) = nVarCouple + 1
-       iVar_V(LcorrLastCouple_)  = nVarCouple + nLcorrCouple
-       nVarCouple = nVarCouple + nLcorrCouple
+    if(DoCoupleVar_V(DoLperp_))then
+       nVarCouple = nVarCouple + 1
+       iVar_V(LperpCouple_) = nVarCouple
     end if
 
     if(DoCoupleVar_V(DoWDiff_))then
@@ -1071,7 +1037,7 @@ contains
        write(*,*) 'Fluids:         ', DoCoupleVar_V(MultiFluid_)
        write(*,*) 'Species:        ', DoCoupleVar_V(MultiSpecie_)
        write(*,*) 'SignB:          ', DoCoupleVar_V(ChGL_)
-       write(*,*) 'Lcorr:          ', DoCoupleVar_V(DoLcorr_)
+       write(*,*) 'Lperp:          ', DoCoupleVar_V(DoLperp_)
        write(*,*) 'WDiff:          ', DoCoupleVar_V(DoWDiff_)
        write(*,*) '---------------------------------------------'
     end if
@@ -1097,8 +1063,7 @@ contains
        write(*,*) 'ChargeStateFirst: ', iVar_V(ChargeStateFirstCouple_)
        write(*,*) 'ChargeStateLast: ',  iVar_V(ChargeStateLastCouple_)
        write(*,*) 'SignB:           ',  iVar_V(ChGLCouple_)
-       write(*,*) 'LcorrFirst:      ',  iVar_V(LcorrFirstCouple_)
-       write(*,*) 'LcorrLast:       ',  iVar_V(LcorrLastCouple_)
+       write(*,*) 'Lperp:           ',  iVar_V(LperpCouple_)
        write(*,*) 'wD:              ',  iVar_V(WDiffCouple_)
        write(*,*) '---------------------------------------------'
 
