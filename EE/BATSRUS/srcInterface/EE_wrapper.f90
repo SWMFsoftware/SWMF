@@ -1,5 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 module EE_wrapper
@@ -10,7 +10,7 @@ module EE_wrapper
        BATS_init_session, BATS_setup, BATS_advance, BATS_save_files, &
        BATS_finalize
   use ModUtilities, ONLY: CON_set_do_test, CON_stop
-  
+
   implicit none
 
   private ! except
@@ -51,7 +51,7 @@ contains
 
     logical :: DoTest, DoTestMe
 
-    character (len=*), parameter :: NameSub='EE_set_param'
+    character(len=*), parameter:: NameSub = 'EE_set_param'
     !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
@@ -98,7 +98,6 @@ contains
     end select
 
   end subroutine EE_set_param
-
   !============================================================================
 
   subroutine EE_set_grid
@@ -112,7 +111,7 @@ contains
     use EE_ModGeometry, ONLY: TypeGeometry, RadiusMin, RadiusMax
     use EE_BATL_lib, ONLY: CoordMin_D, CoordMax_D
 
-    character(len=*), parameter :: NameSub='EE_set_grid'
+    character(len=*), parameter:: NameSub = 'EE_set_grid'
     !--------------------------------------------------------------------------
 
     if(done_dd_init(EE_))RETURN
@@ -130,9 +129,9 @@ contains
          nVar = nVar, &
          NameVar = NameVarCouple,   &
          TypeGeometry=TypeGeometry, &
-         Coord1_I = (/ RadiusMin, RadiusMax /), &
-         Coord2_I = (/ CoordMin_D(2), CoordMax_D(2) /), &
-         Coord3_I = (/ CoordMin_D(3), CoordMax_D(3) /)  )
+         Coord1_I = [ RadiusMin, RadiusMax ], &
+         Coord2_I = [ CoordMin_D(2), CoordMax_D(2) ], &
+         Coord3_I = [ CoordMin_D(3), CoordMax_D(3) ]  )
 
     if(is_proc(EE_)) Grid_C(EE_)%State_VGB => State_VGB
 
@@ -165,7 +164,6 @@ contains
          LocalDomain = MH_Domain)
 
   end subroutine EE_set_grid
-
   !============================================================================
 
   subroutine EE_init_session(iSession, TimeSimulation)
@@ -176,7 +174,7 @@ contains
     logical :: IsUninitialized = .true.
     logical :: DoTest, DoTestMe
 
-    character(len=*), parameter :: NameSub='EE_init_session'
+    character(len=*), parameter:: NameSub = 'EE_init_session'
     !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
@@ -189,7 +187,6 @@ contains
     if(DoTest)write(*,*)NameSub,' finished for session ',iSession
 
   end subroutine EE_init_session
-
   !============================================================================
 
   subroutine EE_finalize(TimeSimulation)
@@ -198,7 +195,7 @@ contains
 
     real, intent(in) :: TimeSimulation   ! seconds from start time
 
-    character(len=*), parameter :: NameSub='EE_finalize'
+    character(len=*), parameter:: NameSub = 'EE_finalize'
     !--------------------------------------------------------------------------
     ! We are not advancing in time any longer
     IsTimeLoop = .false.
@@ -208,20 +205,19 @@ contains
     call BATS_finalize
 
   end subroutine EE_finalize
-
   !============================================================================
 
   subroutine EE_save_restart(TimeSimulation)
 
     real, intent(in) :: TimeSimulation   ! seconds from start time
 
-    character(len=*), parameter :: NameSub='EE_save_restart'
+    character(len=*), parameter:: NameSub = 'EE_save_restart'
     !--------------------------------------------------------------------------
     call BATS_save_files('RESTART')
 
   end subroutine EE_save_restart
-
   !============================================================================
+
   subroutine EE_run(TimeSimulation, TimeSimulationLimit)
 
     use EE_BATL_lib, ONLY: iProc
@@ -232,7 +228,7 @@ contains
 
     logical :: DoTest, DoTestMe
 
-    character(len=*), parameter :: NameSub='EE_run'
+    character(len=*), parameter:: NameSub = 'EE_run'
     !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
@@ -251,8 +247,8 @@ contains
     TimeSimulation = tSimulation
 
   end subroutine EE_run
-
   !============================================================================
+
   subroutine EE_find_points(nDimIn, nPoint, Xyz_DI, iProc_I)
 
     use EE_BATL_lib,   ONLY: MaxDim, find_grid_block
@@ -285,12 +281,11 @@ contains
 
     integer, intent(out):: nDimOut    ! grid dimensionality
     integer, intent(out):: iGridOut   ! grid index (increases with AMR)
-    integer, intent(out):: iDecompOut ! decomposition index 
-
-    character(len=*), parameter :: NameSub='EE_get_grid_info'
+    integer, intent(out):: iDecompOut ! decomposition index
 
     ! Return basic grid information useful for model coupling.
     ! The decomposition index increases with load balance and AMR.
+    character(len=*), parameter:: NameSub = 'EE_get_grid_info'
     !--------------------------------------------------------------------------
 
     nDimOut    = nDim
@@ -302,7 +297,7 @@ contains
   subroutine EE_get_for_sc(IsNew, NameVar, nVarIn, nDimIn, nPoint, Xyz_DI, &
        Data_VI)
 
-    ! Interpolate Data_VI from EE at the list of positions Xyz_DI 
+    ! Interpolate Data_VI from EE at the list of positions Xyz_DI
     ! required by SC
 
     use EE_ModPhysics, ONLY: Si2No_V, UnitX_, No2Si_V, iUnitCons_V
@@ -334,7 +329,7 @@ contains
     integer:: iPoint, iBlock, iProcFound, iVarBuffer, iVar
 
     logical:: DoTest, DoTestMe
-    character(len=*), parameter:: NameSub='EE_get_for_sc'
+    character(len=*), parameter:: NameSub = 'EE_get_for_sc'
     !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
@@ -413,7 +408,7 @@ contains
     use EE_ModMain,      ONLY: UseB0
     use EE_ModB0,        ONLY: B0_DGB
     use EE_ModAdvance,   ONLY: State_VGB, Bx_, Bz_
-    use EE_ModMultiFluid,ONLY: nIonFluid
+    use EE_ModMultiFluid, ONLY: nIonFluid
     use CON_coupler,     ONLY: Grid_C, SC_, nVarBuffer, iVarTarget_V
     character(len=*), intent(inout):: NameVar ! List of variables
     integer,          intent(inout):: nVar    ! Number of variables in Data_VI
@@ -428,10 +423,10 @@ contains
     real    :: Coord_D(3), Xyz_D(3)
     real    :: rMinSc
 
-    character(len=*), parameter :: NameSub='EE_get_sc_region'
+    character(len=*), parameter:: NameSub = 'EE_get_sc_region'
     !--------------------------------------------------------------------------
     DoCountOnly = nPoint < 1
-    
+
     rMinSc = Grid_C(SC_)%Coord2_I(1)
 
     ! Find ghost cells in the SC domain
@@ -442,7 +437,7 @@ contains
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
           ! Set generalized coordinate
           Coord_D = &
-               CoordMin_DB(:,iBlock) + ((/i,j,k/)-0.5)*CellSize_DB(:,iBlock)
+               CoordMin_DB(:,iBlock) + ([i,j,k]-0.5)*CellSize_DB(:,iBlock)
 
           ! Exclude points that are inside the domain
           if(all(Coord_D > CoordMin_D) .and. all(Coord_D < CoordMax_D)) CYCLE
@@ -463,7 +458,7 @@ contains
                      *Si2No_V(iUnitCons_V(iVar))
              end do
              ! Set variables not defined by coupling
-             !if(UseElectronPressure .and. &
+             ! if(UseElectronPressure .and. &
              !     .not. DoCoupleVar_V(ElectronPressure_)then
              if(UseB0) State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
                   State_VGB(Bx_:Bz_,i,j,k,iBlock) - B0_DGB(:,i,j,k,iBlock)
@@ -478,8 +473,8 @@ contains
     if(DoCountOnly) nPoint = iPoint
 
   end subroutine EE_get_sc_region
+  !============================================================================
 
-  !===========================================================================
   subroutine EE_put_from_sc( &
        NameVar, nVar, nPoint, Data_VI, iPoint_I, Pos_DI)
 
@@ -493,7 +488,7 @@ contains
     integer, intent(in), optional:: iPoint_I(nPoint)! Order of data
     real, intent(out), allocatable, optional:: Pos_DI(:,:) ! Position vectors
 
-    character(len=*), parameter :: NameSub='EE_put_from_sc'
+    character(len=*), parameter:: NameSub = 'EE_put_from_sc'
     !--------------------------------------------------------------------------
 
     if(.not. present(Data_VI))then
@@ -514,8 +509,8 @@ contains
     call EE_get_sc_region(NameVar, nVar, nPoint, Pos_DI, Data_VI, iPoint_I)
 
   end subroutine EE_put_from_sc
-
   !============================================================================
+
   subroutine EE_use_pointer(iComp, tSimulation)
 
     use CON_coupler, ONLY: NameComp_I, Grid_C
@@ -526,7 +521,7 @@ contains
 
     logical:: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'EE_use_pointer'
-    !------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     nVarComp2      =  Grid_C(iComp)%nVar
     NameVarComp2   =  Grid_C(iComp)%NameVar
     StateComp2_VGB => Grid_C(iComp)%State_VGB
@@ -540,5 +535,7 @@ contains
     call EE_user_action('POINTERCOUPLING_'//NameComp_I(iComp))
 
   end subroutine EE_use_pointer
+  !============================================================================
 
 end module EE_wrapper
+!==============================================================================

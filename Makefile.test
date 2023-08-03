@@ -112,11 +112,11 @@ test_swmf:
 	-@(if [ -d PT/AMPS    ]; then ${MAKE} test14 TESTDIR=run_test14; fi)
 	-@(if [ -d PT/AMPS    ]; then ${MAKE} test14pui TESTDIR=run_test14pui; fi)
 	-@(if [ -d SP/MFLAMPA ]; then ${MAKE} test15 TESTDIR=run_test15; fi)
+	-@(if [ -d SP/MFLAMPA ]; then ${MAKE} test19 TESTDIR=run_test19; fi)
 	-@(if [ -d PC/FLEKS   ]; then ${MAKE} test16 TESTDIR=run_test16; fi)
 	-@(if [ -d PC/FLEKS   ]; then ${MAKE} test17 TESTDIR=run_test17; fi)
 	-@(if [ -d PC/FLEKS   ]; then ${MAKE} test18 TESTDIR=run_test18; fi)
 	-@(if [ -d PC/FLEKS   ]; then ${MAKE} test_swpc_aepic TESTDIR=run_test_swpc_aepic; fi)
-	-@(if [ -d SP/MFLAMPA ]; then ${MAKE} test19 TESTDIR=run_test19; fi)
 	-@(if [ -d PT/FLEKS   ]; then ${MAKE} test20 TESTDIR=run_test20; fi)
 	-@(if [ -d PT/FLEKS   ]; then ${MAKE} test21 TESTDIR=run_test21; fi)		
 	./Config.pl -noamrex
@@ -1817,6 +1817,10 @@ test9_check:
 		output/test9/SC_cme_los_soho_c2_4_t00000010_n0000012.out \
 		> test09_sc_cme_los.diff)
 	-(${DIFFNUM} -b -r=1e-5 -a=1e-27 \
+		${TESTDIR}/RESULTS/run_cme/SC/shk_mhd_10_t00000010_n00000012.out \
+		output/test9/SC_shk_mhd_10_t00000010_n00000012.out \
+		> test09_sc_cme_shk.diff)
+	-(${DIFFNUM} -b -r=1e-5 -a=1e-27 \
 		${TESTDIR}/RESULTS/run_restart/SC/los_soho_c2_4_t00000010_n0000012.out \
 		output/test9/SC_restart_los_soho_c2_4_t00000010_n0000012.out \
 		> test09_sc_restart_los.diff)
@@ -2500,8 +2504,8 @@ test19:
 
 test19_compile:
 	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS,OH/BATSRUS,SP/MFLAMPA
-	./Config.pl -o=SC:u=Awsom,e=AwsomWDiff,ng=2,g=4,4,4
-	./Config.pl -o=IH:u=Awsom,e=AwsomWDiff,ng=2,g=4,4,4
+	./Config.pl -o=SC:u=Awsom,e=AwsomWdiff,ng=2,g=4,4,4
+	./Config.pl -o=IH:u=Awsom,e=AwsomWdiff,ng=2,g=4,4,4
 	./Config.pl -o=OH:u=Awsom,e=Awsom,ng=2,g=4,4,4
 	./Config.pl -o=SP:g=2000
 	${MAKE} SWMF

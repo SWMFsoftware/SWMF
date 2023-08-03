@@ -759,7 +759,7 @@ contains
              call CON_stop(NameSub//': change nWave (use Config.pl).')
           end if
 
-       case('m01')
+       case('m1')
           ! Verify that target uses the same # of materials.
           ! Otherwise stop with error.
           if(nMaterialSource == nMaterialTarget)then

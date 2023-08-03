@@ -30,9 +30,8 @@ F			UseStrict
 #INCLUDE
 IH/restartIN/restart.H
 
-! Note: cannot use "buffergrid" if there is no SC component
 #INNERBOUNDARY
-float			TypeBcBody
+buffergrid		TypeBcBody
 
 #OUTERBOUNDARY
 float			TypeBc1

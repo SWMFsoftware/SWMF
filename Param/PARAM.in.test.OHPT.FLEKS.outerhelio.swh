@@ -232,7 +232,7 @@ T			useFixedDt
 T			fastMerge
 
 #SAVEPLOT
-3			nPlotFile
+7			nPlotFile
 y=0 var ascii planet year		StringPlot
 -1			DnSavePlot
 5 y			DtSavePlot
@@ -246,6 +246,34 @@ z=0 var ascii planet year		StringPlot
 3d fluid amrex planet year		StringPlot
 -1			DnSavePlot
 10 y			DtSavePlot
+0			DxSavePlot
+cut particlePop1 amrex planet year		StringPlot
+-1			DnSavePlot
+100 y			DtSavePlot
+-400			xMinCut
+-200			xMaxCut
+-100			yMinCut
+100			yMaxCut
+-100			zMinCut
+100			zMaxCut
+0			DxSavePlot
+cut particlePop2 amrex planet year		StringPlot
+-1			DnSavePlot
+100 y			DtSavePlot
+-200			xMinCut
+500			xMaxCut
+-100			yMinCut
+100			yMaxCut
+-100			zMinCut
+100			zMaxCut
+0			DxSavePlot
+3d particlePop3 amrex planet year		StringPlot
+-1			DnSavePlot
+100 y			DtSavePlot
+0			DxSavePlot
+3d particlePop4 amrex planet year		StringPlot
+-1			DnSavePlot
+100 y			DtSavePlot
 0			DxSavePlot
 
 #END_COMP PT -----------------------------------------------------------------
