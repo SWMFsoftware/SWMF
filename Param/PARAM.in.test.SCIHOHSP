@@ -143,7 +143,6 @@ turbulentcascade		TypeCoronalHeating
 1.5e5			LperpTimesSqrtBSi
 1.1			rMinWaveReflection
 T			UseReynoldsDecomposition
-0.0			KarmanTaylorBeta
 
 #HEATPARTITIONING
 uniform			TypeHeatPartitioning
@@ -324,7 +323,7 @@ T			UseBody
  250.0			zMax
 
 #GRIDBLOCKALL
-6800			MaxBlock
+4800			MaxBlock
 
 #AMRREGION
 OuterShell		NameRegion
@@ -379,7 +378,6 @@ turbulentcascade		TypeCoronalHeating
 1.5e5			LperpTimesSqrtBSi
 0.0			rMinWaveReflection
 T			UseReynoldsDecomposition
-0.0			KarmanTaylorBeta
 
 #SCHEME
 2			nOrder
@@ -490,7 +488,7 @@ T			UseBody
  10.0			zMax
 
 #GRIDBLOCKALL
-6800			MaxBlock
+4800			MaxBlock
 
 #AMRREGION
 OuterShell		NameRegion

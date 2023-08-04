@@ -90,7 +90,6 @@ turbulentcascade		TypeCoronalHeating
 1.5e5			LperpTimesSqrtBSi
 1.1			rMinWaveReflection
 T			UseReynoldsDecomposition
-0.0			KarmanTaylorBeta
 
 #TEST
 radiative_cooling		StringTest
@@ -228,7 +227,7 @@ IH/restartIN/restart.H
 1.0			ElectronTemperatureRatio
 
 #GRIDBLOCKALL
-6800			MaxBlock
+4800			MaxBlock
 
 #DOAMR
 F			DoAmr
@@ -255,7 +254,6 @@ turbulentcascade		TypeCoronalHeating
 1.5e5			LperpTimesSqrtBSi
 0.0			rMinWaveReflection
 T			UseReynoldsDecomposition
-0.0			KarmanTaylorBeta
 
 #SCHEME
 2			nOrder

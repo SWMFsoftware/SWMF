@@ -136,7 +136,6 @@ turbulentcascade		TypeCoronalHeating
 1.5e5			LperpTimesSqrtBSi
 1.1			rMinWaveReflection
 T			UseReynoldsDecomposition
-0.0			KarmanTaylorBeta
 
 #HEATPARTITIONING
 uniform			TypeHeatPartitioning
@@ -377,7 +376,6 @@ turbulentcascade		TypeCoronalHeating
 1.5e5			LperpTimesSqrtBSi
 0.0			rMinWaveReflection
 T			UseReynoldsDecomposition
-0.0			KarmanTaylorBeta
 
 #SCHEME
 2			nOrder
