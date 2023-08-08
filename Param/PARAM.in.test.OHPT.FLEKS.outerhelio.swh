@@ -209,6 +209,11 @@ PT/restartIN/FLEKS0_restart.H		NameIncludeFile
 #INITFROMSWMF
 F			initFromSWMF
 
+#LOADBALANCE
+particle		loadBalanceStrategy
+20			dn
+-1.0			dt
+
 #TIMESTEPPING
 T			useFixedDt
 0.2 y			dt
@@ -230,6 +235,13 @@ T			useFixedDt
 #MERGEEFFICIENCY
 1.0			mergeThresholdDistance
 T			fastMerge
+
+! Set splittingLimit = 0.1 is helpful to reduce PPC, exepcially when a
+! AMR grid is used.
+RESAMPLING
+T			doReSampling (rest is read if true)
+0.1			splittingLimit
+1.5			mergingLimit
 
 #SAVEPLOT
 7			nPlotFile

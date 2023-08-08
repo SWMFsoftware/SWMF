@@ -266,10 +266,10 @@ T			receiveICOnly
 16			nCellY
 16			nCellZ
 
-MAXBLOCKSIZE
-8			nCellX
-8			nCellY
-8			nCellZ
+#MAXBLOCKSIZE
+4			nCellX
+4			nCellY
+4			nCellZ
 
 !===== Mesh Refinement=========
 #REGION
