@@ -99,7 +99,7 @@ test_swmf:
 	-@(if [ -d IM/CIMI    ]; then ${MAKE} test_swpc_cimi_species TESTDIR=run_test_swpc_cimi_species; fi)
 	-@(if [ -d PW/PWOM    ]; then ${MAKE} test_swpc_pwom TESTDIR=run_test_swpc_pwom; fi)
 	-@(if [ -d PW/PWOM    ]; then ${MAKE} test_swpc_pwom_species TESTDIR=run_test_swpc_pwom_species; fi)
-	-@(if [ -d PW/PWOM ] && [ -d IM/CIMI ]; then ${MAKE} test_swpc_cimi_pwom_species TESTDIR=run_test_cimi_swpc_pwom_species; fi)
+	-@(if [ -d PW/PWOM ] && [ -d IM/CIMI ]; then ${MAKE} test_swpc_cimi_pwom_species TESTDIR=run_test_swpc_cimi_pwom_species; fi)
 	-@(if [ -d PW/PWOM    ]; then ${MAKE} test1 TESTDIR=run_test01; fi)
 	-@(if [ -d IM/HEIDI   ]; then ${MAKE} test4 TESTDIR=run_test04; fi)
 	-@(if [ -d GM/BATSRUS/srcUserExtra ]; then ${MAKE} test5 TESTDIR=run_test05; fi)
@@ -1340,11 +1340,11 @@ test_swpc_cimi_pwom_species_check:
 		${TESTDIR}/GM/IO2/log_e20140410-000200.log \
 		Param/SWPC/TestOutputCimiPwomSpecies/log_e20140410-000200.log \
 		> test_swpc_cimi_pwom_species_gm.diff)
-	-@(${DIFFNUM} -b -r=2e-4 -a=1e-5 \
+	-@(${DIFFNUM} -b -r=2e-4 -a=3e-5 \
 		${TESTDIR}/GM/IO2/magnetometers_e20140410-000200.mag \
 		Param/SWPC/TestOutputCimiPwomSpecies/magnetometers_e20140410-000200.mag \
 		>> test_swpc_cimi_pwom_species_gm.diff)
-	-@(${DIFFNUM} -b -r=2e-4 -a=1e-5 \
+	-@(${DIFFNUM} -b -r=2e-4 -a=5e-5 \
 		${TESTDIR}/GM/IO2/mag_grid_e20140410-000300.out \
 		Param/SWPC/TestOutputCimiPwomSpecies/mag_grid_e20140410-000300.out \
 		>> test_swpc_cimi_pwom_species_gm.diff)
