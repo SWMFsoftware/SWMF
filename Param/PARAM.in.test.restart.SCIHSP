@@ -322,9 +322,8 @@ SP/restartIN/restart.H
 #DORUN
 F			DoRun
 
-#TEST
+#TRACESHOCK
 F			DoTraceShock
-F			UseDiffusion
 
 
 #SAVEPLOT

@@ -337,9 +337,8 @@ pnt mhd tec		StringPlot
 #DORUN
 F			DoRun
 
-#TEST
+#TRACESHOCK
 F			DoTraceShock
-F			UseDiffusion
 
 
 #ORIGIN
