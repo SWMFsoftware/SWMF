@@ -27,11 +27,8 @@ SP			NameTarget
 #DORUN
 F			DoRun
 
-#TEST
+#TRACESHOCK
 F			DoTraceShock
-F			UseDiffusion
-
-
 
 #READMHDATA
 T			DoReadMhData

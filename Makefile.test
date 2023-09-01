@@ -2618,7 +2618,7 @@ test21_check:
                 output/test21/y=0_neu_OH.ref.gz \
 		> test21.diff)
 	-@(${DIFFNUM} -b -a=1e-13 -r=1e-7 \
-                ${TESTDIR}/RESULTS/swh/OH/z*04207.out \
+                ${TESTDIR}/RESULTS/swh/OH/z*04209.out \
                 output/test21/z=0_OH.ref.gz \
 		>> test21.diff)
 	-@(${DIFFNUM} -b -a=1e-13 -r=1e-7 \
