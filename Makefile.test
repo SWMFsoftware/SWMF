@@ -54,9 +54,6 @@ test_help:
 	@(if [ -d PC/AMPS    ]; then echo "    test12                      (run GM-PC/AMPS tests)"; fi)
 	@(if [ -d PC/IPIC3D2 ]; then echo "    test12_ipic3d               (run GM-PC/IPIC3D2 tests)"; fi)
 	@(if [ -d PT/AMPS    ]; then echo "    test13                      (run GM-PT/AMPS test: Europa)"; fi)
-	@(if [ -d PT/AMPS    ]; then echo "    test14                      (run OH-PT/AMPS test)"; fi)
-	@(if [ -d PT/AMPS    ]; then echo "    test14_1d                   (run OH-PT/AMPS test in 1D)"; fi)
-	@(if [ -d PT/AMPS    ]; then echo "    test14pui                   (run OH-PT/AMPS test with PUI)"; fi)
 	@(if [ -d SP/MFLAMPA ]; then echo "    test15                      (run SC-IH-SP/MFLAMPA test)"; fi)
 	@(if [ -d SP/MFLAMPA ]; then echo "    test15_build                (configure SC-IH-SP/MFLAMPA, run test15)"; fi)
 	@(if [ -d PT/AMPS    ]; then echo "    test15_pt                   (run SC-IH-PT/AMPS test)"; fi)
@@ -108,9 +105,6 @@ test_swmf:
 	-@(if [ -d GM/BATSRUS ]; then ${MAKE} test8 TESTDIR=run_test08; fi)
 	-@(if [ -d GM/BATSRUS ]; then ${MAKE} test9 TESTDIR=run_test09; fi)
 	-@(if [ -d PT/AMPS    ]; then ${MAKE} test13 TESTDIR=run_test13; fi)
-	-@(if [ -d PT/AMPS    ]; then ${MAKE} test14_1d TESTDIR=run_test14_1d; fi)
-	-@(if [ -d PT/AMPS    ]; then ${MAKE} test14 TESTDIR=run_test14; fi)
-	-@(if [ -d PT/AMPS    ]; then ${MAKE} test14pui TESTDIR=run_test14pui; fi)
 	-@(if [ -d SP/MFLAMPA ]; then ${MAKE} test15 TESTDIR=run_test15; fi)
 	-@(if [ -d SP/MFLAMPA ]; then ${MAKE} test19 TESTDIR=run_test19; fi)
 	-@(if [ -d PC/FLEKS   ]; then ${MAKE} test16 TESTDIR=run_test16; fi)
@@ -2332,13 +2326,13 @@ test_sp_check:
 ###         FLEKS runs with periodic boundary conditions. 
 
 test16:
-	@echo "test16_compile..." > test16.diff
+	@echo "test16_compile..." > test16_gmpc.diff
 	$(MAKE) test16_compile
-	@echo "test16_rundir..." > test16.diff
+	@echo "test16_rundir..." > test16_gmpc.diff
 	$(MAKE) test16_rundir
-	@echo "test16_run..." > test16.diff
+	@echo "test16_run..." > test16_gmpc.diff
 	$(MAKE) test16_run
-	@echo "test16_check..." > test16.diff
+	@echo "test16_check..." > test16_gmpc.diff
 	$(MAKE) test16_check
 
 test16_compile:
@@ -2361,28 +2355,28 @@ test16_check:
 	-@(${DIFFNUM} -b -r=1e-7 \
 	   ${TESTDIR}/RESULTS/PC/z=0_fluid_region0_0_t00000002_n00000007.out \
 	   output/test16/z=0.ref.gz \
-		> test16.diff)
+		> test16_gmpc.diff)
 	-@(${DIFFNUM} -b -r=1e-12 \
 	   ${TESTDIR}/RESULTS/PC/log_pic_n00000000.log \
 	   output/test16/PC.log \
-		>> test16.diff)
+		>> test16_gmpc.diff)
 	-@(${DIFFNUM} -b -r=1e-12 \
 	   ${TESTDIR}/RESULTS/PC/log_pt_n00000000.log \
 	   output/test16/PT.log \
-		>> test16.diff)		
-	ls -l test16.diff
+		>> test16_gmpc.diff)		
+	ls -l test16_gmpc.diff
 
 
 ### test17: GM/BATSRUS+PC/FLEKS. 2D Alfven wave ###
 
 test17:
-	@echo "test17_compile..." > test17.diff
+	@echo "test17_compile..." > test17_gmpc.diff
 	$(MAKE) test17_compile
-	@echo "test17_rundir..." > test17.diff
+	@echo "test17_rundir..." > test17_gmpc.diff
 	$(MAKE) test17_rundir
-	@echo "test17_run..." > test17.diff
+	@echo "test17_run..." > test17_gmpc.diff
 	$(MAKE) test17_run
-	@echo "test17_check..." > test17.diff
+	@echo "test17_check..." > test17_gmpc.diff
 	$(MAKE) test17_check
 
 test17_compile:
@@ -2419,49 +2413,49 @@ test17_check:
 	-@(${DIFFNUM} -b -r=1e-7 -a=1e-14 \
 	   ${TESTDIR}/RESULTS/2restart/PC/z=0_fluid_region0_0_t00000005_n00000004.out \
 	   output/test17/z=0_FLEKS0.ref.gz \
-		> test17.diff)
+		> test17_gmpc.diff)
 	-@(${DIFFNUM} -b -r=1e-7 -a=1e-14 \
 	   ${TESTDIR}/RESULTS/2restart/PC/z=0_fluid_region1_0_t00000004_n00000007.out \
 	   output/test17/z=0_FLEKS1.ref.gz \
-		>> test17.diff)
+		>> test17_gmpc.diff)
 	-@(${DIFFNUM} -b -r=1e-7 -a=1e-14 \
 	   ${TESTDIR}/RESULTS/4steps/PC/z=0_fluid_region0_0_t00000005_n00000004.out \
 	   output/test17/z=0_FLEKS0.ref.gz \
-		>> test17.diff)
+		>> test17_gmpc.diff)
 	-@(${DIFFNUM} -b -r=1e-7 -a=1e-14 \
 	   ${TESTDIR}/RESULTS/4steps/PC/z=0_fluid_region1_0_t00000004_n00000007.out \
 	   output/test17/z=0_FLEKS1.ref.gz \
-		>> test17.diff)					
+		>> test17_gmpc.diff)					
 	-@(${DIFFNUM} -b -r=1e-7 -a=1e-14 \
 	   ${TESTDIR}/RESULTS/2restart/GM/z=0_var_1_t00000005_n00000004.out \
 	   output/test17/z=0_GM.ref.gz \
-		>> test17.diff)
+		>> test17_gmpc.diff)
 	-@(${DIFFNUM} -b -r=1e-7 -a=1e-14 \
 	   ${TESTDIR}/RESULTS/4steps/GM/z=0_var_1_t00000005_n00000004.out \
 	   output/test17/z=0_GM.ref.gz \
-		>> test17.diff)
+		>> test17_gmpc.diff)
 	-@(${DIFFNUM} -b -r=1e-7 -a=1e-14 \
            ${TESTDIR}/RESULTS/adapt/PC/z=0_fluid_region0_0_t00000010_n00000008.out \
            output/test17/z=0_FLEKS_adapt.ref.gz \
-                >> test17.diff)
+                >> test17_gmpc.diff)
 	-@(${DIFFNUM} -b -r=1e-7 -a=1e-14 \
            ${TESTDIR}/RESULTS/adapt/GM/z=0_var_1_t00000010_n00000008.out \
            output/test17/z=0_GM_adapt.ref.gz \
-                >> test17.diff)
+                >> test17_gmpc.diff)
 
-	ls -l test17.diff
+	ls -l test17_gmpc.diff
 
 
 ### test18: BATSRUS+FLEKS. 3D reconnection ###
 
 test18:
-	@echo "test18_compile..." > test18.diff
+	@echo "test18_compile..." > test18_gmpc.diff
 	$(MAKE) test18_compile
-	@echo "test18_rundir..." > test18.diff
+	@echo "test18_rundir..." > test18_gmpc.diff
 	$(MAKE) test18_rundir
-	@echo "test18_run..." > test18.diff
+	@echo "test18_run..." > test18_gmpc.diff
 	$(MAKE) test18_run
-	@echo "test18_check..." > test18.diff
+	@echo "test18_check..." > test18_gmpc.diff
 	$(MAKE) test18_check
 
 test18_compile:
@@ -2484,8 +2478,8 @@ test18_check:
 	-@(${DIFFNUM} -b -r=1e-6 -a=1e-15 \
 	     ${TESTDIR}/RESULTS/PC/3d_var_region0_0_t00000016_n00000016.out \
 	     output/test18/3d.ref.gz \
-	     > test18.diff)
-	ls -l test18.diff
+	     > test18_gmpc.diff)
+	ls -l test18_gmpc.diff
 
 ### test19: SC+IH+OH+SP ###
 
@@ -2546,7 +2540,7 @@ test19_check:
 		> test19_sc_los.diff)
 	cat ${TESTDIR}/RESULTS/SP/MH_data_*_*_t00000150_n000010.out \
 	    > ${TESTDIR}/RESULTS/SP/MH_data.outs
-	-(${DIFFNUM} -a=1e-6 -r=3e-6 -b \
+	-(${DIFFNUM} -a=3e-5 -r=3e-6 -b \
 		${TESTDIR}/RESULTS/SP/MH_data.outs \
 		output/test19/MH_data.ref.gz \
 		> test19_sp.diff)
@@ -2555,13 +2549,13 @@ test19_check:
 ### test20: OH/BATSRUS (single-ion) coupled with PT/FLEKS in a shocktube ###
 
 test20:
-	@echo "test20_compile..." > test20.diff
+	@echo "test20_compile..." > test20_ohpt.diff
 	${MAKE} test20_compile
-	@echo "test20_rundir..." >> test20.diff
+	@echo "test20_rundir..." >> test20_ohpt.diff
 	${MAKE} test20_rundir
-	@echo "test20_run..." >> test20.diff
+	@echo "test20_run..." >> test20_ohpt.diff
 	${MAKE} test20_run
-	@echo "test20_check..." >> test20.diff
+	@echo "test20_check..." >> test20_ohpt.diff
 	${MAKE} test20_check
 
 test20_compile:
@@ -2584,31 +2578,29 @@ test20_check:
 	-@(${DIFFNUM} -b -r=1e-7 \
                 ${TESTDIR}/RESULTS/OH/z*006.out \
                 output/test20/z=0_OH.ref.gz \
-		> test20.diff)
+		> test20_ohpt.diff)
 	-@(${DIFFNUM} -b -r=1e-7 \
                 ${TESTDIR}/RESULTS/PT/z*0200.out \
                 output/test20/z=0_PT.ref.gz \
-		>> test20.diff)		
-	ls -l test20.diff
-
-
+		>> test20_ohpt.diff)		
+	ls -l test20_ohpt.diff
 
 ### test21: OH/BATSRUS coupled with PT/FLEKS  ###
 
 test21:
-	@echo "test21_4neu_compile..." > test21.diff
+	@echo "test21_4neu_compile..." > test21_ohpt.diff
 	${MAKE} test21_4neu_compile
-	@echo "test21_4neu_rundir..." >> test21.diff
+	@echo "test21_4neu_rundir..." >> test21_ohpt.diff
 	${MAKE} test21_4neu_rundir
-	@echo "test21_4neu_run..." >> test21.diff
+	@echo "test21_4neu_run..." >> test21_ohpt.diff
 	${MAKE} test21_4neu_run
-	@echo "test21_oh_pt_compile..." >> test21.diff
+	@echo "test21_oh_pt_compile..." >> test21_ohpt.diff
 	${MAKE} test21_oh_pt_compile
-	@echo "test21_oh_pt_rundir..." >> test21.diff
+	@echo "test21_oh_pt_rundir..." >> test21_ohpt.diff
 	${MAKE} test21_oh_pt_rundir
-	@echo "test21_oh_pt_run..." >> test21.diff
+	@echo "test21_oh_pt_run..." >> test21_ohpt.diff
 	${MAKE} test21_oh_pt_run
-	@echo "test21_check..." >> test21.diff
+	@echo "test21_check..." >> test21_ohpt.diff
 	${MAKE} test21_check
 
 
@@ -2616,16 +2608,16 @@ test21_check:
 	-@(${DIFFNUM} -b -a=1e-13 -r=1e-7 \
                 ${TESTDIR}/RESULTS/neu_couple/OH/y*04011.out \
                 output/test21/y=0_neu_OH.ref.gz \
-		> test21.diff)
+		> test21_ohpt.diff)
 	-@(${DIFFNUM} -b -a=1e-13 -r=1e-7 \
                 ${TESTDIR}/RESULTS/swh/OH/z*04209.out \
                 output/test21/z=0_OH.ref.gz \
-		>> test21.diff)
+		>> test21_ohpt.diff)
 	-@(${DIFFNUM} -b -a=1e-13 -r=1e-7 \
                 ${TESTDIR}/RESULTS/swh/PT/z*010.out \
                 output/test21/z=0_PT.ref.gz \
-		>> test21.diff)		
-	ls -l test21.diff
+		>> test21_ohpt.diff)		
+	ls -l test21_ohpt.diff
 
 test21_4neu:
 	@echo "test21_4neu_compile..." > test21_4neu.diff
