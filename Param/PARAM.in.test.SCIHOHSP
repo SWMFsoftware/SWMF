@@ -144,6 +144,9 @@ turbulentcascade		TypeCoronalHeating
 1.1			rMinWaveReflection
 T			UseReynoldsDecomposition
 
+#WAVEREPRESENTATIVE
+F			UseAlfenWaveRepresentative
+
 #HEATPARTITIONING
 uniform			TypeHeatPartitioning
 0.6			QionRatio
