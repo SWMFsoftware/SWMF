@@ -207,6 +207,7 @@ F			UseB0Source
 
 #ELECTRONENTROPY
 F			UseElectronEntropy
+F			UseElectronEnergy
 
 #SCHEME
 2			nOrder

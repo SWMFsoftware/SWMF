@@ -162,6 +162,7 @@ float			TypeBc6
 
 #ELECTRONENTROPY
 F			UseElectronEntropy
+F			UseElectronEnergy
 
 #SCHEME
 2			nOrder
