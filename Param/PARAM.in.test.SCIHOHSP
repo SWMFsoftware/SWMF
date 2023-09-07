@@ -145,7 +145,7 @@ turbulentcascade		TypeCoronalHeating
 T			UseReynoldsDecomposition
 
 #WAVEREPRESENTATIVE
-F			UseAlfenWaveRepresentative
+F			UseAlfvenWaveRepresentative
 
 #HEATPARTITIONING
 uniform			TypeHeatPartitioning
