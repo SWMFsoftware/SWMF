@@ -54,6 +54,10 @@ T			DoTest
 #INCLUDE
 GM/restartIN/restart.H
 
+#ELECTRONENTROPY
+F			UseElectronEntropy
+F			UseElectronEnergy
+
 #TESTVAR
 Bz			NameTestVar
 
