@@ -9,7 +9,7 @@ Param/PARAM.in.test.OHPTpui: Couple multi-ion OH with PT		StringDescription
 PT			StringCompTable
 ChargeExchange		NameTable
 load			NameCommand
-OH/Param/ExchangeRate.dat		NameFile
+OH/Param/ChargeExchangeRate_LS.dat		NameFile
 ascii			TypeFile
 
 #TIMEACCURATE
