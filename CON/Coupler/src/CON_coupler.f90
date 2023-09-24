@@ -733,7 +733,7 @@ contains
           DoCoupleVar_V(ChGL_) = any(NameVarTarget_V=='Sign')
        case('wD')
           DoCoupleVar_V(DoWDiff_) = any(NameVarTarget_V=='wD')
-       case('Lpepr')
+       case('Lperp')
           DoCoupleVar_V(DoLperp_) = any(NameVarTarget_V=='Lperp')
        case('Ppar')
           DoCoupleVar_V(AnisoPressure_) = any(NameVarTarget_V=='Ppar')
