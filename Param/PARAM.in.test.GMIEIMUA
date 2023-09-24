@@ -319,6 +319,7 @@ F               UseMSISFlat
 T               UseMSISTides
 F               UseGSWMTides
 F               UseWACCMTides
+F		UseHmeTides
 
 #GSWMCOMP
 F               Diurnal Migrating

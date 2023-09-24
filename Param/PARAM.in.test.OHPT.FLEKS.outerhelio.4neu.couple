@@ -25,7 +25,7 @@ F			UseComp
 OH			StringCompTable
 ChargeExchange		NameTable
 load			NameCommand
-OH/Param/ExchangeRate.dat		NameFile
+OH/Param/ChargeExchangeRate_LS.dat		NameFile
 ascii			TypeFile
 
 #TIMEACCURATE

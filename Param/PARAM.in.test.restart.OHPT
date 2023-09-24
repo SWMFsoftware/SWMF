@@ -12,7 +12,7 @@ Param/PARAM.in.test.restart.OHPT: Restart single-ion OH and PT		StringDescriptio
 PT			StringCompTable
 ChargeExchange		NameTable
 load			NameCommand
-OH/Param/ExchangeRate.dat		NameFile
+OH/Param/ChargeExchangeRate_LS.dat		NameFile
 ascii			TypeFile
 
 #TIMEACCURATE
