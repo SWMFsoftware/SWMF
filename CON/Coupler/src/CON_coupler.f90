@@ -729,8 +729,8 @@ contains
 
        case('Pe')
           DoCoupleVar_V(ElectronPressure_) = any(NameVarTarget_V=='Pe')
-       case('Sign')
-          DoCoupleVar_V(SaMhd_) = any(NameVarTarget_V=='Sign')
+       case('BperU')
+          DoCoupleVar_V(SaMhd_) = any(NameVarTarget_V=='BperU')
        case('wD')
           DoCoupleVar_V(DoWDiff_) = any(NameVarTarget_V=='wD')
        case('Lperp')
@@ -1036,7 +1036,7 @@ contains
        write(*,*) 'ChargeStates:   ', DoCoupleVar_V(ChargeState_)
        write(*,*) 'Fluids:         ', DoCoupleVar_V(MultiFluid_)
        write(*,*) 'Species:        ', DoCoupleVar_V(MultiSpecie_)
-       write(*,*) 'SignB:          ', DoCoupleVar_V(SaMhd_)
+       write(*,*) 'SaMhd:          ', DoCoupleVar_V(SaMhd_)
        write(*,*) 'Lperp:          ', DoCoupleVar_V(DoLperp_)
        write(*,*) 'WDiff:          ', DoCoupleVar_V(DoWDiff_)
        write(*,*) '---------------------------------------------'
@@ -1062,7 +1062,7 @@ contains
        write(*,*) 'WaveLast: ',         iVar_V(WaveLastCouple_)
        write(*,*) 'ChargeStateFirst: ', iVar_V(ChargeStateFirstCouple_)
        write(*,*) 'ChargeStateLast: ',  iVar_V(ChargeStateLastCouple_)
-       write(*,*) 'SignB:           ',  iVar_V(SaMhdCouple_)
+       write(*,*) 'SaMhd:           ',  iVar_V(SaMhdCouple_)
        write(*,*) 'Lperp:           ',  iVar_V(LperpCouple_)
        write(*,*) 'wD:              ',  iVar_V(WDiffCouple_)
        write(*,*) '---------------------------------------------'
