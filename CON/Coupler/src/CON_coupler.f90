@@ -136,7 +136,7 @@ module CON_coupler
        Material_              = 10, &
        ChargeState_           = 11, &
        CollisionlessHeatFlux_ = 12, &
-       ChGL_                  = 13, &
+       SaMhd_                  = 13, &
        DoLPerp_               = 14, &
        DoWDiff_               = 15
 
@@ -164,7 +164,7 @@ module CON_coupler
        ChargeStateFirstCouple_ = 13, &
        ChargeStateLastCouple_  = 14, &
        EhotCouple_             = 15, &
-       ChGLCouple_             = 16, &
+       SaMhdCouple_             = 16, &
        LperpCouple_            = 17, &
        WDiffCouple_         = 18
 
@@ -729,11 +729,11 @@ contains
 
        case('Pe')
           DoCoupleVar_V(ElectronPressure_) = any(NameVarTarget_V=='Pe')
-       case('Sign')
-          DoCoupleVar_V(ChGL_) = any(NameVarTarget_V=='Sign')
+       case('BperU')
+          DoCoupleVar_V(SaMhd_) = any(NameVarTarget_V=='BperU')
        case('wD')
           DoCoupleVar_V(DoWDiff_) = any(NameVarTarget_V=='wD')
-       case('Lpepr')
+       case('Lperp')
           DoCoupleVar_V(DoLperp_) = any(NameVarTarget_V=='Lperp')
        case('Ppar')
           DoCoupleVar_V(AnisoPressure_) = any(NameVarTarget_V=='Ppar')
@@ -949,9 +949,9 @@ contains
        iVar_V(EhotCouple_) = nVarCouple
     end if
 
-    if(DoCoupleVar_V(ChGL_))then
+    if(DoCoupleVar_V(SaMhd_))then
        nVarCouple = nVarCouple + 1
-       iVar_V(ChGLCouple_) = nVarCouple
+       iVar_V(SaMhdCouple_) = nVarCouple
     end if
 
     if(DoCoupleVar_V(DoLperp_))then
@@ -1036,7 +1036,7 @@ contains
        write(*,*) 'ChargeStates:   ', DoCoupleVar_V(ChargeState_)
        write(*,*) 'Fluids:         ', DoCoupleVar_V(MultiFluid_)
        write(*,*) 'Species:        ', DoCoupleVar_V(MultiSpecie_)
-       write(*,*) 'SignB:          ', DoCoupleVar_V(ChGL_)
+       write(*,*) 'SaMhd:          ', DoCoupleVar_V(SaMhd_)
        write(*,*) 'Lperp:          ', DoCoupleVar_V(DoLperp_)
        write(*,*) 'WDiff:          ', DoCoupleVar_V(DoWDiff_)
        write(*,*) '---------------------------------------------'
@@ -1062,7 +1062,7 @@ contains
        write(*,*) 'WaveLast: ',         iVar_V(WaveLastCouple_)
        write(*,*) 'ChargeStateFirst: ', iVar_V(ChargeStateFirstCouple_)
        write(*,*) 'ChargeStateLast: ',  iVar_V(ChargeStateLastCouple_)
-       write(*,*) 'SignB:           ',  iVar_V(ChGLCouple_)
+       write(*,*) 'SaMhd:           ',  iVar_V(SaMhdCouple_)
        write(*,*) 'Lperp:           ',  iVar_V(LperpCouple_)
        write(*,*) 'wD:              ',  iVar_V(WDiffCouple_)
        write(*,*) '---------------------------------------------'
