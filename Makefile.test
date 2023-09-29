@@ -1327,6 +1327,7 @@ test_swpc_cimi_pwom_species_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/CIMI,PW/PWOM
 	./Config.pl -o=GM:u=Default,e=MhdHpOp,ng=2,g=8,8,8,IE:g=181,361
 	./Config.pl -o=IM:EarthHO,GridExpanded
+	./Config.pl -o=PW:Earth
 	${MAKE} SWMF
 	make PIDL
 
