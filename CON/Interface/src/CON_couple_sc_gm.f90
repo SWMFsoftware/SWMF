@@ -184,7 +184,7 @@ contains
 
     call couple_comp(&
          Router,&
-         nVar=8,&
+         nVar=nVarCouple,&
          fill_buffer=SC_get_for_gm_and_transform,&
          apply_buffer=GM_put_from_mh)
 
@@ -270,7 +270,7 @@ contains
     real, intent(in) :: TimeCoupling     ! simulation time at coupling
 
     ! Couple between two components:
-    !    Generaal Magnetosphere (GM)  source
+    !    General Magnetosphere (GM)  source
     !    Solar Corona           (SC)  target
     !
     ! The GM component sends the state variables to a buffer grid.
