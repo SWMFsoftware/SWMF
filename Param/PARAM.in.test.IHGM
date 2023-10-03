@@ -10,7 +10,7 @@ CON_couple_ih_gm		StringTest
 RESTART.in
 
 #NSTEP
-0
+0			nStep
 
 #DESCRIPTION
 Param/PARAM.in.test.IHGM: Couple IH to GM		StringDescription
@@ -34,7 +34,7 @@ F			UseStrict
 IH/restartIN/restart.H
 
 #NSTEP
-0
+0			nStep
 
 #INNERBOUNDARY
 buffergrid		TypeBcBody
