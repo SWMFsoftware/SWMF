@@ -39,6 +39,9 @@ limited			TypeBc
 1.0e-6			Tolerance
 40			MaxIter
 
+#CHROMOEVAPORATION
+T			UseChromoEvaporation
+
 #HARMONICSFILE
 SC/Param/CR2077_GNG.dat		NameHarmonicsFile
 
