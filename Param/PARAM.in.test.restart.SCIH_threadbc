@@ -191,14 +191,14 @@ shl VAR idl_ascii		StringPlot
 10			DnSavePlot
 -1			DtSavePlot
 HGR			TypeCoordPlot
-1.03			rMin
-1.03			rMax
-2.0			LonMin
-358.0			LonMax
-4.0			dLon
--88.0			LatMin
-88.0			LatMax
-4.0			dLat
+1.155			rMin
+1.155			rMax
+0.5			LonMin
+359.5			LonMax
+1.0			dLon
+-89.5			LatMin
+89.5			LatMax
+1.0			dLat
 {HD} te ti		NameVars
 {default}		NamePars
 

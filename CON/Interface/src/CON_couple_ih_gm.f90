@@ -92,7 +92,7 @@ contains
          Router=Router)                 ! OUT
     IH_iGridRealization=-1
     GM_iGridRealization=-1
-    ! Initialize the coordinate transformation
+    call set_couple_var_info(iCompSource=IH_, iCompTarget=GM_)
 
   end subroutine couple_ih_gm_init
   !============================================================================
@@ -111,10 +111,18 @@ contains
     call GM_synchronize_refinement(Router%iProc0Target,Router%iCommUnion)
 
     CouplingTimeIhGm=TimeCoupling
-
+    call set_couple_var_info(IH_, GM_)
     if(IH_iGridRealization/=i_realization(IH_).or.&
          GM_iGridRealization/=i_realization(GM_).or.&
          TimeCoupling - TimeCouplingLast > dTimeMappingMax)then
+       if(DoTestMe)then
+          write(*,*)'GM_iGridRealization=',GM_iGridRealization
+          write(*,*)'i_realization(GM_)=',i_realization(GM_)
+          write(*,*)'IH_iGridRealization=',IH_iGridRealization
+          write(*,*)'i_realization(IH_)=',i_realization(IH_)
+          write(*,*)'TimeCoupling, TimeCouplingLast=',&
+               TimeCoupling, TimeCouplingLast
+       end if
        if(GM_iGridRealization/=i_realization(GM_))then
 
           ! reset local Grid
@@ -160,7 +168,7 @@ contains
 
     call couple_comp(&
          Router,&
-         nVar=8,&
+         nVar=nVarCouple,&
          fill_buffer=IH_get_for_gm_and_transform,&
          apply_buffer=GM_put_from_mh)
 
@@ -202,17 +210,17 @@ contains
   !============================================================================
 
   subroutine map_gm_ih(&
-       GM_nDim,GM_Xyz_D,IH_nDim,IH_Xyz_D,IsInterfacePoint)
+       GM_nDim,XyzGm_D,IH_nDim,XyzIh_D,IsInterfacePoint)
 
     integer,intent(in)::GM_nDim,IH_nDim
-    real,dimension(GM_nDim),intent(in)::GM_Xyz_D
-    real,dimension(IH_nDim),intent(out)::IH_Xyz_D
+    real,dimension(GM_nDim),intent(in):: XyzGm_D
+    real,dimension(IH_nDim),intent(out)::XyzIh_D
     logical,intent(out)::IsInterfacePoint
     ! In each mapping the corrdinates of the TARGET grid point (GM)
     ! shoud be be transformed to the SOURCE (IH) generalized coords.
 
     !--------------------------------------------------------------------------
-    IH_Xyz_D = XyzPlanetIh_D + matmul(GmToIh_DD, GM_Xyz_D)*&
+    XyzIh_D = XyzPlanetIh_D + matmul(GmToIh_DD, XyzGm_D)*&
          Grid_C(GM_)%UnitX/Grid_C(IH_)%UnitX
     IsInterfacePoint=.true.
 

@@ -4,10 +4,13 @@ GM  0 -1 1		CompMap
 
 ! Useful to see the location of the Earth in the heliosphere
 #TEST
-CON_axes::init_axes		StringTest
+CON_couple_ih_gm		StringTest
 
 #INCLUDE
 RESTART.in
+
+#NSTEP
+0			nStep
 
 #DESCRIPTION
 Param/PARAM.in.test.IHGM: Couple IH to GM		StringDescription
@@ -29,6 +32,9 @@ F			UseStrict
 
 #INCLUDE
 IH/restartIN/restart.H
+
+#NSTEP
+0			nStep
 
 #INNERBOUNDARY
 buffergrid		TypeBcBody
