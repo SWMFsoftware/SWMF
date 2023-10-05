@@ -100,6 +100,9 @@ limited			TypeBc
 1.0e-6			Tolerance
 40			MaxIter
 
+#CHROMOEVAPORATION
+T			UseChromoEvaporation
+
 
 #GRIDBLOCKALL
 1200			MaxBlock
