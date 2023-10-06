@@ -204,11 +204,11 @@ single			TypeFileOut
 1 min			DtOutput      [sec]
 
 #MAGNETOMETERGRID
-2
+2			nMagGridFile
 global real4		StrGridFileOut_I
 GEO			TypeCoordGrid_I
-72			nGridLon_I
-25			nGridLat_I
+360			nGridLon_I
+171			nGridLat_I
 0.			GridLonMin_I
 360.			GridLonMax_I
 -85.			GridLatMin_I
@@ -217,14 +217,14 @@ GEO			TypeCoordGrid_I
 20			DtSaveMagGrid_I
 us real4		StrGridFileOut_I
 GEO			TypeCoordGrid_I
-50			nGridLon_I
-20			nGridLat_I
+320			nGridLon_I
+170			nGridLat_I
 200.			GridLonMin_I
 360.			GridLonMax_I
 0.			GridLatMin_I
 85.			GridLatMax_I
 -1			DnSaveMagGrid_I
-20			DtSaveMagGrid_I
+10			DtSaveMagGrid_I
 
 #END_COMP GM -----------------------------------------------------------------
 
