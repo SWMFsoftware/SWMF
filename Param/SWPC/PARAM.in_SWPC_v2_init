@@ -204,16 +204,27 @@ single			TypeFileOut
 1 min			DtOutput      [sec]
 
 #MAGNETOMETERGRID
-real4			TypeFileMagGrid
-GEO			TypeCoordMagGrid
-360			nLonMagGrid
-171			nLatMagGrid
-0.			LonMinMagGrid
-360.			LonMaxMagGrid
--85.			LatMinMagGrid
-85.			LatMaxMagGrid
--1			DnSaveMagGrid
-20			DtSaveMagGrid
+2
+global real4		StrGridFileOut_I
+GEO			TypeCoordGrid_I
+72			nGridLon_I
+25			nGridLat_I
+0.			GridLonMin_I
+360.			GridLonMax_I
+-85.			GridLatMin_I
+85.			GridLatMax_I
+-1			DnSaveMagGrid_I
+20			DtSaveMagGrid_I
+us real4		StrGridFileOut_I
+GEO			TypeCoordGrid_I
+50			nGridLon_I
+20			nGridLat_I
+200.			GridLonMin_I
+360.			GridLonMax_I
+0.			GridLatMin_I
+85.			GridLatMax_I
+-1			DnSaveMagGrid_I
+20			DtSaveMagGrid_I
 
 #END_COMP GM -----------------------------------------------------------------
 
