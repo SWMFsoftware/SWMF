@@ -645,7 +645,7 @@ test_swpc_check:
 		Param/SWPC/TestOutput/ABK.txt \
 		>> test_swpc_rcm_gm.diff)
 	-@(${DIFFNUM} -b -r=2e-4 -a=2e-4 \
-		${TESTDIR}/GM/IO2/mag_grid_e20140410-000300.out \
+		${TESTDIR}/GM/IO2/mag_grid_global_e20140410-000300.out \
 		Param/SWPC/TestOutput/mag_grid_e20140410-000300.out.gz \
 		>> test_swpc_rcm_gm.diff)
 	-@(${DIFFNUM} -b -r=2e-4 -a=2e-4 \
