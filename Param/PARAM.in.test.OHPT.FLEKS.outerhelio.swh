@@ -235,6 +235,11 @@ T			useFixedDt
 #MERGEEFFICIENCY
 1.0			mergeThresholdDistance
 T			fastMerge
+20			nMergeOld
+8			nMergeNew
+
+#PARTICLELEVRATIO
+1.5			pLevRatio
 
 ! Set splittingLimit = 0.1 is helpful to reduce PPC, exepcially when a
 ! AMR grid is used.

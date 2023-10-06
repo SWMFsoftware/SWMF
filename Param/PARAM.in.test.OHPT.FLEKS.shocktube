@@ -200,6 +200,8 @@ T			isPeriodicZ
 #MERGEEFFICIENCY
 1			mergeThresholdDistance
 T			fastMerge
+20			nMergeOld
+8			nMergeNew
 
 #SAVEPLOT
 2			nPlotFile
