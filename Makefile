@@ -599,10 +599,11 @@ TDSETUP:
 	${MAKE} td_setup
 
 td_compile:
-	cd ${EMPIRICALEEDIR}; make FRM
+	cd ${EMPIRICALEEDIR}; ${MAKE} FRM
 	cd ${MAGNETOGRAMDIR}; \
 		${MAKE} HARMONICS; \
-		${MAKE} CONVERTHARMONICS
+		${MAKE} CONVERTHARMONICS; \
+		${MAKE} FDIPS
 
 td_rundir:
 	./Config.pl -v=SC/BATSRUS

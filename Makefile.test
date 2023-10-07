@@ -1882,9 +1882,11 @@ test10_compile:
 	./Config.pl -o=IH:u=Awsom,e=Awsom,ng=2,g=4,4,4
 	${MAKE} SWMF
 	make PIDL
+	cd ${EMPIRICALEEDIR}; ${MAKE} FRM
 	cd ${MAGNETOGRAMDIR}; \
-	${MAKE} HARMONICS; \
-	${MAKE} CONVERTHARMONICS
+	   	${MAKE} HARMONICS; \
+		${MAKE} CONVERTHARMONICS; \
+		${MAKE} FDIPS
 
 test10_rundir:
 	rm -rf ${TESTDIR}
