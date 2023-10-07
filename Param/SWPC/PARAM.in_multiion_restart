@@ -124,17 +124,17 @@ single			TypeFileOut
 1 min			DtOutput
 
 #MAGNETOMETERGRID
-ascii			TypeFileMagGrid
-GEO			TypeCoordMagGrid
-3			nLonMagGrid
-3			nLatMagGrid
-0.			LonMinMagGrid
-360.			LonMaxMagGrid
--80.			LatMinMagGrid
-80.			LatMaxMagGrid
--1			DnSaveMagGrid
-1 min			DtSaveMagGrid
-
+1			nMagGridFile
+global ascii		StrGridFileOut_I
+GEO			TypeCoordGrid_I
+3			nGridLon_I
+3			nGridLat_I
+0.			GridLonMin_I
+360.			GridLonMax_I
+-80.			GridLatMin_I
+80.			GridLatMax_I
+-1			DnSaveMagGrid_I
+1 min			DtSaveMagGrid_I
 
 #CONSERVATIVECRITERIA
 1			nConservCrit
