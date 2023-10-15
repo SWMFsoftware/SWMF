@@ -196,12 +196,12 @@ T			isPeriodicZ
 1			nParticleY
 1			nParticleZ
 
-
-#MERGEEFFICIENCY
-1			mergeThresholdDistance
+#FASTMERGE
 T			fastMerge
-20			nMergeOld
-8			nMergeNew
+16			nOld
+10			nNew
+3			nTry
+4			mergeRatioMax
 
 #SAVEPLOT
 2			nPlotFile
