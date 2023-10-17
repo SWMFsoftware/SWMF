@@ -656,13 +656,13 @@ wsa_rundir:
 	cd ${RUNDIR}/SC; \
 	perl -i -pe 's/dipole11uniform/fitsfile_01/; s/harmonics11uniform/harmonics/' \
 	     HARMONICS.in; \
-	perl -i -pe 's/\d+(\s+MaxOrder)/90$$1/' \
+	perl -i -pe 's/\d+(\s+MaxOrder)/180$$1/' \
 	     HARMONICS.in; \
 	perl -i -pe 's/\d+(\s+IsLogRadius)/T$$1/' \
 	     HARMONICSGRID.in;  \
-	perl -i -pe 's/\d+(\s+MaxOrder)/90$$1/; s/\d+(\s+nR)/150$$1/' \
+	perl -i -pe 's/\d+(\s+MaxOrder)/180$$1/; s/\d+(\s+nR)/150$$1/' \
 	     HARMONICSGRID.in;  \
-	perl -i -pe 's/\d+(\s+nLon)/180$$1/; s/\d+(\s+nLat)/90$$1/' \
+	perl -i -pe 's/\d+(\s+nLon)/360$$1/; s/\d+(\s+nLat)/180$$1/' \
 	     HARMONICSGRID.in
 	@echo " Before starting WSA, download the magnetogram"
 
