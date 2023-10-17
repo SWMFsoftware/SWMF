@@ -31,12 +31,10 @@ rundir: check_src
 		ln -s ${BINDIR}/HARMONICS.exe .; \
 		ln -s ${BINDIR}/CONVERTHARMONICS.exe .; \
 		ln -s  ${BINDIR}/FRMAGNETOGRAM.exe .; \
-		ln -s ${BINDIR}/WSA.exe .; \
 		cp ${MAGNETOGRAMDIR}/HARMONICS.in.orig \
 		HARMONICS.in; \
 		cp ${MAGNETOGRAMDIR}/HARMONICSGRID.in.orig \
 		HARMONICSGRID.in; \
-		cp ${EMPIRICALSCDIR}/WSA.in.orig WSA.in; \
 		ln -s ${MAGNETOGRAMDIR}/remap_magnetogram.py .; \
 		ln -s ${MAGNETOGRAMDIR}/read_magnetogram.pro .; \
 		ln -s ${MAGNETOGRAMDIR}/readfits.pro .; \

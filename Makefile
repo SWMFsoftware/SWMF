@@ -637,49 +637,6 @@ td_setup:
 	@echo "-----------------------------------"
 	@echo "To start GLSETUP the second command should read:"
 	@echo "python3 GLSETUP.py field_2d.out -CMESpeed 600"
-
-WSA:
-	${MAKE} wsa_compile
-	${MAKE} wsa_rundir
-	${MAKE} wsa_run
-
-wsa_compile:
-	${MAKE} td_compile
-	cd ${EMPIRICALSCDIR}; ${MAKE} WSA
-
-
-wsa_rundir:
-	./Config.pl -v=SC/BATSRUS
-	@echo "Directory ${RUNDIR} is erased!!!"
-	rm -rf ${RUNDIR}
-	$(MAKE) rundir
-	cd ${RUNDIR}/SC; \
-	perl -i -pe 's/dipole11uniform/fitsfile_01/; s/harmonics11uniform/harmonics/' \
-	     HARMONICS.in; \
-	perl -i -pe 's/\d+(\s+MaxOrder)/180$$1/' \
-	     HARMONICS.in; \
-	perl -i -pe 's/\d+(\s+IsLogRadius)/T$$1/' \
-	     HARMONICSGRID.in;  \
-	perl -i -pe 's/\d+(\s+MaxOrder)/180$$1/; s/\d+(\s+nR)/150$$1/' \
-	     HARMONICSGRID.in;  \
-	perl -i -pe 's/\d+(\s+nLon)/360$$1/; s/\d+(\s+nLat)/180$$1/' \
-	     HARMONICSGRID.in
-	@echo " Before starting WSA, download the magnetogram"
-
-wsa_run:
-	@echo "Copy fits file ${FITS} to  ${RUNDIR}/SC/fitsfile.fits"
-	cp -f ${FITS} ${RUNDIR}/SC/fitsfile.fits
-	cd ${RUNDIR}/SC; \
-	python3 remap_magnetogram.py fitsfile.fits fitsfile; \
-	./HARMONICS.exe |tee harmonics.log
-	@echo " Reconstruction of potential field takes a while, please, wait"
-	cd ${RUNDIR}/SC; \
-	${MPIRUN} ./CONVERTHARMONICS.exe > convert.log
-	cd ${RUNDIR}/SC; \
-	${MPIRUN} ./WSA.exe > wsa.log
-
-
-
 #^CMP END SC
 
 include Makefile.test #^CMP IF TESTING
