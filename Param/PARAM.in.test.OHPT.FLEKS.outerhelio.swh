@@ -243,7 +243,7 @@ T			fastMerge
 1.5			pLevRatio
 
 #VACUUM
-1e-5        vacuum
+1e-5			vacuum
 
 #SAVEPLOT
 7			nPlotFile
