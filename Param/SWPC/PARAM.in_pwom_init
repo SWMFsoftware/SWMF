@@ -126,6 +126,9 @@ float			TypeBc6
 #INNERBOUNDARY
 ionosphere		TypeBcBody
 
+#MAGNETICINNERBOUNDARY
+1.0		B1rCoef
+
 #SOLARWINDFILE
 T			UseSolarWindFile
 IMF.dat			NameSolarWindFile
@@ -196,16 +199,17 @@ single			TypeFileOut
 1 min			DtOutput      [sec]
 
 #MAGNETOMETERGRID
-ascii			TypeFileMagGrid
-GEO			TypeCoordMagGrid
-72			nLonMagGrid
-69			nLatMagGrid
-0.			LonMinMagGrid
-360.			LonMaxMagGrid
--85.			LatMinMagGrid
-85.			LatMaxMagGrid
--1			DnSaveMagGrid
-1 min			DtSaveMagGrid
+1			nMagGridFile
+global ascii		StrGridFileOut_I
+GEO			TypeCoordGrid_I
+72			nGridLon_I
+69			nGridLat_I
+0.			GridLonMin_I
+360.			GridLonMax_I
+-85.			GridLatMin_I
+85.			GridLatMax_I
+-1			DnSaveMagGrid_I
+1 min			DtSaveMagGrid_I
 
 #END_COMP GM -----------------------------------------------------------------
 
@@ -474,13 +478,13 @@ F			IsFullyImplicit
 F			IsPointImplicit
 F			IsPointImplicitAll
 
-#SE
+SE
 T			DoCoupleSE
 T			UseFeedbackFromSE
 F			IsVerboseSE
 60			DtGetSe  120
 
-#SETPRECIP
+SETPRECIP
 F			UseFixedPrecip
 
 100.0			PrecipEnergyMin [eV]

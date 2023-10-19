@@ -300,8 +300,8 @@ stop the simulation with an error message. The check is performed every
 nCheckTimeStep iterations on all active processors of the SWMF.
 A positive TimeStepMin is the minimum average time advance in units of seconds.
 A negative TimeStepMin value is replaced with the simulation time of the
-session divided by ten million, which assumes that a session should be
-completed in less than ten million iterations. 
+session divided by hundred million, which assumes that a session should be
+completed in less than hundred million iterations. 
 
 Default values are shown above, so the check is active by default.
 </command>

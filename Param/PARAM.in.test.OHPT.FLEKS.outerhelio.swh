@@ -211,7 +211,7 @@ F			initFromSWMF
 
 #LOADBALANCE
 particle		loadBalanceStrategy
-20			dn
+50			dn
 -1.0			dt
 
 #TIMESTEPPING
@@ -223,25 +223,27 @@ T			useFixedDt
 3.0e8			uNorm [m/s]
 
 #PARTICLES
-3			nParticleX
-3			nParticleY
-3			nParticleZ
+6			nParticleX
+6			nParticleY
+6			nParticleZ
 
 #SOURCEPARTICLES
-1			nParticleX
-1			nParticleY
-1			nParticleZ
+2			nParticleX
+2			nParticleY
+2			nParticleZ
 
-#MERGEEFFICIENCY
-1.0			mergeThresholdDistance
+#FASTMERGE
 T			fastMerge
+16			nOld
+10			nNew
+3			nTry
+4			mergeRatioMax
 
-! Set splittingLimit = 0.1 is helpful to reduce PPC, exepcially when a
-! AMR grid is used.
-RESAMPLING
-T			doReSampling (rest is read if true)
-0.1			splittingLimit
-1.5			mergingLimit
+#PARTICLELEVRATIO
+1.5			pLevRatio
+
+#VACUUM
+1e-5        vacuum
 
 #SAVEPLOT
 7			nPlotFile

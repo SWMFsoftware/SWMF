@@ -599,10 +599,11 @@ TDSETUP:
 	${MAKE} td_setup
 
 td_compile:
-	cd ${EMPIRICALEEDIR}; make FRM
+	cd ${EMPIRICALEEDIR}; ${MAKE} FRM
 	cd ${MAGNETOGRAMDIR}; \
 		${MAKE} HARMONICS; \
-		${MAKE} CONVERTHARMONICS
+		${MAKE} CONVERTHARMONICS; \
+		${MAKE} FDIPS
 
 td_rundir:
 	./Config.pl -v=SC/BATSRUS
@@ -636,7 +637,6 @@ td_setup:
 	@echo "-----------------------------------"
 	@echo "To start GLSETUP the second command should read:"
 	@echo "python3 GLSETUP.py field_2d.out -CMESpeed 600"
-
 #^CMP END SC
 
 include Makefile.test #^CMP IF TESTING
