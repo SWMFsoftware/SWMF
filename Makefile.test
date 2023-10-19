@@ -784,7 +784,7 @@ test_swpc_gpu_check:
 		Param/SWPC/TestOutputGPU/magnetometers_e20140410-000200.mag \
 		>> test_swpc_gpu_gm.diff)
 	-@(${DIFFNUM} -b -r=2e-4 -a=1e-4 \
-		${TESTDIR}/GM/IO2/mag_grid_e20140410-000300.out \
+		${TESTDIR}/GM/IO2/mag_grid_global_e20140410-000300.out \
 		Param/SWPC/TestOutputGPU/mag_grid_e20140410-000300.out.gz \
 		>> test_swpc_gpu_gm.diff)
 	-@(${DIFFNUM} -b -r=1e-5 -a=1e-8 \
@@ -849,7 +849,7 @@ test_swpc_large_gpu_check:
 		Param/SWPC/TestOutputLargeGPU/magnetometers_e20140410-000000.mag \
 		>> test_swpc_large_gpu_gm.diff)
 	-@(${DIFFNUM} -b -r=2e-4 -a=1e-4 \
-		${TESTDIR}/GM/IO2/mag_grid_e20140410-000000.out \
+		${TESTDIR}/GM/IO2/mag_grid_global_e20140410-000000.out \
 		Param/SWPC/TestOutputLargeGPU/mag_grid_e20140410-000000.out.gz \
 		>> test_swpc_large_gpu_gm.diff)
 	-@(${DIFFNUM} -b -r=1e-5 -a=1e-8 \
@@ -920,7 +920,7 @@ test_swpc_multiion_check:
 		Param/SWPC/TestOutputMultiIon/magnetometers*0200.mag \
 		>> test_swpc_multiion_gm.diff)
 	-@(${DIFFNUM} -b -r=2e-4 -a=1e-5 \
-		${TESTDIR}/GM/IO2/mag_grid_e20140410-000300.out \
+		${TESTDIR}/GM/IO2/mag_grid_global_e20140410-000300.out \
 		Param/SWPC/TestOutputMultiIon/mag_grid_e20140410-000300.out \
 		>> test_swpc_multiion_gm.diff)
 	-@(${DIFFNUM} -b -r=1e-5 -a=1e-8 \
@@ -991,7 +991,7 @@ test_swpc_multispecies_check:
 		Param/SWPC/TestOutputMultiSpecies/magnetometers_e20140410-000200.mag \
 		>> test_swpc_multispecies_gm.diff)
 	-@(${DIFFNUM} -b -r=2e-4 -a=1e-5 \
-		${TESTDIR}/GM/IO2/mag_grid_e20140410-000300.out \
+		${TESTDIR}/GM/IO2/mag_grid_global_e20140410-000300.out \
 		Param/SWPC/TestOutputMultiSpecies/mag_grid_e20140410-000300.out \
 		>> test_swpc_multispecies_gm.diff)
 	-@(${DIFFNUM} -b -r=1e-5 -a=1e-8 \
@@ -1063,7 +1063,7 @@ test_swpc_cimi_check:
 		Param/SWPC/TestOutputCimi/magnetometers_e20140410-000200.mag \
 		>> test_swpc_cimi_gm.diff)
 	-@(${DIFFNUM} -b -r=2e-4 -a=1e-5 \
-		${TESTDIR}/GM/IO2/mag_grid_e20140410-000300.out \
+		${TESTDIR}/GM/IO2/mag_grid_global_e20140410-000300.out \
 		Param/SWPC/TestOutputCimi/mag_grid_e20140410-000300.out \
 		>> test_swpc_cimi_gm.diff)
 	-@(${DIFFNUM} -b -r=1e-5 -a=1e-8 \
@@ -1135,7 +1135,7 @@ test_swpc_cimi_species_check:
 		Param/SWPC/TestOutputCimiSpecies/magnetometers_e20140410-000200.mag \
 		>> test_swpc_cimi_species_gm.diff)
 	-@(${DIFFNUM} -b -r=2e-4 -a=1e-5 \
-		${TESTDIR}/GM/IO2/mag_grid_e20140410-000300.out \
+		${TESTDIR}/GM/IO2/mag_grid_global_e20140410-000300.out \
 		Param/SWPC/TestOutputCimiSpecies/mag_grid_e20140410-000300.out \
 		>> test_swpc_cimi_species_gm.diff)
 	-@(${DIFFNUM} -b -r=1e-5 -a=1e-8 \
@@ -1206,7 +1206,7 @@ test_swpc_pwom_check:
 		Param/SWPC/TestOutputPwom/magnetometers_e20140410-000200.mag \
 		>> test_swpc_pwom_gm.diff)
 	-@(${DIFFNUM} -b -r=2e-4 -a=2e-4 \
-		${TESTDIR}/GM/IO2/mag_grid_e20140410-000300.out \
+		${TESTDIR}/GM/IO2/mag_grid_global_e20140410-000300.out \
 		Param/SWPC/TestOutputPwom/mag_grid_e20140410-000300.out \
 		>> test_swpc_pwom_gm.diff)
 	-@(${DIFFNUM} -b -r=1e-5 -a=1e-8 \
@@ -1287,7 +1287,7 @@ test_swpc_pwom_species_check:
 		Param/SWPC/TestOutputPwomSpecies/magnetometers_e20140410-000200.mag \
 		>> test_swpc_pwom_species_gm.diff)
 	-@(${DIFFNUM} -b -r=2e-4 -a=2e-4 \
-		${TESTDIR}/GM/IO2/mag_grid_e20140410-000300.out \
+		${TESTDIR}/GM/IO2/mag_grid_global_e20140410-000300.out \
 		Param/SWPC/TestOutputPwomSpecies/mag_grid_e20140410-000300.out \
 		>> test_swpc_pwom_species_gm.diff)
 	-@(${DIFFNUM} -b -r=1e-5 -a=1e-8 \
@@ -1360,7 +1360,7 @@ test_swpc_cimi_pwom_species_check:
 		Param/SWPC/TestOutputCimiPwomSpecies/magnetometers_e20140410-000200.mag \
 		>> test_swpc_cimi_pwom_species_gm.diff)
 	-@(${DIFFNUM} -b -r=2e-4 -a=5e-5 \
-		${TESTDIR}/GM/IO2/mag_grid_e20140410-000300.out \
+		${TESTDIR}/GM/IO2/mag_grid_global_e20140410-000300.out \
 		Param/SWPC/TestOutputCimiPwomSpecies/mag_grid_e20140410-000300.out \
 		>> test_swpc_cimi_pwom_species_gm.diff)
 	-@(${DIFFNUM} -b -r=1e-5 -a=1e-8 \
@@ -1446,7 +1446,7 @@ test_swpc_amps_check:
 		Param/SWPC/TestOutput/magnetometers_e20140410-000200.mag \
 		>> test_swpc_amps_gm.diff)
 	-@(${DIFFNUM} -b -r=2e-4 -a=1e-8 \
-		${TESTDIR}/GM/IO2/mag_grid_e20140410-000300.out \
+		${TESTDIR}/GM/IO2/mag_grid_global_e20140410-000300.out \
 		Param/SWPC/TestOutput/mag_grid_e20140410-000300.out \
 		>> test_swpc_amps_gm.diff)
 	-@(${DIFFNUM} -b -r=1e-5 -a=1e-8 \
