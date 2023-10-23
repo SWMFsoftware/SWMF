@@ -309,6 +309,10 @@ cut ray idl_ascii		StringPlot ! 3D cut plot with raytrace info
 90.			Coord3MaxCut
 0			DxSavePlot
 
+#TESTPIX
+200			iPixTest
+200			jPixTest
+
 #SATELLITE
 3			nSatellite
 MHD			StringSatellite
