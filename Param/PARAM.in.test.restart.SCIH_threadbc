@@ -82,6 +82,10 @@ uniform			TypeHeatPartitioning
 #TEST
 radiative_cooling write_plot_los		StringTest
 
+#TESTPIXEL
+200			iPixTest
+200			jPixTest
+
 #USERINPUTBEGIN -----------------------------------
 
 #RADIOEMISSION
