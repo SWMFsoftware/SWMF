@@ -159,15 +159,14 @@ GEO			TypeCoordGrid_I
 1 min			DtSaveMagGrid_I
 us ascii		StrGridFileOut_I
 GEO			TypeCoordGrid_I
-320			nGridLon_I
-170			nGridLat_I
-200.			GridLonMin_I
+221			nGridLon_I
+131			nGridLat_I
+190.			GridLonMin_I
 360.			GridLonMax_I
-0.			GridLatMin_I
+20.			GridLatMin_I
 85.			GridLatMax_I
 -1			DnSaveMagGrid_I
-30			DtSaveMagGrid_I
-
+20			DtSaveMagGrid_I
 
 #SUPERMAGINDICES
 T			DoWriteSupermagIndices

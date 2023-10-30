@@ -224,7 +224,7 @@ GEO			TypeCoordGrid_I
 20.			GridLatMin_I
 85.			GridLatMax_I
 -1			DnSaveMagGrid_I
-10			DtSaveMagGrid_I
+20			DtSaveMagGrid_I
 
 #END_COMP GM -----------------------------------------------------------------
 
