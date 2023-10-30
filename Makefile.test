@@ -615,7 +615,7 @@ test_swpc_rundir:
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in_SWPC_v2_init
 	perl -pi -e 'if(/MaxIter|MaxBlock/){s/700/70/; s/1500/200/; s/5000/350/}; s/#BORIS/BORIS/; s/^\#(COMPONENTMAP.*production)/$$1/i; s/^(COMPONENTMAP.*nightly)/\#$$1/i' ${TESTDIR}/PARAM.in_SWPC_v2_init
 	perl -pi -e 's/^360(\s+nGridLon_I)/72$$1/; s/^171(\s+nGridLat_I)/25$$1/;' ${TESTDIR}/PARAM.in_SWPC_v2_init
-	perl -pi -e 's/^320(\s+nGridLon_I)/50$$1/; s/^170(\s+nGridLat_I)/20$$1/;' ${TESTDIR}/PARAM.in_SWPC_v2_init
+	perl -pi -e 's/^221(\s+nGridLon_I)/23$$1/; s/^131(\s+nGridLat_I)/13$$1/;' ${TESTDIR}/PARAM.in_SWPC_v2_init
 	cp ${TESTDIR}/PARAM.in_SWPC_v2_init ${TESTDIR}/PARAM.in
 	ln -s ${BINDIR}/INTERPOLATE.exe ${TESTDIR}/
 
@@ -627,7 +627,7 @@ test_swpc_restart:
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in_SWPC_v2_restart
 	perl -pi -e 's/#BORIS/BORIS/; s/^\#(COMPONENTMAP.*production)/$$1/i; s/^(COMPONENTMAP.*nightly)/\#$$1/i' ${TESTDIR}/PARAM.in_SWPC_v2_restart
 	perl -pi -e 's/^360(\s+nGridLon_I)/72$$1/; s/^171(\s+nGridLat_I)/25$$1/;' ${TESTDIR}/PARAM.in_SWPC_v2_restart
-	perl -pi -e 's/^320(\s+nGridLon_I)/50$$1/; s/^170(\s+nGridLat_I)/20$$1/;' ${TESTDIR}/PARAM.in_SWPC_v2_restart
+	perl -pi -e 's/^221(\s+nGridLon_I)/23$$1/; s/^131(\s+nGridLat_I)/13$$1/;' ${TESTDIR}/PARAM.in_SWPC_v2_restart
 	cd ${TESTDIR}; cp PARAM.in_SWPC_v2_restart PARAM.in
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_restart
 	cd ${TESTDIR}; ./PostProc.pl -noptec
@@ -649,6 +649,10 @@ test_swpc_check:
 	-@(${DIFFNUM} -b -r=2e-4 -a=2e-4 \
 		${TESTDIR}/GM/IO2/mag_grid_global_e20140410-000300.out \
 		Param/SWPC/TestOutput/mag_grid_e20140410-000300.out.gz \
+		>> test_swpc_rcm_gm.diff)
+	-@(${DIFFNUM} -b -r=2e-4 -a=2e-4 \
+		${TESTDIR}/GM/IO2/mag_grid_us_e20140410-000300.out \
+		Param/SWPC/TestOutput/mag_grid_us_e20140410-000300.out.gz \
 		>> test_swpc_rcm_gm.diff)
 	-@(${DIFFNUM} -b -r=2e-4 -a=2e-4 \
 		${TESTDIR}/GM/IO2/superindex_e20140410-000200.log \
