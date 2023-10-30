@@ -214,7 +214,7 @@ GEO			TypeCoordGrid_I
 -85.			GridLatMin_I
 85.			GridLatMax_I
 -1			DnSaveMagGrid_I
-20			DtSaveMagGrid_I
+1 min			DtSaveMagGrid_I
 us real4		StrGridFileOut_I
 GEO			TypeCoordGrid_I
 221			nGridLon_I
