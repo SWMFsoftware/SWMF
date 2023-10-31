@@ -220,7 +220,7 @@ GEO			TypeCoordGrid_I
 221			nGridLon_I
 131			nGridLat_I
 190.			GridLonMin_I
-360.			GridLonMax_I
+300.			GridLonMax_I
 20.			GridLatMin_I
 85.			GridLatMax_I
 -1			DnSaveMagGrid_I
