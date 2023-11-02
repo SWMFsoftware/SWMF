@@ -138,7 +138,7 @@ T			DoReadAgain
 
 #SCHEME
 1			nOrder
-Sokolov			TypeFlux
+Rusanov			TypeFlux
 
 
 #CONSERVATIVECRITERIA
@@ -254,7 +254,7 @@ F			DoAmr
 
 #SCHEME
 2			nOrder
-Sokolov			TypeFlux
+Rusanov			TypeFlux
 mc3			TypeLimiter
 1.2			LimiterBeta
 
@@ -421,7 +421,7 @@ T			UseBorisCorrection
 0.02			BorisClightFactor
 
 #TIMESTEPPING
-1			nStage
+2			nStage
 0.85			CflExpl
 
 #END_COMP GM -----------------------------------------------------------------
@@ -456,6 +456,9 @@ aur idl			StringPlot
 #ROTATION
 F			UseCentrifugal
 
+#FLUIDPWI
+T			UseFluidPWI
+
 #FIELDLINE
 252			nTotalLine
 
@@ -471,12 +474,15 @@ F			UseCentrifugal
 4			AP7
 
 #SCHEME
-Godunov			TypeSolver
-Godunov			TypeFlux
-0.05			DtVertical
+Rusanov			TypeSolver
+Rusanov			TypeFlux
+0.01			DtVertical
 F			IsFullyImplicit
 F			IsPointImplicit
 F			IsPointImplicitAll
+
+#LIMITER
+1.4			LimiterBeta
 
 SE
 T			DoCoupleSE
