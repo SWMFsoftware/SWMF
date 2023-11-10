@@ -95,7 +95,12 @@ For machines with no MPI library, use
 ```
 ./Config.pl -install -nompi -compiler=....
 ```
-This will only allow serial execution, of course.
+This will only allow serial execution, of course. Like with most scripts
+in the SWMF, type
+```
+./Config.pl -help
+```
+for a comprehensive description of options and examples.
 
 The ifort compiler (and possibly others too) use the stack for temporary
 arrays, so the stack size should be large. For csh/tcsh add the following
@@ -130,6 +135,11 @@ To remove all the created documentation type
 cd doc/Tex
 make cleanpdf
 ```
+As for most Makefile-s in the SWMF, type
+```
+make help
+```
+for a comprehensive list of make targets and examples.
 
 # Read the manuals
 
