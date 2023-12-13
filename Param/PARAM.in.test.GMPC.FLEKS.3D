@@ -161,6 +161,7 @@ T			useFixedDt
 T			doReSampling
 0.95			splittingLimit  (0.8 is a typical value)
 1.1			mergingLimit (3 is a typical value)
+0.0			maxWeightRatio
 
 #SAVEPLOT
 1			nPlotFile

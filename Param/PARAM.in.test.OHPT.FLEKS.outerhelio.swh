@@ -223,27 +223,40 @@ T			useFixedDt
 3.0e8			uNorm [m/s]
 
 #PARTICLES
-6			nParticleX
-6			nParticleY
-6			nParticleZ
+5			nParticleX
+5			nParticleY
+5			nParticleZ
 
 #SOURCEPARTICLES
 2			nParticleX
 2			nParticleY
 2			nParticleZ
 
+#RESAMPLING
+T			doReSampling
+0.8			splittingLimit
+2.0			mergingLimit
+4.0			maxWeightRatio
+
 #FASTMERGE
 T			fastMerge
-16			nOld
-10			nNew
-3			nTry
-4			mergeRatioMax
+10			nOld
+8			nNew
+6			nTry
+1.2			mergeRatioMax
+
+#MERGELIGHT
+T			MERGELIGHT
+20			mergePartRatioMax
+
+#ADAPTIVESOURCEPPC
+T			useAdaptiveSourcePPC
 
 #PARTICLELEVRATIO
 1.5			pLevRatio
 
 #VACUUM
-1e-5			vacuum
+1e-4			vacuum
 
 #SAVEPLOT
 7			nPlotFile
