@@ -866,10 +866,10 @@ contains
     end do
   end subroutine set_stdout
   !============================================================================
-  subroutine save_restart
+  subroutine save_restart(DoFinalize)
 
     use CON_coupler, ONLY: NameRestartOutDirComp
-    use CON_time, ONLY: get_time, TimeType
+    use CON_time, ONLY: get_time, TimeType, UseEndTime, TimeEnd
     use ModUtilities, ONLY: write_string_tabs_name, cTab
 
     ! Save restart information for all components.
@@ -881,7 +881,7 @@ contains
     ! with the \#INCLUDE file command.
     ! Set the name of the restart directory based on the DATE-TIME if required.
     ! Set NameRestartOutDirComp for the components too.
-
+    logical, optional :: DoFinalize
     integer :: lComp, iComp, iError
     integer :: i
     type(TimeType):: TimeCurrent
@@ -941,21 +941,39 @@ contains
        write(UnitTmp_,'(a)')'#IDEALAXES'
        write(UnitTmp_,*)
     end if
-    write(UnitTmp_,'(a)')'#STARTTIME'
-    write(UnitTmp_,'(i8,a)')TimeStart % iYear,   cTab//cTab//'iYear'
-    write(UnitTmp_,'(i8,a)')TimeStart % iMonth,  cTab//cTab//'iMonth'
-    write(UnitTmp_,'(i8,a)')TimeStart % iDay,    cTab//cTab//'iDay'
-    write(UnitTmp_,'(i8,a)')TimeStart % iHour,   cTab//cTab//'iHour'
-    write(UnitTmp_,'(i8,a)')TimeStart % iMinute, cTab//cTab//'iMinute'
-    write(UnitTmp_,'(i8,a)')TimeStart % iSecond, cTab//cTab//'iSecond'
-    write(UnitTmp_,'(f15.12,a)')TimeStart%FracSecond, cTab//cTab//'FracSecond'
-    write(UnitTmp_,*)
-    write(UnitTmp_,'(a)')'#NSTEP'
-    write(UnitTmp_,'(i8,a)')nStep, cTab//cTab//'nStep'
-    write(UnitTmp_,*)
-    write(UnitTmp_,'(a)')'#TIMESIMULATION'
-    write(UnitTmp_,'(es15.8,a)')tSimulation, cTab//cTab//'tSimulation'
-    write(UnitTmp_,*)
+    if(present(DoFinalize).and.UseEndTime)then
+       ! Save EndTime as the start time for future run
+       write(UnitTmp_,'(a)')'#STARTTIME'
+       write(UnitTmp_,'(i8,a)')TimeEnd % iYear,   cTab//cTab//'iYear'
+       write(UnitTmp_,'(i8,a)')TimeEnd % iMonth,  cTab//cTab//'iMonth'
+       write(UnitTmp_,'(i8,a)')TimeEnd % iDay,    cTab//cTab//'iDay'
+       write(UnitTmp_,'(i8,a)')TimeEnd % iHour,   cTab//cTab//'iHour'
+       write(UnitTmp_,'(i8,a)')TimeEnd % iMinute, cTab//cTab//'iMinute'
+       write(UnitTmp_,'(i8,a)')TimeEnd % iSecond, cTab//cTab//'iSecond'
+       write(UnitTmp_,'(f15.12,a)')TimeEnd%FracSecond, cTab//cTab//'FracSecond'
+       write(UnitTmp_,*)
+       write(UnitTmp_,'(a)')'#NSTEP'
+       write(UnitTmp_,'(a)')'0'//cTab//cTab//'nStep'
+       write(UnitTmp_,*)
+       write(UnitTmp_,'(a)')'#TIMESIMULATION'
+       write(UnitTmp_,'(a)')'0'//cTab//cTab//'tSimulation'
+    else
+       write(UnitTmp_,'(a)')'#STARTTIME'
+       write(UnitTmp_,'(i8,a)')TimeStart % iYear,   cTab//cTab//'iYear'
+       write(UnitTmp_,'(i8,a)')TimeStart % iMonth,  cTab//cTab//'iMonth'
+       write(UnitTmp_,'(i8,a)')TimeStart % iDay,    cTab//cTab//'iDay'
+       write(UnitTmp_,'(i8,a)')TimeStart % iHour,   cTab//cTab//'iHour'
+       write(UnitTmp_,'(i8,a)')TimeStart % iMinute, cTab//cTab//'iMinute'
+       write(UnitTmp_,'(i8,a)')TimeStart % iSecond, cTab//cTab//'iSecond'
+       write(UnitTmp_,'(f15.12,a)')TimeStart%FracSecond, cTab//cTab//'FracSecond'
+       write(UnitTmp_,*)
+       write(UnitTmp_,'(a)')'#NSTEP'
+       write(UnitTmp_,'(i8,a)')nStep, cTab//cTab//'nStep'
+       write(UnitTmp_,*)
+       write(UnitTmp_,'(a)')'#TIMESIMULATION'
+       write(UnitTmp_,'(es15.8,a)')tSimulation, cTab//cTab//'tSimulation'
+       write(UnitTmp_,*)
+    end if
     write(UnitTmp_,'(a)')'#VERSION'
     write(UnitTmp_,'(f5.2,a)')VersionSwmf, cTab//cTab//cTab//'VersionSwmf'
     write(UnitTmp_,*)
