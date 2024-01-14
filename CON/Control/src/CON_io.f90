@@ -956,7 +956,8 @@ contains
        write(UnitTmp_,'(a)')'0'//cTab//cTab//'nStep'
        write(UnitTmp_,*)
        write(UnitTmp_,'(a)')'#TIMESIMULATION'
-       write(UnitTmp_,'(a)')'0'//cTab//cTab//'tSimulation'
+       write(UnitTmp_,'(a)')'0.0'//cTab//cTab//'tSimulation'
+       write(UnitTmp_,*)
     else
        write(UnitTmp_,'(a)')'#STARTTIME'
        write(UnitTmp_,'(i8,a)')TimeStart % iYear,   cTab//cTab//'iYear'
@@ -965,7 +966,8 @@ contains
        write(UnitTmp_,'(i8,a)')TimeStart % iHour,   cTab//cTab//'iHour'
        write(UnitTmp_,'(i8,a)')TimeStart % iMinute, cTab//cTab//'iMinute'
        write(UnitTmp_,'(i8,a)')TimeStart % iSecond, cTab//cTab//'iSecond'
-       write(UnitTmp_,'(f15.12,a)')TimeStart%FracSecond, cTab//cTab//'FracSecond'
+       write(UnitTmp_,'(f15.12,a)') &
+            TimeStart%FracSecond, cTab//cTab//'FracSecond'
        write(UnitTmp_,*)
        write(UnitTmp_,'(a)')'#NSTEP'
        write(UnitTmp_,'(i8,a)')nStep, cTab//cTab//'nStep'
