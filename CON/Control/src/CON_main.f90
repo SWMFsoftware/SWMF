@@ -195,13 +195,11 @@ contains
 
     if(SaveRestart % DoThis .and. .not. IsRestartSaved)then
        if(UseEndTime .and. .not. IsForcedStop)then
-          ! Set TimeStart to TimeEnd and set simulation time to zero
-          ! Also set nStep to zero. These will be saved into RESTART.out
-          TimeStart   = TimeEnd
-          tSimulation = 0
-          nStep       = 0
+          ! Save TimeEnd to RESTART.out for future simulation
+          if(is_proc(CON_)) call save_restart(DoFinalize=.true.)
+       else
+          if(is_proc(CON_)) call save_restart
        end if
-       if(is_proc(CON_)) call save_restart
     end if
     do lComp = 1,n_comp()
        iComp = i_comp(lComp)
