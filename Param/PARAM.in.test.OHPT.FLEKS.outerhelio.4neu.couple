@@ -39,7 +39,6 @@ F			UseGravity (rest of parameters read if true)
 #INCLUDE
 OH/restartIN/restart.H
 
-
 #UPDATECHECK
 T			UseUpdateCheck
 40.			RhoMinPercent
@@ -198,8 +197,6 @@ T			    UseNe4Source
 
 #RUN ##########################################################################
 
-
-
 LOOKUPTABLE
 OH			StringCompTable
 solarwind2d		NameTable
@@ -214,7 +211,6 @@ T  			IsTimeAccurate
 T			DoSaveRestart
 -1			DnSaveRestart
 1 y			DtSaveRestart
-
 
 #BEGIN_COMP OH ---------------------------------------------------------------
 
@@ -236,7 +232,6 @@ y=0 MHD idl_ascii		StringPlot
 #COMPONENT
 PT			NameComp
 T			UseComp
-
 
 #COUPLE1
 OH			NameSource

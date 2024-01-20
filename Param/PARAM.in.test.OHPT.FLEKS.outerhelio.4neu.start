@@ -20,16 +20,6 @@ F  			IsTimeAccurate
 #GRAVITY
 F			UseGravity (rest of parameters read if true)
 
-#UPDATECHECK
-T			UseUpdateCheck
-40.			RhoMinPercent
-400.			RhoMaxPercent
-40.			pMinPercent
-400.			pMaxPercent
-
-#BODY
-F			UseBody
-
 #PLOTFILENAME
 year			NameMaxTimeUnit
 
