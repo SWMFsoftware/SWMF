@@ -2349,7 +2349,7 @@ test_sp_check:
 	ls -l test_sp.diff
 
 
-### test16: GM/BATSRUS+PC/FLEKS. BATSRUS only provides the initial condition.
+### test16: 2D/3D GM/BATSRUS+PC/FLEKS. BATSRUS only provides the initial condition.
 ###         FLEKS runs with periodic boundary conditions. 
 
 test16:
@@ -2392,6 +2392,48 @@ test16_check:
 	   output/test16/PT.log \
 		>> test16_gmpc.diff)		
 	ls -l test16_gmpc.diff
+
+
+test16_2d:
+	@echo "test16_2d_compile..." > test16_2d_gmpc.diff
+	$(MAKE) test16_2d_compile
+	@echo "test16_2d_rundir..." > test16_2d_gmpc.diff
+	$(MAKE) test16_2d_rundir
+	@echo "test16_2d_run..." > test16_2d_gmpc.diff
+	$(MAKE) test16_2d_run
+	@echo "test16_2d_check..." > test16_2d_gmpc.diff
+	$(MAKE) test16_2d_check
+
+test16_2d_compile:
+	./Config.pl -v=Empty,PC/FLEKS,GM/BATSRUS -amrex2d
+	./Config.pl -o=GM:u=Default,e=MultiIonPe,ng=2,g=8,8,1 -o=PC:lev=9
+	$(MAKE) SWMF
+	$(MAKE) PIDL
+	
+test16_2d_rundir:
+	rm -rf ${TESTDIR}
+	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR}
+	cp Param/PARAM.in.test.GMPC.FLEKS.periodic  ${TESTDIR}/PARAM.in
+	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
+
+test16_2d_run:
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl RESULTS
+
+test16_2d_check:
+	-@(${DIFFNUM} -b -r=1e-7 \
+	   ${TESTDIR}/RESULTS/PC/z=0_fluid_region0_0_t00000002_n00000007.out \
+	   output/test16/z=0.ref.gz \
+		> test16_2d_gmpc.diff)
+	-@(${DIFFNUM} -b -r=1e-12 \
+	   ${TESTDIR}/RESULTS/PC/log_pic_n00000000.log \
+	   output/test16/PC.log \
+		>> test16_2d_gmpc.diff)
+	-@(${DIFFNUM} -b -r=1e-12 \
+	   ${TESTDIR}/RESULTS/PC/log_pt_n00000000.log \
+	   output/test16/PT.log \
+		>> test16_2d_gmpc.diff)		
+	ls -l test16_2d_gmpc.diff
 
 
 ### test17: GM/BATSRUS+PC/FLEKS. 2D Alfven wave ###
