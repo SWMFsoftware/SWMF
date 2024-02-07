@@ -3,9 +3,10 @@ ALL:  EXE
 
 # Get the SWMF definitions
 include ../../../Makefile.def
+include ../../../Makefile.conf
 
 # Get the dependencies
-include Makefile.DEPEND
+-include Makefile.DEPEND
 
 # The executable
 EXE = ${BINDIR}/ESMF_SWMF.exe
@@ -14,12 +15,12 @@ EXE = ${BINDIR}/ESMF_SWMF.exe
 EXELINK = ./ESMF_SWMF.exe
 
 # The ESMF definitions
-include $(ESMF_DIR)/makefile
+-include $(ESMF_DIR)/makefile
 
 # Overwrite the incorrect .f90.o rule (for ESMF 2.*):
-.f90.o:
-	$(FC) -c $(FC_MOD)$(ESMF_MODDIR) $(FOPTFLAGS) $(FFLAGS) \
-		$(F_FREENOCPP) $<
+#.f90.o:
+#	$(FC) -c $(FC_MOD)$(ESMF_MODDIR) $(FOPTFLAGS) $(FFLAGS) \
+#		$(F_FREENOCPP) $<
 
 DIRS = 
 
@@ -103,4 +104,4 @@ serialrun: ${EXE}
 clean: cleanfiles
 
 distclean: clean
-	rm -f Makefile.DEPEND
+
