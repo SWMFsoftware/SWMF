@@ -1,0 +1,3 @@
+This directory contains the source files that can build 
+a sample ESMF application which couples the SWMF subcomponent
+with one (or more) ESMF subcomponents.

@@ -1,0 +1,17 @@
+# This directory tree contains the ESMF related files inside the SWMF.
+# The ESMF library most be installed and the ESMF environment variables 
+# must be set. One could install the ESMF library in a subdirectory here.
+
+# The ESMF library can be downloaded from
+
+http://earthsystemmodeling.org/
+
+# Environment variables to set
+setenv ESMF_DIR <top of ESMF source> 
+setenv ESMF_COMPILER gfortranclang
+setenv ESMF_COMM mpich
+setenv ESMF_BOPT g
+
+# For Darwin + NAG compiler
+#setenv ESMF_COMPILER nag
+#setenv ESMF_TRACE_LIB_BUILD OFF 

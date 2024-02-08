@@ -127,7 +127,7 @@ float			TypeBc6
 ionosphere		TypeBcBody
 
 #MAGNETICINNERBOUNDARY
-1.0		B1rCoef
+1.0			B1rCoef
 
 #SOLARWINDFILE
 T			UseSolarWindFile

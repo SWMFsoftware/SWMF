@@ -114,7 +114,7 @@ ENV_CHECK:
 install: ENV_CHECK mkdir
 	@echo VERSION ${VERSION}
 	cd CON;	make install
-	@if([ -d ESMF ]); then cd ESMF/ESMF_SWMF;make install; fi #^CMP IF ESMF
+	@if([ -n "${ESMF_DIR}" ]); then cd ESMF/ESMF_SWMF; make install; fi
 	@if([ -d "GM/BATSRUS" ]); then \
 		if([ -d "EE/BATSRUS" ]); \
 			then cp GM/BATSRUS/Config.pl EE/BATSRUS; \
@@ -194,12 +194,10 @@ LIB:	ENV_CHECK
 	@cd ${CONTROLDIR}; $(MAKE) SWMFLIB
 	@echo ' '
 
-#^CMP IF ESMF BEGIN
-#       ESMF driver for the SWMF and a simple ESMF component
+#       ESMF driver for the SWMF and another ESMF component
 #
 ESMF_SWMF: LIB
 	@cd ESMF/ESMF_SWMF/src; $(MAKE) EXE
-#^CMP END ESMF
 
 # NOMPI library for execution without MPI
 
@@ -279,7 +277,7 @@ clean: ENV_CHECK
 	rm -rf *~ doc/*~ Param/*~ TAGS
 	for i in `ls -d [A-Z][A-Z]/*/`; \
 		do (echo Cleaning $$i; cd $$i; make clean); done
-	-@if([ -d ESMF ]); then cd ESMF/ESMF_SWMF;make clean; fi #^CMP IF ESMF
+	-@if([ -n "${ESMF_DIR}" ]); then cd ESMF/ESMF_SWMF; make clean; fi
 	cd CON;			make clean
 	cd share;		make clean
 	cd util;		make clean
@@ -305,7 +303,7 @@ allclean: ENV_CHECK rmdir
 	for i in `ls -d [A-Z][A-Z]/*/ | grep -v Empty`; \
 		do (echo Uninstalling $$i; cd $$i; ${CONFIG_PL} -uninstall); \
 		done
-	@if([ -d ESMF ]); then cd ESMF/ESMF_SWMF;make distclean;fi #^CMP IF ESMF
+	@if([ -n "${ESMF_DIR}" ]); then cd ESMF/ESMF_SWMF;make distclean; fi 
 	cd CON;			make distclean
 	@#^CMP IF DOC BEGIN
 	@#^CMP IF NOT REMOVEDOCTEX BEGIN
@@ -332,9 +330,8 @@ dist:
 	tar -cf tmp.tar README.md PARAM.XML LICENSE.txt Config.pl Makefile
 	${TAR} Makefile.test output		#^CMP IF TESTING
 	${TAR} doc				#^CMP IF DOC
-	${TAR} Copyrights Param Scripts CON share util
+	${TAR} Copyrights Param Scripts CON share util ESMF
 	if([ -d gui ]); then ${TAR} gui; fi
-	@if([ -d ESMF ]); then ${TAR} ESMF; fi #^CMP IF ESMF
 	for i in `ls -d [A-Z][A-Z]`; \
 		do (echo Tarring $$i; ${TAR} $$i); done
 	@echo ' '
