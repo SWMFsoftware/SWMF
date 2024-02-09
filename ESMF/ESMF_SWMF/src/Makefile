@@ -2,8 +2,8 @@
 ALL:  EXE
 
 # Get the SWMF definitions
-include ../../../Makefile.def
-include ../../../Makefile.conf
+-include ../../../Makefile.def
+-include ../../../Makefile.conf
 
 # Get the dependencies
 -include Makefile.DEPEND
@@ -15,7 +15,7 @@ EXE = ${BINDIR}/ESMF_SWMF.exe
 EXELINK = ./ESMF_SWMF.exe
 
 # The ESMF definitions
--include $(ESMF_DIR)/makefile
+include $(ESMF_DIR)/makefile
 
 # Overwrite the incorrect .f90.o rule (for ESMF 2.*):
 #.f90.o:
@@ -49,28 +49,15 @@ EXE: DEPEND
 	@echo ' '
 
 # build the executable.
-${EXE}: $(APPOBJS) ${LIBDIR}/libSWMF.a ${ESMFLIB}
-	@(if [ "${OS}" = "Darwin" ];         then make EXE_Darwin;\
-	else                                      make EXE_general; fi)
-
-EXE_general:
-	echo $(FLINKER) and  $(LINKOPTS) and  $(FLINKLIBS)
-	$(FLINKER) $(LINKOPTS) -o ${EXE} $(APPOBJS) $(FLINKLIBS) \
-		-L${LIBDIR} -lSWMF
-
-# Link rule for Darwin
-EXE_Darwin:
-	ld -all_load -r -o LIBRARIES.o $(LIBDIR)/libSWMF.a \
-	    $(ESMF_F90LINKPATHS) $(ESMF_F90ESMFLINKLIBS)
-	$(ESMF_F90LINKER) $(ESMF_F90LINKOPTS) $(ESMF_F90LINKPATHS) \
-	                  $(LINKOPTS) -o ${EXE} LIBRARIES.o $(APPOBJS)  \
-
+$(EXE): $(APPOBJS)
+	${LINK.f90} -o ${EXE} $(APPOBJS) $(ESMF_F90ESMFLINKPATHS) ${ESMF_F90LINKPATHS} $(ESMF_F90ESMFLINKLIBS) \
+		-L${LIBDIR} -lSWMF 
 
 TESTOBJS = \
 	test.o
 
 test.exe: ${TESTOBJS} ${ESMFLIB}
-	$(FLINKER) $(LINKOPTS) -o test.exe ${TESTOBJS} $(FLINKLIBS) \
+	${LINK.f90} -o test.exe ${TESTOBJS} $(FLINKLIBS) \
 		-L${LIBDIR}
 
 test: test.exe
