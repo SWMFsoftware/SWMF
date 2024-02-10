@@ -1,23 +1,16 @@
-!------------------------------------------------------------------------------
-! MODULE ESMF_SWMF_Driver.f90 - main program for coupled ESMF-SWMF application
-!
-! !DESCRIPTION:
-!  Application Driver for the coupled ESMF-SWMF system.  
-!  Creates the top ESMF_SWMF Gridded Component and calls the 
-!  Initialize, Run, and Finalize routines for it.  
-!
-!  The top Gridded Component creates and manages the ESMF and SWMF 
-!  subcomponents internally. The SWMF is treated as a single component
-!  which is coupled to (some of) the ESMF component(s) periodically.
-!
-!BOP
-!\begin{verbatim}
-
 program ESMF_SWMF_Driver
 
+  !  Application Driver for the coupled ESMF-SWMF system.  
+  !  Creates the top ESMF_SWMF Gridded Component and calls the 
+  !  Initialize, Run, and Finalize routines for it.  
+  !
+  !  The top Gridded Component creates and manages the ESMF and SWMF 
+  !  subcomponents internally. The SWMF is treated as a single component
+  !  which is coupled to (some of) the ESMF component(s) periodically.
+  
   ! ESMF module, defines all ESMF data types and procedures
-  use ESMF_Mod
-
+  use ESMF
+  
   ! Top ESMF-SWMF Gridded Component registration routines
   use ESMF_SWMF_GridCompMod, only : SetServices => ESMF_SWMF_SetServices
 
@@ -58,20 +51,16 @@ program ESMF_SWMF_Driver
 
   ! Return code for error checks
   integer :: rc
-
-
-
-  !----------------------------------------------------------------------------
-  !  Initialize the ESMF Framework
   !----------------------------------------------------------------------------
 
-  call ESMF_Initialize(defaultCalendar=ESMF_CAL_GREGORIAN, rc=rc)
+  ! Initialize the ESMF Framework
+  call ESMF_Initialize(defaultCalkind=ESMF_CALKIND_GREGORIAN, rc=rc)
   if (rc /= ESMF_SUCCESS) stop 'ESMF_Initialize FAILED'
 
-  call ESMF_LogWrite("ESMF-SWMF Driver start", ESMF_LOG_INFO)
+  call ESMF_LogWrite("ESMF-SWMF Driver start", ESMF_LOGMSG_INFO)
 
   ! Get the default VM which contains all PEs this job was started on.
-  call ESMF_VMGetGlobal(defaultVM, rc)
+  call ESMF_VMGetGlobal(defaultVM, rc=rc)
   if(rc /= ESMF_SUCCESS) call my_error('ESMF_VMGetGlobal failed')
 
   ! Get the processor number
@@ -82,25 +71,21 @@ program ESMF_SWMF_Driver
   call read_esmf_swmf_input(nProc, iProc, rc)
   if(rc /= ESMF_SUCCESS) call my_error('call read_esmf_swmf_input failed')
 
-  !----------------------------------------------------------------------------
-  !    Create section
-  !----------------------------------------------------------------------------
+  ! Create section
 
   ! Create the top Gridded component, passing in the default layout.
-  EsmfSwmfComp = ESMF_GridCompCreate(DefaultVM, name="ESMF-SWMF Component", rc=rc)
+  EsmfSwmfComp = ESMF_GridCompCreate(name="ESMF-SWMF Component", rc=rc)
 
-  call ESMF_LogWrite("Component Create finished", ESMF_LOG_INFO)
+  call ESMF_LogWrite("Component Create finished", ESMF_LOGMSG_INFO)
 
-  !----------------------------------------------------------------------------
-  !  Register section
-  !----------------------------------------------------------------------------
+  ! Register section
+  !!! DOES NOT COMPILE???
+!!!  call ESMF_GridCompSetServices(EsmfSwmfComp, userRoutine=SetServices, rc=rc)
+!  if (ESMF_LogFoundError(rcToCheck=rc, msg='Registration failed', &
+!       line=__LINE__, file=__FILE__)) &
+!       call ESMF_Finalize
 
-  call ESMF_GridCompSetServices(EsmfSwmfComp, SetServices, rc)
-  if (ESMF_LogMsgFoundError(rc, "Registration failed", rc)) call ESMF_Finalize
-
-  !----------------------------------------------------------------------------
   !  Create and initialize a clock, and a grid.
-  !----------------------------------------------------------------------------
 
   ! Based on values from the Config file, create a Clock.  
 
@@ -142,8 +127,8 @@ program ESMF_SWMF_Driver
      call ESMF_Finalize
   end if
 
-  Clock = ESMF_ClockCreate("Application Clock", TimeStep, StartTime, &
-       StopTime, rc=rc)
+  Clock = ESMF_ClockCreate(TimeStep, StartTime, stopTime=StopTime, &
+       name="pplication Clock", rc=rc)
 
   if(rc /= ESMF_SUCCESS)then
      if(iProc == 0)write(*,*) 'ESMF_SWMF ERROR: ',&
@@ -173,11 +158,7 @@ program ESMF_SWMF_Driver
      end if
   end if
 
-
-  !----------------------------------------------------------------------------
   !  Init, Run, and Finalize section
-  !----------------------------------------------------------------------------
-
   call ESMF_GridCompInitialize(EsmfSwmfComp, clock=Clock, rc=rc)
   if (rc /= ESMF_SUCCESS) call my_error('EsmfSwmfComp:init failed')
 
@@ -187,22 +168,16 @@ program ESMF_SWMF_Driver
   call ESMF_GridCompFinalize(EsmfSwmfComp, clock=Clock, rc=rc)
   if (rc /= ESMF_SUCCESS) call my_error('EsmfSwmfComp:finalize failed')
 
-  !----------------------------------------------------------------------------
-  !     Destroy section
-  !----------------------------------------------------------------------------
-
   ! Clean up
 
-  call ESMF_ClockDestroy(clock, rc)
+  call ESMF_ClockDestroy(clock, rc=rc)
 
-  call ESMF_GridCompDestroy(EsmfSwmfComp, rc)
-
-  !----------------------------------------------------------------------------
+  call ESMF_GridCompDestroy(EsmfSwmfComp, rc=rc)
 
   call ESMF_Finalize
 
 contains
-
+  !============================================================================
   subroutine my_error(String)
 
     character(len=*), intent(in) :: String
@@ -213,8 +188,6 @@ contains
     stop
 
   end subroutine my_error
-
+  !============================================================================
 end program ESMF_SWMF_Driver
 
-!\end{verbatim}    
-!EOP

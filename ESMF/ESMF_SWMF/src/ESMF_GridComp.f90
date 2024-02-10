@@ -8,7 +8,7 @@
 module EsmfGridCompMod
 
   ! ESMF Framework module
-  use ESMF_Mod
+  use ESMF
 
   implicit none
   private
@@ -16,32 +16,29 @@ module EsmfGridCompMod
   public SetServices
 
 contains
-
-  !===========================================================================
-
+  !============================================================================
   subroutine SetServices(gcomp, rc)
+
     type(ESMF_GridComp) :: gcomp
     integer :: rc
 
-    call ESMF_GridCompSetEntryPoint(gcomp, ESMF_SETINIT, my_init, &
-         ESMF_SINGLEPHASE, rc)
-    call ESMF_GridCompSetEntryPoint(gcomp, ESMF_SETRUN, my_run, &
-         ESMF_SINGLEPHASE, rc)
-    call ESMF_GridCompSetEntryPoint(gcomp, ESMF_SETFINAL, my_final, &
-         ESMF_SINGLEPHASE, rc)
+    call ESMF_GridCompSetEntryPoint(gcomp, ESMF_METHOD_INITIALIZE, &
+         userRoutine=my_init, rc=rc)
+    call ESMF_GridCompSetEntryPoint(gcomp, ESMF_METHOD_RUN, &
+         userRoutine=my_run, rc=rc)
+    call ESMF_GridCompSetEntryPoint(gcomp, ESMF_METHOD_FINALIZE, &
+         userRoutine=my_final, rc=rc)
 
   end subroutine SetServices
-
-  !===========================================================================
-
+  !============================================================================
   subroutine my_init(gComp, importState, exportState, externalclock, rc)
 
     use ESMF_SWMF_Mod, ONLY: add_mhd_fields, nVar, NameField_V, iMax, jMax
 
-    type(ESMF_GridComp), intent(inout):: gComp
-    type(ESMF_State),    intent(in)   :: importState
-    type(ESMF_State),    intent(inout):: exportState
-    type(ESMF_Clock),    intent(in)   :: externalclock
+    type(ESMF_GridComp):: gComp
+    type(ESMF_State)   :: importState
+    type(ESMF_State)   :: exportState
+    type(ESMF_Clock)   :: externalclock
     integer,             intent(out)  :: rc
 
     ! Access to the MHD data
@@ -50,7 +47,7 @@ contains
     ! Units
     real, parameter :: nT=1e-9, amu=1.6726*1e-27, cc=1e-6, kms=1e3, kb=1.38E-23
     !-------------------------------------------------------------------------
-    call ESMF_LogWrite("ESMFGridComp init called",  ESMF_LOG_INFO)
+    call ESMF_LogWrite("ESMFGridComp init called",  ESMF_LOGMSG_INFO)
     rc = ESMF_FAILURE
 
     ! Add MHD fields to the export state
@@ -60,9 +57,10 @@ contains
     ! Initialize the MHD data
     do iVar = 1, nVar
        ! Get pointers to the MHD variables in the export state
-       nullify(Ptr)
-       call ESMF_StateGetDataPointer(ExportState, NameField_V(iVar), Ptr, &
-            rc=rc)
+!!! How to do this???
+       ! nullify(Ptr)
+       ! call ESMF_StateGetDataPointer(ExportState, NameField_V(iVar), Ptr, &
+       !     rc=rc)
        if(rc /= ESMF_SUCCESS) RETURN
        select case(NameField_V(iVar))
        case('Rho')
@@ -93,32 +91,31 @@ contains
     end do
 
     rc = ESMF_SUCCESS
-    call ESMF_LogWrite("ESMFGridComp init returned", ESMF_LOG_INFO)
+    call ESMF_LogWrite("ESMFGridComp init returned", ESMF_LOGMSG_INFO)
 
   end subroutine my_init
-
-  !===========================================================================
-
+  !============================================================================
   subroutine my_run(gComp, importState, exportState, externalclock, rc)
 
     use ESMF_SWMF_Mod, ONLY: NameField_V
 
-    type(ESMF_GridComp), intent(in)   :: gComp
-    type(ESMF_State),    intent(in)   :: importState
-    type(ESMF_State),    intent(inout):: exportState
-    type(ESMF_Clock),    intent(in)   :: externalclock
-    integer,             intent(out)  :: rc
+    type(ESMF_GridComp):: gComp
+    type(ESMF_State)   :: importState
+    type(ESMF_State)   :: exportState
+    type(ESMF_Clock)   :: externalclock
+    integer, intent(out):: rc
 
     ! Access to the MHD data
     real(ESMF_KIND_R8), pointer :: Ptr(:,:)
-    !-------------------------------------------------------------------------
-    call ESMF_LogWrite("ESMFGridComp run called", ESMF_LOG_INFO)
+    !--------------------------------------------------------------------------
+    call ESMF_LogWrite("ESMFGridComp run called", ESMF_LOGMSG_INFO)
     rc = ESMF_FAILURE
 
     ! Get pointers to the MHD variables in the export state
     nullify(Ptr)
-    call ESMF_StateGetDataPointer(ExportState, 'Bz', Ptr, rc=rc)
-    if(rc /= ESMF_SUCCESS) call my_error('ESMF_StateGetDataPointer failed')
+!!! How to do this ???
+    ! call ESMF_StateGetDataPointer(ExportState, 'Bz', Ptr, rc=rc)
+    ! if(rc /= ESMF_SUCCESS) call my_error('ESMF_StateGetDataPointer failed')
 
     ! Update MHD state by changing Bz
     write(*,*)'ESMFGridComp:run old Bz=',Ptr(1,1)
@@ -126,26 +123,23 @@ contains
     write(*,*)'ESMFGridComp:run new Bz=',Ptr(1,1)
 
     rc = ESMF_SUCCESS
-    call ESMF_LogWrite("ESMFGridComp run returned", ESMF_LOG_INFO)
+    call ESMF_LogWrite("ESMFGridComp run returned", ESMF_LOGMSG_INFO)
 
   end subroutine my_run
-
-  !===========================================================================
-
+  !============================================================================
   subroutine my_final(gcomp, importState, exportState, externalclock, rc)
+
     type(ESMF_GridComp) :: gcomp
     type(ESMF_State) :: importState
     type(ESMF_State) :: exportState
     type(ESMF_Clock) :: externalclock
-    integer :: rc
+    integer, intent(out):: rc
 
-    call ESMF_LogWrite("ESMFGridComp finalize called", ESMF_LOG_INFO)
-    call ESMF_LogWrite("ESMFGridComp finalize returned", ESMF_LOG_INFO)
+    call ESMF_LogWrite("ESMFGridComp finalize called", ESMF_LOGMSG_INFO)
+    call ESMF_LogWrite("ESMFGridComp finalize returned", ESMF_LOGMSG_INFO)
 
   end subroutine my_final
-
-  !===========================================================================
-
+  !============================================================================
   subroutine my_error(String)
 
     ! Since the error flag is not returned from my_run due to the 
@@ -158,7 +152,7 @@ contains
     call ESMF_finalize
 
   end subroutine my_error
-
+  !============================================================================
 end module EsmfGridCompMod
 
 !\end{verbatim}
