@@ -395,15 +395,18 @@ contains
     DoRead = .false.
     READLAYOUT: do
        read(iUnit,'(a)',iostat=rc)String
+       write(*,*)'!!! rc, String=', rc, String
+    
        if(rc/=0)then
           if(iProc==0)write(*,*)'ESMF_SWMF ERROR: '// &
                'could not read LAYOUT.in file'
           rc = ESMF_FAILURE; RETURN
        end if
-       if(String == '#COMPONENTMAP') DoRead = .true.
+       if(String(1:13) == '#COMPONENTMAP') DoRead = .true.
        if(.not.DoRead) CYCLE
        if(String(1:2) == NameSwmfComp)then
           read(String, *, iostat=rc)NameSwmfComp, iProcCoupleSwmf
+          write(*,*)'!!! rc, iProcCoupleSwmf=', rc, iProcCoupleSwmf
           if(rc/=0)then
              if(iProc==0)write(*,*)'ESMF_SWMF ERROR: '// &
                   'could not read iProcRoot for '//NameSwmfComp// &
