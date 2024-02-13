@@ -1,0 +1,6 @@
+Name Root Last Stride nThread
+#COMPONENTMAP		For production run
+GM  0 10 1		CompMap 0:nProc-3 multithreaded
+IE  1 2  1  		CompMap last 2 PE-s
+IM  0 0  1		CompMap nProc-2 PE
+
