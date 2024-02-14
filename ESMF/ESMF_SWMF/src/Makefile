@@ -8,29 +8,18 @@ ALL:  EXE
 # Get the dependencies
 -include Makefile.DEPEND
 
+# Add ESMF include directories
+-include ${ESMF_DIR}/esmf.mk
+INCL_EXTRA=${ESMF_F90COMPILEPATHS}
+
 # The executable
 EXE = ${BINDIR}/ESMF_SWMF.exe
 
 # A link to the executable in the run directory
 EXELINK = ./ESMF_SWMF.exe
 
-# The ESMF definitions
-include $(ESMF_DIR)/makefile
-
-# Overwrite the incorrect .f90.o rule (for ESMF 2.*):
-#.f90.o:
-#	$(FC) -c $(FC_MOD)$(ESMF_MODDIR) $(FOPTFLAGS) $(FFLAGS) \
-#		$(F_FREENOCPP) $<
-
-DIRS = 
-
-# Define these for the generic ESMF clean target
-CLEANDIRS   =
-CLEANFILES  = ${EXE}
-CLOBBERDIRS =
-
 # object files which need to be compiled into the executable.
-APPOBJS = \
+OBJECTS = \
 	ESMF_SWMF_Coupler.o \
 	SWMF_GridComp.o \
 	ESMF_GridComp.o \
@@ -40,7 +29,7 @@ APPOBJS = \
 
 # Dependencies:
 DEPEND:
-	perl ${SCRIPTDIR}/depend.pl ${APPOBJS}
+	perl ${SCRIPTDIR}/depend.pl ${OBJECTS}
 
 EXE: DEPEND
 	make ${EXE}
@@ -49,32 +38,9 @@ EXE: DEPEND
 	@echo ' '
 
 # build the executable.
-$(EXE): $(APPOBJS)
-	${LINK.f90} -o ${EXE} $(APPOBJS) ${ESMF_F90LINKPATHS} $(ESMF_F90ESMFLINKLIBS) \
-		-L${LIBDIR} -lSWMF 
-
-TESTOBJS = \
-	test.o
-
-test.exe: ${TESTOBJS} ${ESMFLIB}
-	${LINK.f90} -o test.exe ${TESTOBJS} $(FLINKLIBS) \
-		-L${LIBDIR}
-
-test: test.exe
-	${MPIRUN} test.exe
-
-ESMFTESTOBJS = \
-	user_model1.o \
-	user_model2.o \
-	user_coupler.o \
-	ESMFTEST.o
-
-esmftest.exe: ${ESMFTESTOBJS} ${ESMFLIB}
-	$(FLINKER) $(LINKOPTS) -o esmftest.exe ${ESMFTESTOBJS} $(FLINKLIBS) \
-		-L${LIBDIR}
-
-esmftest: esmftest.exe
-	${MPIRUN} esmftest.exe
+$(EXE): $(OBJECTS)
+	${LINK.f90} -o ${EXE} $(OBJECTS) ${ESMF_F90LINKPATHS} $(ESMF_F90ESMFLINKLIBS) \
+		-L${LIBDIR} -lSWMF
 
 # run the executable in parallel. 
 parallelrun: ${EXE}
