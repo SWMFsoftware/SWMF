@@ -12,7 +12,7 @@ program ESMF_SWMF_Driver
   use ESMF
   
   ! Top ESMF-SWMF Gridded Component registration routines
-  use ESMF_SWMF_GridCompMod, only : SetServices => ESMF_SWMF_SetServices
+  use ESMF_SWMF_GridCompMod, only : ESMF_SWMF_SetServices
 
   ! Various variables
   use ESMF_SWMF_Mod
@@ -79,11 +79,11 @@ program ESMF_SWMF_Driver
   call ESMF_LogWrite("Component Create finished", ESMF_LOGMSG_INFO)
 
   ! Register section
-  !!! DOES NOT COMPILE???
-!!!  call ESMF_GridCompSetServices(EsmfSwmfComp, userRoutine=SetServices, rc=rc)
-!  if (ESMF_LogFoundError(rcToCheck=rc, msg='Registration failed', &
-!       line=__LINE__, file=__FILE__)) &
-!       call ESMF_Finalize
+  call ESMF_GridCompSetServices(EsmfSwmfComp, userRoutine=ESMF_SWMF_SetServices, rc=rc)
+
+  if (ESMF_LogFoundError(rcToCheck=rc, msg='Registration failed', &
+       line=__LINE__, file=__FILE__)) &
+       call ESMF_Finalize
 
   !  Create and initialize a clock, and a grid.
 

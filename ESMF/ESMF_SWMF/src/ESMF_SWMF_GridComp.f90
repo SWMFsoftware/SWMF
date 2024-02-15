@@ -26,7 +26,7 @@ contains
   subroutine ESMF_SWMF_SetServices(gcomp, rc)
 
     type(ESMF_GridComp) :: gcomp
-    integer :: rc
+    integer, intent(out):: rc
     !--------------------------------------------------------------------------
     call ESMF_GridCompSetEntryPoint(gcomp, ESMF_METHOD_INITIALIZE, &
          userRoutine=my_init, rc=rc)
@@ -39,7 +39,7 @@ contains
   !============================================================================
   subroutine my_init(gComp, ImportState, ExportState, ParentClock, rc)
 
-    use ESMF_SWMF_Mod, only: iMax, jMax, yMin, yMax, zMin, zMax, &
+    use ESMF_SWMF_Mod, only: nLon, nLat, LonMin, LonMax, LatMin, LatMax, &
          iProcRootSwmf, iProcRootEsmf, iProcLastEsmf, iProcLastSwmf
 
     type(ESMF_GridComp):: gComp
@@ -65,13 +65,15 @@ contains
     if(rc /= ESMF_SUCCESS) return
 
     ! Create two grids
-    SwmfGrid = ESMF_GridCreate1PeriDimUfrm(maxIndex=[iMax, jMax], &
-         minCornerCoord=[yMin, zMin], maxCornerCoord=[yMax, zMax], &
+    SwmfGrid = ESMF_GridCreate1PeriDimUfrm(maxIndex=[nLon, nLat], &
+         minCornerCoord=[LonMin, LatMin], maxCornerCoord=[LonMax, LatMax], &
+         staggerLocList=[ESMF_STAGGERLOC_CENTER, ESMF_STAGGERLOC_CORNER], &
          name="SWMF grid", rc=rc)
     if(rc /= ESMF_SUCCESS) return
 
-    EsmfGrid = ESMF_GridCreate1PeriDimUfrm(maxIndex=[iMax, jMax], &
-         minCornerCoord=[yMin, zMin], maxCornerCoord=[yMax, zMax], &
+    EsmfGrid = ESMF_GridCreate1PeriDimUfrm(maxIndex=[nLon, nLat], &
+         minCornerCoord=[LonMin, LatMin], maxCornerCoord=[LonMax, LatMax], &
+         staggerLocList=[ESMF_STAGGERLOC_CENTER, ESMF_STAGGERLOC_CORNER], &
          name="ESMF grid", rc=rc)
     if(rc /= ESMF_SUCCESS) return
 
@@ -96,14 +98,15 @@ contains
 
     ! Call the SetServices routine for each so they can register their
     ! subroutines for Init, Run, and Finalize
-    !call ESMF_GridCompSetServices(SwmfComp, &
-    !     userRoutine=SwmfSetServices, rc=rc)
-    !if(rc /= ESMF_SUCCESS) return
-    !call ESMF_GridCompSetServices(EsmfComp, &
-    !     userRoutine=EsmfSetServices, rc=rc)
-    !if(rc /= ESMF_SUCCESS) return
-    ! call ESMF_CplCompSetServices(CouplerComp, Coupler_SetServices, rc)
-    ! if(rc /= ESMF_SUCCESS) return
+    call ESMF_GridCompSetServices(SwmfComp, &
+         userRoutine=SwmfSetServices, rc=rc)
+    if(rc /= ESMF_SUCCESS) return
+    call ESMF_GridCompSetServices(EsmfComp, &
+         userRoutine=EsmfSetServices, rc=rc)
+    if(rc /= ESMF_SUCCESS) return
+    call ESMF_CplCompSetServices(CouplerComp, &
+         userRoutine=CouplerSetServices, rc=rc)
+    if(rc /= ESMF_SUCCESS) return
 
     ! Create Import and Export State objects in order to pass data
     ! between the Coupler and the Gridded Components

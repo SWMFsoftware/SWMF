@@ -1,10 +1,3 @@
-!BOP
-!
-! !DESCRIPTION:
-!  A template for the ESMF gridded components to be coupled with the SWMF.
-!
-!\begin{verbatim}
-
 module EsmfGridCompMod
 
   ! ESMF Framework module
@@ -20,7 +13,7 @@ contains
   subroutine SetServices(gcomp, rc)
 
     type(ESMF_GridComp) :: gcomp
-    integer :: rc
+    integer, intent(out):: rc
 
     call ESMF_GridCompSetEntryPoint(gcomp, ESMF_METHOD_INITIALIZE, &
          userRoutine=my_init, rc=rc)
@@ -33,7 +26,7 @@ contains
   !============================================================================
   subroutine my_init(gComp, importState, exportState, externalclock, rc)
 
-    use ESMF_SWMF_Mod, ONLY: add_mhd_fields, nVar, NameField_V, iMax, jMax
+    use ESMF_SWMF_Mod, ONLY: add_mhd_fields, nVar, NameField_V, nLon, nLat
 
     type(ESMF_GridComp):: gComp
     type(ESMF_State)   :: importState
@@ -80,11 +73,11 @@ contains
        end select
 
        ! Add coordinate dependence (5% in Y, 10% in Z)
-       if(iMax > 1 .and. jMax > 1)then
-          do j=1, jMax; do i = 1, iMax
-             Ptr(i, j) = Ptr(i,j) &
-                  * (0.95 + 0.1*(i-1.0)/(iMax-1.0)) &
-                  * (0.90 + 0.2*(j-1.0)/(jMax-1.0))
+       if(nLon > 1 .and. nLat > 1)then
+          do j = 1, nLat; do i = 1, nLon
+             Ptr(i,j) = Ptr(i,j) &
+                  * (0.95 + 0.1*(i - 1.0)/(nLon - 1.0)) &
+                  * (0.90 + 0.2*(j - 1.0)/(nLat - 1.0))
           end do; end do
        end if
 

@@ -16,7 +16,13 @@ rundir: ${RUNDIR}
 	cp input/PARAM.in ${RUNDIR}/
 	cd ${RUNDIR}; ln -sf ${BINDIR}/ESMF_SWMF.exe .
 
-test: EXE rundir
+SWMFLIB = ${LIBDIR}/libSWMF.a
+
+${SWMFLIB}:
+	cd ${DIR}; ${MAKE} test_swpc_compile
+	cd ${DIR}; ${MAKE} LIB
+
+test: ${SWMFLIB} EXE rundir
 	cd ${RUNDIR}; rm -f *.ESMF_LogFile; ${MPIRUN} ESMF_SWMF.exe
 	cd ${RUNDIR}; perl -ne 'print if /error/i' PET*.ESMF_LogFile
 

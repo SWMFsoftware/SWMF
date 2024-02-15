@@ -16,7 +16,7 @@ contains
   !============================================================================
   subroutine SetServices(ccomp, rc)
     type(ESMF_CplComp) :: ccomp
-    integer :: rc
+    integer, intent(out):: rc
 
     call ESMF_CplCompSetEntryPoint(ccomp, ESMF_METHOD_INITIALIZE, &
          userRoutine=my_init, rc=rc)

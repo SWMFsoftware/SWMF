@@ -42,15 +42,14 @@ module ESMF_SWMF_Mod
   logical :: DoBlockAllSwmf=.false.
 
   ! Variables related to the grid used between the ESMF and SWMF components.
-  ! Distance units are Earth radii, and the 2D uniform grid is defined
-  ! in the Geo-Solar-Magnetic (GSM) coordinate system. It is orthogonal
-  ! to the GSM-X axis.
-  real(ESMF_KIND_R8), parameter :: rEarth = 6378000.0 ! Earth radius in SI unit
-  integer            :: iMax=9, jMax=9                ! Default grid size
-  real(ESMF_KIND_R8) :: yMin=-128.0                   ! Minimum Y in rEarth
-  real(ESMF_KIND_R8) :: yMax=+128.0                   ! Maximum Y in rEarth
-  real(ESMF_KIND_R8) :: zMin=-128.0                   ! Minimum Z in rEarth
-  real(ESMF_KIND_R8) :: zMax=+128.0                   ! Maximum Z in rEarth
+  ! This is a 2D spherical grid representing the height integrated ionosphere.
+  ! In RIM it is in SM coordinates:
+  ! +Z points to north magnetic dipole and the Sun is in the +X-Z halfplane.
+  integer            :: nLon=360, nLat=180             ! Default grid size
+  real(ESMF_KIND_R8) :: LonMin = 0.0                   ! Minimum longitude
+  real(ESMF_KIND_R8) :: LonMax = 360.0                 ! Maximum longitude
+  real(ESMF_KIND_R8) :: LatMin=-128.0                  ! Minimum latitude
+  real(ESMF_KIND_R8) :: LatMax=+128.0                  ! Maximum latitude
 
 contains
   !============================================================================
@@ -277,90 +276,74 @@ contains
     end if
 
     ! Get grid size
-    iDefaultTmp = iMax
-    call ESMF_ConfigGetAttribute(Config, iMax, label='iMax:', rc=rc)
+    iDefaultTmp = nLon
+    call ESMF_ConfigGetAttribute(Config, nLon, label='nLon:', rc=rc)
     if(rc /= ESMF_SUCCESS) then
-       if(iProc == 0) write(*,*) 'ESMF_SWMF did not read iMax, ', &
+       if(iProc == 0) write(*,*) 'ESMF_SWMF did not read nLon, ', &
             'setting default value= ', iDefaultTmp
-       iMax = iDefaultTmp
+       nLon = iDefaultTmp
     end if
-    if(iMax < 1)then
+    if(nLon < 1)then
        if(iProc == 0) write(*,*) 'ESMF_SWMF ERROR: ', &
-            'iMax =',iMax,' should be positive!'
+            'nLon =',nLon,' should be positive!'
        rc = ESMF_FAILURE; RETURN
     end if
 
-    iDefaultTmp = jMax
-    call ESMF_ConfigGetAttribute(Config, jMax, label='jMax:', rc=rc)
+    iDefaultTmp = nLat
+    call ESMF_ConfigGetAttribute(Config, nLat, label='nLat:', rc=rc)
     if(rc /= ESMF_SUCCESS) then
-       if(iProc == 0) write(*,*) 'ESMF_SWMF did not read jMax, ', &
+       if(iProc == 0) write(*,*) 'ESMF_SWMF did not read nLat, ', &
             'setting default value= ', iDefaultTmp
-       jMax = iDefaultTmp
+       nLat = iDefaultTmp
     end if
-    if(jMax < 1)then
+    if(nLat < 1)then
        if(iProc == 0) write(*,*) 'ESMF_SWMF ERROR: ', &
-            'jMax =',jMax,' should be positive!'
+            'nLat =',nLat,' should be positive!'
        rc = ESMF_FAILURE; RETURN
     end if
 
     ! Get grid coordinate range
-    DefaultTmp = yMin
-    call ESMF_ConfigGetAttribute(Config, yMin, label='yMin:', rc=rc)
+    DefaultTmp = LonMin
+    call ESMF_ConfigGetAttribute(Config, LonMin, label='LonMin:', rc=rc)
     if(rc /= ESMF_SUCCESS) then
-       if(iProc == 0) write(*,*) 'ESMF_SWMF did not read yMin, '// &
+       if(iProc == 0) write(*,*) 'ESMF_SWMF did not read LonMin, '// &
             'setting default value= ', DefaultTmp
-       yMin = DefaultTmp
+       LonMin = DefaultTmp
     end if
-    if(yMin >= 0.0)then
+
+    DefaultTmp = LonMax
+    call ESMF_ConfigGetAttribute(Config, LonMax, label='LonMax:', rc=rc)
+    if(rc /= ESMF_SUCCESS) then
+       if(iProc == 0) write(*,*) 'ESMF_SWMF did not read LonMax, '// &
+            'setting default value= ', DefaultTmp
+       LonMax = DefaultTmp
+    end if
+    if(LonMax <= LonMin)then
        if(iProc == 0) write(*,*) 'ESMF_SWMF ERROR: ', &
-            'yMin =',yMin,' should be negative!'
+            'LonMax =', LonMax, ' should be larger than LonMin=', LonMin
        rc = ESMF_FAILURE; RETURN
     end if
 
-    DefaultTmp = yMax
-    call ESMF_ConfigGetAttribute(Config, yMax, label='yMax:', rc=rc)
+    DefaultTmp = LatMin
+    call ESMF_ConfigGetAttribute(Config, LatMin, label='LatMin:', rc=rc)
     if(rc /= ESMF_SUCCESS) then
-       if(iProc == 0) write(*,*) 'ESMF_SWMF did not read yMax, '// &
+       if(iProc == 0) write(*,*) 'ESMF_SWMF did not read LatMin, '// &
             'setting default value= ', DefaultTmp
-       yMax = DefaultTmp
-    end if
-    if(yMax <= 0.0)then
-       if(iProc == 0) write(*,*) 'ESMF_SWMF ERROR: ', &
-            'yMax =',yMax,' should be positive!'
-       rc = ESMF_FAILURE; RETURN
+       LatMin = DefaultTmp
     end if
 
-    DefaultTmp = zMin
-    call ESMF_ConfigGetAttribute(Config, zMin, label='zMin:', rc=rc)
+    DefaultTmp = LatMax
+    call ESMF_ConfigGetAttribute(Config, LatMax, label='LatMax:', rc=rc)
     if(rc /= ESMF_SUCCESS) then
-       if(iProc == 0) write(*,*) 'ESMF_SWMF did not read zMin, '// &
+       if(iProc == 0) write(*,*) 'ESMF_SWMF did not read LatMax, '// &
             'setting default value= ', DefaultTmp
-       zMin = DefaultTmp
+       LatMax = DefaultTmp
     end if
-    if(zMin >= 0.0)then
+    if(LatMax <= LatMin)then
        if(iProc == 0) write(*,*) 'ESMF_SWMF ERROR: ', &
-            'zMin =',zMin,' should be negative!'
+            'LatMax =', LatMax, ' should be larger than LatMin=', LatMin
        rc = ESMF_FAILURE; RETURN
     end if
-
-    DefaultTmp = zMax
-    call ESMF_ConfigGetAttribute(Config, zMax, label='zMax:', rc=rc)
-    if(rc /= ESMF_SUCCESS) then
-       if(iProc == 0) write(*,*) 'ESMF_SWMF did not read zMax, '// &
-            'setting default value= ', DefaultTmp
-       zMax = DefaultTmp
-    end if
-    if(zMax <= 0.0)then
-       if(iProc == 0) write(*,*) 'ESMF_SWMF ERROR: ', &
-            'zMax =',zMax,' should be positive!'
-       rc = ESMF_FAILURE; RETURN
-    end if
-
-    ! Convert to SI units
-    yMin = yMin*rEarth
-    yMax = yMax*rEarth
-    zMin = zMin*rEarth
-    zMax = zMax*rEarth
 
     call ESMF_ConfigDestroy(Config, rc=rc)
     if(rc /= ESMF_SUCCESS) RETURN
@@ -479,10 +462,10 @@ contains
     !   call ESMF_VMGet(VM, petcount=nProc, rc=rc)
     !   if(rc /= ESMF_SUCCESS) RETURN
     !
-    !   ! Create cell count array with all iMax cells on PE iProcCoupleSwmf
+    !   ! Create cell count array with all nLon cells on PE iProcCoupleSwmf
     !   allocate(nCell_P(nProc))
     !   nCell_P = 0
-    !   nCell_P(iProcCoupleSwmf+1) = iMax
+    !   nCell_P(iProcCoupleSwmf+1) = nLon
     !
     !   ! write(*,*)'!!! nProc, iProcCoupleSwmf, nCell_P=', &
     !   !     nProc, iProcCoupleSwmf, nCell_P
@@ -490,7 +473,7 @@ contains
     !   ! The SMWF grid is on a single processor
     !   call ESMF_GridDistribute(Grid, delayout=Layout, &
     !        countsPerDEDim1=nCell_P, &
-    !        countsPerDEDim2=[ jMax ], rc=rc)
+    !        countsPerDEDim2=[ nLat ], rc=rc)
     !
     !   deallocate(nCell_P)
     !else
