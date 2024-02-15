@@ -25,14 +25,14 @@ module ESMF_SWMF_Mod
   ! Variables related to the layout information
   ! SWMF runs on processor ranks iProcRootSwmf to iProcLastSwmf,
   ! ESMF runs on processor ranks iProcRootEsmf to iProcLastEsmf
-  integer :: iProcRootSwmf, iProcLastSwmf
+  integer :: iProcRootSwmf, iProcLastSwmf, nProcSwmf
   integer :: iProcRootEsmf, iProcLastEsmf
 
   ! SWMF component to couple with
   character(len=2) :: NameSwmfComp = 'GM'
 
   ! The ESMF communicates with iProcCoupleSwmf within the SWMF layout
-  ! This variable is determined from NameSwmfComp and the LAYOUT.in file.
+  ! This variable is determined from NameSwmfComp and the PARAM.in file.
   integer :: iProcCoupleSwmf=0
 
   ! When SWMF and ESMF are coupled, the one can block the whole SWMF
@@ -199,6 +199,8 @@ contains
             'SWMF Last PE rank too large, setting it to nProc-1=', nProc-1
        iProcLastSwmf = nProc-1
     end if
+    ! Number of PEs used by the SWMF
+    nProcSwmf = iProcLastSwmf - iProcRootSwmf + 1
 
     ! Read root PE for the ESMF
     call ESMF_ConfigGetAttribute(Config, iProcRootEsmf, &
@@ -374,59 +376,60 @@ contains
   !============================================================================
   subroutine read_swmf_layout(iProc, rc)
 
+    ! Get the root processor for the SWMF component to be coupled with
+    ! from the PARAM.in file
+
     integer, intent(in)  :: iProc  ! rank of processor
     integer, intent(out) :: rc     ! error code
 
     integer :: iUnit
     character(len=100) :: String
     logical :: DoRead
-    ! Get the root processor for the SWMF component to be coupled with
-    ! from the LAYOUT.in file
     !--------------------------------------------------------------------------
     call CON_io_unit_new_ext(iUnit)
-    open(unit=iUnit, file='LAYOUT.in', iostat=rc)
+    open(unit=iUnit, file='PARAM.in', iostat=rc)
     if(rc /= 0)then
        if(iProc==0)write(*,*)'ESMF_SWMF ERROR: '// &
-            'could not open LAYOUT.in file'
+            'could not open PARAM.in file'
        rc = ESMF_FAILURE; RETURN
     end if
 
-    ! Read the LAYOUT.in file
+    ! Read the PARAM.in file
     DoRead = .false.
     READLAYOUT: do
-       read(iUnit,'(a)',iostat=rc)String
-       write(*,*)'!!! rc, String=', rc, String
+       read(iUnit,'(a)',iostat=rc) String
     
-       if(rc/=0)then
+       if(rc /= 0)then
           if(iProc==0)write(*,*)'ESMF_SWMF ERROR: '// &
-               'could not read LAYOUT.in file'
+               'could not read PARAM.in file'
           rc = ESMF_FAILURE; RETURN
        end if
        if(String(1:13) == '#COMPONENTMAP') DoRead = .true.
        if(.not.DoRead) CYCLE
        if(String(1:2) == NameSwmfComp)then
           read(String, *, iostat=rc)NameSwmfComp, iProcCoupleSwmf
-          write(*,*)'!!! rc, iProcCoupleSwmf=', rc, iProcCoupleSwmf
           if(rc/=0)then
              if(iProc==0)write(*,*)'ESMF_SWMF ERROR: '// &
                   'could not read iProcRoot for '//NameSwmfComp// &
-                  ' from line=',trim(String),' in LAYOUT.in'
+                  ' from line=',trim(String),' in PARAM.in'
              rc = ESMF_FAILURE; RETURN
           end if
+          ! Negative value is relative to the end
+          if(iProcCoupleSwmf < 0) iProcCoupleSwmf = iProcCoupleSwmf + nProcSwmf
           ! Limit iProcCoupleSwmf by the number of SWMF processors
-          iProcCoupleSwmf = min(iProcCoupleSwmf, iProcLastSwmf - iProcRootSwmf)
+          iProcCoupleSwmf = min(iProcCoupleSwmf, nProcSwmf - 1)
           EXIT READLAYOUT
        end if
-       if(String == '#END')then
+       if(String == '')then
           if(iProc==0)write(*,*)'ESMF_SWMF ERROR: '// &
-               'could not find component '//NameSwmfComp//' in LAYOUT.in file'
+               'could not find component '//NameSwmfComp//' in #COMPONENTMAP'
           rc = ESMF_FAILURE; RETURN
        end if
     end do READLAYOUT
     close(iUnit)
 
     if(iProc==0)write(*,*)'ESMF_SWMF: '// &
-         NameSwmfComp//'   Root PE rank in SWMF=',iProcCoupleSwmf
+         NameSwmfComp//'   Root PE rank in SWMF=', iProcCoupleSwmf
 
   end subroutine read_swmf_layout
   !============================================================================
