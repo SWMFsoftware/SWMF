@@ -1,38 +1,27 @@
 include ../../Makefile.def
 
-ESMF3 = `cd ${ESMF_DIR}; make info | grep ESMF_VERSION_STRING | grep 3`
-
-# Change source code for ESMF3 compatibility
 install:
-	touch src/Makefile.DEPEND
-	@(if [ "$(ESMF3)" != "" ]; then \
-	   perl -ni -e 'print unless /\.f90\.o|FC_MOD|FREENO/' src/Makefile; \
-	   perl -pi -e \
-	     's/type=ESMF_DATA_REAL, kind=ESMF_R8/typekind=ESMF_TYPEKIND_R8/' \
-		src/ESMF_SWMF_Mod.f90; \
-	   perl -pi -e \
-	     's/(ESMF_(Grid|Cpl)CompCreate)\((\w+),/$$1\(parentvm=$$3,/' \
-		src/ESMF_SWMF_Driver.f90 src/ESMF_SWMF_GridComp.f90; \
-	fi)
 
-rundir: ${RUNDIR}/ESMF_SWMF.input ${RUNDIR}/ESMF_SWMF.exe
+EXE:
+	cd src; ${MAKE} EXE
 
-${RUNDIR}/ESMF_SWMF.input:
-	cp src/ESMF_SWMF.input ${RUNDIR}/
+RUNDIR = run
 
-${RUNDIR}/ESMF_SWMF.exe:
-	@(if perl -e 'exit(-l "${RUNDIR}/ESMF_SWMF.exe")' ; then \
-	   echo "Creating link to ${BINDIR}/ESMF_SWMF.exe"; \
-	   ln -s ${BINDIR}/ESMF_SWMF.exe ${RUNDIR}/ESMF_SWMF.exe; \
-	fi)
+${RUNDIR}:
+	mkdir -p ${RUNDIR}
+
+
+rundir: ${RUNDIR}
+	cp input/ESMF_SWMF.input ${RUNDIR}/
+	cp input/PARAM.in ${RUNDIR}/
+	cd ${RUNDIR}; ln -sf ${BINDIR}/ESMF_SWMF.exe .
+
+test: EXE rundir
+	cd ${RUNDIR}; rm -f *.ESMF_LogFile; ${MPIRUN} ESMF_SWMF.exe
+	cd ${RUNDIR}; perl -ne 'print if /error/i' PET*.ESMF_LogFile
 
 clean:
-	@(if([ "${ESMF_DIR}" != "" ]); then \
-		cd src; touch Makefile.DEPEND; make clean; \
-	fi)
+	@(if([ "${ESMF_DIR}" != "" ]); then cd src; make clean; fi)
 
 distclean:
-	@(if([ "${ESMF_DIR}" != "" ]); then \
-		cd src; touch Makefile.DEPEND; make distclean; \
-	fi)
-	@rm -f src/Makefile.DEPEND
+	@(if([ "${ESMF_DIR}" != "" ]); then cd src; make distclean; fi)
