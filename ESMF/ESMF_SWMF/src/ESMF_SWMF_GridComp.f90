@@ -58,41 +58,41 @@ contains
 
     ! Get the layout associated with this component
     call ESMF_GridCompGet(gComp, vm=parentvm, rc=rc)
-    if(rc /= ESMF_SUCCESS) return
+    if(rc /= ESMF_SUCCESS) call my_error('ESMF_GridCompGet')
 
     ! Get the number of processors
     call ESMF_VMGet(parentvm, petCount=nProc, localPET=iProc, rc=rc)
-    if(rc /= ESMF_SUCCESS) return
+    if(rc /= ESMF_SUCCESS) call	my_error('ESMF_VMGet')
 
     ! Create two grids
     SwmfGrid = ESMF_GridCreate1PeriDimUfrm(maxIndex=[nLon, nLat], &
          minCornerCoord=[LonMin, LatMin], maxCornerCoord=[LonMax, LatMax], &
          staggerLocList=[ESMF_STAGGERLOC_CENTER, ESMF_STAGGERLOC_CORNER], &
          name="SWMF grid", rc=rc)
-    if(rc /= ESMF_SUCCESS) return
+    if(rc /= ESMF_SUCCESS)call	my_error('ESMF_GridCreate1PeriDimUfrm Swmf')
 
     EsmfGrid = ESMF_GridCreate1PeriDimUfrm(maxIndex=[nLon, nLat], &
          minCornerCoord=[LonMin, LatMin], maxCornerCoord=[LonMax, LatMax], &
          staggerLocList=[ESMF_STAGGERLOC_CENTER, ESMF_STAGGERLOC_CORNER], &
          name="ESMF grid", rc=rc)
-    if(rc /= ESMF_SUCCESS) return
+    if(rc /= ESMF_SUCCESS)call my_error('ESMF_GridCreate1PeriDimUfrm Esmf')
 
     ! Create the SWMF Gridded component
+    write(*,*)'!!! iProcRootSwmf, iProcLastSwmf=',iProcRootSwmf, iProcLastSwmf
     SwmfComp = ESMF_GridCompCreate(name="SWMF Gridded Component", & 
-         petlist = (/ (i, i=iProcRootSwmf, iProcLastSwmf) /), &
-         rc=rc)
-    if(rc /= ESMF_SUCCESS) return
+         petlist = [ (i, i=iProcRootSwmf, iProcLastSwmf) ], rc=rc)
+    if(rc /= ESMF_SUCCESS)call my_error('ESMF_GridCompCreate Swmf')
 
     ! Create the ESMF Gridded component(s, there could be more than one here)
+    write(*,*)'!!! iProcRootEsmf, iProcLastEsmf=',iProcRootEsmf, iProcLastEsmf
     EsmfComp = ESMF_GridCompCreate(name="ESMF Gridded Component", &
-         petlist = (/ (i, i=iProcRootEsmf, iProcLastEsmf) /), &
-         rc=rc)
-    if(rc /= ESMF_SUCCESS) return
+         petlist = [ (i, i=iProcRootEsmf, iProcLastEsmf) ], rc=rc)
+    if(rc /= ESMF_SUCCESS)call my_error('ESMF_GridCompCreate Esmf')
 
     ! Create the Coupler component
-    !CouplerComp = ESMF_CplCompCreate(parentvm, &
-    !     name="ESMF-SWMF Coupler Component", rc=rc)
-    !if(rc /= ESMF_SUCCESS) return
+    CouplerComp = ESMF_CplCompCreate(name="ESMF-SWMF Coupler Component", &
+         petlist = [ (i, i=0, nProc-1) ], rc=rc)
+    if(rc /= ESMF_SUCCESS)call my_error('ESMF_GridCompCreate Coupler')
 
     call ESMF_LogWrite("Component Creates finished", ESMF_LOGMSG_INFO)
 
@@ -100,36 +100,36 @@ contains
     ! subroutines for Init, Run, and Finalize
     call ESMF_GridCompSetServices(SwmfComp, &
          userRoutine=SwmfSetServices, rc=rc)
-    if(rc /= ESMF_SUCCESS) return
+    if(rc /= ESMF_SUCCESS)call my_error('ESMF_GridCompSetServices Swmf')
     call ESMF_GridCompSetServices(EsmfComp, &
          userRoutine=EsmfSetServices, rc=rc)
-    if(rc /= ESMF_SUCCESS) return
+    if(rc /= ESMF_SUCCESS)call my_error('ESMF_GridCompSetServices Esmf')
     call ESMF_CplCompSetServices(CouplerComp, &
          userRoutine=CouplerSetServices, rc=rc)
-    if(rc /= ESMF_SUCCESS) return
+    if(rc /= ESMF_SUCCESS)call my_error('ESMF_GridCompSetServices Coupler')
 
     ! Create Import and Export State objects in order to pass data
     ! between the Coupler and the Gridded Components
-
-!!! This is now done differently???
-    ! SwmfImport = ESMF_StateCreate("SWMF Import", ESMF_STATE_IMPORT, rc=rc)
-    ! if(rc /= ESMF_SUCCESS) return
-    ! EsmfExport = ESMF_StateCreate("ESMF Export", ESMF_STATE_EXPORT, rc=rc)
-    ! if(rc /= ESMF_SUCCESS) return
+    SwmfImport = ESMF_StateCreate(name="SWMF Import", &
+         stateintent=ESMF_STATEINTENT_IMPORT, rc=rc)
+    if(rc /= ESMF_SUCCESS)call my_error('ESMF_StateCreate SwmfImport')
+    EsmfExport = ESMF_StateCreate(name="ESMF Export", &
+         stateintent=ESMF_STATEINTENT_EXPORT, rc=rc)
+    if(rc /= ESMF_SUCCESS)call my_error('ESMF_StateCreate EsmfExport')
 
     ! Each of the subcomponents initialize themselves.
     call ESMF_GridCompInitialize(EsmfComp, exportState = EsmfExport, &
          clock=parentclock, rc=rc)
-    if(rc /= ESMF_SUCCESS) RETURN
+    if(rc /= ESMF_SUCCESS)call my_error('ESMF_GridCompInitialize Esmf')
 
     call ESMF_GridCompInitialize(SwmfComp, importState = SwmfImport, &
          clock=parentclock, rc=rc)
-    if(rc /= ESMF_SUCCESS) RETURN
+    if(rc /= ESMF_SUCCESS)call my_error('ESMF_GridCompInitialize Swmf')
 
     call ESMF_CplCompInitialize(CouplerComp, &
          importstate = EsmfExport, exportstate = SwmfImport, &
          clock=parentclock, rc=rc)
-    if(rc /= ESMF_SUCCESS) RETURN
+    if(rc /= ESMF_SUCCESS)call my_error('ESMF_CplCompInitialize')
 
     rc = ESMF_SUCCESS
     call ESMF_LogWrite("ESMF-SWMF Grid Component Initialize finished", &
@@ -154,11 +154,11 @@ contains
 
     ! make our own local copy of the clock
     localclock = ESMF_ClockCreate(parentclock, rc=rc)
-    if(rc /= ESMF_SUCCESS) RETURN
+    if(rc /= ESMF_SUCCESS)call my_error('ESMF_ClockCreate')
 
     do
        if(ESMF_ClockIsStopTime(localclock, rc=rc)) EXIT
-       if(rc /= ESMF_SUCCESS) RETURN
+       if(rc /= ESMF_SUCCESS)call my_error('ESMF_ClockIsStopTime')
 
        ! Couple the subcomponents first so that SWMF has the input from ESMF
        !call ESMF_CplCompRun(CouplerComp, EsmfExport, SwmfImport, localclock, &
@@ -168,20 +168,20 @@ contains
        ! Run the subcomponents concurrently if possible
        call ESMF_GridCompRun(SwmfComp, importState=SwmfImport, &
             clock=localClock, syncflag=ESMF_SYNC_NONBLOCKING, rc=rc)
-       if(rc /= ESMF_SUCCESS) RETURN
+       if(rc /= ESMF_SUCCESS)call my_error('ESMF_GridCompRun Swmf')
 
        call ESMF_GridCompRun(EsmfComp, exportState=EsmfExport, &
             clock=localClock, syncflag=ESMF_SYNC_NONBLOCKING, rc=rc)
-       if(rc /= ESMF_SUCCESS) RETURN
+       if(rc /= ESMF_SUCCESS)call my_error('ESMF_GridCompRun Esmf')
 
        ! Advance the time
        call ESMF_ClockAdvance(localclock, rc=rc)
-       if(rc /= ESMF_SUCCESS) RETURN
+       if(rc /= ESMF_SUCCESS)call my_error('ESMF_ClockAdvance')
 
     end do
 
     call ESMF_ClockDestroy(localclock, rc=rc)
-    if(rc /= ESMF_SUCCESS) RETURN
+    if(rc /= ESMF_SUCCESS)call my_error('ESMF_ClockDestroy')
 
     rc = ESMF_SUCCESS
     call ESMF_LogWrite("ESMF-SWMF Run finished", ESMF_LOGMSG_INFO)
@@ -233,6 +233,14 @@ contains
 
   end subroutine my_final
   !============================================================================
+  subroutine my_error(String)
+    
+    character(len=*), intent(in) :: String
+
+    write(*,*)'ERROR in ESMF_SWMF_GridCompMod: ',String
+    
+    call ESMF_finalize
+
+  end subroutine my_error
+  !============================================================================
 end module ESMF_SWMF_GridCompMod
-
-

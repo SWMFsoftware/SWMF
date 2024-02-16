@@ -5,51 +5,54 @@ module ESMF_SWMF_Mod
   use ESMF
   implicit none
 
+  private
+  public:: read_esmf_swmf_input, add_mhd_fields
+  
   ! named integer indexes for integer time arrays
-  integer, parameter :: &
+  integer, public, parameter :: &
        Year_=1, Month_=2, Day_=3, Hour_=4, Minute_=5, Second_=6, MilliSec_=7
 
   ! number of MHD variables and their names
-  integer, parameter :: nVar = 8
-  character(len=3), dimension(nVar), parameter :: NameField_V = &
+  integer, public, parameter :: nVar = 8
+  character(len=3), public, parameter :: NameField_V(nVar) = &
        [ 'Rho', 'Ux ', 'Uy ', 'Uz ', 'Bx ', 'By ', 'Bz ', 'P  ' ]
 
   ! Time related variables
-  integer :: iStartTime_I(Year_:MilliSec_)  = & ! Start date-time
-       [2000, 3, 21, 10, 45, 0, 0]            !   with defaults
-  integer :: iFinishTime_I(Year_:MilliSec_) = & ! Finish date-time
-       [2000, 3, 21, 10, 45, 0, 0]            !   with defaults
-  real(ESMF_KIND_R8)      :: TimeSimulation = 0.0
-  integer :: iCoupleFreq = 1                    ! Coupling frequency in seconds
+  integer, public:: iStartTime_I(Year_:MilliSec_)  = & ! Start date-time
+       [2000, 3, 21, 10, 45, 0, 0]                     !   with defaults
+  integer, public:: iFinishTime_I(Year_:MilliSec_) = & ! Finish date-time
+       [2000, 3, 21, 10, 45, 0, 0]                     !   with defaults
+  real(ESMF_KIND_R8), public:: TimeSimulation = 0.0
+  integer, public :: iCoupleFreq = 1   ! Coupling frequency in seconds
 
   ! Variables related to the layout information
   ! SWMF runs on processor ranks iProcRootSwmf to iProcLastSwmf,
   ! ESMF runs on processor ranks iProcRootEsmf to iProcLastEsmf
-  integer :: iProcRootSwmf, iProcLastSwmf, nProcSwmf
-  integer :: iProcRootEsmf, iProcLastEsmf
+  integer, public :: iProcRootSwmf, iProcLastSwmf, nProcSwmf
+  integer, public :: iProcRootEsmf, iProcLastEsmf
 
   ! SWMF component to couple with
-  character(len=2) :: NameSwmfComp = 'GM'
+  character(len=2), public :: NameSwmfComp = 'GM'
 
   ! The ESMF communicates with iProcCoupleSwmf within the SWMF layout
   ! This variable is determined from NameSwmfComp and the PARAM.in file.
-  integer :: iProcCoupleSwmf=0
+  integer, public:: iProcCoupleSwmf=0
 
   ! When SWMF and ESMF are coupled, the one can block the whole SWMF
   ! or only the component the ESMF is communicating with. The latter
   ! is more efficient but it can result in a dead-lock if the ESMF and
   ! SWMF overlap.
-  logical :: DoBlockAllSwmf=.false.
+  logical, public:: DoBlockAllSwmf=.false.
 
   ! Variables related to the grid used between the ESMF and SWMF components.
   ! This is a 2D spherical grid representing the height integrated ionosphere.
   ! In RIM it is in SM coordinates:
   ! +Z points to north magnetic dipole and the Sun is in the +X-Z halfplane.
-  integer            :: nLon=360, nLat=180             ! Default grid size
-  real(ESMF_KIND_R8) :: LonMin = 0.0                   ! Minimum longitude
-  real(ESMF_KIND_R8) :: LonMax = 360.0                 ! Maximum longitude
-  real(ESMF_KIND_R8) :: LatMin=-128.0                  ! Minimum latitude
-  real(ESMF_KIND_R8) :: LatMax=+128.0                  ! Maximum latitude
+  integer, public:: nLon=360, nLat=180           ! Default grid size
+  real(ESMF_KIND_R8), public:: LonMin = 0.0      ! Minimum longitude
+  real(ESMF_KIND_R8), public:: LonMax = 360.0    ! Maximum longitude
+  real(ESMF_KIND_R8), public:: LatMin = -90.0    ! Minimum latitude
+  real(ESMF_KIND_R8), public:: LatMax = +90.0    ! Maximum latitude
 
 contains
   !============================================================================
@@ -92,7 +95,7 @@ contains
     call ESMF_ConfigLoadFile(Config, NameParamFile, rc=rc)
     if(rc /= ESMF_SUCCESS) then
        if(iProc == 0)write(*,*) 'ESMF_SWMF ERROR: ',&
-            'ESMF_ConfigLoadFile FAILED for file '//NameParamFile
+            'ESMF_ConfigLoadFile FAILED for file '//trim(NameParamFile)
        RETURN
     endif
 
@@ -447,10 +450,10 @@ contains
 
     ! Get default layout for the VM of GridComp
     call ESMF_GridCompGet(GridComp, vm=vm, grid=Grid, name=Name, rc=rc)
-    if(rc /= ESMF_SUCCESS) RETURN
+    if(rc /= ESMF_SUCCESS) call my_error('ESMF_GridCompGet failed')
 
     Layout = ESMF_DELayoutCreate(vm, rc=rc)
-    if(rc /= ESMF_SUCCESS) RETURN
+    if(rc /= ESMF_SUCCESS) call my_error('ESMF_DELayoutCreate failed')
 
     ! call ESMF_DELayoutPrint(Layout, rc=rc)
     ! if(rc /= ESMF_SUCCESS) return
@@ -483,18 +486,19 @@ contains
     !if(rc /= ESMF_SUCCESS) RETURN
 
     call ESMF_GridCompSet(GridComp, grid=Grid, rc=rc)
-    if(rc /= ESMF_SUCCESS) RETURN
+    if(rc /= ESMF_SUCCESS) call my_error('ESMF_GridCompSet failed')
 
     ! Add MHD fields using the grid layout from DELayout
     call ESMF_ArraySpecSet(ArraySpec, rank=2, &
          typekind=ESMF_TYPEKIND_R8, rc=rc)
-    if(rc /= ESMF_SUCCESS) RETURN
+    if(rc /= ESMF_SUCCESS) call my_error('ESMF_ArraySpecSet failed')
 
     do iVar=1, nVar
        MhdField = ESMF_FieldCreate(Grid, ArraySpec, &
             staggerloc=ESMF_STAGGERLOC_CENTER, &
             name=NameField_V(iVar), rc=rc)
-       if(rc /= ESMF_SUCCESS) RETURN
+       if(rc /= ESMF_SUCCESS) call my_error('ESMF_FieldCreate failed for ' &
+            //trim(NameField_V(iVar)))
 
        ! call ESMF_FieldGetDataPointer(MhdField, MyData)
        if(rc /= ESMF_SUCCESS) RETURN
@@ -513,5 +517,16 @@ contains
 
   end subroutine add_mhd_fields
   !============================================================================
+  subroutine my_error(String)
+
+    character(len=*), intent(in) :: String
+
+    write(*,*)'ERROR in ESMF_SWMF_Mod:', String
+    call ESMF_Finalize
+    stop
+
+  end subroutine my_error
+  !============================================================================
+
 end module ESMF_SWMF_Mod
 !==============================================================================

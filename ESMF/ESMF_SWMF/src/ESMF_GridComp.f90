@@ -6,7 +6,7 @@ module EsmfGridCompMod
   implicit none
   private
 
-  public SetServices
+  public:: SetServices
 
 contains
   !============================================================================
@@ -35,6 +35,7 @@ contains
     integer,             intent(out)  :: rc
 
     ! Access to the MHD data
+    type(ESMF_Field):: Field
     real(ESMF_KIND_R8), pointer :: Ptr(:,:)
     integer                     :: iVar, i, j
     ! Units
@@ -50,10 +51,13 @@ contains
     ! Initialize the MHD data
     do iVar = 1, nVar
        ! Get pointers to the MHD variables in the export state
-!!! How to do this???
-       ! nullify(Ptr)
-       ! call ESMF_StateGetDataPointer(ExportState, NameField_V(iVar), Ptr, &
-       !     rc=rc)
+       nullify(Ptr)
+       call ESMF_StateGet(ExportState, itemName=NameField_V(iVar), &
+            field=Field, rc=rc)
+       if(rc /= ESMF_SUCCESS) call my_error("ESMF_StateGet failed")
+       call ESMF_FieldGet(Field, farrayPtr=Ptr, rc=rc) 
+       if(rc /= ESMF_SUCCESS) call my_error("ESMF_FieldGet failed")
+
        if(rc /= ESMF_SUCCESS) RETURN
        select case(NameField_V(iVar))
        case('Rho')
@@ -98,6 +102,8 @@ contains
     type(ESMF_Clock)   :: externalclock
     integer, intent(out):: rc
 
+    type(ESMF_Field):: Field
+    
     ! Access to the MHD data
     real(ESMF_KIND_R8), pointer :: Ptr(:,:)
     !--------------------------------------------------------------------------
@@ -106,9 +112,10 @@ contains
 
     ! Get pointers to the MHD variables in the export state
     nullify(Ptr)
-!!! How to do this ???
-    ! call ESMF_StateGetDataPointer(ExportState, 'Bz', Ptr, rc=rc)
-    ! if(rc /= ESMF_SUCCESS) call my_error('ESMF_StateGetDataPointer failed')
+    call ESMF_StateGet(ExportState, itemName='Bz', field=Field, rc=rc)
+    if(rc /= ESMF_SUCCESS) call my_error("ESMF_StateGet failed")
+    call ESMF_FieldGet(Field, farrayPtr=Ptr, rc=rc) 
+    if(rc /= ESMF_SUCCESS) call my_error("ESMF_FieldGet failed")
 
     ! Update MHD state by changing Bz
     write(*,*)'ESMFGridComp:run old Bz=',Ptr(1,1)
@@ -135,12 +142,9 @@ contains
   !============================================================================
   subroutine my_error(String)
 
-    ! Since the error flag is not returned from my_run due to the 
-    ! non-blocking flag, we have to do something drastic here
-
     character(len=*), intent(in) :: String
 
-    write(*,*)'ERROR in EsmfGridCompMod:run: ',String
+    write(*,*)'ERROR in EsmfGridCompMod: ',String
     
     call ESMF_finalize
 
