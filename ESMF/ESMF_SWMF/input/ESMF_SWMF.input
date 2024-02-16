@@ -21,14 +21,14 @@ Block all SWMF [y/n]: y
 Coupling Frequency: 2
 
 #
-# Coupling grid size and range (in units of planet radii)
+# Coupling grid size and range (in degrees)
 #
-iMax:  9
-jMax:  9
-yMin: -128.0
-yMax: +128.0
-zMin: -128.0
-zMax: +128.0
+nLon:  360
+nLat:  180
+LonMin:  0.0
+LonMax: +360.0
+LatMin: -90.0
+LatMax: +90.0
 #
 # Start and End of the simulation
 #

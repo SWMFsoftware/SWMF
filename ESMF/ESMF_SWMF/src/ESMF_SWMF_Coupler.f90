@@ -15,14 +15,14 @@ module EsmfSwmfCouplerMod
 contains
   !============================================================================
   subroutine SetServices(ccomp, rc)
-    type(ESMF_GridComp) :: ccomp
-    integer :: rc
+    type(ESMF_CplComp) :: ccomp
+    integer, intent(out):: rc
 
-    call ESMF_GridCompSetEntryPoint(ccomp, ESMF_METHOD_INITIALIZE, &
+    call ESMF_CplCompSetEntryPoint(ccomp, ESMF_METHOD_INITIALIZE, &
          userRoutine=my_init, rc=rc)
-    call ESMF_GridCompSetEntryPoint(ccomp, ESMF_METHOD_RUN, &
+    call ESMF_CplCompSetEntryPoint(ccomp, ESMF_METHOD_RUN, &
          userRoutine=my_run, rc=rc)
-    call ESMF_GridCompSetEntryPoint(ccomp, ESMF_METHOD_FINALIZE, &
+    call ESMF_CplCompSetEntryPoint(ccomp, ESMF_METHOD_FINALIZE, &
          userRoutine=my_final, rc=rc)
 
   end subroutine SetServices
@@ -31,11 +31,10 @@ contains
 
     use ESMF_SWMF_Mod, ONLY: NameField_V
 
-    type(ESMF_GridComp) :: cComp
-    type(ESMF_State)    :: ImportState
-    type(ESMF_State)    :: ExportState
-    type(ESMF_Clock)    :: Clock
-    integer, intent(out)              :: rc
+    type(ESMF_CplComp):: cComp
+    type(ESMF_State):: ImportState, ExportState
+    type(ESMF_Clock):: Clock
+    integer, intent(out):: rc
 
     type(ESMF_Field):: Field1, FIeld2
 
@@ -45,7 +44,7 @@ contains
     rc = ESMF_FAILURE
 
     ! Get VM from coupler component to use in computing the redist
-    call ESMF_GridCompGet(cComp, vm=vm, rc=rc)
+    call ESMF_CplCompGet(cComp, vm=vm, rc=rc)
     if (rc /= ESMF_SUCCESS) RETURN
 
     ! Since the states were created on non-overlapping PE-s, need to reconcile
@@ -74,7 +73,7 @@ contains
 
     use ESMF_SWMF_Mod, only: nVar, NameField_V
 
-    type(ESMF_GridComp):: cComp
+    type(ESMF_CplComp):: cComp
     type(ESMF_State):: ImportState, ExportState
     type(ESMF_Clock):: Clock
     integer, intent(out):: rc
@@ -108,7 +107,7 @@ contains
   !============================================================================
   subroutine my_final(cComp, ImportState, ExportState, Clock, rc)
 
-    type(ESMF_GridComp):: cComp
+    type(ESMF_CplComp):: cComp
     type(ESMF_State):: ImportState, ExportState
     type(ESMF_Clock):: Clock
     integer, intent(out):: rc

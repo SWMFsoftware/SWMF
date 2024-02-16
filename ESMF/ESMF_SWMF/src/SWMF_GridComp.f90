@@ -17,10 +17,10 @@ module SwmfGridCompMod
   public:: SetServices
 
 contains
-
+  !============================================================================
   subroutine SetServices(gcomp, rc)
     type(ESMF_GridComp) :: gcomp
-    integer :: rc
+    integer, intent(out):: rc
 
     call ESMF_GridCompSetEntryPoint(gcomp, ESMF_METHOD_INITIALIZE, &
          userRoutine=my_init, rc=rc)
@@ -110,7 +110,7 @@ contains
   subroutine my_run(gComp, importState, exportState, clock, rc)
 
     use ESMF_SWMF_Mod, ONLY: NameSwmfComp, DoBlockAllSwmf, iProcCoupleSwmf, &
-         NameField_V, nVar, iMax, jMax, yMin, yMax, zMin, zMax
+         NameField_V, nVar, nLon, nLat, LonMin, LonMax, LatMin, LatMax
 
     type(ESMF_GridComp):: gComp
     type(ESMF_State):: ImportState
@@ -146,7 +146,7 @@ contains
     if(rc /= ESMF_SUCCESS) call my_error('ESMF_VMGet failed')
 
     ! Obtain pointer to the MHD data obtained from the ESMF component
-    allocate(Mhd_VII(nVar, iMax, jMax), stat=rc)
+    allocate(Mhd_VII(nVar,nLon,nLat), stat=rc)
     if(rc /= 0) call my_error('allocate(Mhd_VII) failed')
 
     if(iProc == iProcCoupleSwmf)then
@@ -166,7 +166,7 @@ contains
     ! Send MHD data to the GM processors in the SWMF
     !write(*,*)'!!! SWMF_GridComp SWMF_couple Mhd=',Mhd_VII(:,1,1)
     call SWMF_couple('ESMF_IH', NameSwmfComp, 'GSM', &
-         nVar, iMax, jMax, yMin, yMax, zMin, zMax, Mhd_VII, rc)
+         nVar, nLon, nLat, LonMin, LonMax, LatMin, LatMax, Mhd_VII, rc)
     if(rc /= 0)call my_error('SWMF_couple failed')
 
     deallocate(Mhd_VII)
