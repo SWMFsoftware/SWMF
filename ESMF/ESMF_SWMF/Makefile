@@ -1,6 +1,14 @@
 include ../../Makefile.def
 
+# Nothing should be done parallel in this Makefile
+.NOTPARALLEL:
+
 install:
+
+ESMF_SWMF:
+	cd ${DIR}; ${MAKE} test_swpc_compile
+	cd ${DIR}; ${MAKE} LIB
+	cd src; ${MAKE} EXE
 
 EXE:
 	cd src; ${MAKE} EXE
@@ -16,13 +24,7 @@ rundir: ${RUNDIR}
 	cp input/PARAM.in ${RUNDIR}/
 	cd ${RUNDIR}; ln -sf ${BINDIR}/ESMF_SWMF.exe .
 
-SWMFLIB = ${LIBDIR}/libSWMF.a
-
-${SWMFLIB}:
-	cd ${DIR}; ${MAKE} test_swpc_compile
-	cd ${DIR}; ${MAKE} LIB
-
-test: ${SWMFLIB} EXE rundir
+test: ESMF_SWMF rundir
 	cd ${RUNDIR}; rm -f *.ESMF_LogFile; ${MPIRUN} ESMF_SWMF.exe
 	cd ${RUNDIR}; perl -ne 'print if /error/i' PET*.ESMF_LogFile
 

@@ -133,8 +133,9 @@ contains
     real(ESMF_KIND_R8) :: tSimSwmf        ! SWMF Simulation time
 
     ! Misc variables
-    type(ESMF_VM)      :: vm
-    integer            :: iProc
+    type(ESMF_Field):: Field
+    type(ESMF_VM):: vm
+    integer:: iProc
     !--------------------------------------------------------------------------
     call ESMF_LogWrite("SWMF_GridComp:run routine called", ESMF_LOGMSG_INFO)
     rc = ESMF_FAILURE
@@ -153,11 +154,13 @@ contains
        ! Copy fields into an array
        do iVar = 1, nVar
           nullify(Ptr)
-!!! How to read the state???
-          !call ESMF_StateGetDataPointer(ImportState, NameField_V(iVar), Ptr, &
-          !     rc=rc)
-          !if(rc/=ESMF_SUCCESS) call my_error('ESMF_StateGetDataPointer failed')
-          !Mhd_VII(iVar,:,:) = Ptr
+          call ESMF_StateGet(ImportState, itemName=NameField_V(iVar), &
+               field=Field, rc=rc)
+          if(rc /= ESMF_SUCCESS) call my_error("ESMF_StateGet failed")
+          call ESMF_FieldGet(Field, farrayPtr=Ptr, rc=rc) 
+          if(rc /= ESMF_SUCCESS) call my_error("ESMF_FieldGet failed")
+
+          Mhd_VII(iVar,:,:) = Ptr
        end do
        !write(*,*)'SWMF_GridComp shape of Ptr=',shape(Ptr)
        !write(*,*)'SWMF_GridComp value of Mhd=',Mhd_VII(:,1,1)

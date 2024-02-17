@@ -12,7 +12,7 @@ program ESMF_SWMF_Driver
   use ESMF
   
   ! Top ESMF-SWMF Gridded Component registration routines
-  use ESMF_SWMF_GridCompMod, only : ESMF_SWMF_SetServices
+  use ESMF_SWMF_GridCompMod, ONLY: ESMF_SWMF_SetServices
 
   ! Various variables
   use ESMF_SWMF_Mod
@@ -79,7 +79,8 @@ program ESMF_SWMF_Driver
   call ESMF_LogWrite("Component Create finished", ESMF_LOGMSG_INFO)
 
   ! Register section
-  call ESMF_GridCompSetServices(EsmfSwmfComp, userRoutine=ESMF_SWMF_SetServices, rc=rc)
+  call ESMF_GridCompSetServices(EsmfSwmfComp, &
+       userRoutine=ESMF_SWMF_SetServices, rc=rc)
 
   if (ESMF_LogFoundError(rcToCheck=rc, msg='Registration failed', &
        line=__LINE__, file=__FILE__)) &
@@ -128,7 +129,7 @@ program ESMF_SWMF_Driver
   end if
 
   Clock = ESMF_ClockCreate(TimeStep, StartTime, stopTime=StopTime, &
-       name="pplication Clock", rc=rc)
+       name="application Clock", rc=rc)
 
   if(rc /= ESMF_SUCCESS)then
      if(iProc == 0)write(*,*) 'ESMF_SWMF ERROR: ',&
@@ -159,6 +160,7 @@ program ESMF_SWMF_Driver
   end if
 
   !  Init, Run, and Finalize section
+  write(*,*)'!!! ESMF_GridCompInitialize(EsmfSwmfComp)'
   call ESMF_GridCompInitialize(EsmfSwmfComp, clock=Clock, rc=rc)
   if (rc /= ESMF_SUCCESS) call my_error('EsmfSwmfComp:init failed')
 
