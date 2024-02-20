@@ -180,17 +180,20 @@ contains
 
     call ESMF_LogWrite("SWMF_run routine called!", ESMF_LOGMSG_INFO)
     write(*,*)'SWMF_run starts  with tCouple =',tCouple
-    if(.not.DoBlockAllSwmf)then
+    !if(.not.DoBlockAllSwmf)then
        !call SWMF_run('**', tCouple, tSimSwmf, DoStop, rc)
     !else
-       call SWMF_run(NameSwmfComp, tCouple, tSimSwmf, DoStop, rc)
-    end if
+       !call SWMF_run(NameSwmfComp, tCouple, tSimSwmf, DoStop, rc)
+    !end if
+    rc = 0
     write(*,*)'SWMF_run returns with tSimSwmf=',tSimSwmf
     call ESMF_LogWrite("SWMF_run routine returned!", ESMF_LOGMSG_INFO)
     if(rc /= 0)call my_error('SWMF_run failed')
 
-    rc = ESMF_SUCCESS
     call ESMF_LogWrite("SWMF_GridComp:run routine returned", ESMF_LOGMSG_INFO)
+
+    write(*,*)'!!! setting rc=ESMF_SUCCESS in SWMF_GridComp:my_run'
+    rc = ESMF_SUCCESS
 
   end subroutine my_run
   !============================================================================
@@ -206,7 +209,7 @@ contains
     integer          :: iProc
     !--------------------------------------------------------------------------
     call ESMF_LogWrite("SWMF_finalize routine called", ESMF_LOGMSG_INFO)
-    if(.not.DoBlockAllSwmf) call SWMF_finalize(rc)
+    !if(.not.DoBlockAllSwmf) call SWMF_finalize(rc)
     call ESMF_LogWrite("SWMF_finalize routine returned", ESMF_LOGMSG_INFO)
     if(rc /= 0)then
        call ESMF_LogWrite("SWMF_finalize FAILED", ESMF_LOGMSG_ERROR)
