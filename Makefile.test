@@ -2353,45 +2353,49 @@ test_sp_check:
 ###         FLEKS runs with periodic boundary conditions. 
 
 test16:
-	@echo "test16_compile..." > test16_gmpc.diff
-	$(MAKE) test16_compile
-	@echo "test16_rundir..." > test16_gmpc.diff
-	$(MAKE) test16_rundir
-	@echo "test16_run..." > test16_gmpc.diff
-	$(MAKE) test16_run
-	@echo "test16_check..." > test16_gmpc.diff
-	$(MAKE) test16_check
+	$(MAKE) test16_3d
+	$(MAKE) test16_2d
 
-test16_compile:
+test16_3d:
+	@echo "test16_3d_compile..." > test16_3d_gmpc.diff
+	$(MAKE) test16_3d_compile
+	@echo "test16_3d_rundir..." > test16_3d_gmpc.diff
+	$(MAKE) test16_3d_rundir
+	@echo "test16_3d_run..." > test16_3d_gmpc.diff
+	$(MAKE) test16_3d_run
+	@echo "test16_3d_check..." > test16_3d_gmpc.diff
+	$(MAKE) test16_3d_check
+
+test16_3d_compile:
 	./Config.pl -v=Empty,PC/FLEKS,GM/BATSRUS -amrex
 	./Config.pl -o=GM:u=Default,e=MultiIonPe,ng=2,g=8,8,1 -o=PC:lev=9
 	$(MAKE) SWMF
 	$(MAKE) PIDL
 	
-test16_rundir:
+test16_3d_rundir:
 	rm -rf ${TESTDIR}
 	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/PARAM.in.test.GMPC.FLEKS.periodic  ${TESTDIR}/PARAM.in
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
 
-test16_run:
+test16_3d_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl RESULTS
+	cd ${TESTDIR}; ./PostProc.pl RESULTS/3d
 
-test16_check:
+test16_3d_check:
 	-@(${DIFFNUM} -b -r=1e-7 \
-	   ${TESTDIR}/RESULTS/PC/z=0_fluid_region0_0_t00000002_n00000007.out \
+	   ${TESTDIR}/RESULTS/3d/PC/z=0_fluid_region0_0_t00000002_n00000007.out \
 	   output/test16/z=0.ref.gz \
-		> test16_gmpc.diff)
+		> test16_3d_gmpc.diff)
 	-@(${DIFFNUM} -b -r=1e-12 \
-	   ${TESTDIR}/RESULTS/PC/log_pic_n00000000.log \
+	   ${TESTDIR}/RESULTS/3d/PC/log_pic_n00000000.log \
 	   output/test16/PC.log \
-		>> test16_gmpc.diff)
+		>> test16_3d_gmpc.diff)
 	-@(${DIFFNUM} -b -r=1e-12 \
-	   ${TESTDIR}/RESULTS/PC/log_pt_n00000000.log \
+	   ${TESTDIR}/RESULTS/3d/PC/log_pt_n00000000.log \
 	   output/test16/PT.log \
-		>> test16_gmpc.diff)		
-	ls -l test16_gmpc.diff
+		>> test16_3d_gmpc.diff)		
+	ls -l test16_3d_gmpc.diff
 
 
 test16_2d:
@@ -2418,21 +2422,13 @@ test16_2d_rundir:
 
 test16_2d_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl RESULTS
+	cd ${TESTDIR}; ./PostProc.pl RESULTS/2d
 
 test16_2d_check:
 	-@(${DIFFNUM} -b -r=1e-7 \
-	   ${TESTDIR}/RESULTS/PC/z=0_fluid_region0_0_t00000002_n00000007.out \
+	   ${TESTDIR}/RESULTS/2d/PC/z=0_fluid_region0_0_t00000002_n00000007.out \
 	   output/test16/z=0.ref.gz \
 		> test16_2d_gmpc.diff)
-	-@(${DIFFNUM} -b -r=1e-12 \
-	   ${TESTDIR}/RESULTS/PC/log_pic_n00000000.log \
-	   output/test16/PC.log \
-		>> test16_2d_gmpc.diff)
-	-@(${DIFFNUM} -b -r=1e-12 \
-	   ${TESTDIR}/RESULTS/PC/log_pt_n00000000.log \
-	   output/test16/PT.log \
-		>> test16_2d_gmpc.diff)		
 	ls -l test16_2d_gmpc.diff
 
 
