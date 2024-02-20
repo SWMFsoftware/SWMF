@@ -1,6 +1,222 @@
 Name Root Last Stride nThread
 #COMPONENTMAP		For production run
-GM  0 10 1		CompMap 0:nProc-3 multithreaded
-IE  1 2  1  		CompMap last 2 PE-s
-IM  0 0  1		CompMap nProc-2 PE
+GM  0 -3 -1  -1		CompMap 0:nProc-3 multithreaded
+IE -2 -1  1  		CompMap last 2 PE-s
+IM -2 -2  1		CompMap nProc-2 PE
+RB -1 -1  1		CompMap nProc-1 PE
+
+COMPONENTMAP		For nightly test
+GM  0 -1 -1 -1		CompMap 0:nProc-1 multithreaded
+IE -2 -1  1  		CompMap last 2 PE-s
+IM -2 -2  1		CompMap nProc-2 PE
+RB -1 -1  1		CompMap nProc-1 PE
+
+#DESCRIPTION
+Param/SWPC/PARAM.in_SWPC_v2_init: Example file to start a run for the SWPC Version 2 code selection		StringDescription
+
+#STARTTIME
+2014			iYear
+04			iMonth
+10			iDay
+00			iHour
+00			iMinute
+00			iSecond
+0.0			FracSecond
+
+#COMPONENT
+IM			NameComp
+F			UseComp
+
+#COMPONENT
+RB			NameComp
+F			UseComp
+
+#COUPLE2
+GM			NameComp1
+IE			NameComp2
+-1			DnCouple
+5.0			DtCouple
+
+#CHECKTIMESTEP
+T			DoCheckTimeStep (rest is read if true)
+100			DnCheckTimeStep (2 or more)
+1e-6			TimeStepMin [s] (negative value means SessionTime/1e7)
+
+#BEGIN_COMP GM ---------------------------------------------------------------
+
+#GRIDBLOCKALL
+5000			MaxBlock
+
+#GRID
+1			nRootBlock1
+1			nRootBlock2
+1			nRootBlock3
+-224.			xMin
+ 32.			xMax
+-128.			yMin
+ 128.			yMax
+-128.			zMin
+ 128.			zMax
+
+! Maximum resolution initially
+#GRIDRESOLUTION
+2.0			Resolution
+initial			StringShape
+
+! Minimum resolution in the computational domain
+#GRIDRESOLUTION
+8.0			Resolution
+all			StringShape
+
+#GRIDRESOLUTION
+1.0			Resolution
+box			StringShape
+-100.0			xMinBox
+ -16.0			yMinBox
+ -16.0			zMinBox
+  22.0			xMaxBox
+  16.0			yMaxBox
+  16.0			zMaxBox
+
+! Better res at geosync and near tail.
+#GRIDRESOLUTION
+1/4			Resolution
+box			StringShape
+-20.0			xMinBox
+-8.0			yMinBox
+-8.0			zMinBox
+ 8.0			xMaxBox
+ 8.0			yMaxBox
+ 8.0			zMaxBox
+
+! Close tail and bow shock resolution
+#GRIDRESOLUTION
+1/2			Resolution
+box			StringShape
+-32.0			xMinBox
+-22.0			yMinBox
+-10.0			zMinBox
+ 20.0			xMaxBox
+ 22.0			yMaxBox
+ 10.0			zMaxBox
+
+
+#GRIDRESOLUTION
+1/8			Resolution
+shell0			StringShape
+2.5			RadiusInner
+3.5			Radius
+
+#BODY
+T			UseBody
+2.5			rBody     (in planet radius)
+3.0			rCurrents (in planet radius)
+28.0			BodyNDim  (/cc)
+25000.0			BodyTDim  (K)
+
+#OUTERBOUNDARY
+outflow			TypeBc1
+vary			TypeBc2
+float			TypeBc3
+float			TypeBc4
+float			TypeBc5
+float			TypeBc6
+
+#INNERBOUNDARY
+ionosphere		TypeBcBody
+
+! Set the inner boundary density as Rho0Cpcp + RhoPerCpcp*CPCP[keV]
+#CPCPBOUNDARY
+T			UseCpcpBc  (rest is read if true)
+28.0			Rho0Cpcp   [amu/cc]
+0.1			RhoPerCpcp [amu/cc / keV]
+
+#SOLARWIND
+5.0			SwNDim  [n/cc]
+100000.0		SwTDim  [K]
+-400.0			SwUxDim [km/s]
+0.0			SwUyDim [km/s]
+0.0			SwUzDim [km/s]
+0.0			SwBxDim [nT]
+0.0			SwByDim [nT]
+-5.0			SwBzDim [nT]
+
+#SCHEME
+1			nOrder
+Sokolov			TypeFlux
+
+
+#CONSERVATIVECRITERIA
+1			nConservCrit
+parabola		TypeConservCrit
+ 5.0			xParabolaConserv
+15.0			yParabolaConserv
+
+#SAVELOGNAME
+F			UseLogNameStep
+T			UseLogNameDateTime
+
+#SAVEPLOTNAME
+F			UsePlotNameStep
+F			UsePlotNameTime
+T			UsePlotNameDateTime
+
+#PLOTFILENAME
+date			NameMaxTimeUnit
+
+#SAVELOGFILE
+T			DoSaveLogfile
+VAR step date		StringLog
+-1			DnSaveLogfile
+5.0			DtSaveLogfile
+dt rho mx my mz p bx by bz pmin pmax dst_sm dstflx		NameLogVars
+3.0			StringLogRadii
+
+#SAVEPLOT
+2			nPlotFile
+y=0 MHD idl		StringPlot
+2500			DnSavePlot
+-1.			DtSavePlot
+-1.			DxSavePlot
+z=0 MHD idl		StringPlot
+2500			DnSavePlot
+-1.			DtSavePlot
+-1.			DxSavePlot
+
+#DOAMR
+T			DoAmr
+100			DnAmr
+-1.0			DtAmr
+T			IsStrictAmr
+
+#GEOMAGINDICES
+180			nSizeKpWindow [min]
+1 min			DtOutput      [sec]
+
+#END_COMP GM -----------------------------------------------------------------
+
+#BEGIN_COMP IE ---------------------------------------------------------------
+
+#IONOSPHERE
+5			iConductanceModel
+F			UseFullCurrent
+F			UseFakeRegion2
+100.0			F107Flux
+1.0			StarLightPedConductance
+0.25			PolarCapPedConductance
+
+#BOUNDARY
+10.0			LatBoundary
+
+#SAVEPLOT
+1			nPlotFile
+min idl			StringPlot
+100			DnSavePlot
+-1.0			DtSavePlot
+
+#END_COMP IE -----------------------------------------------------------------
+
+#STOP
+-1			MaxIter
+10.0			TimeMax
 
