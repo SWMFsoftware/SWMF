@@ -53,7 +53,7 @@ contains
 
     integer :: i, iProc, nProc
     !--------------------------------------------------------------------------
-    call ESMF_LogWrite("ESMF_SWMF Initialize routine called", ESMF_LOGMSG_INFO)
+    call ESMF_LogWrite("ESMF_SWMF_GridComp init called", ESMF_LOGMSG_INFO)
     rc = ESMF_FAILURE
 
     ! Get the layout associated with this component
@@ -117,22 +117,25 @@ contains
          stateintent=ESMF_STATEINTENT_EXPORT, rc=rc)
     if(rc /= ESMF_SUCCESS)call my_error('ESMF_StateCreate EsmfExport')
 
+    write(*,*)'!!! call ESMF_GridCompInitialize(EsmfComp...)'
     ! Each of the subcomponents initialize themselves.
     call ESMF_GridCompInitialize(EsmfComp, exportState = EsmfExport, &
          clock=parentclock, rc=rc)
     if(rc /= ESMF_SUCCESS)call my_error('ESMF_GridCompInitialize Esmf')
 
+    write(*,*)'!!! call ESMF_GridCompInitialize(SwmfComp...)'
     call ESMF_GridCompInitialize(SwmfComp, importState = SwmfImport, &
          clock=parentclock, rc=rc)
     if(rc /= ESMF_SUCCESS)call my_error('ESMF_GridCompInitialize Swmf')
 
+    write(*,*)'!!! call ESMF_GridCompInitialize(CouplerComp...)'
     call ESMF_CplCompInitialize(CouplerComp, &
          importstate = EsmfExport, exportstate = SwmfImport, &
          clock=parentclock, rc=rc)
     if(rc /= ESMF_SUCCESS)call my_error('ESMF_CplCompInitialize')
 
     rc = ESMF_SUCCESS
-    call ESMF_LogWrite("ESMF-SWMF Grid Component Initialize finished", &
+    call ESMF_LogWrite("ESMF-SWMF GridComp init finished", &
          ESMF_LOGMSG_INFO)
 
   end subroutine my_init

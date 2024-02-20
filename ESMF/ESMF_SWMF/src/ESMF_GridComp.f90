@@ -26,7 +26,7 @@ contains
   !============================================================================
   subroutine my_init(gComp, importState, exportState, externalClock, rc)
 
-    use ESMF_SWMF_Mod, ONLY: add_mhd_fields, nVar, NameField_V, nLon, nLat
+    use ESMF_SWMF_Mod, ONLY: add_fields, nVar, NameField_V, nLon, nLat
 
     type(ESMF_GridComp):: gComp
     type(ESMF_State)   :: importState
@@ -45,12 +45,12 @@ contains
     rc = ESMF_FAILURE
 
     ! Add MHD fields to the export state
-    call add_mhd_fields(gComp, ExportState, 7.77, rc=rc)
-    if(rc /= ESMF_SUCCESS) call my_error("add_mhd_fields failed")
+    call add_fields(gComp, ExportState, rc=rc)
+    if(rc /= ESMF_SUCCESS) call my_error("add_fields failed")
 
-    ! Initialize the MHD data
+    ! Initialize the data
     do iVar = 1, nVar
-       ! Get pointers to the MHD variables in the export state
+       ! Get pointers to the variables in the export state
        nullify(Ptr)
        call ESMF_StateGet(ExportState, itemName=NameField_V(iVar), &
             field=Field, rc=rc)

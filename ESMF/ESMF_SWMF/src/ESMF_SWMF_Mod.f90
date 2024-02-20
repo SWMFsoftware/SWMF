@@ -6,7 +6,7 @@ module ESMF_SWMF_Mod
   implicit none
 
   private
-  public:: read_esmf_swmf_input, add_mhd_fields
+  public:: read_esmf_swmf_input, add_fields
   
   ! named integer indexes for integer time arrays
   integer, public, parameter :: &
@@ -243,6 +243,9 @@ contains
        iProcLastEsmf = nProc-1
     end if
 
+    write(*,*)'iProcRootEsmf, iProcLastEsmf=', iProcRootEsmf, iProcLastEsmf
+    write(*,*)'iProcRootSwmf, iProcLastSwmf=', iProcRootSwmf, iProcLastSwmf
+    
     call ESMF_ConfigGetAttribute(Config, StringTmp, &
          label='Block all SWMF [y/n]:', rc=rc)
     if(rc == ESMF_SUCCESS) then
@@ -419,103 +422,44 @@ contains
 
   end subroutine read_swmf_layout
   !============================================================================
-  subroutine add_mhd_fields(GridComp, State, InitialValue, rc)
+  subroutine add_fields(GridComp, State, rc)
 
     type(ESMF_GridComp), intent(inout) :: GridComp
     type(ESMF_State),    intent(inout) :: State
-    real,                intent(in)    :: InitialValue
     integer,             intent(out)   :: rc
 
-    type(ESMF_VM)        :: Vm
-    type(ESMF_DELayout)  :: Layout
     type(ESMF_Grid)      :: Grid
-    type(ESMF_ArraySpec) :: ArraySpec
-
-    type(ESMF_Field)     :: MhdField
+    type(ESMF_Field)     :: Field
     integer              :: iVar
-    ! Access to the MHD data
-    real(ESMF_KIND_R8), pointer :: MyData(:,:)
 
     ! Name of the component
     character(len=100) :: Name
-
-    ! Number of PE-s in SWMF
-    integer              :: nProc
-
-    ! Number of grid cells per DE=PE in SWMF
-    integer, allocatable :: nCell_P(:)
     !--------------------------------------------------------------------------
-    call ESMF_LogWrite("ESMF_SWMF_Mod:add_mhd_fields called", ESMF_LOGMSG_INFO)
+    call ESMF_LogWrite("ESMF_SWMF_Mod:add_fields called", ESMF_LOGMSG_INFO)
     rc = ESMF_FAILURE
 
     ! Get default layout for the VM of GridComp
-    call ESMF_GridCompGet(GridComp, vm=vm, grid=Grid, name=Name, rc=rc)
+    call ESMF_GridCompGet(GridComp, grid=Grid, name=Name, rc=rc)
     if(rc /= ESMF_SUCCESS) call my_error('ESMF_GridCompGet failed')
 
-    Layout = ESMF_DELayoutCreate(vm, rc=rc)
-    if(rc /= ESMF_SUCCESS) call my_error('ESMF_DELayoutCreate failed')
-
-    ! call ESMF_DELayoutPrint(Layout, rc=rc)
-    ! if(rc /= ESMF_SUCCESS) return
-
-    ! Distribute grid over the local vm
-    ! This should be done in GridCreate
-    !if(index(Name, 'SWMF') > 0)then
-    !   ! For the SWMF all the data is on iProcCoupleSwmf
-    !   call ESMF_VMGet(VM, petcount=nProc, rc=rc)
-    !   if(rc /= ESMF_SUCCESS) RETURN
-    !
-    !   ! Create cell count array with all nLon cells on PE iProcCoupleSwmf
-    !   allocate(nCell_P(nProc))
-    !   nCell_P = 0
-    !   nCell_P(iProcCoupleSwmf+1) = nLon
-    !
-    !   ! write(*,*)'!!! nProc, iProcCoupleSwmf, nCell_P=', &
-    !   !     nProc, iProcCoupleSwmf, nCell_P
-    !
-    !   ! The SMWF grid is on a single processor
-    !   call ESMF_GridDistribute(Grid, delayout=Layout, &
-    !        countsPerDEDim1=nCell_P, &
-    !        countsPerDEDim2=[ nLat ], rc=rc)
-    !
-    !   deallocate(nCell_P)
-    !else
-    !   ! For the ESMF the data is distributed
-    !   call ESMF_GridDistribute(Grid, delayout=Layout, rc=rc)
-    !end if
-    !if(rc /= ESMF_SUCCESS) RETURN
-
-    call ESMF_GridCompSet(GridComp, grid=Grid, rc=rc)
-    if(rc /= ESMF_SUCCESS) call my_error('ESMF_GridCompSet failed')
-
-    ! Add MHD fields using the grid layout from DELayout
-    call ESMF_ArraySpecSet(ArraySpec, rank=2, &
-         typekind=ESMF_TYPEKIND_R8, rc=rc)
-    if(rc /= ESMF_SUCCESS) call my_error('ESMF_ArraySpecSet failed')
-
-    do iVar=1, nVar
-       MhdField = ESMF_FieldCreate(Grid, ArraySpec, &
+    ! Add fields to the grid
+    do iVar = 1, nVar
+       write(*,*)'Adding field=', NameField_V(iVar)
+       Field = ESMF_FieldCreate(Grid, typekind=ESMF_TYPEKIND_R8, &
             staggerloc=ESMF_STAGGERLOC_CENTER, &
             name=NameField_V(iVar), rc=rc)
        if(rc /= ESMF_SUCCESS) call my_error('ESMF_FieldCreate failed for ' &
             //trim(NameField_V(iVar)))
-
-       ! call ESMF_FieldGetDataPointer(MhdField, MyData)
-       if(rc /= ESMF_SUCCESS) RETURN
-
-       if(size(MyData) > 0) MyData = InitialValue
-
-       !call ESMF_StateAddField(State, MhdField, rc=rc)
-       !if(rc /= ESMF_SUCCESS) RETURN
-
-       ! write(*,*)'iVar,shape(MyData),value=',iVar,shape(MyData),InitialValue
+       call ESMF_StateAdd(State, [Field], rc=rc)
+       if(rc /= ESMF_SUCCESS) call my_error('ESMF_StateAdd failed for ' &
+            //trim(NameField_V(iVar)))
     end do
 
     rc = ESMF_SUCCESS
-    call ESMF_LogWrite("ESMF_SWMF_Mod:add_mhd_fields returned", &
+    call ESMF_LogWrite("ESMF_SWMF_Mod:add_fields returned", &
          ESMF_LOGMSG_INFO)
 
-  end subroutine add_mhd_fields
+  end subroutine add_fields
   !============================================================================
   subroutine my_error(String)
 
