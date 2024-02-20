@@ -78,15 +78,15 @@ contains
     if(rc /= ESMF_SUCCESS)call my_error('ESMF_GridCreate1PeriDimUfrm Esmf')
 
     ! Create the SWMF Gridded component
-    write(*,*)'!!! iProcRootSwmf, iProcLastSwmf=',iProcRootSwmf, iProcLastSwmf
     SwmfComp = ESMF_GridCompCreate(name="SWMF Gridded Component", & 
-         petlist = [ (i, i=iProcRootSwmf, iProcLastSwmf) ], rc=rc)
+         grid=SwmfGrid, petlist = [ (i, i=iProcRootSwmf, iProcLastSwmf) ], &
+         rc=rc)
     if(rc /= ESMF_SUCCESS)call my_error('ESMF_GridCompCreate Swmf')
 
     ! Create the ESMF Gridded component(s, there could be more than one here)
-    write(*,*)'!!! iProcRootEsmf, iProcLastEsmf=',iProcRootEsmf, iProcLastEsmf
     EsmfComp = ESMF_GridCompCreate(name="ESMF Gridded Component", &
-         petlist = [ (i, i=iProcRootEsmf, iProcLastEsmf) ], rc=rc)
+         grid=EsmfGrid, petlist = [ (i, i=iProcRootEsmf, iProcLastEsmf) ], &
+         rc=rc)
     if(rc /= ESMF_SUCCESS)call my_error('ESMF_GridCompCreate Esmf')
 
     ! Create the Coupler component
