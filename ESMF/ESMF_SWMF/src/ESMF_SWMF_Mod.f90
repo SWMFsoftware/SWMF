@@ -7,6 +7,8 @@ module ESMF_SWMF_Mod
 
   private
   public:: read_esmf_swmf_input, add_fields
+
+  type(ESMF_Sync_Flag), public:: SyncFlag = ESMF_SYNC_BLOCKING
   
   ! named integer indexes for integer time arrays
   integer, public, parameter :: &
@@ -38,7 +40,10 @@ module ESMF_SWMF_Mod
   ! This variable is determined from NameSwmfComp and the PARAM.in file.
   integer, public:: iProcCoupleSwmf=0
 
-  ! When SWMF and ESMF are coupled, the one can block the whole SWMF
+  ! If DoRunSwmf is true, run the SWMF for real, otherwise just pretend
+  logical, public:: DoRunSwmf = .true.
+
+  ! When SWMF and ESMF are coupled, one can block the whole SWMF
   ! or only the component the ESMF is communicating with. The latter
   ! is more efficient but it can result in a dead-lock if the ESMF and
   ! SWMF overlap.
@@ -245,12 +250,22 @@ contains
 
     write(*,*)'iProcRootEsmf, iProcLastEsmf=', iProcRootEsmf, iProcLastEsmf
     write(*,*)'iProcRootSwmf, iProcLastSwmf=', iProcRootSwmf, iProcLastSwmf
+
+    call ESMF_ConfigGetAttribute(Config, StringTmp, &
+         label='Run the SWMF [y/n]:', rc=rc)
+    if(rc == ESMF_SUCCESS) then
+       DoRunSwmf = StringTmp == 'y' .or. StringTmp == 'Y' .or. &
+            StringTmp == 't' .or. StringTmp == 'T'
+    endif
+    write(*,*)'DoRunSwmf=', DoRunSwmf
     
     call ESMF_ConfigGetAttribute(Config, StringTmp, &
          label='Block all SWMF [y/n]:', rc=rc)
+    
     if(rc == ESMF_SUCCESS) then
        DoBlockAllSwmf = StringTmp == 'y' .or. StringTmp == 'Y' .or. &
             StringTmp == 't' .or. StringTmp == 'T'
+       write(*,*)'Block all SWMF [y/n]=',StringTmp,'! DoBlock=',DoBlockAllSwmf
     else
        ! If there is an overlap between the SWMF and ESMF processors
        ! it is a good idea to block the whole SWMF during coupling
