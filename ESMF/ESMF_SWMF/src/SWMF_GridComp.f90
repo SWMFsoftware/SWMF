@@ -8,8 +8,10 @@ module SwmfGridCompMod
 
   ! Named indexes for integer time arrays and access to MHD data
   use ESMF_SWMF_Mod, ONLY: &
+       NameSwmfComp, DoBlockAllSwmf, iProcCoupleSwmf, &
+       NameField_V, nVar, nLon, nLat, LonMin, LonMax, LatMin, LatMax, &
        Year_, Month_, Day_, Hour_, Minute_, Second_, MilliSec_, &
-       add_mhd_fields
+       add_fields
 
   implicit none
   private
@@ -52,21 +54,21 @@ contains
     rc = ESMF_FAILURE
 
     ! Add MHD fields to the SWMF import state
-    call add_mhd_fields(gComp, importState, -1.0, rc)
-    if(rc /= ESMF_SUCCESS) RETURN
+    call add_fields(gComp, importState, rc)
+    if(rc /= ESMF_SUCCESS) call my_error('add_fields failed')
 
     ! Obtain the VM for the SWMF gridded component
     call ESMF_GridCompGet(gcomp, vm=vm, rc=rc)
-    if(rc /= ESMF_SUCCESS) RETURN
+    if(rc /= ESMF_SUCCESS) call my_error('ESMF_GridCompGet failed')
 
     ! Obtain the MPI communicator for the VM
     call ESMF_VMGet(vm, mpiCommunicator=iComm, rc=rc)
-    if(rc /= ESMF_SUCCESS) RETURN
+    if(rc /= ESMF_SUCCESS) call my_error('ESMF_VMGet failed')
 
     ! Obtain the start time from the clock 
     call ESMF_ClockGet(externalclock, startTime=StartTime, &
          currSimTime=SimTime, runDuration=RunDuration, rc=rc)
-    if(rc /= ESMF_SUCCESS) RETURN
+    if(rc /= ESMF_SUCCESS) call	my_error('ESMF_ClockGet failed')
 
     call ESMF_TimeGet(StartTime,   &
          yy=iStartTime_I(Year_),   &
@@ -77,30 +79,25 @@ contains
          s =iStartTime_I(Second_), &
          ms=iStartTime_I(Millisec_), &
          rc=rc)
-    if(rc /= ESMF_SUCCESS) RETURN
+    if(rc /= ESMF_SUCCESS) call my_error('ESMF_TimeGet failed')
 
     ! Obtain the simulation time from the clock
     call ESMF_TimeIntervalGet(SimTime, s=iSecond, ms=iMillisec, rc=rc)
-    if(rc /= ESMF_SUCCESS) RETURN
+    if(rc /= ESMF_SUCCESS) call my_error('ESMF_TimeIntervalGet Sim failed')
     TimeSim = iSecond + iMillisec/1000.0
 
     ! Obtain the final simulation time from the clock
     call ESMF_TimeIntervalGet(RunDuration, s=iSecond, ms=iMillisec, rc=rc)
-    if(rc /= ESMF_SUCCESS) RETURN
+    if(rc /= ESMF_SUCCESS) call my_error('ESMF_TimeIntervalGet Run failed')
     TimeStop = iSecond + iMillisec/1000.0
 
     ! Initialze the SWMF with this MPI communicator and start time
     call ESMF_LogWrite("SWMF_initialize routine called", ESMF_LOGMSG_INFO)
+    !!! if(.not.DoBlockAllSwmf) &
     call SWMF_initialize(iComm, iStartTime_I, &
          TimeSim, TimeStop, IsLastSession, rc)
     call ESMF_LogWrite("SWMF_initialize routine returned", ESMF_LOGMSG_INFO)
-    if(rc /= 0)then
-       call ESMF_LogWrite("SWMF_initialize FAILED", ESMF_LOGMSG_ERROR)
-       call ESMF_VMGet(vm, localPET=iProc)
-       if(iProc == 0)write(0, *) "SWMF_initialize FAILED"
-       rc = ESMF_FAILURE
-       RETURN
-    endif
+    if(rc /= 0)call my_error('SWMF_initialize failed')
 
     rc = ESMF_SUCCESS
     call ESMF_LogWrite("SWMF_GridComp:init routine returned", ESMF_LOGMSG_INFO)
@@ -108,9 +105,6 @@ contains
   end subroutine my_init
   !============================================================================
   subroutine my_run(gComp, importState, exportState, clock, rc)
-
-    use ESMF_SWMF_Mod, ONLY: NameSwmfComp, DoBlockAllSwmf, iProcCoupleSwmf, &
-         NameField_V, nVar, nLon, nLat, LonMin, LonMax, LatMin, LatMax
 
     type(ESMF_GridComp):: gComp
     type(ESMF_State):: ImportState
@@ -186,17 +180,20 @@ contains
 
     call ESMF_LogWrite("SWMF_run routine called!", ESMF_LOGMSG_INFO)
     write(*,*)'SWMF_run starts  with tCouple =',tCouple
-    if(DoBlockAllSwmf)then
-       call SWMF_run('**', tCouple, tSimSwmf, DoStop, rc)
-    else
-       call SWMF_run(NameSwmfComp, tCouple, tSimSwmf, DoStop, rc)
-    end if
+    !if(.not.DoBlockAllSwmf)then
+       !call SWMF_run('**', tCouple, tSimSwmf, DoStop, rc)
+    !else
+       !call SWMF_run(NameSwmfComp, tCouple, tSimSwmf, DoStop, rc)
+    !end if
+    rc = 0
     write(*,*)'SWMF_run returns with tSimSwmf=',tSimSwmf
     call ESMF_LogWrite("SWMF_run routine returned!", ESMF_LOGMSG_INFO)
     if(rc /= 0)call my_error('SWMF_run failed')
 
-    rc = ESMF_SUCCESS
     call ESMF_LogWrite("SWMF_GridComp:run routine returned", ESMF_LOGMSG_INFO)
+
+    write(*,*)'!!! setting rc=ESMF_SUCCESS in SWMF_GridComp:my_run'
+    rc = ESMF_SUCCESS
 
   end subroutine my_run
   !============================================================================
@@ -212,7 +209,7 @@ contains
     integer          :: iProc
     !--------------------------------------------------------------------------
     call ESMF_LogWrite("SWMF_finalize routine called", ESMF_LOGMSG_INFO)
-    call SWMF_finalize(rc)
+    !if(.not.DoBlockAllSwmf) call SWMF_finalize(rc)
     call ESMF_LogWrite("SWMF_finalize routine returned", ESMF_LOGMSG_INFO)
     if(rc /= 0)then
        call ESMF_LogWrite("SWMF_finalize FAILED", ESMF_LOGMSG_ERROR)

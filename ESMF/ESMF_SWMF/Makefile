@@ -18,8 +18,9 @@ RUNDIR = run
 ${RUNDIR}:
 	mkdir -p ${RUNDIR}
 
-
 rundir: ${RUNDIR}
+	mkdir -p ${RUNDIR}/IE/ionosphere
+	cp ${IEDIR}/input/cond_???_coeffs.dat run/IE/
 	cp input/ESMF_SWMF.input ${RUNDIR}/
 	cp input/PARAM.in ${RUNDIR}/
 	cd ${RUNDIR}; ln -sf ${BINDIR}/ESMF_SWMF.exe .

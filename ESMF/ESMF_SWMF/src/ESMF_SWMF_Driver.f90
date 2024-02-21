@@ -160,7 +160,6 @@ program ESMF_SWMF_Driver
   end if
 
   !  Init, Run, and Finalize section
-  write(*,*)'!!! ESMF_GridCompInitialize(EsmfSwmfComp)'
   call ESMF_GridCompInitialize(EsmfSwmfComp, clock=Clock, rc=rc)
   if (rc /= ESMF_SUCCESS) call my_error('EsmfSwmfComp:init failed')
 

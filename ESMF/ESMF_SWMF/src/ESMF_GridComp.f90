@@ -24,15 +24,15 @@ contains
 
   end subroutine SetServices
   !============================================================================
-  subroutine my_init(gComp, importState, exportState, externalclock, rc)
+  subroutine my_init(gComp, importState, exportState, externalClock, rc)
 
-    use ESMF_SWMF_Mod, ONLY: add_mhd_fields, nVar, NameField_V, nLon, nLat
+    use ESMF_SWMF_Mod, ONLY: add_fields, nVar, NameField_V, nLon, nLat
 
     type(ESMF_GridComp):: gComp
     type(ESMF_State)   :: importState
     type(ESMF_State)   :: exportState
-    type(ESMF_Clock)   :: externalclock
-    integer,             intent(out)  :: rc
+    type(ESMF_Clock)   :: externalClock
+    integer, intent(out):: rc
 
     ! Access to the MHD data
     type(ESMF_Field):: Field
@@ -41,22 +41,25 @@ contains
     ! Units
     real, parameter :: nT=1e-9, amu=1.6726*1e-27, cc=1e-6, kms=1e3, kb=1.38E-23
     !-------------------------------------------------------------------------
-    call ESMF_LogWrite("ESMFGridComp init called",  ESMF_LOGMSG_INFO)
+    call ESMF_LogWrite("ESMFGridComp init called", ESMF_LOGMSG_INFO)
     rc = ESMF_FAILURE
 
     ! Add MHD fields to the export state
-    call add_mhd_fields(gComp, ExportState, 7.77, rc=rc)
-    if(rc /= ESMF_SUCCESS) RETURN
+    call add_fields(gComp, ExportState, rc=rc)
+    if(rc /= ESMF_SUCCESS) call my_error("add_fields failed")
 
-    ! Initialize the MHD data
+    ! Initialize the data
     do iVar = 1, nVar
-       ! Get pointers to the MHD variables in the export state
+       ! Get pointers to the variables in the export state
        nullify(Ptr)
        call ESMF_StateGet(ExportState, itemName=NameField_V(iVar), &
             field=Field, rc=rc)
-       if(rc /= ESMF_SUCCESS) call my_error("ESMF_StateGet failed")
+       if(rc /= ESMF_SUCCESS) call my_error("ESMF_StateGet failed for " &
+            //trim(NameField_V(iVar)))
+            
        call ESMF_FieldGet(Field, farrayPtr=Ptr, rc=rc) 
-       if(rc /= ESMF_SUCCESS) call my_error("ESMF_FieldGet failed")
+       if(rc /= ESMF_SUCCESS) call my_error("ESMF_FieldGet failed for " &
+            //trim(NameField_V(iVar)))
 
        if(rc /= ESMF_SUCCESS) RETURN
        select case(NameField_V(iVar))
