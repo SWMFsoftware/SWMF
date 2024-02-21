@@ -12,8 +12,7 @@
 ! 09/01/05 G.Toth - initial version
 ! 02/06/06          modified SWMF_run to pass coupling time
 !                   added SWMF_couple to transfer 2D grid data
-
-! ROUTINE: SWMF_initialize - initialize the SWMF (for the first session)
+!==============================================================================
 subroutine SWMF_initialize(iComm, iTimeStart_I, TimeSim, TimeStop, &
      IsLastSession, iError)
 
@@ -34,6 +33,7 @@ subroutine SWMF_initialize(iComm, iTimeStart_I, TimeSim, TimeStop, &
   integer, intent(out):: iError         ! SWMF error code (0 on success)
   logical, intent(out):: IsLastSession  ! True if there is only one session
 
+  ! initialize the SWMF (for the first session)
   ! Obtains the MPI communicator for the whole SWMF.
   ! Initializes the SWMF for the first session with a start date and time,
   ! current and final simulation time. The output arguments indicate
@@ -64,11 +64,13 @@ subroutine SWMF_initialize(iComm, iTimeStart_I, TimeSim, TimeStop, &
 
   ! Initialize first session
   call SWMF_initialize_session(IsLastSession, iError)
+
 end subroutine SWMF_initialize
 !==============================================================================
-
-! ROUTINE: SWMF_initialize_session - read parameters and initialize session
 subroutine SWMF_initialize_session(IsLastSession, iError)
+
+  ! read parameters and initialize session
+
   use CON_io,        ONLY: read_inputs
   use CON_session,   ONLY: init_session
   use CON_variables, ONLY: iErrorSwmf
@@ -82,22 +84,25 @@ subroutine SWMF_initialize_session(IsLastSession, iError)
   call read_inputs(IsLastSession)
   if(iErrorSwmf == 0) call init_session
   iError = iErrorSwmf
+
 end subroutine SWMF_initialize_session
 !==============================================================================
-
-! ROUTINE: SWMF_run - run the SWMF
 subroutine SWMF_run(NameComp, tCouple, tSimulationOut, DoStop, iError)
+
   use CON_session,    ONLY: do_session
   use CON_variables,  ONLY: iErrorSwmf
   use CON_time,       ONLY: tSimulation
   use CON_comp_param, ONLY: MaxComp, lNameComp, i_comp_name
   use ModKind,        ONLY: Real8_
+
   implicit none
+
   character(len=lNameComp), intent(in):: NameComp ! Component to couple with
   real(Real8_),             intent(in):: tCouple  ! Next coupling time
   real(Real8_), intent(out):: tSimulationOut ! Current SWMF simulation time
   logical,      intent(out):: DoStop         ! True if SWMF requested a stop
   integer,      intent(out):: iError         ! Error code, 0 on success
+
   ! Run the SWMF until the coupling time or a stop condition is reached.
   ! If NameComp is the name of one of the SWMF components then the coupling
   ! time tCouple affects only the processors that run component NameComp.
@@ -124,25 +129,25 @@ subroutine SWMF_run(NameComp, tCouple, tSimulationOut, DoStop, iError)
 
   tSimulationOut = tSimulation
   iError = iErrorSwmf
+
 end subroutine SWMF_run
 !==============================================================================
-
-! ROUTINE: SWMF_finalize - finalize the SWMF
 subroutine SWMF_finalize(iError)
+
   use CON_main,      ONLY: finalize
   use CON_variables, ONLY: iErrorSwmf
+
   implicit none
+
   integer, intent(out):: iError ! Error code, 0 on success
+
   ! Finalize the SWMF after the last session is done.
   !----------------------------------------------------------------------------
   call finalize
   iError = iErrorSwmf
+
 end subroutine SWMF_finalize
 !==============================================================================
-
-!^CMP IF IH BEGIN
-!^CMP IF GM BEGIN
-! ROUTINE: SWMF_couple - SWMF coupling with an external code
 subroutine SWMF_couple(NameFrom, NameTo, NameCoord, &
      nVar, nX, nY, xMin, xMax, yMin, yMax, Data_VII, iError)
 
@@ -165,6 +170,8 @@ subroutine SWMF_couple(NameFrom, NameTo, NameCoord, &
   real(Real8_),  intent(inout) :: Data_VII(nVar, nX, nY) ! grid data pointer
 
   integer, intent(out):: iError ! Error code, 0 on success
+
+  ! SWMF coupling with an external code
   ! The coupling interface of the SWMF when coupled to an external code.
   ! This subroutine can be used to couple with various components.
   ! The couplings are identified by the NameFrom and NameTo strings.
@@ -223,5 +230,4 @@ subroutine SWMF_couple(NameFrom, NameTo, NameCoord, &
 
 end subroutine SWMF_couple
 !==============================================================================
-!^CMP IF GM END
-!^CMP IF IH END
+
