@@ -8,7 +8,7 @@ module SwmfGridCompMod
 
   ! Named indexes for integer time arrays and access to MHD data
   use ESMF_SWMF_Mod, ONLY: &
-       NameSwmfComp, DoBlockAllSwmf, iProcCoupleSwmf, &
+       NameSwmfComp, DoRunSwmf, DoBlockAllSwmf, iProcCoupleSwmf, &
        NameField_V, nVar, nLon, nLat, LonMin, LonMax, LatMin, LatMax, &
        Year_, Month_, Day_, Hour_, Minute_, Second_, MilliSec_, &
        add_fields
@@ -93,7 +93,6 @@ contains
 
     ! Initialze the SWMF with this MPI communicator and start time
     call ESMF_LogWrite("SWMF_initialize routine called", ESMF_LOGMSG_INFO)
-    !!! if(.not.DoBlockAllSwmf) &
     call SWMF_initialize(iComm, iStartTime_I, &
          TimeSim, TimeStop, IsLastSession, rc)
     call ESMF_LogWrite("SWMF_initialize routine returned", ESMF_LOGMSG_INFO)
@@ -180,13 +179,16 @@ contains
 
     call ESMF_LogWrite("SWMF_run routine called!", ESMF_LOGMSG_INFO)
     write(*,*)'SWMF_run starts  with tCouple =',tCouple
-    !if(.not.DoBlockAllSwmf)then
-       !call SWMF_run('**', tCouple, tSimSwmf, DoStop, rc)
-    !else
-       !call SWMF_run(NameSwmfComp, tCouple, tSimSwmf, DoStop, rc)
-    !end if
-    rc = 0
-    write(*,*)'SWMF_run returns with tSimSwmf=',tSimSwmf
+    if(.not.DoRunSwmf)then
+       ! Pretend that SWMF reached the coupling time
+       tSimSwmf = tCouple
+       rc = 0
+    elseif(DoBlockAllSwmf)then
+       call SWMF_run('**', tCouple, tSimSwmf, DoStop, rc)
+    else
+       call SWMF_run(NameSwmfComp, tCouple, tSimSwmf, DoStop, rc)
+    end if
+    write(*,*)'SWMF_run returns with tSimSwmf=', tSimSwmf
     call ESMF_LogWrite("SWMF_run routine returned!", ESMF_LOGMSG_INFO)
     if(rc /= 0)call my_error('SWMF_run failed')
 
@@ -209,7 +211,7 @@ contains
     integer          :: iProc
     !--------------------------------------------------------------------------
     call ESMF_LogWrite("SWMF_finalize routine called", ESMF_LOGMSG_INFO)
-    !if(.not.DoBlockAllSwmf) call SWMF_finalize(rc)
+    call SWMF_finalize(rc)
     call ESMF_LogWrite("SWMF_finalize routine returned", ESMF_LOGMSG_INFO)
     if(rc /= 0)then
        call ESMF_LogWrite("SWMF_finalize FAILED", ESMF_LOGMSG_ERROR)
