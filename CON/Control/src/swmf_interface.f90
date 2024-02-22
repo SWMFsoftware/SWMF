@@ -12,7 +12,6 @@
 ! 09/01/05 G.Toth - initial version
 ! 02/06/06          modified SWMF_run to pass coupling time
 !                   added SWMF_couple to transfer 2D grid data
-!==============================================================================
 subroutine SWMF_initialize(iComm, iTimeStart_I, TimeSim, TimeStop, &
      IsLastSession, iError)
 
