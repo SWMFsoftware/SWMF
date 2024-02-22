@@ -459,15 +459,15 @@ contains
 
     ! Add fields to the grid
     do iVar = 1, nVar
-       write(*,*)'Adding field=', NameField_V(iVar)
+       write(*,*)'Adding field=', NameField_V(iVar),' to ',trim(Name)
        Field = ESMF_FieldCreate(Grid, typekind=ESMF_TYPEKIND_R8, &
             staggerloc=ESMF_STAGGERLOC_CENTER, &
             name=NameField_V(iVar), rc=rc)
-       if(rc /= ESMF_SUCCESS) call my_error('ESMF_FieldCreate failed for ' &
-            //trim(NameField_V(iVar)))
+       if(rc /= ESMF_SUCCESS) call my_error('ESMF_FieldCreate ' &
+            //trim(NameField_V(iVar))//' for '//trim(Name))
        call ESMF_StateAdd(State, [Field], rc=rc)
-       if(rc /= ESMF_SUCCESS) call my_error('ESMF_StateAdd failed for ' &
-            //trim(NameField_V(iVar)))
+       if(rc /= ESMF_SUCCESS) call my_error('ESMF_StateAdd ' &
+            //trim(NameField_V(iVar))//' to '//trim(Name))
     end do
 
     rc = ESMF_SUCCESS
