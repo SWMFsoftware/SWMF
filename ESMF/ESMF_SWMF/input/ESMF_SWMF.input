@@ -14,12 +14,15 @@ ESMF Last PE:   1
 SWMF Root PE:   0
 SWMF Last PE:   1
 #
+# Running
+#
+Run the SWMF [y/n]: y
+#
 # Coupling parameters
 #
 SWMF Component: GM
-Block all SWMF [y/n]: y
+Block all SWMF [y/n]: n
 Coupling Frequency: 2
-
 #
 # Coupling grid size and range (in degrees)
 #

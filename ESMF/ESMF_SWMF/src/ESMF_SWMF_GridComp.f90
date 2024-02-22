@@ -142,6 +142,8 @@ contains
   !============================================================================
   subroutine my_run(gcomp, importState, exportState, parentclock, rc)
 
+    use ESMF_SWMF_Mod, ONLY: SyncFlag
+
     type(ESMF_GridComp):: gcomp
     type(ESMF_State)   :: importState
     type(ESMF_State)   :: exportState
@@ -165,16 +167,16 @@ contains
 
        ! Couple the subcomponents first so that SWMF has the input from ESMF
        !call ESMF_CplCompRun(CouplerComp, EsmfExport, SwmfImport, localclock, &
-       !     blockingflag=ESMF_NONBLOCKING, rc=rc)
+       !     blockingflag=SyncFlag, rc=rc)
        !if(rc /= ESMF_SUCCESS) RETURN
 
        ! Run the subcomponents concurrently if possible
        call ESMF_GridCompRun(SwmfComp, importState=SwmfImport, &
-            clock=localClock, syncflag=ESMF_SYNC_NONBLOCKING, rc=rc)
+            clock=localClock, syncflag=SyncFlag, rc=rc)
        if(rc /= ESMF_SUCCESS)call my_error('ESMF_GridCompRun Swmf')
 
        call ESMF_GridCompRun(EsmfComp, exportState=EsmfExport, &
-            clock=localClock, syncflag=ESMF_SYNC_NONBLOCKING, rc=rc)
+            clock=localClock, syncflag=SyncFlag, rc=rc)
        if(rc /= ESMF_SUCCESS)call my_error('ESMF_GridCompRun Esmf')
 
        ! Advance the time
