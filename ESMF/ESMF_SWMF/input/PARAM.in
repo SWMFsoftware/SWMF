@@ -14,14 +14,14 @@ RB -1 -1  1		CompMap nProc-1 PE
 #DESCRIPTION
 Param/SWPC/PARAM.in_SWPC_v2_init: Example file to start a run for the SWPC Version 2 code selection		StringDescription
 
-#STARTTIME
-2014			iYear
-04			iMonth
-10			iDay
-00			iHour
-00			iMinute
-00			iSecond
-0.0			FracSecond
+#ECHO
+F			DoEcho
+
+#VERBOSE
+0			lVerbose
+
+#TIMING
+F			DoTiming
 
 #COMPONENT
 IM			NameComp
@@ -43,6 +43,9 @@ T			DoCheckTimeStep (rest is read if true)
 1e-6			TimeStepMin [s] (negative value means SessionTime/1e7)
 
 #BEGIN_COMP GM ---------------------------------------------------------------
+
+#VERBOSE
+0			lVerbose
 
 #GRIDBLOCKALL
 5000			MaxBlock
@@ -189,7 +192,7 @@ T			DoAmr
 -1.0			DtAmr
 T			IsStrictAmr
 
-#GEOMAGINDICES
+GEOMAGINDICES
 180			nSizeKpWindow [min]
 1 min			DtOutput      [sec]
 
@@ -216,7 +219,7 @@ min idl			StringPlot
 
 #END_COMP IE -----------------------------------------------------------------
 
-#STOP
+STOP
 -1			MaxIter
 10.0			TimeMax
 
