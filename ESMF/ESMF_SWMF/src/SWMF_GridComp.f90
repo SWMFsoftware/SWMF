@@ -155,12 +155,11 @@ contains
 
           Mhd_VII(iVar,:,:) = Ptr
        end do
-       !write(*,*)'SWMF_GridComp shape of Ptr=',shape(Ptr)
-       !write(*,*)'SWMF_GridComp value of Mhd=',Mhd_VII(:,1,1)
+       write(*,*)'SWMF_GridComp shape of Ptr=',shape(Ptr)
+       write(*,*)'SWMF_GridComp value of Mhd=',Mhd_VII(:,1,1)
     end if
 
     ! Send MHD data to the GM processors in the SWMF
-    !write(*,*)'!!! SWMF_GridComp SWMF_couple Mhd=',Mhd_VII(:,1,1)
     call SWMF_couple('ESMF_IH', NameSwmfComp, 'GSM', &
          nVar, nLon, nLat, LonMin, LonMax, LatMin, LatMax, Mhd_VII, rc)
     if(rc /= 0)call my_error('SWMF_couple failed')
@@ -194,7 +193,6 @@ contains
 
     call ESMF_LogWrite("SWMF_GridComp:run routine returned", ESMF_LOGMSG_INFO)
 
-    write(*,*)'!!! setting rc=ESMF_SUCCESS in SWMF_GridComp:my_run'
     rc = ESMF_SUCCESS
 
   end subroutine my_run
