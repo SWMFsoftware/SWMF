@@ -117,18 +117,15 @@ contains
          stateintent=ESMF_STATEINTENT_EXPORT, rc=rc)
     if(rc /= ESMF_SUCCESS)call my_error('ESMF_StateCreate EsmfExport')
 
-    write(*,*)'!!! call ESMF_GridCompInitialize(EsmfComp...)'
     ! Each of the subcomponents initialize themselves.
     call ESMF_GridCompInitialize(EsmfComp, exportState = EsmfExport, &
          clock=parentclock, rc=rc)
     if(rc /= ESMF_SUCCESS)call my_error('ESMF_GridCompInitialize Esmf')
 
-    write(*,*)'!!! call ESMF_GridCompInitialize(SwmfComp...)'
     call ESMF_GridCompInitialize(SwmfComp, importState = SwmfImport, &
          clock=parentclock, rc=rc)
     if(rc /= ESMF_SUCCESS)call my_error('ESMF_GridCompInitialize Swmf')
 
-    write(*,*)'!!! call ESMF_GridCompInitialize(CouplerComp...)'
     call ESMF_CplCompInitialize(CouplerComp, &
          importstate = EsmfExport, exportstate = SwmfImport, &
          clock=parentclock, rc=rc)
@@ -166,9 +163,10 @@ contains
        if(rc /= ESMF_SUCCESS)call my_error('ESMF_ClockIsStopTime')
 
        ! Couple the subcomponents first so that SWMF has the input from ESMF
-       !call ESMF_CplCompRun(CouplerComp, EsmfExport, SwmfImport, localclock, &
-       !     blockingflag=SyncFlag, rc=rc)
-       !if(rc /= ESMF_SUCCESS) RETURN
+       call ESMF_CplCompRun(CouplerComp, &
+            importstate = EsmfExport, exportstate = SwmfImport, &
+            clock=localclock, syncflag=SyncFlag, rc=rc)
+       if(rc /= ESMF_SUCCESS)call my_error('ESMF_CplCompRun')
 
        ! Run the subcomponents concurrently if possible
        call ESMF_GridCompRun(SwmfComp, importState=SwmfImport, &
@@ -211,16 +209,17 @@ contains
 
     ! Give each of the subcomponents and the coupler a chance to finalize 
     call ESMF_GridCompFinalize(SwmfComp, importState=SwmfImport, &
-         clock=parentclock, rc=rc)
+         clock=Parentclock, rc=rc)
     if(rc /= ESMF_SUCCESS) iError = rc
 
     call ESMF_GridCompFinalize(EsmfComp, exportState=EsmfExport, &
-         clock=parentClock, rc=rc)
+         clock=ParentClock, rc=rc)
     if(rc /= ESMF_SUCCESS) iError = rc
 
-    !call ESMF_CplCompFinalize(CouplerComp, SwmfImport, EsmfExport, &
-    !     parentClock, rc=rc)
-    !if(rc /= ESMF_SUCCESS) iError = rc
+    call ESMF_CplCompFinalize(CouplerComp, &
+         importstate=EsmfExport, exportstate=SwmfImport, &
+         clock=ParentClock, rc=rc)
+    if(rc /= ESMF_SUCCESS) iError = rc
 
     ! Now remove the Components to free up their resources
     call ESMF_GridCompDestroy(SwmfComp, rc=rc)

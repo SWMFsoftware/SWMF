@@ -9,7 +9,7 @@
 #
 # Layout
 #
-ESMF Root PE:   1
+ESMF Root PE:   0
 ESMF Last PE:   1
 SWMF Root PE:   0
 SWMF Last PE:   1
@@ -21,7 +21,7 @@ Run the SWMF [y/n]: y
 # Coupling parameters
 #
 SWMF Component: GM
-Block all SWMF [y/n]: n
+Block all SWMF [y/n]: y
 Coupling Frequency: 2
 #
 # Coupling grid size and range (in degrees)
