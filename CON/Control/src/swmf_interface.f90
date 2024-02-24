@@ -191,12 +191,12 @@ subroutine SWMF_couple(NameFrom, NameTo, NameCoord, &
 
   ! Do the appropriate coupling depending on the NameFrom-NameTo pair
   select case(NameFrom)
-  case('ESMF_IH')
+  case('ESMF_IPE')
      select case(NameTo)
-     case('GM')
-        if(nVar /= 8)then
+     case('IE')
+        if(nVar /= 2)then
            write(*,*)NameSub//' ERROR: '// &
-                'coupling to GM requires 8 variables, not nVar=',nVar
+                'coupling to IE requires 2 variables, not nVar=',nVar
            RETURN
         end if
 
@@ -211,9 +211,9 @@ subroutine SWMF_couple(NameFrom, NameTo, NameCoord, &
            RETURN
         end if
 
-        ! Put data into GM. Convert to the default real used by SWMF.
-        call GM_put_from_ih_buffer(NameCoord, nX, nY, &
-             real(xMin), real(xMax), real(yMin), real(yMax), real(Data_VII))
+        ! Put data into IE. Convert to the default real used by SWMF.
+        !call IE_put_from_ih_buffer(NameCoord, nX, nY, &
+        !     real(xMin), real(xMax), real(yMin), real(yMax), real(Data_VII))
      case default
         write(*,*)NameSub//' ERROR: '// &
              'coupling to '//NameTo//' is not implemented'

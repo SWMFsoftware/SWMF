@@ -9,7 +9,7 @@ module SwmfGridCompMod
   ! Named indexes for integer time arrays and access to MHD data
   use ESMF_SWMF_Mod, ONLY: &
        NameSwmfComp, DoRunSwmf, DoBlockAllSwmf, iProcCoupleSwmf, &
-       NameField_V, nVar, nLon, nLat, LonMin, LonMax, LatMin, LatMax, &
+       NameFieldEsmf_V, nVarEsmf, nLon, nLat, LonMin, LonMax, LatMin, LatMax, &
        Year_, Month_, Day_, Hour_, Minute_, Second_, MilliSec_, &
        add_fields
 
@@ -54,7 +54,7 @@ contains
     rc = ESMF_FAILURE
 
     ! Add MHD fields to the SWMF import state
-    call add_fields(gComp, importState, rc)
+    call add_fields(gComp, importState, IsFromEsmf=.true., rc=rc)
     if(rc /= ESMF_SUCCESS) call my_error('add_fields failed')
 
     ! Obtain the VM for the SWMF gridded component
@@ -127,7 +127,8 @@ contains
 
     ! Misc variables
     type(ESMF_Field):: Field
-    type(ESMF_VM):: vm
+    character(len=4):: NameField
+    type(ESMF_VM):: Vm
     integer:: iProc
     !--------------------------------------------------------------------------
     call ESMF_LogWrite("SWMF_GridComp:run routine called", ESMF_LOGMSG_INFO)
@@ -140,14 +141,15 @@ contains
     if(rc /= ESMF_SUCCESS) call my_error('ESMF_VMGet failed')
 
     ! Obtain pointer to the MHD data obtained from the ESMF component
-    allocate(Mhd_VII(nVar,nLon,nLat), stat=rc)
+    allocate(Mhd_VII(nVarEsmf,nLon,nLat), stat=rc)
     if(rc /= 0) call my_error('allocate(Mhd_VII) failed')
 
     if(iProc == iProcCoupleSwmf)then
        ! Copy fields into an array
-       do iVar = 1, nVar
+       do iVar = 1, nVarEsmf
           nullify(Ptr)
-          call ESMF_StateGet(ImportState, itemName=NameField_V(iVar), &
+          NameField = NameFieldEsmf_V(iVar)
+          call ESMF_StateGet(ImportState, itemName=NameField, &
                field=Field, rc=rc)
           if(rc /= ESMF_SUCCESS) call my_error("ESMF_StateGet failed")
           call ESMF_FieldGet(Field, farrayPtr=Ptr, rc=rc) 
@@ -160,8 +162,8 @@ contains
     end if
 
     ! Send MHD data to the GM processors in the SWMF
-    call SWMF_couple('ESMF_IH', NameSwmfComp, 'GSM', &
-         nVar, nLon, nLat, LonMin, LonMax, LatMin, LatMax, Mhd_VII, rc)
+    call SWMF_couple('ESMF_IPE', NameSwmfComp, 'GSM', &
+         nVarEsmf, nLon, nLat, LonMin, LonMax, LatMin, LatMax, Mhd_VII, rc)
     if(rc /= 0)call my_error('SWMF_couple failed')
 
     deallocate(Mhd_VII)

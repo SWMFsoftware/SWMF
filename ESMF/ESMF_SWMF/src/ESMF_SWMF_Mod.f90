@@ -14,11 +14,16 @@ module ESMF_SWMF_Mod
   integer, public, parameter :: &
        Year_=1, Month_=2, Day_=3, Hour_=4, Minute_=5, Second_=6, MilliSec_=7
 
-  ! number of MHD variables and their names
-  integer, public, parameter :: nVar = 8
-  character(len=3), public, parameter :: NameField_V(nVar) = &
-       [ 'Rho', 'Ux ', 'Uy ', 'Uz ', 'Bx ', 'By ', 'Bz ', 'P  ' ]
+  ! number of ESMF variables and their names to be sent to SWMF
+  integer, public, parameter :: nVarEsmf = 2
+  character(len=4), public, parameter :: NameFieldEsmf_V(nVarEsmf) = &
+       [ 'Ped ', 'Hall' ]
 
+  ! number of SWMF variables and their names to be sent to ESMF
+  integer, public, parameter :: nVarSwmf = 4
+  character(len=4), public, parameter :: NameFieldSwmf_V(nVarSwmf) = &
+       [ 'jFac', 'Epot', 'Aver', 'Diff' ]
+  
   ! Time related variables
   integer, public:: iStartTime_I(Year_:MilliSec_)  = & ! Start date-time
        [2000, 3, 21, 10, 45, 0, 0]                     !   with defaults
@@ -34,7 +39,7 @@ module ESMF_SWMF_Mod
   integer, public :: iProcRootEsmf, iProcLastEsmf
 
   ! SWMF component to couple with
-  character(len=2), public :: NameSwmfComp = 'GM'
+  character(len=2), public :: NameSwmfComp = 'IE'
 
   ! The ESMF communicates with iProcCoupleSwmf within the SWMF layout
   ! This variable is determined from NameSwmfComp and the PARAM.in file.
@@ -292,8 +297,8 @@ contains
          label='SWMF Component:', rc=rc)
     if(rc /= ESMF_SUCCESS) then
        if(iProc == 0)write(*,*) 'ESMF_SWMF: ', &
-            'Setting default for SWMF Component: GM'
-       NameSwmfComp = 'GM'
+            'Setting default for SWMF Component: IE'
+       NameSwmfComp = 'IE'
     end if
 
     ! Get grid size
@@ -437,15 +442,18 @@ contains
 
   end subroutine read_swmf_layout
   !============================================================================
-  subroutine add_fields(GridComp, State, rc)
+  subroutine add_fields(GridComp, State, IsFromEsmf, rc)
 
     type(ESMF_GridComp), intent(inout) :: GridComp
     type(ESMF_State),    intent(inout) :: State
+    logical,             intent(in)    :: IsFromEsmf
     integer,             intent(out)   :: rc
 
     type(ESMF_Grid)      :: Grid
     type(ESMF_Field)     :: Field
+    type(ESMF_ArraySpec) :: ArraySpec
     integer              :: iVar
+    character(len=4)    :: NameField
 
     ! Name of the component
     character(len=100) :: Name
@@ -457,19 +465,34 @@ contains
     call ESMF_GridCompGet(GridComp, grid=Grid, name=Name, rc=rc)
     if(rc /= ESMF_SUCCESS) call my_error('ESMF_GridCompGet failed')
 
-    ! Add fields to the grid
-    do iVar = 1, nVar
-       write(*,*)'Adding field=', NameField_V(iVar),' to ',trim(Name)
-       Field = ESMF_FieldCreate(Grid, typekind=ESMF_TYPEKIND_R8, &
-            staggerloc=ESMF_STAGGERLOC_CENTER, &
-            name=NameField_V(iVar), rc=rc)
-       if(rc /= ESMF_SUCCESS) call my_error('ESMF_FieldCreate ' &
-            //trim(NameField_V(iVar))//' for '//trim(Name))
-       call ESMF_StateAdd(State, [Field], rc=rc)
-       if(rc /= ESMF_SUCCESS) call my_error('ESMF_StateAdd ' &
-            //trim(NameField_V(iVar))//' to '//trim(Name))
-    end do
-
+    call ESMF_ArraySpecSet(ArraySpec, rank=2, typekind=ESMF_TYPEKIND_R8)
+    if (rc /= ESMF_SUCCESS) call my_error('ESMF_ArraySpecSet')
+    
+    if(IsFromEsmf)then
+       do iVar = 1, nVarEsmf
+          NameField = NameFieldEsmf_V(iVar)
+          write(*,*)'Adding ESMF field=', NameField,' to ',trim(Name)
+          Field = ESMF_FieldCreate(Grid, arrayspec=ArraySpec, &
+               staggerloc=ESMF_STAGGERLOC_CENTER, name=NameField, rc=rc)
+          if(rc /= ESMF_SUCCESS) call my_error('ESMF_FieldCreate ' &
+               //trim(NameField)//' for '//trim(Name))
+          call ESMF_StateAdd(State, [Field], rc=rc)
+          if(rc /= ESMF_SUCCESS) call my_error('ESMF_StateAdd ' &
+               //trim(NameField)//' to '//trim(Name))
+       end do
+    else
+       do iVar = 1, nVarSwmf
+          NameField = NameFieldSwmf_V(iVar)
+          write(*,*)'Adding SWMF field=', NameField,' to ',trim(Name)
+          Field = ESMF_FieldCreate(Grid, typekind=ESMF_TYPEKIND_R8, &
+               staggerloc=ESMF_STAGGERLOC_CENTER, name=NameField, rc=rc)
+          if(rc /= ESMF_SUCCESS) call my_error('ESMF_FieldCreate ' &
+               //trim(NameField)//' for '//trim(Name))
+          call ESMF_StateAdd(State, [Field], rc=rc)
+          if(rc /= ESMF_SUCCESS) call my_error('ESMF_StateAdd ' &
+               //trim(NameField)//' to '//trim(Name))
+       end do
+    endif
     rc = ESMF_SUCCESS
     call ESMF_LogWrite("ESMF_SWMF_Mod:add_fields returned", &
          ESMF_LOGMSG_INFO)

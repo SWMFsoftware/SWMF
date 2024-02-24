@@ -26,7 +26,7 @@ contains
   !============================================================================
   subroutine my_init(gComp, importState, exportState, externalClock, rc)
 
-    use ESMF_SWMF_Mod, ONLY: add_fields, nVar, NameField_V, nLon, nLat
+    use ESMF_SWMF_Mod, ONLY: add_fields, nVarEsmf, NameFieldEsmf_V, nLon, nLat
 
     type(ESMF_GridComp):: gComp
     type(ESMF_State)   :: importState
@@ -38,6 +38,7 @@ contains
     type(ESMF_Field):: Field
     real(ESMF_KIND_R8), pointer :: Ptr(:,:)
     integer                     :: iVar, i, j
+    character(len=4):: NameField
     ! Units
     real, parameter :: nT=1e-9, amu=1.6726*1e-27, cc=1e-6, kms=1e3, kb=1.38E-23
     !-------------------------------------------------------------------------
@@ -45,37 +46,29 @@ contains
     rc = ESMF_FAILURE
 
     ! Add MHD fields to the export state
-    call add_fields(gComp, ExportState, rc=rc)
+    call add_fields(gComp, ExportState, IsFromEsmf=.true., rc=rc)
     if(rc /= ESMF_SUCCESS) call my_error("add_fields failed")
 
     ! Initialize the data
-    do iVar = 1, nVar
+    do iVar = 1, nVarEsmf
        ! Get pointers to the variables in the export state
        nullify(Ptr)
-       call ESMF_StateGet(ExportState, itemName=NameField_V(iVar), &
-            field=Field, rc=rc)
-       if(rc /= ESMF_SUCCESS) call my_error("ESMF_StateGet failed for " &
-            //trim(NameField_V(iVar)))
+       NameField = NameFieldEsmf_V(iVar)
+       call ESMF_StateGet(ExportState, itemName=NameField, field=Field, rc=rc)
+       if(rc /= ESMF_SUCCESS) call my_error("ESMF_StateGet for "//NameField)
             
        call ESMF_FieldGet(Field, farrayPtr=Ptr, rc=rc) 
-       if(rc /= ESMF_SUCCESS) call my_error("ESMF_FieldGet failed for " &
-            //trim(NameField_V(iVar)))
+       if(rc /= ESMF_SUCCESS) call my_error("ESMF_FieldGet for "//NameField)
 
        if(rc /= ESMF_SUCCESS) RETURN
-       select case(NameField_V(iVar))
-       case('Rho')
+       select case(NameField)
+       case('Ped')
           Ptr =  5.0*amu/cc             ! 5 amu/cc
-       case('Ux')
+       case('Hall')
           Ptr = -400.0*kms              ! -400km/s
-       case('Bz')
-          Ptr = 1.0*nT                  ! 1 nT
-       case('P')
-          Ptr = 5.0/cc*kb*100000.0      ! 5/cc*kBoltzmann*100000 K 
-       case('Uy', 'Uz', 'Bx', 'By')
-          Ptr =  0.0
        case default
-          write(*,*)'ERROR in ESMF_GridComp:init: unknown NameField_V=',&
-               NameField_V(iVar),' for iVar=',iVar
+          write(*,*)'ERROR in ESMF_GridComp:init: unknown NameField=',&
+               NameField,' for iVar=',iVar
           rc = ESMF_FAILURE; return
        end select
 
@@ -97,8 +90,6 @@ contains
   !============================================================================
   subroutine my_run(gComp, importState, exportState, externalclock, rc)
 
-    use ESMF_SWMF_Mod, ONLY: NameField_V
-
     type(ESMF_GridComp):: gComp
     type(ESMF_State)   :: importState
     type(ESMF_State)   :: exportState
@@ -115,15 +106,15 @@ contains
 
     ! Get pointers to the MHD variables in the export state
     nullify(Ptr)
-    call ESMF_StateGet(ExportState, itemName='Bz', field=Field, rc=rc)
-    if(rc /= ESMF_SUCCESS) call my_error("ESMF_StateGet failed")
+    call ESMF_StateGet(ExportState, itemName='Hall', field=Field, rc=rc)
+    if(rc /= ESMF_SUCCESS) call my_error("ESMF_StateGet for Hall")
     call ESMF_FieldGet(Field, farrayPtr=Ptr, rc=rc) 
-    if(rc /= ESMF_SUCCESS) call my_error("ESMF_FieldGet failed")
+    if(rc /= ESMF_SUCCESS) call my_error("ESMF_FieldGet for Hall")
 
-    ! Update MHD state by changing Bz
-    write(*,*)'ESMFGridComp:run old Bz=',Ptr(1,1)
-    Ptr = Ptr - 2.0e-9/30   ! Change Bz by -2nT in 1 minute = 30 couplings
-    write(*,*)'ESMFGridComp:run new Bz=',Ptr(1,1)
+    ! Update state by changing Hall conductivity
+    write(*,*)'ESMFGridComp:run old Hall=',Ptr(1,1)
+    Ptr = Ptr - 2.0/30   ! Change by -2 in 1 minute = 30 couplings
+    write(*,*)'ESMFGridComp:run new Hall=',Ptr(1,1)
 
     rc = ESMF_SUCCESS
     call ESMF_LogWrite("ESMFGridComp run returned", ESMF_LOGMSG_INFO)
