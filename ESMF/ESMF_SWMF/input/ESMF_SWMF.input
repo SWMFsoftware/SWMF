@@ -20,7 +20,7 @@ Run the SWMF [y/n]: y
 #
 # Coupling parameters
 #
-SWMF Component: GM
+SWMF Component: IE
 Block all SWMF [y/n]: y
 Coupling Frequency: 2
 #
