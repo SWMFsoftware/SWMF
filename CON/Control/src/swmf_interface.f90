@@ -212,7 +212,7 @@ subroutine SWMF_couple(NameFrom, NameTo, NameCoord, &
         end if
 
         ! Put data into IE. Convert to the default real used by SWMF.
-        !call IE_put_from_ih_buffer(NameCoord, nX, nY, &
+        ! call IE_put_from_ih_buffer(NameCoord, nX, nY, &
         !     real(xMin), real(xMax), real(yMin), real(yMax), real(Data_VII))
      case default
         write(*,*)NameSub//' ERROR: '// &
