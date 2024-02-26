@@ -1,8 +1,8 @@
 Name Root Last Stride nThread
 #COMPONENTMAP		For up to 2 CPU cores + 1 GPU
-GM  0 0 1		CompMap root PE+GPU
-IE  0 1 1  		CompMap PEs 0 and 1
-IM  1 1 1		CompMap PE 1
+GM  0  0 1		CompMap root PE+GPU
+IE  0  1 1  		CompMap PEs 0 and 1
+IM -1 -1 1		CompMap last PE
 
 #TIMING
 T			UseTiming
