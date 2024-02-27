@@ -30,7 +30,8 @@ rundir: check_src
 		ln -s ${BINDIR}/FDIPS.exe .; \
 		ln -s ${BINDIR}/HARMONICS.exe .; \
 		ln -s ${BINDIR}/CONVERTHARMONICS.exe .; \
-		ln -s  ${BINDIR}/FRMAGNETOGRAM.exe .; \
+		ln -s ${BINDIR}/FRMAGNETOGRAM.exe .; \
+		ln -s ${BINDIR}/ELIMINATECMEBR.exe .; \
 		cp ${MAGNETOGRAMDIR}/HARMONICS.in.orig \
 		HARMONICS.in; \
 		cp ${MAGNETOGRAMDIR}/HARMONICSGRID.in.orig \

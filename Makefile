@@ -596,7 +596,9 @@ TDSETUP:
 	${MAKE} td_setup
 
 td_compile:
-	cd ${EMPIRICALEEDIR}; ${MAKE} FRM
+	cd ${EMPIRICALEEDIR}; \
+		${MAKE} FRM;  \
+		${MAKE} CMEBR
 	cd ${MAGNETOGRAMDIR}; \
 		${MAKE} HARMONICS; \
 		${MAKE} CONVERTHARMONICS; \

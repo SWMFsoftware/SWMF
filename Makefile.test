@@ -3203,7 +3203,13 @@ test_eegtd_run:
 	python3 TDSETUP.py field_2d.out -LonPosIn 45.50 -LatPosIn 6.08 \
 		-LonNegIn 48.50 -LatNegIn 10.60 -LonFPPosIn 42.50 \
 		-LatFPPosIn 8.50 -LonFPNegIn 65.50 -LatFPNegIn 16.50 \
-		-a2r0Ratio 0.25 -ApexIn 0.18 -BStrapMax 8.0 > run.log
+		-a2r0Ratio 0.25 -ApexIn 0.18 -BStrapMax 8.0 > run.log; \
+	perl -i -pe 's/#END/#MAGNETOGRAM\nfitsfile_01.out\n\n#END/' CME.in;\
+	perl -i -pe 's/#END/#ELIMINATECMEBR\neliminatecmebr.out\n\n#END/' \
+	CME.in;\
+	./ELIMINATECMEBR.exe |tee eliminatecmebr.log; \
+	perl -i -pe 's/#MAGNETOGRAM/MAGNETOGRAM/' CME.in;\
+	perl -i -pe 's/#ELIMINATECMEBR/ELIMINATECMEBR/' CME.in
 
 test_eegtd_check:
 	-${DIFFNUM} ${TESTDIR}/SC/CME.in \

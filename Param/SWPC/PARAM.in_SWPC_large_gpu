@@ -1,7 +1,7 @@
 Name Root Last Stride nThread
 #COMPONENTMAP
-GM  0 -2 1		CompMap root PE+GPU or 0..last-1 PEs
-IE -1 -1 1  		CompMap last PE
+GM  0 -3 1		CompMap root PE+GPU or 0..last-2 PEs
+IE -2 -2 1  		CompMap last-1 PE
 IM -1 -1 1		CompMap last PE
 
 #TIMING

@@ -22,6 +22,12 @@ readbstrap          TypeBStrap
 2.70      	     bStrappingDim 
 none                TypeCharge 
  
+MAGNETOGRAM
+fitsfile_01.out
+
+ELIMINATECMEBR
+eliminatecmebr.out
+
 #END 
 
 Angular Size            = 23.81
