@@ -6,7 +6,6 @@ module SwmfGridCompMod
   ! ESMF Framework module
   use ESMF
 
-  ! Named indexes for integer time arrays and access to MHD data
   use ESMF_SWMF_Mod, ONLY: &
        NameSwmfComp, DoRunSwmf, DoBlockAllSwmf, iProcCoupleSwmf, &
        NameFieldEsmf_V, nVarEsmf, nLon, nLat, LonMin, LonMax, LatMin, LatMax, &
@@ -53,7 +52,7 @@ contains
     call ESMF_LogWrite("SWMF_GridComp:init routine called", ESMF_LOGMSG_INFO)
     rc = ESMF_FAILURE
 
-    ! Add MHD fields to the SWMF import state
+    ! Add ESMF fields to the SWMF import state
     call add_fields(gComp, importState, IsFromEsmf=.true., rc=rc)
     if(rc /= ESMF_SUCCESS) call my_error('add_fields failed')
 
@@ -111,9 +110,9 @@ contains
     type(ESMF_Clock):: Clock
     integer, intent(out):: rc
 
-    ! Access to the MHD data
+    ! Access to the data
     real(ESMF_KIND_R8), pointer     :: Ptr(:,:)
-    real(ESMF_KIND_R8), allocatable :: Mhd_VII(:,:,:)
+    real(ESMF_KIND_R8), allocatable :: Data_VII(:,:,:)
     integer                         :: iVar
 
     ! Access to time
@@ -140,9 +139,9 @@ contains
     call ESMF_VMGet(vm, localPET=iProc, rc=rc)
     if(rc /= ESMF_SUCCESS) call my_error('ESMF_VMGet failed')
 
-    ! Obtain pointer to the MHD data obtained from the ESMF component
-    allocate(Mhd_VII(nVarEsmf,nLon,nLat), stat=rc)
-    if(rc /= 0) call my_error('allocate(Mhd_VII) failed')
+    ! Obtain pointer to the data obtained from the ESMF component
+    allocate(Data_VII(nVarEsmf,nLon,nLat), stat=rc)
+    if(rc /= 0) call my_error('allocate(Data_VII) failed')
 
     if(iProc == iProcCoupleSwmf)then
        ! Copy fields into an array
@@ -155,18 +154,18 @@ contains
           call ESMF_FieldGet(Field, farrayPtr=Ptr, rc=rc) 
           if(rc /= ESMF_SUCCESS) call my_error("ESMF_FieldGet failed")
 
-          Mhd_VII(iVar,:,:) = Ptr
+          Data_VII(iVar,:,:) = Ptr
        end do
-       write(*,*)'SWMF_GridComp shape of Ptr=',shape(Ptr)
-       write(*,*)'SWMF_GridComp value of Mhd=',Mhd_VII(:,1,1)
+       write(*,*)'SWMF_GridComp shape of Ptr =', shape(Ptr)
+       write(*,*)'SWMF_GridComp value of Data=', Data_VII(:,1,1)
     end if
 
     ! Send MHD data to the GM processors in the SWMF
     call SWMF_couple('ESMF_IPE', NameSwmfComp, 'GSM', &
-         nVarEsmf, nLon, nLat, LonMin, LonMax, LatMin, LatMax, Mhd_VII, rc)
+         nVarEsmf, nLon, nLat, LonMin, LonMax, LatMin, LatMax, Data_VII, rc)
     if(rc /= 0)call my_error('SWMF_couple failed')
 
-    deallocate(Mhd_VII)
+    deallocate(Data_VII)
 
     ! Get the next coupling time from the clock
     call ESMF_ClockGet(clock, CurrSimTime=SimTime, TimeStep=TimeStep,rc=rc)
