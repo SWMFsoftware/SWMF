@@ -1,0 +1,169 @@
+ iProcRootEsmf, iProcLastEsmf=           0           1
+ iProcRootSwmf, iProcLastSwmf=           0           1
+ DoRunSwmf= T
+ Block all SWMF [y/n]=y! DoBlock= T
+ iProcRootEsmf, iProcLastEsmf=           0           1
+ iProcRootSwmf, iProcLastSwmf=           0           1
+ DoRunSwmf= T
+ Block all SWMF [y/n]=y! DoBlock= T
+ ESMF_SWMF: IE   Root PE rank in SWMF=           0
+ Adding ESMF field=Hall to ESMF Gridded Component
+ Adding ESMF field=Hall to ESMF Gridded Component
+ Adding ESMF field=Ped  to ESMF Gridded Component
+ Adding ESMF field=Ped  to ESMF Gridded Component
+ Adding ESMF field=Hall to SWMF Gridded Component
+ Adding ESMF field=Hall to SWMF Gridded Component
+ Adding ESMF field=Ped  to SWMF Gridded Component
+ Adding ESMF field=Ped  to SWMF Gridded Component
+Main dir=/Users/gtoth/swmf/HEAD
+Remote  =git@github.com:SWMFsoftware
+SWMF                                original  master 2024-02-27 c2f90adda
+  CZ/FSAM                           original  master 2022-03-02 4ca1e89
+  GM/BATSRUS                        original  master 2024-02-26 0b56bd0
+  GM/BATSRUS/srcBATL                original  master 2024-02-22 f7cc837
+  GM/BATSRUS/srcUserExtra           original  master 2024-01-15 155fbc0
+  IE/Ridley_serial                  original  master 2023-07-10 667a247
+  IE/SIM                            original  master 2022-09-17 5719222
+  IM/CIMI                           original  master 2023-09-29 07a38fc
+  IM/HEIDI                          original  master 2023-07-20 ffd0d78
+  IM/RCM2                           original  master 2023-07-18 21dfecf
+  PC/ALTOR                          original  master 2023-07-18 7ec47af
+  PC/ALTOR/srcBATL_orig             original  master 2024-02-22 f7cc837
+  PC/AMPS                           original  master 2024-02-07 8201ab9
+  PC/FLEKS                          original  master 2024-02-26 946825e
+  PC/IPIC3D2                        original  master 2022-02-24 7065b00
+  PS/DGCPM                          original  master 2022-09-27 f90d741
+  PT/AMPS                           original  master 2024-02-07 8201ab9
+  PT/FLEKS                          original  master 2024-02-26 946825e
+  PW/PWOM                           original  master 2024-02-09 a24ca98
+  RB/RBE                            original  master 2023-07-18 8a623e7
+  SP/MFLAMPA                        original  master 2024-02-25 81b75f4
+  SWMFSOLAR                         original  master 2024-02-26 06dca2b
+  SWPCTEST                          original  master 2024-01-02 799bd08
+  UA/GITM2                          original  master 2023-07-19 8267f59
+  share                             original  master 2024-02-26 31cfee1
+  util                              original  master 2024-02-26 7ef5b0f
+  util/AMREX                        original  master 2023-11-03 16dc97391
+  util/HYPRE                        original  master 2020-10-21 aa8036c
+
+#=============================================================================#
+# ID  Version                                       nproc proc0 stride nthread#
+#-----------------------------------------------------------------------------#
+# CON SWMF by Univ. of Michigan          version 2.40     2     0     1     1 #
+#-----------------------------------------------------------------------------#
+# GM  BATSRUS (Univ. of Michigan)        version 9.90     1     0     1     1 #
+# IE  Serial Potential Solver (Ridley)   version 1.10     2     0     1     1 #
+# IM  RCM (De Zeeuw-Sazykin)             version 2.00     1     0     1     1 #
+# RB  Radiation Belt Environment, M. Fok version 1.00     1     1     1     1 #
+#=============================================================================#
+read_inputs: iSession=  1
+read_file: read and broadcast nLine= 225 lines of text
+
+#COMPONENTMAP		For production run
+GM  0 -3 -1  -1		CompMap 0:nProc-3 multithreaded
+IE -2 -1  1  		CompMap last 2 PE-s
+IM -2 -2  1		CompMap nProc-2 PE
+RB -1 -1  1		CompMap nProc-1 PE
+
+
+#DESCRIPTION
+Param/SWPC/PARAM.in_SWPC_v2_init: Example file to start a run for the SWPC Version 2 code selection		StringDescription
+
+#ECHO
+F			DoEcho
+ GM_set_parameters: READ iSession =           1  iLine=          45  nLine =         198
+ IE_set_param: READ iSession =           1  iLine=         201  nLine =         219
+ GM_set_parameters: CHECK iSession =           1
+  
+ The code is configured with nG=           2  ghost cell layers.
+ The selected scheme requires nGUsed=           1  layers!
+GM:init_mod_advance allocated arrays
+GM:init_mod_geometry allocated arrays
+GM:init_mod_nodes allocated arrays
+GM:init_mod_field_trace allocated arrays
+ IE_set_param: CHECK iSession =           1
+ ----- Starting Session            1  ------
+IE0:
+IE0:  Ionosphere Solution Parameters
+IE0:  ------------------------------
+IE0:
+IE0: Ionospheric grids   :   181 x   361
+IE0: Height of ionosphere:   110.0 km
+IE0: Conductance model   : Realistic oval
+IE0: UseCMEEFitting      :  F
+IE0: NameHalFile         : cond_hal_coeffs.dat
+IE0: NamePedFile         : cond_ped_coeffs.dat
+IE0:  ------------------------------
+IE0:
+ world_used finished with iProc0Used=           0  nProcUsed=           2
+ Resetting timing counters after setup.
+ SWMF_GridComp shape of Ptr =         180         180
+ SWMF_GridComp value of Data=  -342000.00000000000        7.1503650000000000E-021
+ SWMF_run starts  with tCouple =   2.0000000000000000     
+ SWMF_run starts  with tCouple =   2.0000000000000000     
+ SWMF_run returns with tSimSwmf=   2.0000000000000000     
+Progress:      10 steps,  2.000000E+00 s simulation time,      3.70 s CPU time, Date: 20000321_104502
+ SWMF_run returns with tSimSwmf=   2.0000000000000000     
+ ESMFGridComp:run old Hall=  -342000.00000000000     
+ ESMFGridComp:run old Hall=   0.0000000000000000     
+ ESMFGridComp:run new Hall=  -342000.06666666665     
+ ESMFGridComp:run new Hall=   0.0000000000000000     
+ SWMF_GridComp shape of Ptr =         180         180
+ SWMF_GridComp value of Data=  -342000.06666666665        7.1503650000000000E-021
+ SWMF_run starts  with tCouple =   4.0000000000000000     
+ SWMF_run starts  with tCouple =   4.0000000000000000     
+ SWMF_run returns with tSimSwmf=   4.0000000000000000     
+ SWMF_run returns with tSimSwmf=   4.0000000000000000     
+ ESMFGridComp:run old Hall=  -342000.06666666665     
+ ESMFGridComp:run old Hall=   0.0000000000000000     
+ ESMFGridComp:run new Hall=  -342000.13333333330     
+ ESMFGridComp:run new Hall=   0.0000000000000000     
+ SWMF_GridComp shape of Ptr =         180         180
+ SWMF_GridComp value of Data=  -342000.13333333330        7.1503650000000000E-021
+ SWMF_run starts  with tCouple =   6.0000000000000000     
+ SWMF_run starts  with tCouple =   6.0000000000000000     
+Progress:      20 steps,  4.903780E+00 s simulation time,      7.30 s CPU time, Date: 20000321_104504
+IE0:iono_solver: F10.7=    100.00
+IE0:iono_solver: Northern Cross Polar Cap Potential=   6.94896     kV
+IE1:iono_solver: Southern Cross Polar Cap Potential=   6.99534     kV
+ SWMF_run returns with tSimSwmf=   6.0000000000000000     
+ SWMF_run returns with tSimSwmf=   6.0000000000000000     
+ ESMFGridComp:run old Hall=  -342000.13333333330     
+ ESMFGridComp:run old Hall=   0.0000000000000000     
+ ESMFGridComp:run new Hall=  -342000.19999999995     
+ ESMFGridComp:run new Hall=   0.0000000000000000     
+ SWMF_GridComp shape of Ptr =         180         180
+ SWMF_GridComp value of Data=  -342000.19999999995        7.1503650000000000E-021
+ SWMF_run starts  with tCouple =   8.0000000000000000     
+ SWMF_run starts  with tCouple =   8.0000000000000000     
+ SWMF_run returns with tSimSwmf=   8.0000000000000000     
+Progress:      30 steps,  7.548001E+00 s simulation time,     11.79 s CPU time, Date: 20000321_104507
+ SWMF_run returns with tSimSwmf=   8.0000000000000000     
+ ESMFGridComp:run old Hall=  -342000.19999999995     
+ ESMFGridComp:run old Hall=   0.0000000000000000     
+ ESMFGridComp:run new Hall=  -342000.26666666660     
+ ESMFGridComp:run new Hall=   0.0000000000000000     
+ SWMF_GridComp shape of Ptr =         180         180
+ SWMF_GridComp value of Data=  -342000.26666666660        7.1503650000000000E-021
+ SWMF_run starts  with tCouple =   10.000000000000000     
+ SWMF_run starts  with tCouple =   10.000000000000000     
+IE1:iono_solver: Southern Cross Polar Cap Potential=   11.4204     kV
+IE0:iono_solver: F10.7=    100.00
+IE0:iono_solver: Northern Cross Polar Cap Potential=   11.2025     kV
+ SWMF_run returns with tSimSwmf=   10.000000000000000     
+ ----- End of Session              1  ------
+ SWMF_run returns with tSimSwmf=   10.000000000000000     
+ ESMFGridComp:run old Hall=  -342000.26666666660     
+ ESMFGridComp:run old Hall=   0.0000000000000000     
+ ESMFGridComp:run new Hall=  -342000.33333333326     
+ ESMFGridComp:run new Hall=   0.0000000000000000     
+
+    Finished Numerical Simulation
+    -----------------------------
+   Simulated time =   1.00000E+01 s 
+ => Writing restart file for ionosphere.
+GM:clean_mod_advance deallocated arrays
+GM:clean_mod_raytrace deallocated arrays
+GM:clean_mod_geometry deallocated arrays
+GM:clean_mod_nodes deallocated arrays
+GM: Error report: no errors...
