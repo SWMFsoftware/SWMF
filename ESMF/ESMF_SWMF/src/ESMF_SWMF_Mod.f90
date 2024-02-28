@@ -454,7 +454,7 @@ contains
     type(ESMF_ArraySpec) :: ArraySpec
     integer              :: iVar
     character(len=4)     :: NameField
-    real(ESMF_KIND_R8), pointer :: Ptr_C(:,:)
+    ! real(ESMF_KIND_R8), pointer :: Ptr_C(:,:)
 
     ! Name of the component
     character(len=100) :: Name
@@ -477,18 +477,18 @@ contains
                staggerloc=ESMF_STAGGERLOC_CENTER, name=NameField, rc=rc)
           if(rc /= ESMF_SUCCESS) call my_error('ESMF_FieldCreate ' &
                //trim(NameField)//' for '//trim(Name))
-          nullify(Ptr_C)
-          call ESMF_FieldGet(Field, farrayPtr=Ptr_C, rc=rc)
-          if(rc /= ESMF_SUCCESS) call my_error("ESMF_FieldGet for "//NameField// &
-               ' for '//trim(Name))
-          if(size(Ptr_C) == 0)then
-             write(*,*)'!!! size(Ptr_C)=', size(Ptr_C)
-             call my_error("ESMF_FieldGet "//NameField//' for  '//trim(Name))
-          end if
-          Ptr_C = -7.77
+          ! nullify(Ptr_C)
+          ! call ESMF_FieldGet(Field, farrayPtr=Ptr_C, rc=rc)
+          ! if(rc /= ESMF_SUCCESS) call my_error("ESMF_FieldGet for "//NameField// &
+          !      ' for '//trim(Name))
+          ! if(size(Ptr_C) == 0)then
+          !    write(*,*)'!!! size(Ptr_C)=', size(Ptr_C)
+          !    call my_error("ESMF_FieldGet "//NameField//' for  '//trim(Name))
+          ! end if
+          ! Ptr_C = -7.77
           call ESMF_StateAdd(State, [Field], rc=rc)
           if(rc /= ESMF_SUCCESS) call my_error('ESMF_StateAdd '//NameField// &
-               ' to '//trim(Name))
+                ' to '//trim(Name))
        end do
     else
        do iVar = 1, nVarSwmf
