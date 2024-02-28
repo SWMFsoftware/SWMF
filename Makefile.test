@@ -742,10 +742,10 @@ test_swpc_gpu:
 	${MAKE} test_swpc_gpu_rundir
 	@echo "test_swpc_gpu_run..." >> test_swpc_gpu_gm.diff
 	@echo "test_swpc_gpu_run..." >> test_swpc_gpu_ie.diff
-	${MAKE} test_swpc_gpu_run NP=2
+	${MAKE} test_swpc_gpu_run
 	@echo "test_swpc_gpu_restart..." >> test_swpc_gpu_gm.diff
 	@echo "test_swpc_gpu_restart..." >> test_swpc_gpu_ie.diff
-	${MAKE} test_swpc_gpu_restart NP=2
+	${MAKE} test_swpc_gpu_restart
 	@echo "test_swpc_gpu_check..." >> test_swpc_gpu_gm.diff
 	@echo "test_swpc_gpu_check..." >> test_swpc_gpu_ie.diff
 	${MAKE} test_swpc_gpu_check
@@ -817,7 +817,7 @@ test_swpc_large_gpu:
 	${MAKE} test_swpc_large_gpu_rundir
 	@echo "test_swpc_large_gpu_run..." >> test_swpc_large_gpu_gm.diff
 	@echo "test_swpc_large_gpu_run..." >> test_swpc_large_gpu_ie.diff
-	${MAKE} test_swpc_large_gpu_run NP=2
+	${MAKE} test_swpc_large_gpu_run
 	@echo "test_swpc_large_gpu_check..." >> test_swpc_large_gpu_gm.diff
 	@echo "test_swpc_large_gpu_check..." >> test_swpc_large_gpu_ie.diff
 	${MAKE} test_swpc_large_gpu_check
