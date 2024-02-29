@@ -26,7 +26,8 @@ contains
   !============================================================================
   subroutine my_init(gComp, importState, exportState, externalClock, rc)
 
-    use ESMF_SWMF_Mod, ONLY: add_fields, nVarEsmf, NameFieldEsmf_V, nLon, nLat
+    use ESMF_SWMF_Mod, ONLY: add_fields, nVarEsmf, NameFieldEsmf_V, &
+         nLonEsmf, nLatEsmf
 
     type(ESMF_GridComp):: gComp
     type(ESMF_State)   :: importState
@@ -73,11 +74,11 @@ contains
        end select
 
        ! Add coordinate dependence (5% in Y, 10% in Z)
-       if(nLon > 1 .and. nLat > 1)then
-          do j = 1, nLat; do i = 1, nLon
+       if(nLonEsmf > 1 .and. nLatEsmf > 1)then
+          do j = 1, nLatEsmf; do i = 1, nLonEsmf
              Ptr(i,j) = Ptr(i,j) &
-                  * (0.95 + 0.1*(i - 1.0)/(nLon - 1.0)) &
-                  * (0.90 + 0.2*(j - 1.0)/(nLat - 1.0))
+                  * (0.95 + 0.1*(i - 1.0)/(nLonEsmf - 1)) &
+                  * (0.90 + 0.2*(j - 1.0)/(nLatEsmf - 1))
           end do; end do
        end if
 

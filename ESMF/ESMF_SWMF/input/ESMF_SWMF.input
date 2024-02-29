@@ -24,14 +24,12 @@ SWMF Component: IE
 Block all SWMF [y/n]: y
 Coupling Frequency: 2
 #
-# Coupling grid size and range (in degrees)
+# WAM-IPE grid size and range (in degrees)
 #
-nLon:  360
-nLat:  180
-LonMin:  0.0
-LonMax: +360.0
-LatMin: -90.0
-LatMax: +90.0
+nLon:  72
+nLat:  50
+LatMin: -50.0
+LatMax: +50.0
 #
 # Start and End of the simulation
 #

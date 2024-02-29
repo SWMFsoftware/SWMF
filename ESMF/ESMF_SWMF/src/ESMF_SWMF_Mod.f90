@@ -3,6 +3,7 @@ module ESMF_SWMF_Mod
   ! Various entities needed for the ESMF-SWMF coupling
 
   use ESMF
+  use IE_ModSize, ONLY: nLatSwmf => IONO_nTheta, nLonSwmf => IONO_nPsi
   implicit none
 
   private
@@ -41,9 +42,9 @@ module ESMF_SWMF_Mod
   ! SWMF component to couple with
   character(len=2), public :: NameSwmfComp = 'IE'
 
-  ! The ESMF communicates with iProcCoupleSwmf within the SWMF layout
-  ! This variable is determined from NameSwmfComp and the PARAM.in file.
-  integer, public:: iProcCoupleSwmf=0
+  ! The ESMF communicates with SwmfComp within the SWMF.
+  ! The processors used by SwmfComp are obtained from the PARAM.in file.
+  integer, public:: iProc0SwmfComp=0, iProcLastSwmfComp=0, nProcSwmfComp=1
 
   ! If DoRunSwmf is true, run the SWMF for real, otherwise just pretend
   logical, public:: DoRunSwmf = .true.
@@ -58,11 +59,14 @@ module ESMF_SWMF_Mod
   ! This is a 2D spherical grid representing the height integrated ionosphere.
   ! In RIM it is in SM coordinates:
   ! +Z points to north magnetic dipole and the Sun is in the +X-Z halfplane.
-  integer, public:: nLon=360, nLat=180           ! Default grid size
-  real(ESMF_KIND_R8), public:: LonMin = 0.0      ! Minimum longitude
-  real(ESMF_KIND_R8), public:: LonMax = 360.0    ! Maximum longitude
-  real(ESMF_KIND_R8), public:: LatMin = -90.0    ! Minimum latitude
-  real(ESMF_KIND_R8), public:: LatMax = +90.0    ! Maximum latitude
+  public:: nLonSwmf, nLatSwmf                 ! SWMF grid size from IE_ModSize
+  integer, public:: nLonEsmf=48, nLatEsmf=120 ! Default ESMF grid size
+  real(ESMF_KIND_R8), parameter, public:: LonMin = 0.0      ! Minimum longitude
+  real(ESMF_KIND_R8), parameter, public:: LonMax = 360.0    ! Maximum longitude
+  real(ESMF_KIND_R8), parameter, public:: LatMinSwmf = -90.0 ! Min SWMF lat
+  real(ESMF_KIND_R8), parameter, public:: LatMaxSwmf = +90.0 ! Max SWMF lat
+  real(ESMF_KIND_R8), public:: LatMinEsmf = -90.0 ! Min latitude of ESMF grid
+  real(ESMF_KIND_R8), public:: LatMaxEsmf = +90.0 ! Max latitude of ESMF grid
 
 contains
   !============================================================================
@@ -302,72 +306,50 @@ contains
     end if
 
     ! Get grid size
-    iDefaultTmp = nLon
-    call ESMF_ConfigGetAttribute(Config, nLon, label='nLon:', rc=rc)
+    iDefaultTmp = nLonEsmf
+    call ESMF_ConfigGetAttribute(Config, nLonEsmf, label='nLon:', rc=rc)
     if(rc /= ESMF_SUCCESS) then
        if(iProc == 0) write(*,*) 'ESMF_SWMF did not read nLon, ', &
             'setting default value= ', iDefaultTmp
-       nLon = iDefaultTmp
+       nLonEsmf = iDefaultTmp
     end if
-    if(nLon < 1)then
+    if(nLonEsmf < 1)then
        if(iProc == 0) write(*,*) 'ESMF_SWMF ERROR: ', &
-            'nLon =',nLon,' should be positive!'
+            'nLon =',nLonEsmf,' should be positive!'
        rc = ESMF_FAILURE; RETURN
     end if
 
-    iDefaultTmp = nLat
-    call ESMF_ConfigGetAttribute(Config, nLat, label='nLat:', rc=rc)
+    iDefaultTmp = nLatEsmf
+    call ESMF_ConfigGetAttribute(Config, nLatEsmf, label='nLat:', rc=rc)
     if(rc /= ESMF_SUCCESS) then
        if(iProc == 0) write(*,*) 'ESMF_SWMF did not read nLat, ', &
             'setting default value= ', iDefaultTmp
-       nLat = iDefaultTmp
+       nLatEsmf = iDefaultTmp
     end if
-    if(nLat < 1)then
+    if(nLatEsmf < 1)then
        if(iProc == 0) write(*,*) 'ESMF_SWMF ERROR: ', &
-            'nLat =',nLat,' should be positive!'
+            'nLat =',nLatEsmf,' should be positive!'
        rc = ESMF_FAILURE; RETURN
     end if
 
-    ! Get grid coordinate range
-    DefaultTmp = LonMin
-    call ESMF_ConfigGetAttribute(Config, LonMin, label='LonMin:', rc=rc)
-    if(rc /= ESMF_SUCCESS) then
-       if(iProc == 0) write(*,*) 'ESMF_SWMF did not read LonMin, '// &
-            'setting default value= ', DefaultTmp
-       LonMin = DefaultTmp
-    end if
-
-    DefaultTmp = LonMax
-    call ESMF_ConfigGetAttribute(Config, LonMax, label='LonMax:', rc=rc)
-    if(rc /= ESMF_SUCCESS) then
-       if(iProc == 0) write(*,*) 'ESMF_SWMF did not read LonMax, '// &
-            'setting default value= ', DefaultTmp
-       LonMax = DefaultTmp
-    end if
-    if(LonMax <= LonMin)then
-       if(iProc == 0) write(*,*) 'ESMF_SWMF ERROR: ', &
-            'LonMax =', LonMax, ' should be larger than LonMin=', LonMin
-       rc = ESMF_FAILURE; RETURN
-    end if
-
-    DefaultTmp = LatMin
-    call ESMF_ConfigGetAttribute(Config, LatMin, label='LatMin:', rc=rc)
+    DefaultTmp = LatMinEsmf
+    call ESMF_ConfigGetAttribute(Config, LatMinEsmf, label='LatMin:', rc=rc)
     if(rc /= ESMF_SUCCESS) then
        if(iProc == 0) write(*,*) 'ESMF_SWMF did not read LatMin, '// &
             'setting default value= ', DefaultTmp
-       LatMin = DefaultTmp
+       LatMinEsmf = DefaultTmp
     end if
 
-    DefaultTmp = LatMax
-    call ESMF_ConfigGetAttribute(Config, LatMax, label='LatMax:', rc=rc)
+    DefaultTmp = LatMaxEsmf
+    call ESMF_ConfigGetAttribute(Config, LatMaxEsmf, label='LatMax:', rc=rc)
     if(rc /= ESMF_SUCCESS) then
        if(iProc == 0) write(*,*) 'ESMF_SWMF did not read LatMax, '// &
             'setting default value= ', DefaultTmp
-       LatMax = DefaultTmp
+       LatMaxEsmf = DefaultTmp
     end if
-    if(LatMax <= LatMin)then
-       if(iProc == 0) write(*,*) 'ESMF_SWMF ERROR: ', &
-            'LatMax =', LatMax, ' should be larger than LatMin=', LatMin
+    if(LatMaxEsmf <= LatMinEsmf)then
+       if(iProc == 0) write(*,*) 'ESMF_SWMF ERROR: LatMaxEsmf=', &
+            LatMaxEsmf, ' should be larger than LatMinEsmf=', LatMinEsmf
        rc = ESMF_FAILURE; RETURN
     end if
 
@@ -416,17 +398,28 @@ contains
        if(String(1:13) == '#COMPONENTMAP') DoRead = .true.
        if(.not.DoRead) CYCLE
        if(String(1:2) == NameSwmfComp)then
-          read(String, *, iostat=rc)NameSwmfComp, iProcCoupleSwmf
+          read(String, *, iostat=rc)NameSwmfComp, &
+               iProc0SwmfComp, iProcLastSwmfComp
           if(rc/=0)then
              if(iProc==0)write(*,*)'ESMF_SWMF ERROR: '// &
                   'could not read iProcRoot for '//NameSwmfComp// &
                   ' from line=',trim(String),' in PARAM.in'
              rc = ESMF_FAILURE; RETURN
           end if
-          ! Negative value is relative to the end
-          if(iProcCoupleSwmf < 0) iProcCoupleSwmf = iProcCoupleSwmf + nProcSwmf
-          ! Limit iProcCoupleSwmf by the number of SWMF processors
-          iProcCoupleSwmf = min(iProcCoupleSwmf, nProcSwmf - 1)
+          if(iProc0SwmfComp < 0) then
+             ! Negative value is relative to the end
+             iProc0SwmfComp = max(0, iProc0SwmfComp + nProcSwmf)
+          else
+             ! Positive value is limited by nProcSwmf
+             iProc0SwmfComp = min(0, nProcSwmf - 1)
+          end if
+          if(iProcLastSwmfComp < 0) then
+             iProcLastSwmfComp = iProcLastSwmfComp + nProcSwmf
+          else
+             iProcLastSwmfComp = min(iProcLastSwmfComp, nProcSwmf - 1)
+          end if
+          ! Number of processors used by SwmfComp
+          nProcSwmfComp = iProcLastSwmfComp - iProc0SwmfComp + 1
           EXIT READLAYOUT
        end if
        if(String == '')then
@@ -437,8 +430,9 @@ contains
     end do READLAYOUT
     close(iUnit)
 
-    if(iProc==0)write(*,*)'ESMF_SWMF: '// &
-         NameSwmfComp//'   Root PE rank in SWMF=', iProcCoupleSwmf
+    if(iProc == 0)write(*,*)'ESMF_SWMF: '//NameSwmfComp// &
+         ' Root, Last, nProc=', &
+         iProc0SwmfComp, iProcLastSwmfComp, nProcSwmfComp
 
   end subroutine read_swmf_layout
   !============================================================================
