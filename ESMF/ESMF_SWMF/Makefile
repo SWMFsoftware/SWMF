@@ -25,7 +25,9 @@ rundir: ${RUNDIR}
 	cp input/PARAM.in ${RUNDIR}/
 	cd ${RUNDIR}; ln -sf ${BINDIR}/ESMF_SWMF.exe .
 
-test: ESMF_SWMF rundir
+test:
+	${MAKE} ESMF_SWMF
+	${MAKE} rundir
 	cd ${RUNDIR}; rm -f *.ESMF_LogFile; ${MPIRUN} ESMF_SWMF.exe
 	cd ${RUNDIR}; perl -ne 'print if /error/i' PET*.ESMF_LogFile
 
