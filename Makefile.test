@@ -3205,11 +3205,15 @@ test_eegtd_run:
 		-LatFPPosIn 8.50 -LonFPNegIn 65.50 -LatFPNegIn 16.50 \
 		-a2r0Ratio 0.25 -ApexIn 0.18 -BStrapMax 8.0 > run.log; \
 	perl -i -pe 's/#END/#MAGNETOGRAM\nfitsfile_01.out\n\n#END/' CME.in;\
-	perl -i -pe 's/#END/#ELIMINATECMEBR\neliminatecmebr.out\n\n#END/' \
+	perl -i -pe 's/#END/#ELIMINATECMEBR\nfitsfile_01.out\n\n#END/' \
 	CME.in;\
 	./ELIMINATECMEBR.exe |tee eliminatecmebr.log; \
 	perl -i -pe 's/#MAGNETOGRAM/MAGNETOGRAM/' CME.in;\
-	perl -i -pe 's/#ELIMINATECMEBR/ELIMINATECMEBR/' CME.in
+	perl -i -pe 's/#ELIMINATECMEBR/ELIMINATECMEBR/' CME.in; \
+	./HARMONICS.exe |tee harmonics.log
+	@echo " Reconstruction of potential field takes a while, please, wait"
+	cd ${RUNDIR}/SC; \
+	${MPIRUN} ./CONVERTHARMONICS.exe > convert.log
 
 test_eegtd_check:
 	-${DIFFNUM} ${TESTDIR}/SC/CME.in \
