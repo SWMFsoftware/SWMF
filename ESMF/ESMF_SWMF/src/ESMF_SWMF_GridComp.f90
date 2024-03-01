@@ -39,7 +39,8 @@ contains
   !============================================================================
   subroutine my_init(gComp, ImportState, ExportState, ParentClock, rc)
 
-    use ESMF_SWMF_Mod, only: nLon, nLat, LonMin, LonMax, LatMin, LatMax, &
+    use ESMF_SWMF_Mod, only: nLonSwmf, nLatSwmf, &
+         nLonEsmf, nLatEsmf, LatMinEsmf, LatMaxEsmf, &
          iProcRootSwmf, iProcRootEsmf, iProcLastEsmf, iProcLastSwmf
 
     type(ESMF_GridComp):: gComp
@@ -65,14 +66,14 @@ contains
     if(rc /= ESMF_SUCCESS) call	my_error('ESMF_VMGet')
 
     ! Create two grids
-    SwmfGrid = ESMF_GridCreate1PeriDimUfrm(maxIndex=[nLon, nLat], &
-         minCornerCoord=[LonMin, LatMin], maxCornerCoord=[LonMax, LatMax], &
+    SwmfGrid = ESMF_GridCreate1PeriDimUfrm(maxIndex=[nLonSwmf, nLatSwmf], &
+         minCornerCoord=[0.0, -90.0], maxCornerCoord=[360.0, 90.0], &
          staggerLocList=[ESMF_STAGGERLOC_CENTER, ESMF_STAGGERLOC_CORNER], &
          name="SWMF grid", rc=rc)
     if(rc /= ESMF_SUCCESS)call	my_error('ESMF_GridCreate1PeriDimUfrm Swmf')
 
-    EsmfGrid = ESMF_GridCreate1PeriDimUfrm(maxIndex=[nLon, nLat], &
-         minCornerCoord=[LonMin, LatMin], maxCornerCoord=[LonMax, LatMax], &
+    EsmfGrid = ESMF_GridCreate1PeriDimUfrm(maxIndex=[nLonSwmf, nLatSwmf], &
+         minCornerCoord=[0.0, -90.0], maxCornerCoord=[360.0, 90.0], &
          staggerLocList=[ESMF_STAGGERLOC_CENTER, ESMF_STAGGERLOC_CORNER], &
          name="ESMF grid", rc=rc)
     if(rc /= ESMF_SUCCESS)call my_error('ESMF_GridCreate1PeriDimUfrm Esmf')

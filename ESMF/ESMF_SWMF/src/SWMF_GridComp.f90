@@ -7,8 +7,9 @@ module SwmfGridCompMod
   use ESMF
 
   use ESMF_SWMF_Mod, ONLY: &
-       NameSwmfComp, DoRunSwmf, DoBlockAllSwmf, iProcCoupleSwmf, &
-       NameFieldEsmf_V, nVarEsmf, nLon, nLat, LonMin, LonMax, LatMin, LatMax, &
+       DoRunSwmf, DoBlockAllSwmf, &
+       NameSwmfComp, iProc0SwmfComp, iProcLastSwmfComp, &
+       NameFieldEsmf_V, nVarEsmf, nLonSwmf, nLatSwmf, &
        Year_, Month_, Day_, Hour_, Minute_, Second_, MilliSec_, &
        add_fields
 
@@ -140,10 +141,10 @@ contains
     if(rc /= ESMF_SUCCESS) call my_error('ESMF_VMGet failed')
 
     ! Obtain pointer to the data obtained from the ESMF component
-    allocate(Data_VII(nVarEsmf,nLon,nLat), stat=rc)
+    allocate(Data_VII(nVarEsmf,nLonSwmf,nLatSwmf), stat=rc)
     if(rc /= 0) call my_error('allocate(Data_VII) failed')
 
-    if(iProc == iProcCoupleSwmf)then
+    if(iProc >= iProc0SwmfComp .and. iProc <= iProcLastSwmfComp)then
        ! Copy fields into an array
        do iVar = 1, nVarEsmf
           nullify(Ptr)
@@ -160,15 +161,15 @@ contains
        write(*,*)'SWMF_GridComp value of Data=', Data_VII(:,1,1)
     end if
 
-    ! Send MHD data to the GM processors in the SWMF
-    call SWMF_couple('ESMF_IPE', NameSwmfComp, 'GSM', &
-         nVarEsmf, nLon, nLat, LonMin, LonMax, LatMin, LatMax, Data_VII, rc)
+    ! Send the data to the processors in the SWMF
+    call SWMF_couple('ESMF_IPE', NameSwmfComp, 'SMG', &
+         nVarEsmf, nLonSwmf, nLatSwmf, 0.0, 360.0, -90.0, 90.0, Data_VII, rc)
     if(rc /= 0)call my_error('SWMF_couple failed')
 
     deallocate(Data_VII)
 
     ! Get the next coupling time from the clock
-    call ESMF_ClockGet(clock, CurrSimTime=SimTime, TimeStep=TimeStep,rc=rc)
+    call ESMF_ClockGet(Clock, CurrSimTime=SimTime, TimeStep=TimeStep, rc=rc)
     if(rc /= ESMF_SUCCESS) call my_error('ESMF_ClockGet failed')
 
     ! Calculate simulation time for next coupling
