@@ -33,17 +33,17 @@ module ESMF_SWMF_Mod
   real(ESMF_KIND_R8), public:: TimeSimulation = 0.0
   integer, public :: iCoupleFreq = 1   ! Coupling frequency in seconds
 
-  ! Variables related to the layout information
-  ! SWMF runs on processor ranks iProcRootSwmf to iProcLastSwmf,
+  ! SWMF runs on processor ranks iProcRootSwmf to iProcLastSwmf
   ! ESMF runs on processor ranks iProcRootEsmf to iProcLastEsmf
-  integer, public :: iProcRootSwmf, iProcLastSwmf, nProcSwmf
-  integer, public :: iProcRootEsmf, iProcLastEsmf
+  integer, public :: iProcRootSwmf=1, iProcLastSwmf=-1, nProcSwmf
+  integer, public :: iProcRootEsmf=0, iProcLastEsmf=0
 
   ! SWMF component to couple with
   character(len=2), public :: NameSwmfComp = 'IE'
 
   ! The ESMF communicates with SwmfComp within the SWMF.
   ! The processors used by SwmfComp are obtained from the PARAM.in file.
+  ! These indexes are relative to the SWMF MPI communicator
   integer, public:: iProc0SwmfComp=0, iProcLastSwmfComp=0, nProcSwmfComp=1
 
   ! If DoRunSwmf is true, run the SWMF for real, otherwise just pretend
@@ -177,84 +177,51 @@ contains
        RETURN
     endif
 
-    ! Read root PE for the SWMF
+    ! Read root PE for the SWMF (default is 1)
     call ESMF_ConfigGetAttribute(Config, iProcRootSwmf, &
          label='SWMF Root PE:', rc=rc)
     if(rc /= ESMF_SUCCESS) then
-       if(iProc == 0)write(*,*) 'ESMF_SWMF: ', &
-            'Settind default for SWMF Root PE: 0'
-       iProcRootSwmf = 0
-    end if
-    if(iProcRootSwmf < 0) then
-       if(iProc == 0)write(*,*) 'WARNING in ESMF_SWMF: ', &
-            'SWMF Root PE rank negative! Setting it to 0'
-       iProcRootSwmf = 0
-    end if
-    if(iProcRootSwmf >= nProc) then
-       if(iProc == 0)write(*,*) 'ESMF_SWMF: ', &
-            'SWMF Root PE rank too large, setting nProc-1=',nProc-1
-       iProcRootSwmf = nProc-1
+       iProcRootSwmf = min(nProc - 1, 1)
+    elseif(iProcRootSwmf < 0) then
+       iProcRootSwmf = max(0, iProcRootSwmf + nProc)
+    else
+       iProcRootSwmf = min(iProcRootSwmf, nProc - 1)
     end if
 
-    ! Read last PE for the SWMF
+    ! Read last PE for the SWMF (default is nProc - 1)
     call ESMF_ConfigGetAttribute(Config, iProcLastSwmf, &
          label='SWMF Last PE:', rc=rc)
     if(rc /= ESMF_SUCCESS) then
-       if(iProc == 0)write(*,*) 'ESMF_SWMF: ', &
-            'Setting default for SWMF Last PE: nProc-1=',nProc-1
        iProcLastSwmf = nProc-1
+    elseif(iProcLastSwmf < 0) then
+       iProcLastSwmf = max(iProcRootSwmf, iProcLastSwmf + nProc)
+    else
+       iProcLastSwmf = max(iProcRootSwmf, min(iProcLastSwmf, nProc - 1))
     end if
-    if(iProcLastSwmf < iProcRootSwmf) then
-       if(iProc == 0)write(*,*) 'ESMF_SWMF: ', &
-            'SWMF Last PE rank too small, setting it to iProcRootSwmf=',&
-            iProcRootSwmf
-       iProcLastSwmf = iProcRootSwmf
-    end if
-    if(iProcLastSwmf >= nProc) then
-       if(iProc == 0)write(*,*) 'ESMF_SWMF: ', &
-            'SWMF Last PE rank too large, setting it to nProc-1=', nProc-1
-       iProcLastSwmf = nProc-1
-    end if
+
     ! Number of PEs used by the SWMF
     nProcSwmf = iProcLastSwmf - iProcRootSwmf + 1
 
-    ! Read root PE for the ESMF
+    ! Read root PE for the ESMF (default is 0)
     call ESMF_ConfigGetAttribute(Config, iProcRootEsmf, &
          label='ESMF Root PE:', rc=rc)
     if(rc /= ESMF_SUCCESS) then
-       if(iProc == 0)write(*,*) 'ESMF_SWMF: ', &
-            'Setting default for ESMF Root PE: 0'
        iProcRootEsmf = 0
-    end if
-    if(iProcRootEsmf < 0) then
-       if(iProc == 0)write(*,*) 'WARNING in ESMF_SWMF: ', &
-            'Negative rank for ESMF Root PE! Setting it to 0'
-       iProcRootEsmf = 0
-    end if
-    if(iProcRootEsmf >= nProc) then
-       if(iProc == 0)write(*,*) 'ESMF_SWMF: ', &
-            'ESMF Root PE rank too large, setting it to nProc-1=', nProc-1
-       iProcRootEsmf = nProc-1
+    elseif(iProcRootEsmf < 0) then
+       iProcRootEsmf = max(0, iProcRootEsmf + nProc)
+    else
+       iProcRootEsmf = min(nProc - 1, iProcRootEsmf)
     end if
 
-    ! Read last PE for the ESMF
+    ! Read last PE for the ESMF (default is iProcRootEsmf)
     call ESMF_ConfigGetAttribute(Config, iProcLastEsmf, &
          label='ESMF Last PE:', rc=rc)
-    if(rc /= ESMF_SUCCESS) then
-       if(iProc == 0)write(*,*) 'ESMF_SWMF: ', &
-            'Setting default for ESMF Last PE: nProc-1= ',nProc-1
-       iProcLastEsmf = nProc-1
-    end if
-    if(iProcLastEsmf < iProcRootEsmf) then
-       if(iProc == 0)write(*,*) 'WARNING in ESMF_SWMF: ', &
-            'ESMF Last PE rank too small! Setting it to iProcRootEsmf=', &
-            iProcRootEsmf
+    if(rc /= ESMF_SUCCESS)then
        iProcLastEsmf = iProcRootEsmf
-    end if
-    if(iProcLastEsmf >= nProc) then
-       if(iProc == 0)write(*,*) 'ESMF_SWMF: ', &
-            'ESMF Last PE rank too large, setting it to nProc-1=', nProc-1
-       iProcLastEsmf = nProc-1
+    elseif(iProcLastEsmf < 0)then
+       iProcLastEsmf = max(iProcRootEsmf, iProcLastEsmf + nProc)
+    else
+       iProcLastEsmf = max(iProcRootEsmf, min(nProc - 1, iProcLastEsmf))
     end if
 
     write(*,*)'iProcRootEsmf, iProcLastEsmf=', iProcRootEsmf, iProcLastEsmf
