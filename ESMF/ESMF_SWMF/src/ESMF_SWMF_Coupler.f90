@@ -32,26 +32,24 @@ contains
     use ESMF_SWMF_Mod, ONLY: NameFieldEsmf_V
 
     type(ESMF_CplComp):: cComp
+    type(ESMF_VM):: Vm
     type(ESMF_State):: ImportState, ExportState
     type(ESMF_Clock):: Clock
     integer, intent(out):: rc
 
     type(ESMF_Field):: Field1, FIeld2
-
-    type(ESMF_VM)    :: vm
     !--------------------------------------------------------------------------
     call ESMF_LogWrite("Coupler Initialize routine called", ESMF_LOGMSG_INFO)
     rc = ESMF_FAILURE
 
-    ! Get VM from coupler component to use in computing the redist
-    call ESMF_CplCompGet(cComp, vm=vm, rc=rc)
-    if (rc /= ESMF_SUCCESS) call my_error('ESMF_CplCompGet')
+    call ESMF_CplCompGet(cComp, vm=Vm, rc=rc)
+    if (rc/=ESMF_SUCCESS) call my_error('ESMF_CplCompGet Vm')
 
-    ! Since the states were created on non-overlapping PE-s, need to reconcile
-    call ESMF_StateReconcile(ImportState, Vm, rc=rc)
-    if (rc /= ESMF_SUCCESS) call my_error('ESMF_StateReconcile Import')
-    call ESMF_StateReconcile(ExportState, Vm, rc=rc)
-    if (rc /= ESMF_SUCCESS) call my_error('ESMF_StateReconcile Export')
+    call ESMF_StateReconcile(ImportState, vm=Vm, rc=rc)
+    if (rc/=ESMF_SUCCESS) call my_error('ESMF_StateReconcile Import')
+
+    call ESMF_StateReconcile(ExportState, vm=Vm, rc=rc)
+    if (rc/=ESMF_SUCCESS) call my_error('ESMF_StateReconcile Export')
 
     call ESMF_StateGet(ImportState, NameFieldEsmf_V(1), Field1, rc=rc)
     if(rc /= ESMF_SUCCESS) call my_error('ESMF_StateGet Import')
@@ -59,10 +57,12 @@ contains
     call ESMF_StateGet(ExportState, NameFieldEsmf_V(1), Field2, rc=rc)
     if(rc /= ESMF_SUCCESS) call my_error('ESMF_StateGet Export')
 
-    ! Precompute communication patterns: it is the same for all the fields
-    call ESMF_FieldRedistStore(srcField=Field1, dstField=Field2, &
-         routehandle=RouteHandle, rc=rc)
-    if(rc /= ESMF_SUCCESS) call my_error('ESMF_FieldRedistStor')
+    ! This should be moved into my_run when the grids rotate !!!
+    call ESMF_FieldRegridStore(srcField=Field1, dstfield=Field2, &
+         routeHandle=RouteHandle, &
+         regridmethod=ESMF_REGRIDMETHOD_BILINEAR, rc=rc)
+
+    if(rc /= ESMF_SUCCESS) call my_error('ESMF_FieldRegridStore')
 
     rc = ESMF_SUCCESS
     call ESMF_LogWrite("Coupler Initialize routine returning", &
@@ -98,9 +98,11 @@ contains
        if (rc /= ESMF_SUCCESS) &
             call my_error('ESMF_StateGet Export for '//NameField)
 
-       call ESMF_FieldRedist(Field1, Field2, RouteHandle, rc=rc)
+       !call ESMF_FieldRedist(Field1, Field2, RouteHandle, rc=rc)
+       call ESMF_FieldRegrid(Field1, Field2, RouteHandle, rc=rc)
+
        if (rc /= ESMF_SUCCESS) &
-            call my_error('ESMF_FieldRedist for '//NameField)
+            call my_error('ESMF_FieldRegrid for '//NameField)
 
     end do
 
@@ -118,7 +120,7 @@ contains
     !--------------------------------------------------------------------------
     call ESMF_LogWrite("Coupler Finalize routine called", ESMF_LOGMSG_INFO)
     rc = ESMF_FAILURE
-    call ESMF_FieldRedistRelease(RouteHandle, rc=rc)
+    call ESMF_FieldRegridRelease(RouteHandle, rc=rc)
     if (rc /= ESMF_SUCCESS) call my_error('ESMF_FieldRedistRelease')
 
     rc = ESMF_SUCCESS
