@@ -72,8 +72,8 @@ contains
          name="SWMF grid", rc=rc)
     if(rc /= ESMF_SUCCESS)call	my_error('ESMF_GridCreate1PeriDimUfrm Swmf')
 
-    EsmfGrid = ESMF_GridCreate1PeriDimUfrm(maxIndex=[nLonSwmf, nLatSwmf], &
-         minCornerCoord=[0.0, -90.0], maxCornerCoord=[360.0, 90.0], &
+    EsmfGrid = ESMF_GridCreate1PeriDimUfrm(maxIndex=[nLonEsmf, nLatEsmf], &
+         minCornerCoord=[-180.0, -90.0], maxCornerCoord=[180.0, 90.0], &
          staggerLocList=[ESMF_STAGGERLOC_CENTER, ESMF_STAGGERLOC_CORNER], &
          name="ESMF grid", rc=rc)
     if(rc /= ESMF_SUCCESS)call my_error('ESMF_GridCreate1PeriDimUfrm Esmf')
