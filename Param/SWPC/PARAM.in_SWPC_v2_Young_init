@@ -141,7 +141,7 @@ Sokolov			TypeFlux
 
 #CONSERVATIVECRITERIA
 1			nConservCrit
-parabola			TypeConservCrit_I
+parabola			TypeConservCrit
  5.0			xParabolaConserv
 15.0			yParabolaConserv
 
@@ -204,16 +204,16 @@ single			TypeFileOut
 
 #MAGNETOMETERGRID
 1			nMagGridFile
-global ascii		StrGridFileOut_I
-GEO			TypeCoordGrid_I
-3			nGridLon_I
-3			nGridLat_I
-0.			GridLonMin_I
-360.			GridLonMax_I
--80.			GridLatMin_I
-80.			GridLatMax_I
--1			DnSaveMagGrid_I
-1 min			DtSaveMagGrid_I
+global ascii		StrGridFileOut
+GEO			TypeCoordGrid
+3			nGridLon
+3			nGridLat
+0.			GridLonMin
+360.			GridLonMax
+-80.			GridLatMin
+80.			GridLatMax
+-1			DnSaveMagGrid
+1 min			DtSaveMagGrid
 
 #END_COMP GM -----------------------------------------------------------------
 
