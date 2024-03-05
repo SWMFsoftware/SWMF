@@ -68,12 +68,12 @@ F			DoImSatTrace
 T			DoMultiFluidIMCoupling
 
 #OUTERBOUNDARY
-outflow			TypeBC_I(east_)
-vary			TypeBC_I(west_)
-float			TypeBC_I(south_)
-float			TypeBC_I(north_)
-float			TypeBC_I(bot_)
-float			TypeBC_I(top_)
+outflow			TypeBc1
+vary			TypeBc2
+float			TypeBc3
+float			TypeBc4
+float			TypeBc5
+float			TypeBc6
 
 #INNERBOUNDARY
 ionosphere		

@@ -94,10 +94,10 @@ shell0			NameArea
 T                       body1
 2.5                     rBody
 3.0                     Rcurrents
-28.0                    BodyNDim_I(1)
-25000.0                	BodyTDim_I(1)
-2.8			BodyNDim_I(2)
-25000.0			BodyTDim_I(2)
+28.0                    BodyNDim
+25000.0                	BodyTDim
+2.8			BodyNDim
+25000.0			BodyTDim
 
 #MULTIFLUIDIM
 T			DoMultiFluidIMCoupling
