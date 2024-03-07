@@ -147,26 +147,26 @@ single			TypeFileOut
 
 #MAGNETOMETERGRID
 2			nMagGridFile
-global ascii		StrGridFileOut_I
-GEO			TypeCoordGrid_I
-360			nGridLon_I
-171			nGridLat_I
-0.			GridLonMin_I
-360.			GridLonMax_I
--85.			GridLatMin_I
-85.			GridLatMax_I
--1			DnSaveMagGrid_I
-1 min			DtSaveMagGrid_I
-us ascii		StrGridFileOut_I
-GEO			TypeCoordGrid_I
-221			nGridLon_I
-131			nGridLat_I
-190.			GridLonMin_I
-300.			GridLonMax_I
-20.			GridLatMin_I
-85.			GridLatMax_I
--1			DnSaveMagGrid_I
-20			DtSaveMagGrid_I
+global ascii		StrGridFileOut
+GEO			TypeCoordGrid
+360			nGridLon
+171			nGridLat
+0.			GridLonMin
+360.			GridLonMax
+-85.			GridLatMin
+85.			GridLatMax
+-1			DnSaveMagGrid
+1 min			DtSaveMagGrid
+us ascii		StrGridFileOut
+GEO			TypeCoordGrid
+221			nGridLon
+131			nGridLat
+190.			GridLonMin
+300.			GridLonMax
+20.			GridLatMin
+85.			GridLatMax
+-1			DnSaveMagGrid
+20			DtSaveMagGrid
 
 #SUPERMAGINDICES
 T			DoWriteSupermagIndices

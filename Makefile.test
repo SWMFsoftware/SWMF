@@ -614,8 +614,8 @@ test_swpc_rundir:
 	cd Param/SWPC/; cp PARAM.in_SWPC_v2_init PARAM.in_SWPC_v2_restart *.in *.dat ../../${TESTDIR}/
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in_SWPC_v2_init
 	perl -pi -e 'if(/MaxIter|MaxBlock/){s/700/70/; s/1500/200/; s/5000/350/}; s/#BORIS/BORIS/; s/^\#(COMPONENTMAP.*production)/$$1/i; s/^(COMPONENTMAP.*nightly)/\#$$1/i' ${TESTDIR}/PARAM.in_SWPC_v2_init
-	perl -pi -e 's/^360(\s+nGridLon_I)/72$$1/; s/^171(\s+nGridLat_I)/25$$1/;' ${TESTDIR}/PARAM.in_SWPC_v2_init
-	perl -pi -e 's/^221(\s+nGridLon_I)/23$$1/; s/^131(\s+nGridLat_I)/13$$1/;' ${TESTDIR}/PARAM.in_SWPC_v2_init
+	perl -pi -e 's/^360(\s+nGridLon)/72$$1/; s/^171(\s+nGridLat)/25$$1/;' ${TESTDIR}/PARAM.in_SWPC_v2_init
+	perl -pi -e 's/^221(\s+nGridLon)/23$$1/; s/^131(\s+nGridLat)/13$$1/;' ${TESTDIR}/PARAM.in_SWPC_v2_init
 	cp ${TESTDIR}/PARAM.in_SWPC_v2_init ${TESTDIR}/PARAM.in
 	ln -s ${BINDIR}/INTERPOLATE.exe ${TESTDIR}/
 
@@ -626,8 +626,8 @@ test_swpc_run:
 test_swpc_restart:
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in_SWPC_v2_restart
 	perl -pi -e 's/#BORIS/BORIS/; s/^\#(COMPONENTMAP.*production)/$$1/i; s/^(COMPONENTMAP.*nightly)/\#$$1/i' ${TESTDIR}/PARAM.in_SWPC_v2_restart
-	perl -pi -e 's/^360(\s+nGridLon_I)/72$$1/; s/^171(\s+nGridLat_I)/25$$1/;' ${TESTDIR}/PARAM.in_SWPC_v2_restart
-	perl -pi -e 's/^221(\s+nGridLon_I)/23$$1/; s/^131(\s+nGridLat_I)/13$$1/;' ${TESTDIR}/PARAM.in_SWPC_v2_restart
+	perl -pi -e 's/^360(\s+nGridLon)/72$$1/; s/^171(\s+nGridLat)/25$$1/;' ${TESTDIR}/PARAM.in_SWPC_v2_restart
+	perl -pi -e 's/^221(\s+nGridLon)/23$$1/; s/^131(\s+nGridLat)/13$$1/;' ${TESTDIR}/PARAM.in_SWPC_v2_restart
 	cd ${TESTDIR}; cp PARAM.in_SWPC_v2_restart PARAM.in
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_restart
 	cd ${TESTDIR}; ./PostProc.pl -noptec

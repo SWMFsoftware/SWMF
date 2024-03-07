@@ -4,10 +4,9 @@
 !^CMP FILE GM
 !^CMP FILE IM
 
-!
-! Couple GM and IM components both ways.
-!
 module CON_couple_gm_im
+
+  ! Couple GM and IM components both ways.
 
   use CON_coupler
   use CON_transfer_data, ONLY: transfer_integer, transfer_real_array, &
@@ -54,8 +53,8 @@ module CON_couple_gm_im
 
 contains
   !============================================================================
-
   subroutine couple_gm_im_init
+
     ! Store IM grid size.
 
     use ModProcessVarName,  ONLY: process_var_name
@@ -103,7 +102,6 @@ contains
 
   end subroutine couple_gm_im_init
   !============================================================================
-
   subroutine couple_gm_im(tSimulation)
 
     use CON_world, ONLY: get_comp_info
@@ -142,7 +140,6 @@ contains
 
   contains
     !==========================================================================
-
     subroutine couple_rcm
 
       ! Number of variables to pass
@@ -205,7 +202,6 @@ contains
 
     end subroutine couple_rcm
     !==========================================================================
-
     subroutine couple_ram
 
       ! Some variables do not change during a run, so transfer once only
@@ -264,7 +260,6 @@ contains
 
     end subroutine couple_ram
     !==========================================================================
-
     subroutine couple_crcm
 
       ! Couple between two components:
@@ -366,11 +361,10 @@ contains
 
     end subroutine couple_crcm
     !==========================================================================
-
   end subroutine couple_gm_im
   !============================================================================
-
   subroutine couple_im_gm(tSimulation)
+
     use CON_world, ONLY: get_comp_info
     use CON_comp_param, ONLY: lNameVersion
 
@@ -444,10 +438,11 @@ contains
       deallocate(Buffer_IIV)
 
       if(DoTest)write(*,*)NameSub,': finished iProc=', i_proc()
+
     end subroutine couple_im_gm_default
     !==========================================================================
-
     subroutine couple_im_gm_cimi
+
       ! Number of variables to pass
       integer:: nVarImGm
 
@@ -486,6 +481,5 @@ contains
     !==========================================================================
   end subroutine couple_im_gm
   !============================================================================
-
 end module CON_couple_gm_im
 !==============================================================================
