@@ -5,7 +5,7 @@
 !^CMP FILE IM
 
 module CON_couple_gm_im
-  
+
   ! Couple GM and IM components both ways.
 
   use CON_coupler
