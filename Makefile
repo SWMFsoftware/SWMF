@@ -403,6 +403,7 @@ FORMATF90:
 	-@share/Scripts/FormatFortran.pl CON/*/src/*.f90
 	-@share/Scripts/FormatFortran.pl -l GM/BATSRUS/src/*.f90
 	-@share/Scripts/FormatFortran.pl GM/BATSRUS/src[A-Z]*/*.f90
+	-@share/Scripts/FormatFortran.pl IE/Ridley_serial/src/*.f90
 	-@share/Scripts/FormatFortran.pl share/Library/src/*.f90
 
 #^CMP IF EE BEGIN
