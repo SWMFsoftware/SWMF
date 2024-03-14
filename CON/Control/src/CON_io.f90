@@ -511,16 +511,13 @@ contains
        case("#COUPLETIME")
           call read_var('NameComp', NameComp)
           call read_var('DoCoupleOnTime', DoCoupleOnTime_C(i_comp(NameComp)))
+
        case("#CYCLE")
           call read_var('NameComp', NameComp)
           call read_var('DnRun', DnRun_C(i_comp(NameComp)))
+
        case("#VERSION")
-          VersionRead = VersionSwmf ! set default value
-          call read_var('Version', VersionRead)
-          if(abs(VersionRead-VersionSwmf)>0.005.and.is_proc0())&
-               write(*,'(a,f6.3,a,f6.3)') &
-               NameSub//': SWMF_WARNING version in file is ',&
-               VersionRead,' but SWMF version is ', VersionSwmf
+          ! Ignored. May be present in old RESTART.out files
 
        case("#PRECISION")
           call read_var('nByteReal', nByteRealRead)
@@ -976,9 +973,6 @@ contains
        write(UnitTmp_,'(es15.8,a)')tSimulation, cTab//cTab//'tSimulation'
        write(UnitTmp_,*)
     end if
-    write(UnitTmp_,'(a)')'#VERSION'
-    write(UnitTmp_,'(f5.2,a)')VersionSwmf, cTab//cTab//cTab//'VersionSwmf'
-    write(UnitTmp_,*)
     write(UnitTmp_,'(a)')'#PRECISION'
     write(UnitTmp_,'(i1,a)')nByteReal, cTab//cTab//cTab//'nByteReal'
     write(UnitTmp_,*)

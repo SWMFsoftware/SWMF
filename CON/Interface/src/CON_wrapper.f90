@@ -1,14 +1,13 @@
 !  Copyright (C) 2002 Regents of the University of Michigan,
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!
-! Contains general subroutines which call the specific subroutines
-! in the component wrappers. The components are identified by their
-! name or the component ID.
 
 module CON_wrapper
-  !
-  !
+
+  ! General subroutines which call the specific subroutines
+  ! in the component wrappers. The components are identified by their
+  ! name or the component ID.
+
   use CON_world
   use CON_comp_param
   use CON_comp_info
@@ -90,8 +89,6 @@ module CON_wrapper
 
 contains
   !============================================================================
-
-  !
   subroutine set_param_name(NameComp,TypeAction)
 
     !
@@ -111,11 +108,8 @@ contains
 
   end subroutine set_param_name
   !============================================================================
-
-  !
   subroutine set_param_id(iComp,TypeAction)
 
-    !
     integer, intent(in)          :: iComp
     character(len=*), intent(in) :: TypeAction
 
@@ -206,17 +200,14 @@ contains
 
   end subroutine set_param_id
   !============================================================================
+  subroutine get_version_name(NameComp, IsOn, NameVersion)
 
-  !
-  ! Obtain ON/OFF status, version name and version number
-  ! for component specified by its name!
-
-  subroutine get_version_name(NameComp,IsOn,NameVersion,Version)
+    ! Obtain ON/OFF status, version name and version number
+    ! for component specified by its name!
 
     character (len=*),            intent(in)  :: NameComp
     logical,                      intent(out) :: IsOn
     character (len=lNameVersion), intent(out) :: NameVersion
-    real,                         intent(out) :: Version
 
     ! revision history:
     ! 15Jul03 - G. Toth <gtoth@umich.edu> - initial prototype/prolog/code
@@ -226,23 +217,20 @@ contains
     if(.not.is_valid_comp_name(NameComp)) call CON_stop(NameSub// &
          ' SWMF_ERROR '//NameComp//' is not a valid component name')
 
-    call get_version_id(i_comp(NameComp),IsOn,NameVersion,Version)
+    call get_version_id(i_comp(NameComp), IsOn, NameVersion)
 
   end subroutine get_version_name
   !============================================================================
+  subroutine get_version_id(iComp, IsOn, NameVersion)
 
-  !
-  ! Obtain ON/OFF status, version name and version number
-  ! for component specified by its ID!
-
-  subroutine get_version_id(iComp,IsOn,NameVersion,Version)
+    ! Obtain ON/OFF status, version name and version number
+    ! for component specified by its ID!
 
     use CON_comp_info
 
     integer,                      intent(in)  :: iComp
     logical,                      intent(out) :: IsOn
     character (len=lNameVersion), intent(out) :: NameVersion
-    real,                         intent(out) :: Version
 
     ! revision history:
     ! 21Jul03 - G. Toth <gtoth@umich.edu> - use temporary CompInfo
@@ -291,14 +279,13 @@ contains
     case(CZ_)                                    !^CMP IF CZ
        call CZ_set_param(CompInfo,'VERSION')     !^CMP IF CZ
     case default
-       call put(CompInfo,Use=.false.,NameVersion='not implemented',Version=0.0)
+       call put(CompInfo, Use=.false., NameVersion='not implemented')
     end select
 
-    call get(CompInfo,Use=IsOn,NameVersion=NameVersion,Version=Version)
+    call get(CompInfo, Use=IsOn, NameVersion=NameVersion)
 
   end subroutine get_version_id
   !============================================================================
-
   subroutine init_session_comp_id(iComp, iSession, TimeSimulation)
 
     integer,  intent(in) :: iComp            ! component ID
@@ -371,8 +358,6 @@ contains
 
   end subroutine init_session_comp_id
   !============================================================================
-
-  !
   subroutine finalize_comp_id(iComp, TimeSimulation)
 
     integer,  intent(in) :: iComp            ! component ID
@@ -444,7 +429,6 @@ contains
 
   end subroutine finalize_comp_id
   !============================================================================
-
   subroutine save_restart_comp_id(iComp, TimeSimulation)
 
     integer,  intent(in) :: iComp            ! component ID
@@ -515,12 +499,10 @@ contains
 
   end subroutine save_restart_comp_id
   !============================================================================
-
   subroutine run_comp_id(iComp, TimeSimulation, TimeSimulationLimit)
 
     integer,  intent(in) :: iComp               ! component ID
-    real,     intent(in) :: TimeSimulationLimit ! simulation time not to be exceeded
-
+    real,     intent(in) :: TimeSimulationLimit ! simulation time limit
     real,     intent(inout) :: TimeSimulation   ! current time of component
 
     ! Do one time step or solve for the component.
@@ -593,6 +575,5 @@ contains
 
   end subroutine run_comp_id
   !============================================================================
-
 end module CON_wrapper
 !==============================================================================

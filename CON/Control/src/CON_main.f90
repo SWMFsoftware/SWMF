@@ -225,10 +225,8 @@ contains
 
   end subroutine finalize
   !============================================================================
-
   subroutine show_all_comp
 
-    use CON_variables,  ONLY: VersionSwmf
     use CON_comp_param, ONLY: lNameVersion
 
     ! Show the version information and layout for all registered components.
@@ -237,56 +235,52 @@ contains
     ! revision history:
     ! 08/2003 G.Toth <gtoth@umich.edu> - initial version and impovements
 
-    integer, parameter :: lWidth = 77
+    integer, parameter :: lWidth = 68
 
     logical                      :: IsOn, IsFound
     character (LEN=lNameVersion) :: NameVersion
-    real                         :: Version
 
     integer :: lComp, iComp, iProc0Comp, nProcComp, iStrideComp, nThread
     !--------------------------------------------------------------------------
-    ! Get and show framework version
 
-    NameVersion  ='SWMF by Univ. of Michigan'
+    NameVersion  = 'SWMF by Univ. of Michigan'
 
     write(*,'(a)')'#'//repeat('=',lWidth)//'#'
     write(*,'(2a)') &
-         '# ID  Version                                       ',&
-         'nproc proc0 stride nthread#'
+         '# ID  Version                             ',&
+         'nproc proc0 stride nthread #'
     write(*,'(a)')'#'//repeat('-',lWidth)//'#'
-    write(*,'(a,a,f5.2,4i6,a)')&
-         '# CON ',NameVersion//' version',VersionSwmf,n_proc(),0,1,1,' #'
+    write(*,'(a,a,4i6,a6)') &
+         '# CON ', NameVersion, n_proc(), 0, 1, 1,'#'
     write(*,'(a)')'#'//repeat('-',lWidth)//'#'
 
     ! Show registered components
-    do lComp = 1,n_comp()
+    do lComp = 1, n_comp()
        iComp = i_comp(lComp)
 
-       call get_comp_info(iComp,&
-            NameVersion=NameVersion,Version=Version,&
+       call get_comp_info(iComp, NameVersion=NameVersion, &
             iProcZero=iProc0Comp, nProc=nProcComp, iProcStride=iStrideComp,&
             nThread=nThread)
 
-       write(*,'(a,f5.2,4i6,a)')&
-            '# '//NameComp_I(iComp)//'  '//NameVersion//' version',Version,&
-            nProcComp,iProc0Comp,iStrideComp,nThread,' #'
+       write(*,'(a,4i6,a6)')&
+            '# '//NameComp_I(iComp)//'  '//NameVersion, &
+            nProcComp, iProc0Comp, iStrideComp, nThread,'#'
     end do
 
     ! Show unregistered but compiled (ON) components
     IsFound = .false.
-    do iComp=1,MaxComp
+    do iComp = 1, MaxComp
        if(use_comp(iComp)) CYCLE ! registered component
-       call get_version_comp(iComp,IsOn,NameVersion,Version)
+       call get_version_comp(iComp, IsOn, NameVersion)
        if(.not.IsOn) CYCLE       ! empty component
        if(.not.IsFound)then
           write(*,'(a)')'#'//repeat('-',lWidth)//'#'
-          IsFound=.true.
+          IsFound = .true.
        end if
-       write(*,'(a,f5.2,a)')&
-            '# '//NameComp_I(iComp)//'  '//NameVersion//' version',Version,&
-            '    not registered #'
+       write(*,'(a)') '# '//NameComp_I(iComp)//'  '//NameVersion// &
+            '        not registered       #'
     end do
-    write(*,'(a)')'#'//repeat('=',lWidth)//'#'
+    write(*,'(a)')'#'//repeat('=', lWidth)//'#'
 
   end subroutine show_all_comp
   !============================================================================
@@ -307,11 +301,11 @@ contains
     !--------------------------------------------------------------------------
     do lComp=2,n_comp()
        iComp = i_comp(lComp)
-       call get_comp_info(iComp,NameVersion=NameVersion)
+       call get_comp_info(iComp, NameVersion=NameVersion)
 
        do lComp2 = 1, lComp - 1
           iComp2 = i_comp(lComp2)
-          call get_comp_info(iComp2,NameVersion=NameVersion2)
+          call get_comp_info(iComp2, NameVersion=NameVersion2)
 
           ! Store processor rank for illegal overlap
           if(NameVersion==NameVersion2 .and. &
