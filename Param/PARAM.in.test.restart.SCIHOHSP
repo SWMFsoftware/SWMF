@@ -20,9 +20,9 @@ SC			NameSource
 21.55			RScMax
 IH			NameSource
 20			RIhMin
-240			RIhMax
+248			RIhMax
 OH			NameSource
-220			ROhMin
+238			ROhMin
 1500			ROhMax
 
 #TEST
