@@ -92,6 +92,7 @@ contains
        BufferMinMaxIh_DI(1,:) = BufferMinMaxIh_DI(1,:) &
             *(Grid_C(OH_)%UnitX/Grid_C(IH_)%UnitX)
     end if
+
     ! Pass buffer size
     call transfer_integer(OH_, IH_, iSize, jSize, kSize, &
          UseSourceRootOnly = .false.)
@@ -121,7 +122,8 @@ contains
     character(len=*), parameter:: NameSub = 'couple_ih_oh'
     !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
-    if(DoTest)write(*,*)NameSub,' starting, iProc=',i_proc()
+    if(DoTest.and.is_proc0(OH_))&
+         write(*,'(a,es12.5)')NameSub//': starting, Time=', TimeCoupling
 
     ! Transfer buffer grid from IH to OH to be used for inner boundary
     allocate(Buffer_VIII(nVarCouple,iSize,jSize,kSize))
@@ -142,7 +144,8 @@ contains
        if(is_proc(OH_)) call OH_match_IBC
     end if
 
-    if(DoTest)write(*,*)NameSub,' finished, iProc=',i_proc()
+    if(DoTest.and.is_proc0(OH_))&
+         write(*,'(a,es12.5)')NameSub//': finished, Time=', TimeCoupling
 
   end subroutine couple_ih_oh
   !============================================================================
