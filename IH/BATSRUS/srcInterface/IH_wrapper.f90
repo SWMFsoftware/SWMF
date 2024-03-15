@@ -103,7 +103,7 @@ contains
     use IH_ModIO, ONLY: iUnitOut, StringPrefix, STDOUT_, NamePlotDir
     use IH_ModSetParameters, ONLY: set_parameters
     use IH_ModRestartFile, ONLY: NameRestartInDir, NameRestartOutDir
-    use IH_ModMain, ONLY : CodeVersion, NameThisComp, &
+    use IH_ModMain, ONLY : NameThisComp, &
          IsTimeAccurate, tSimulation, StartTime, iStartTime_I
     use CON_physics, ONLY: get_time
     use ModTimeConvert, ONLY: time_real_to_int
@@ -124,8 +124,7 @@ contains
     case('VERSION')
        call put(CompInfo,&
             Use        =.true.,                        &
-            NameVersion='IH_BATSRUS (Univ. of Michigan)', &
-            Version    =CodeVersion)
+            NameVersion='IH_BATSRUS (Univ. of Michigan)')
     case('MPI')
        call get(CompInfo, iComm=iComm, iProc=iProc, nProc=nProc,&
             Name=NameThisComp)
