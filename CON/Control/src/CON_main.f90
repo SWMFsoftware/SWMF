@@ -241,8 +241,8 @@ contains
     character (LEN=lNameVersion) :: NameVersion
 
     integer :: lComp, iComp, iProc0Comp, nProcComp, iStrideComp, nThread
-    !--------------------------------------------------------------------------
 
+    !--------------------------------------------------------------------------
     NameVersion  = 'SWMF by Univ. of Michigan'
 
     write(*,'(a)')'#'//repeat('=',lWidth)//'#'
