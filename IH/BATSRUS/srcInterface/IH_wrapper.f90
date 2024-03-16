@@ -851,7 +851,6 @@ contains
     end if
     ! Make sure that ghost cells get filled after
     call fill_in_buffer_grid_gc
-    ! DoExtraMessagePass = .true.
     ! Fill in the cells, covered by the bufer grid, including ghost cells.
     ! Fill in the ghostcells, calculate energy
     call exchange_messages(UseBufferIn = .true.)
