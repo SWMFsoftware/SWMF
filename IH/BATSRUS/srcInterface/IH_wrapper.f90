@@ -745,7 +745,7 @@ contains
   subroutine IH_save_global_buffer(nVarCouple, nR, nLon, nLat, BufferIn_VG)
 
     use IH_ModBuffer,      ONLY: BufferState_VG, fill_in_buffer_grid_gc
-    use IH_ModMessagePass, ONLY: DoExtraMessagePass
+    use IH_ModMessagePass, ONLY: exchange_messages
     ! spherical buffer coupling
     use CON_coupler,       ONLY: &
          iVar_V, DoCoupleVar_V
@@ -851,7 +851,10 @@ contains
     end if
     ! Make sure that ghost cells get filled after
     call fill_in_buffer_grid_gc
-    DoExtraMessagePass = .true.
+    ! DoExtraMessagePass = .true.
+    ! Fill in the cells, covered by the bufer grid, including ghost cells.
+    ! Fill in the ghostcells, calculate energy
+    call exchange_messages(UseBufferIn = .true.)
 
   end subroutine IH_save_global_buffer
   !============================================================================
