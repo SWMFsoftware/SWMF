@@ -33,8 +33,8 @@ RESTART.in
 SC/restartIN/restart.H
 
 #PLASMA
-1.0			MassFluid
-1.0			ChargeIon
+1.0			FluidMass
+1.0			IonCharge
 1.0			ElectronTemperatureRatio
 
 #FIELDLINETHREAD
