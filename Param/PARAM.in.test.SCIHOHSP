@@ -4,7 +4,7 @@ SCURBegin session: 1
 SC  0 -1  1		CompMap
 IH  1 -1  2		CompMap
 OH  0 -1  2		CompMap
-SP  0 -1  2		CompMap
+SP  0 -1  1		CompMap
 
 #DESCRIPTION
 Param/PARAM.in.test.SCIHOHSP		StringDescription
@@ -295,9 +295,6 @@ IH			NameTarget
 1			DnCouple
 -1.0			DtCouple
 
-#TEST
-couple_sc_ih		StringTest
-
 #BEGIN_COMP IH ---------------------------------------------------------------
 
 #COORDSYSTEM
@@ -460,9 +457,6 @@ Begin session: 3
 OH			NameComp
 T			UseComp
 
-#TEST
-couple_ih_oh couple_sc_ih		StringTest
-
 #BEGIN_COMP OH ---------------------------------------------------------------
 
 #COORDSYSTEM
@@ -612,7 +606,6 @@ F			UseBUAlignment
 #TIMEACCURATE
 T			IsTimeAccurate
 
-
 #COUPLE1
 SC			NameSource
 IH			NameTarget
@@ -634,7 +627,6 @@ OH			NameTarget
 #AMR
 -1			DnRefine
 
-
 #END_COMP SC -----------------------------------------------------------------
 
 #BEGIN_COMP IH ---------------------------------------------------------------
@@ -642,9 +634,7 @@ OH			NameTarget
 #COORDSYSTEM
 HGI			TypeCoordSystem
 
-
 #END_COMP IH -----------------------------------------------------------------
-
 
 End session: 3 (SC+IH+OH time accurate to 50 s)
 #RUN ##########################################################################
@@ -790,7 +780,6 @@ z=0 VAR idl		StringPlot
 rho ux uy uz ti te bx by bz I01 I02 p		NameVars
 g rbody			NamePars
 
-
 #END_COMP OH -----------------------------------------------------------------
 
 #STOP
@@ -798,4 +787,137 @@ g rbody			NamePars
 100.0			TimeMax
 
 End session: 4 (SC+IH+OH to 100 s)
+#RUN ##########################################################################
+
+#COUPLE1
+SC			NameSource
+IH			NameTarget
+-1			DnCouple
+-1.0			DtCouple
+
+#COUPLE1
+IH			NameSource
+OH			NameTarget
+-1			DnCouple
+-1.0			DtCouple
+
+#COMPONENT
+SP			NameComp
+T			UseComp
+
+#FIELDLINE
+SP			NameTarget
+3			nSource
+SC			NameSource
+1.15			RScMin
+21.55			RScMax
+IH			NameSource
+20			RIhMin
+248			RIhMax
+OH			NameSource
+238			ROhMin
+1500			ROhMax
+
+#COUPLEFIELDLINE
+-1			DnCouple
+10.0			DtCouple
+
+#BEGIN_COMP SP ---------------------------------------------------------------
+
+#ORIGIN
+2.5			ROrigin
+-10			LonMin
+25			LatMin
+10			LonMax
+90			LatMax
+
+#END_COMP SP -----------------------------------------------------------------
+
+#STOP
+-1			MaxIter
+100.0			TimeMax
+
+#RUN ##########################################################################
+
+#TIMEACCURATE
+F			IsTimeAccurate
+
+#COMPONENT
+SC			NameComp
+F			UseComp
+
+#COMPONENT
+IH			NameComp
+F			UseComp
+
+#COMPONENT
+OH			NameComp
+F			UseComp
+
+#COUPLEFIELDLINE
+-1			DnCouple
+-1.0			DtCouple
+
+#BEGIN_COMP SP ---------------------------------------------------------------
+
+#USEDATETIME
+T			UseDateTime
+
+#DORUN
+T			DoRun
+
+#TRACESHOCK
+F			DoTraceShock
+
+#POISSONBRACKET
+T			UsePoissonBracket
+
+#UPPERENDBC
+T			UseUpperEndBc
+lism			TypeUpperEndBc
+default			TypeLisBc
+T			UseModulationPot
+534.7			ModulationPot
+
+#SAVEPLOT
+2			nFileOut
+mh1d flux ascii		StringPlot
+mh2d flux ascii		StringPlot
+215.0			Radius [Rs]
+
+#NOUTPUT
+7			nOutput
+
+#SCALETURBULENCE
+constant		ScaleTurbulenceType
+0.2402397832		ScaleTurbulence [AU] at 1 AU
+
+#END_COMP SP -----------------------------------------------------------------
+
+
+#STOP
+230			MaxIter
+-1.0			TimeMax
+
+#RUN ##########################################################################
+
+#TIMEACCURATE
+T			IsTimeAccurate
+
+#COMPONENT
+SC			NameComp
+T			UseComp
+
+#COMPONENT
+IH			NameComp
+T			UseComp
+
+#COMPONENT
+OH			NameComp
+T			UseComp
+
+#STOP
+-1			MaxIter
+100.0			TimeMax
+
 #END ##########################################################################
