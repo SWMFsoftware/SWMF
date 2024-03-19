@@ -10,8 +10,8 @@
 # Layout
 #
 ESMF Root PE:   0
-ESMF Last PE:   1
-SWMF Root PE:   0
+ESMF Last PE:   0
+SWMF Root PE:   1
 SWMF Last PE:   1
 #
 # Running
