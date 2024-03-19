@@ -43,6 +43,7 @@ contains
 
     logical          :: IsLastSession ! true if SWMF has a single session
     type(ESMF_VM)    :: vm
+    type(ESMF_Grid)    :: Grid
     integer          :: iComm, iProc
     type(ESMF_Time)  :: StartTime
     integer          :: iStartTime_I(Year_:Millisec_)
@@ -53,10 +54,17 @@ contains
     call ESMF_LogWrite("SWMF_GridComp:init routine called", ESMF_LOGMSG_INFO)
     rc = ESMF_FAILURE
 
-    ! Add ESMF fields to the SWMF import state
-    call add_fields(gComp, importState, IsFromEsmf=.true., rc=rc)
-    if(rc /= ESMF_SUCCESS) call my_error('add_fields failed')
+    Grid = ESMF_GridCreate1PeriDimUfrm(maxIndex=[nLonSwmf, nLatSwmf], &
+         minCornerCoord=[0.0, -90.0], maxCornerCoord=[360.0, 90.0], &
+         staggerLocList=[ESMF_STAGGERLOC_CENTER, ESMF_STAGGERLOC_CORNER], &
+         name="SWMF grid", rc=rc)
+    if(rc /= ESMF_SUCCESS)call	my_error('ESMF_GridCreate1PeriDimUfrm Swmf')
 
+    
+    ! Add ESMF fields to the SWMF import state
+    call add_fields(Grid, importState, IsFromEsmf=.true., rc=rc)
+    if(rc /= ESMF_SUCCESS) call my_error('add_fields failed')
+    
     ! Obtain the VM for the SWMF gridded component
     call ESMF_GridCompGet(gcomp, vm=vm, rc=rc)
     if(rc /= ESMF_SUCCESS) call my_error('ESMF_GridCompGet failed')
@@ -97,7 +105,7 @@ contains
          TimeSim, TimeStop, IsLastSession, rc)
     call ESMF_LogWrite("SWMF_initialize routine returned", ESMF_LOGMSG_INFO)
     if(rc /= 0)call my_error('SWMF_initialize failed')
-
+    
     rc = ESMF_SUCCESS
     call ESMF_LogWrite("SWMF_GridComp:init routine returned", ESMF_LOGMSG_INFO)
 
@@ -192,7 +200,7 @@ contains
     write(*,*)'SWMF_run returns with tSimSwmf=', tSimSwmf
     call ESMF_LogWrite("SWMF_run routine returned!", ESMF_LOGMSG_INFO)
     if(rc /= 0)call my_error('SWMF_run failed')
-
+    
     call ESMF_LogWrite("SWMF_GridComp:run routine returned", ESMF_LOGMSG_INFO)
 
     rc = ESMF_SUCCESS
@@ -211,6 +219,7 @@ contains
     integer          :: iProc
     !--------------------------------------------------------------------------
     call ESMF_LogWrite("SWMF_finalize routine called", ESMF_LOGMSG_INFO)
+
     call SWMF_finalize(rc)
     call ESMF_LogWrite("SWMF_finalize routine returned", ESMF_LOGMSG_INFO)
     if(rc /= 0)then
@@ -219,7 +228,7 @@ contains
        if(iProc == 0)write(0, *) "SWMF_finalize FAILED"
        rc = ESMF_FAILURE
     endif
-
+    
   end subroutine my_final
   !============================================================================
   subroutine my_error(String)

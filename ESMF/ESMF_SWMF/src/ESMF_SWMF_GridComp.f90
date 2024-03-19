@@ -65,29 +65,14 @@ contains
     call ESMF_VMGet(parentvm, petCount=nProc, localPET=iProc, rc=rc)
     if(rc /= ESMF_SUCCESS) call	my_error('ESMF_VMGet')
 
-    ! Create two grids
-    SwmfGrid = ESMF_GridCreate1PeriDimUfrm(maxIndex=[nLonSwmf, nLatSwmf], &
-         minCornerCoord=[0.0, -90.0], maxCornerCoord=[360.0, 90.0], &
-         staggerLocList=[ESMF_STAGGERLOC_CENTER, ESMF_STAGGERLOC_CORNER], &
-         name="SWMF grid", rc=rc)
-    if(rc /= ESMF_SUCCESS)call	my_error('ESMF_GridCreate1PeriDimUfrm Swmf')
-
-    EsmfGrid = ESMF_GridCreate1PeriDimUfrm(maxIndex=[nLonEsmf, nLatEsmf], &
-         minCornerCoord=[-180.0, -90.0], maxCornerCoord=[180.0, 90.0], &
-         staggerLocList=[ESMF_STAGGERLOC_CENTER, ESMF_STAGGERLOC_CORNER], &
-         name="ESMF grid", rc=rc)
-    if(rc /= ESMF_SUCCESS)call my_error('ESMF_GridCreate1PeriDimUfrm Esmf')
-
     ! Create the SWMF Gridded component
     SwmfComp = ESMF_GridCompCreate(name="SWMF Gridded Component", & 
-         grid=SwmfGrid, petlist = [ (i, i=iProcRootSwmf, iProcLastSwmf) ], &
-         rc=rc)
+         petlist = [ (i, i=iProcRootSwmf, iProcLastSwmf) ], rc=rc)
     if(rc /= ESMF_SUCCESS)call my_error('ESMF_GridCompCreate Swmf')
 
     ! Create the ESMF Gridded component(s, there could be more than one here)
     EsmfComp = ESMF_GridCompCreate(name="ESMF Gridded Component", &
-         grid=EsmfGrid, petlist = [ (i, i=iProcRootEsmf, iProcLastEsmf) ], &
-         rc=rc)
+         petlist = [ (i, i=iProcRootEsmf, iProcLastEsmf) ], rc=rc)
     if(rc /= ESMF_SUCCESS)call my_error('ESMF_GridCompCreate Esmf')
 
     ! Create the Coupler component

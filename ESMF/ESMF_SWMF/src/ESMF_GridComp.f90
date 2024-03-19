@@ -36,6 +36,7 @@ contains
     integer, intent(out):: rc
 
     ! Access to the MHD data
+    type(ESMF_Grid):: Grid
     type(ESMF_Field):: Field
     real(ESMF_KIND_R8), pointer :: Ptr(:,:)
     integer                     :: iVar, i, j
@@ -46,8 +47,15 @@ contains
     call ESMF_LogWrite("ESMFGridComp init called", ESMF_LOGMSG_INFO)
     rc = ESMF_FAILURE
 
+    Grid = ESMF_GridCreate1PeriDimUfrm(maxIndex=[nLonEsmf, nLatEsmf], &
+         minCornerCoord=[-180.0, -90.0], maxCornerCoord=[180.0, 90.0], &
+         staggerLocList=[ESMF_STAGGERLOC_CENTER, ESMF_STAGGERLOC_CORNER], &
+         name="ESMF grid", rc=rc)
+    if(rc /= ESMF_SUCCESS)call my_error('ESMF_GridCreate1PeriDimUfrm Esmf')
+
+    
     ! Add MHD fields to the export state
-    call add_fields(gComp, ExportState, IsFromEsmf=.true., rc=rc)
+    call add_fields(Grid, ExportState, IsFromEsmf=.true., rc=rc)
     if(rc /= ESMF_SUCCESS) call my_error("add_fields failed")
 
     ! Initialize the data
@@ -81,9 +89,9 @@ contains
                   * (0.90 + 0.2*(j - 1.0)/(nLatEsmf - 1))
           end do; end do
        end if
-
+       
     end do
-
+    
     rc = ESMF_SUCCESS
     call ESMF_LogWrite("ESMFGridComp init returned", ESMF_LOGMSG_INFO)
 
@@ -116,7 +124,7 @@ contains
     write(*,*)'ESMFGridComp:run old Hall=',Ptr(1,1)
     Ptr = Ptr - 2.0/30   ! Change by -2 in 1 minute = 30 couplings
     write(*,*)'ESMFGridComp:run new Hall=',Ptr(1,1)
-
+    
     rc = ESMF_SUCCESS
     call ESMF_LogWrite("ESMFGridComp run returned", ESMF_LOGMSG_INFO)
 
