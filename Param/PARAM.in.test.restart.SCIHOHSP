@@ -20,9 +20,9 @@ SC			NameSource
 21.55			RScMax
 IH			NameSource
 20			RIhMin
-240			RIhMax
+248			RIhMax
 OH			NameSource
-220			ROhMin
+238			ROhMin
 1500			ROhMax
 
 #TEST
@@ -397,6 +397,9 @@ F			UseBUAlignment
 
 #BEGIN_COMP SP ---------------------------------------------------------------
 
+#INCLUDE
+SP/restartIN/restart.H
+
 #NSTEP
 0			nStep
 
@@ -405,14 +408,6 @@ F			DoRun
 
 #TRACESHOCK
 F			DoTraceShock
-
-
-#ORIGIN
-2.5			ROrigin
--10			LonMin
-25			LatMin
-10			LonMax
-90			LatMax
 
 #SAVEPLOT
 1			nFileOut

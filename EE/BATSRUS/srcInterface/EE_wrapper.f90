@@ -42,7 +42,7 @@ contains
     use EE_ModIO, ONLY: iUnitOut, StringPrefix, STDOUT_, NamePlotDir
     use EE_ModSetParameters, ONLY: set_parameters
     use EE_ModRestartFile, ONLY: NameRestartInDir, NameRestartOutDir
-    use EE_ModMain, ONLY : CodeVersion, NameThisComp, &
+    use EE_ModMain, ONLY : NameThisComp, &
          IsTimeAccurate, tSimulation, StartTime, iStartTime_I
     use ModTimeConvert, ONLY: time_real_to_int
 
@@ -62,8 +62,7 @@ contains
     case('VERSION')
        call put(CompInfo,&
             Use        =.true.,                        &
-            NameVersion='EE_BATSRUS (Univ. of Michigan)', &
-            Version    =CodeVersion)
+            NameVersion='EE_BATSRUS (Univ. of Michigan)')
     case('MPI')
        call get(CompInfo, iComm=iComm, iProc=iProc, nProc=nProc,&
             Name=NameThisComp)

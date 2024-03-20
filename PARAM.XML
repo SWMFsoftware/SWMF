@@ -600,12 +600,9 @@ the real numbers is not checked.
 #VERSION
 1.0                    VersionSwmf
 
-The VersionSwmf variable contains the version number of SWMF. This command
-serves to check consistency for restarted runs. The #VERSION command
-and the Version variable are saved into the restart file.
-
-There is no default value. If the command is not used, the version
-number is not checked.
+This command is obsolete. We now use Git references to identify the
+code version. The only use of this command is to be compatible with
+restart files produced before VersionSwmf was removed.
 </command>
 
 </commandgroup>

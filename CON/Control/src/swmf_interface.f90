@@ -200,17 +200,6 @@ subroutine SWMF_couple(NameFrom, NameTo, NameCoord, &
            RETURN
         end if
 
-        ! Broadcast information from the root processor
-        ! to the rest of the component
-        iComm = i_comm(NameTo)
-        call MPI_bcast(Data_VII, nVar*nX*nY, MPI_DOUBLE_PRECISION, 0, &
-             iComm, iError)
-        if(iError /= 0)then
-           write(*,*)NameSub//' ERROR: '// &
-                'MPI_bcast failed for component '//NameTo
-           RETURN
-        end if
-
         ! Put data into IE. Convert to the default real used by SWMF.
         ! call IE_put_from_ih_buffer(NameCoord, nX, nY, &
         !     real(xMin), real(xMax), real(yMin), real(yMax), real(Data_VII))

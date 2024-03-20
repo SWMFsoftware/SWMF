@@ -22,7 +22,7 @@ IH			NameSource
 220			RIhMax
 
 #TEST
-couple_mh_sp		StringTest
+couple_mh_sp couple_sc_ih		StringTest
 
 #INCLUDE
 RESTART.in
@@ -33,8 +33,8 @@ RESTART.in
 SC/restartIN/restart.H
 
 #PLASMA
-1.0			FluidMass [amu]
-1.0			IonCharge [e]
+1.0			FluidMass
+1.0			IonCharge
 1.0			ElectronTemperatureRatio
 
 #FIELDLINETHREAD

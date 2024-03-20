@@ -73,13 +73,17 @@ module CON_coupler
        SC_, GM_, &
        GM_, SC_, &
        SC_, IH_, &
-       SC_, PT_, &
        IH_, SC_, &
+       IH_, OH_, &
+       OH_, IH_, &
        SC_, SP_, & ! The order of these three couplings is mandatory
        IH_, SP_, & !
        OH_, SP_, & ! Do not modify them, please.
+       SC_, PT_, & ! The order of these three couplings is mandatory
+       IH_, PT_, & !
+       OH_, PT_, & ! Do not modify them, please.
+       PT_, OH_, &
        IH_, GM_, &
-       IH_, PT_, &
        GM_, EE_, &
        GM_, IE_, &
        GM_, IM_, &
@@ -100,10 +104,6 @@ module CON_coupler
        IE_, PS_, &
        IE_, RB_, &
        IE_, UA_, &
-       IH_, OH_, &
-       OH_, IH_, &
-       OH_, PT_, &
-       PT_, OH_, &
        PC_, GM_  &
        ], [2, MaxCouple] )
 

@@ -25,7 +25,7 @@ SAVERESTART
 T			DoSaveRestart
 
 #TEST
-couple_mh_sp		StringTest
+couple_mh_sp couple_sc_ih		StringTest
 
 #INCLUDE
 RESTART.in

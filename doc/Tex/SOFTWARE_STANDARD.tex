@@ -221,31 +221,9 @@ This allows users to use the previous version in case the new version has
 problems, it also allows reproducing earlier results if the new version is
 not backwards compatible, and it makes debugging easier.
 
-When the code changes significantly, especially if the results produced
-by the code change relative to the previous version, the version number
-of the code should be modified. Typically we use a real number with two
-significant digits as the version number. The version number of the SWMF 
-is defined in 
-\begin{verbatim}
-CON/Control/src/CON_variables.f90
-\end{verbatim}
-The current value is
-\begin{verbatim}
-  real, parameter:: VersionSwmf = 2.3
-\end{verbatim}
-There are similar version numbers in the components, user modules, etc.
-For example the MHD code BATS-R-US has its version number defined in
-\begin{verbatim}
-GM/BATSRUS/src/ModMain.f90
-\end{verbatim}
-and the current value is
-\begin{verbatim}
-  real, parameter:: CodeVersion = 8.01
-\end{verbatim}
-The version number is written to the standard output when the code is 
-running and it may also be stored in restart files. This helps to 
-ensure that the version of the code is known for any particular run
-and restart files are only used with a consistent version of the code.
+The code versions of the repositories are identified with Git
+references which are compiled into the executables and shown at the
+beginning of the simulation run.
 
 \subsection{Documenting code changes in Git}
 

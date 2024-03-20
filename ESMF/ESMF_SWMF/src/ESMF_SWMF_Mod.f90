@@ -403,41 +403,45 @@ contains
 
   end subroutine read_swmf_layout
   !============================================================================
-  subroutine add_fields(GridComp, State, IsFromEsmf, rc)
+  subroutine add_fields(Grid, State, IsFromEsmf, rc)
 
-    type(ESMF_GridComp), intent(inout) :: GridComp
+    type(ESMF_Grid), intent(inout) :: Grid
     type(ESMF_State),    intent(inout) :: State
     logical,             intent(in)    :: IsFromEsmf
     integer,             intent(out)   :: rc
 
-    type(ESMF_Grid)      :: Grid
     type(ESMF_Field)     :: Field
     type(ESMF_ArraySpec) :: ArraySpec
-    integer              :: iVar
+    integer              :: iVar, iPet
     character(len=4)     :: NameField
     ! real(ESMF_KIND_R8), pointer :: Ptr_C(:,:)
-
+    type(ESMF_VM)      :: Vm
+    
     ! Name of the component
-    character(len=100) :: Name
+    character(len=100) :: Name="UNKNOWN"
     !--------------------------------------------------------------------------
     call ESMF_LogWrite("ESMF_SWMF_Mod:add_fields called", ESMF_LOGMSG_INFO)
     rc = ESMF_FAILURE
 
-    ! Get default layout for the VM of GridComp
-    call ESMF_GridCompGet(GridComp, grid=Grid, name=Name, rc=rc)
-    if(rc /= ESMF_SUCCESS) call my_error('ESMF_GridCompGet failed')
+    call ESMF_VMGetCurrent(Vm, rc=rc)
+    if (rc /= ESMF_SUCCESS) call my_error('ESMF_VMGetCurrent')
+    call ESMF_VMGet(Vm, localPet=iPet, rc=rc)
+    if (rc /= ESMF_SUCCESS) call my_error('ESMF_VMGet')
 
+    call ESMF_GridGet(Grid, name=Name)
+    if (rc /= ESMF_SUCCESS) call my_error('ESMF_GridGet')
+    
     call ESMF_ArraySpecSet(ArraySpec, rank=2, typekind=ESMF_TYPEKIND_R8)
     if (rc /= ESMF_SUCCESS) call my_error('ESMF_ArraySpecSet')
     
     if(IsFromEsmf)then
        do iVar = 1, nVarEsmf
           NameField = NameFieldEsmf_V(iVar)
-          write(*,*)'Adding ESMF field=', NameField,' to ',trim(Name)
+          write(*,*) iPet,' Adding ESMF field=', NameField,' to ',trim(Name)
           Field = ESMF_FieldCreate(Grid, arrayspec=ArraySpec, &
                staggerloc=ESMF_STAGGERLOC_CENTER, name=NameField, rc=rc)
           if(rc /= ESMF_SUCCESS) call my_error('ESMF_FieldCreate ' &
-               //trim(NameField)//' for '//trim(Name))
+               //NameField//' for '//trim(Name))
           ! nullify(Ptr_C)
           ! call ESMF_FieldGet(Field, farrayPtr=Ptr_C, rc=rc)
           ! if(rc /= ESMF_SUCCESS) call my_error("ESMF_FieldGet for "//NameField// &
