@@ -32,10 +32,6 @@ PC			NameComp2
 
 #BEGIN_COMP GM ---------------------------------------------------------------
 
-USERMODULE
-Waves
- 1.30			VersionUserModule
-
 #IOUNITS
 NONE			TypeIoUnit
 
