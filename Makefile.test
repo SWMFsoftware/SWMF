@@ -8,24 +8,25 @@ TESTDIR = run_test
 TESTMACHINE = `hostname | sed -e 's/\..*//; s/[0-9]*$$//'`
 
 test_help:
-	@echo "    test                       (run all tests with ${MPIRUN})"
-	@echo "    test MPIRUN=               (run tests serially)"
-	@echo "    test NPFLAG=-n NP=3        (run tests with ${PARALLEL} -n 3)"
-	@echo "    test PARALLEL='mpiexec'    (run tests with mpiexec)"
-	@echo "    test8_compile              (configure and compile test8)"
-	@echo "    test8_rundir               (create run directory for test8)"
-	@echo "    test8_run NP=4             (run test8 with 4 MPI )"
-	@echo "    test8_check                (check test8 results)"
-	@echo "    test8_check BLESS=YES      (bless test8 results = update references)"
-	@echo "    test8 TESTDIR=run_test08   (run test8 in run_test08 directory)"
-	@echo "    test_gpu                   (run GPU related tests only)"
-	@echo "    test_share_library         (run share/Library tests)"
-	@echo "    test_util                  (run util/ tests)"
-	@echo "    test_batl                  (run BATL tests if BATL/ is present)"
-	@echo "    test_comp                  (run component tests)"
-	@echo "    test_swmf                  (run SWMF tests below)"
-	@echo "    test_eeggl                 (run EEGGL test)"
-	@echo "    test_eegtd                 (run Titov-Demouline test)"
+	@echo "    test                        (run all tests with ${MPIRUN})"
+	@echo "    test MPIRUN=                (run tests serially)"
+	@echo "    test NPFLAG=-n NP=3         (run tests with ${PARALLEL} -n 3)"
+	@echo "    test PARALLEL='ibrun'       (run tests with ibrun)"
+	@echo "    test8_compile               (configure and compile test8)"
+	@echo "    test8_rundir                (create run directory for test8)"
+	@echo "    test8_run NP=4              (run test8 with 4 MPI )"
+	@echo "    test8_check                 (check test8 results)"
+	@echo "    test8_check BLESS=YES       (bless test8 results = update references)"
+	@echo "    test8 TESTDIR=run_test08    (run test8 in run_test08 directory)"
+	@echo "    test_gpu                    (run GPU related tests only)"
+	@echo "    test_share_library          (run share/Library tests)"
+	@echo "    test_util                   (run util/ tests)"
+	@echo "    test_batl                   (run BATL tests if BATL/ is present)"
+	@echo "    test_comp                   (run component tests)"
+	@echo "    test_swmf                   (run SWMF tests below)"
+	@echo "    test_eeggl                  (run EEGGL test)"
+	@echo "    test_eegtd                  (run Titov-Demouline test)"
+	@echo "    test_esmf                   (run ESMF-SWMF coupling test)"
 	@(if [ -d PW/PWOM    ]; then echo "    test_pw                     (run PW/PWOM test)"; fi)
 	@(if [ -d PS/DGCPM   ]; then echo "    test_ps                     (run PS/DGCPM test)"; fi)
 	@(if [ -d SP/MFLAMPA ]; then echo "    test_sp                     (run SP/MFLAMPA test)"; fi)
@@ -44,9 +45,9 @@ test_help:
 	@(if [ -d PW/PWOM    ]; then echo "    test1                       (run GM-IE-PWOM test)"; fi)
 	@(if [ -d UA/GITM    ]; then echo "    test3                       (run GM-IE-IM-UA test)"; fi)
 	@(if [ -d IM/HEIDI   ]; then echo "    test4                       (run GM-IE-HEIDI test)"; fi)
-	@(if [ -d GM/BATSRUS/srcUserExtra ]; then echo "    test5                      (run EE-SC test)"; fi)
+	@(if [ -d GM/BATSRUS/srcUserExtra ]; then echo "    test5                       (run EE-SC test)"; fi)
 	@(if [ -d GM/BATSRUS ]; then echo "    test6                       (run SC-IH coupling test: stream-aligned)"; fi)
-	@(if [ -d GM/BATSRUS/srcUserExtra ]; then echo "    test7                      (run IH-OH test)"; fi)
+	@(if [ -d GM/BATSRUS/srcUserExtra ]; then echo "    test7                       (run IH-OH test)"; fi)
 	@(if [ -d GM/BATSRUS ]; then echo "    test8                       (run SC-IH coupling test with AWSoM-R)"; fi)
 	@(if [ -d GM/BATSRUS ]; then echo "    test9                       (run SC-IH coupling test with AWSoM)"; fi)
 	@(if [ -d GM/BATSRUS ]; then echo "    test10                      (run SC-IH like in a real-time)"; fi)
@@ -62,7 +63,7 @@ test_help:
 	@(if [ -d PC/FLEKS   ]; then echo "    test18                      (run GM-PC/FLEKS test: 3D reconnection)"; fi)
 	@(if [ -d PT/FLEKS   ]; then echo "    test20                      (run OH-PT/FLEKS test: shocktube)"; fi)
 	@(if [ -d PT/FLEKS   ]; then echo "    test21                      (run OH-PT/FLEKS test: OuterHelio)"; fi)
-	@echo "    test_check                 (collect test results into test_swmf.res)"
+	@echo "    test_check                  (collect test results into test_swmf.res)"
 
 # Nothing should be done parallel in this Makefile
 .NOTPARALLEL:
@@ -85,6 +86,7 @@ test_gpu:
 
 test_swmf:
 	-@(${MAKE} test_eeggl TESTDIR=run_test_eeggl)
+	-@(if [ ${COMPILER} != nagfor && "${ESMF_DIR}" != "" ]; then ${MAKE} test_esmf; fi)
 	-@(if [ -d PS/DGCPM   ]; then ${MAKE} test_ps TESTDIR=run_test_ps; fi)
 	-@(if [ -d SP/MFLAMPA ]; then ${MAKE} test_sp TESTDIR=run_test_sp; fi)
 	-@(if [ -d IM/RCM2    ]; then ${MAKE} test_swpc_gpu TESTDIR=run_test_swpc_gpu; fi)
@@ -3154,6 +3156,9 @@ test12_iso_check:
 		>> test12_iso_pc.diff)
 	ls -l test12_iso*.diff
 
+###############################################################################
+test_esmf:
+	cd ESMF/ESMF_SWMF; ${MAKE} test
 ###############################################################################
 test_eeggl:
 	@echo "test_eeggl_compile..." > test_eeggl.diff
