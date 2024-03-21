@@ -39,8 +39,7 @@ contains
   !============================================================================
   subroutine my_init(gComp, ImportState, ExportState, ParentClock, rc)
 
-    use ESMF_SWMF_Mod, only: nLonSwmf, nLatSwmf, &
-         nLonEsmf, nLatEsmf, LatMinEsmf, LatMaxEsmf, &
+    use ESMF_SWMF_Mod, ONLY: &
          iProcRootSwmf, iProcRootEsmf, iProcLastEsmf, iProcLastSwmf
 
     type(ESMF_GridComp):: gComp
