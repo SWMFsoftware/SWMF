@@ -3,7 +3,6 @@ module ESMF_SWMF_Mod
   ! Various entities needed for the ESMF-SWMF coupling
 
   use ESMF
-  use IE_ModSize, ONLY: nLatSwmf => IONO_nTheta, nLonSwmf => IONO_nPsi
   implicit none
 
   private
@@ -19,7 +18,13 @@ module ESMF_SWMF_Mod
   integer, public, parameter :: nVarEsmf = 2
   character(len=4), public, parameter :: NameFieldEsmf_V(nVarEsmf) = &
        [ 'Hall', 'Ped ' ]
+  ! Field values and coordinate coefficients for testing
+  real, public, parameter:: FieldEsmf_V(nVarEsmf) = [300.0, 500.0]
+  real, public, parameter:: CoordCoefEsmf_D(2) = [0.05, 0.1]
 
+  ! Change of Hall field during ESMF run
+  real, public, parameter:: dHall = 0.0
+  
   ! number of SWMF variables and their names to be sent to ESMF
   integer, public, parameter :: nVarSwmf = 4
   character(len=4), public, parameter :: NameFieldSwmf_V(nVarSwmf) = &
@@ -57,16 +62,10 @@ module ESMF_SWMF_Mod
 
   ! Variables related to the grid used between the ESMF and SWMF components.
   ! This is a 2D spherical grid representing the height integrated ionosphere.
-  ! In RIM it is in SM coordinates:
+  ! In RIM it is in SM coordinates (aligned with Sun-Earth direction):
   ! +Z points to north magnetic dipole and the Sun is in the +X-Z halfplane.
-  public:: nLonSwmf, nLatSwmf                 ! SWMF grid size from IE_ModSize
-  integer, public:: nLonEsmf=48, nLatEsmf=120 ! Default ESMF grid size
-  real(ESMF_KIND_R8), parameter, public:: LonMin = 0.0      ! Minimum longitude
-  real(ESMF_KIND_R8), parameter, public:: LonMax = 360.0    ! Maximum longitude
-  real(ESMF_KIND_R8), parameter, public:: LatMinSwmf = -90.0 ! Min SWMF lat
-  real(ESMF_KIND_R8), parameter, public:: LatMaxSwmf = +90.0 ! Max SWMF lat
-  real(ESMF_KIND_R8), public:: LatMinEsmf = -90.0 ! Min latitude of ESMF grid
-  real(ESMF_KIND_R8), public:: LatMaxEsmf = +90.0 ! Max latitude of ESMF grid
+  ! The ESMF grid is in MAG coordinates (rotates with Earth):
+  ! +Z points to north magnetic dipole, +Y is towards rotational Omega x Z
 
 contains
   !============================================================================
@@ -272,54 +271,6 @@ contains
        NameSwmfComp = 'IE'
     end if
 
-    ! Get grid size
-    iDefaultTmp = nLonEsmf
-    call ESMF_ConfigGetAttribute(Config, nLonEsmf, label='nLon:', rc=rc)
-    if(rc /= ESMF_SUCCESS) then
-       if(iProc == 0) write(*,*) 'ESMF_SWMF did not read nLon, ', &
-            'setting default value= ', iDefaultTmp
-       nLonEsmf = iDefaultTmp
-    end if
-    if(nLonEsmf < 1)then
-       if(iProc == 0) write(*,*) 'ESMF_SWMF ERROR: ', &
-            'nLon =',nLonEsmf,' should be positive!'
-       rc = ESMF_FAILURE; RETURN
-    end if
-
-    iDefaultTmp = nLatEsmf
-    call ESMF_ConfigGetAttribute(Config, nLatEsmf, label='nLat:', rc=rc)
-    if(rc /= ESMF_SUCCESS) then
-       if(iProc == 0) write(*,*) 'ESMF_SWMF did not read nLat, ', &
-            'setting default value= ', iDefaultTmp
-       nLatEsmf = iDefaultTmp
-    end if
-    if(nLatEsmf < 1)then
-       if(iProc == 0) write(*,*) 'ESMF_SWMF ERROR: ', &
-            'nLat =',nLatEsmf,' should be positive!'
-       rc = ESMF_FAILURE; RETURN
-    end if
-
-    DefaultTmp = LatMinEsmf
-    call ESMF_ConfigGetAttribute(Config, LatMinEsmf, label='LatMin:', rc=rc)
-    if(rc /= ESMF_SUCCESS) then
-       if(iProc == 0) write(*,*) 'ESMF_SWMF did not read LatMin, '// &
-            'setting default value= ', DefaultTmp
-       LatMinEsmf = DefaultTmp
-    end if
-
-    DefaultTmp = LatMaxEsmf
-    call ESMF_ConfigGetAttribute(Config, LatMaxEsmf, label='LatMax:', rc=rc)
-    if(rc /= ESMF_SUCCESS) then
-       if(iProc == 0) write(*,*) 'ESMF_SWMF did not read LatMax, '// &
-            'setting default value= ', DefaultTmp
-       LatMaxEsmf = DefaultTmp
-    end if
-    if(LatMaxEsmf <= LatMinEsmf)then
-       if(iProc == 0) write(*,*) 'ESMF_SWMF ERROR: LatMaxEsmf=', &
-            LatMaxEsmf, ' should be larger than LatMinEsmf=', LatMinEsmf
-       rc = ESMF_FAILURE; RETURN
-    end if
-
     call ESMF_ConfigDestroy(Config, rc=rc)
     if(rc /= ESMF_SUCCESS) RETURN
 
@@ -439,7 +390,7 @@ contains
           NameField = NameFieldEsmf_V(iVar)
           write(*,*) iPet,' Adding ESMF field=', NameField,' to ',trim(Name)
           Field = ESMF_FieldCreate(Grid, arrayspec=ArraySpec, &
-               staggerloc=ESMF_STAGGERLOC_CENTER, name=NameField, rc=rc)
+               staggerloc=ESMF_STAGGERLOC_CORNER, name=NameField, rc=rc)
           if(rc /= ESMF_SUCCESS) call my_error('ESMF_FieldCreate ' &
                //NameField//' for '//trim(Name))
           ! nullify(Ptr_C)
@@ -460,7 +411,7 @@ contains
           NameField = NameFieldSwmf_V(iVar)
           write(*,*)'Adding SWMF field=', NameField,' to ',trim(Name)
           Field = ESMF_FieldCreate(Grid, typekind=ESMF_TYPEKIND_R8, &
-               staggerloc=ESMF_STAGGERLOC_CENTER, name=NameField, rc=rc)
+               staggerloc=ESMF_STAGGERLOC_CORNER, name=NameField, rc=rc)
           if(rc /= ESMF_SUCCESS) call my_error('ESMF_FieldCreate ' &
                //trim(NameField)//' for '//trim(Name))
           call ESMF_StateAdd(State, [Field], rc=rc)
