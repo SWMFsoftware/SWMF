@@ -1,0 +1,40 @@
+#!/usr/bin/tcsh
+if ( -d $HOME/Tmp_ifort/SWMF/ ) then
+   cd $HOME/Tmp_ifort/SWMF/
+   rm -f test_swmf.log
+   /bin/cat test_config.log test_nobats.log ../BATSRUS/test_bats.log > test_swmf.log
+   /bin/cp -f $HOME/Tmp_ifort/BATSRUS/*.diff GM/BATSRUS/
+   make test_check > /dev/null
+   /usr/bin/ssh herot "mkdir -p Sites/SWMF_TEST_RESULTS/`date -d yesterday +%Y/%m/%d`/pleiades/"
+   /usr/bin/scp test_swmf.* "herot:Sites/SWMF_TEST_RESULTS/`date -d yesterday +%Y/%m/%d`/pleiades/"
+endif
+
+if ( -d $HOME/Tmp_nvidia/SWMF ) then
+   cd $HOME/Tmp_nvidia/SWMF
+   make test_check > /dev/null
+   /usr/bin/ssh herot "mkdir -p Sites/SWMF_TEST_RESULTS/`date -d yesterday +%Y/%m/%d`/nvidia/"
+   /usr/bin/scp test_swmf.* "herot:Sites/SWMF_TEST_RESULTS/`date -d yesterday +%Y/%m/%d`/nvidia/"
+endif
+
+if ( -d $HOME/Tmp_nvidia_serial/SWMF ) then
+   cd $HOME/Tmp_nvidia_serial/SWMF
+   make test_check > /dev/null
+   /usr/bin/ssh herot "mkdir -p Sites/SWMF_TEST_RESULTS/`date -d yesterday +%Y/%m/%d`/nvidia_serial/"
+   /usr/bin/scp test_swmf.* "herot:Sites/SWMF_TEST_RESULTS/`date -d yesterday +%Y/%m/%d`/nvidia_serial/"
+endif
+
+
+
+if ( -d $HOME/Tmp_mstem_gfortran/SWMF ) then
+   cd $HOME/Tmp_mstem_gfortran/SWMF
+   make test_check > /dev/null
+   /usr/bin/ssh herot "mkdir -p Sites/SWMF_TEST_RESULTS/`date -d yesterday +%Y/%m/%d`/mstemgcc/"
+   /usr/bin/scp test_swmf.* "herot:Sites/SWMF_TEST_RESULTS/`date -d yesterday +%Y/%m/%d`/mstemgcc/"
+endif
+
+if ( -d $HOME/Tmp_mstem_ifort/SWMF ) then
+   cd $HOME/Tmp_mstem_ifort/SWMF
+   make test_check > /dev/null
+   /usr/bin/ssh herot "mkdir -p Sites/SWMF_TEST_RESULTS/`date -d yesterday +%Y/%m/%d`/mstemifort/"
+   /usr/bin/scp test_swmf.* "herot:Sites/SWMF_TEST_RESULTS/`date -d yesterday +%Y/%m/%d`/mstemifort/"
+endif
