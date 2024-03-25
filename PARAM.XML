@@ -666,8 +666,7 @@ respectively.  This allows the same layout to be used on different
 nodes with different number of cores per node.  The default number of
 threads is 1 and the maximum value is MaxThread.
 
-This command is required either in the PARAM.in file or (for sake of backward
-compatibility) in the now depreciated LAYOUT.in file. 
+This command is required in the first session of the PARAM.in file.
 </command>
 
 <command name="COMPONENT" multiple="T">

@@ -51,34 +51,33 @@ module CON_main
 contains
   !============================================================================
   subroutine initialize(iComm)
+
     integer, intent(in), optional :: iComm ! the MPI communicator for the SWMF
 
     ! The optional argument MPI communicator argument is present only
     ! when the SWMF is not running in stand alone mode.
     ! This subroutine executes the following major steps shown in
     ! pseudo F90 code
-    ! \begin{itemize}
-    ! \item Initialize the framework:                         \begin{verbatim}
-    !       call world_init                                   \end{verbatim}
-    ! \item Read the layout of the components from LAYOUT.in: \begin{verbatim}
-    !       call world_setup                                  \end{verbatim}
-    ! \item Obtain version information from and provide MPI information to the
-    !       components:                                       \begin{verbatim}
+    !
+    ! Initialize the framework:
+    !       call world_init
+    ! Read the layout of the components from #COMPONENTMAP:
+    !       call world_setup
+    ! Obtain version information from and provide MPI information to the
+    !       components:
     !       do iComp = 1, nComp
     !           call set_param_comp(iComp,"VERSION")
     !           call set_param_comp(iComp,"MPI")
-    !       end do                                            \end{verbatim}
-    ! \item Show the registered and unregistered components:  \begin{verbatim}
-    !       call show_all_comp                                \end{verbatim}
-    ! \end{itemize}
+    !       end do
+    ! Show the registered and unregistered components: 
+    !       call show_all_comp
+    !
     ! The actual code is somewhat longer, since the main code also
     ! deals with timing, deleting the SWMF.STOP and SWMF.SUCCESS files
     ! at the beginning of the run, and initializing the planet information.
     ! There is also some verbose information printed.
     !--------------------------------------------------------------------------
-
-    ! Initialize control component (MPI)
-    call world_init(iComm)
+    call world_init(iComm)     ! Initialize control component (MPI)
 
     ! Set IsStandAlone variable:
     ! if the communicator is externally given,
@@ -97,7 +96,7 @@ contains
        include 'show_git_info.h'
     end if
 
-    ! Read component information from LAYOUT.in
+    ! Read component information from #COMPONENTMAP/#LAYOUT command
     call world_setup
 
     ! Initialize CPU timing
@@ -143,26 +142,25 @@ contains
 
   end subroutine initialize
   !============================================================================
-
   subroutine finalize
+
     ! This subroutine executes the following major steps shown in
     ! pseudo F90 code
-    ! begin{itemize}
-    ! \item Save final restart files if required:             \begin{verbatim}
-    !    if(SaveRestart % DoThis) call save_restart           \end{verbatim}
-    ! \item Finalize components:                              \begin{verbatim}
+    !
+    ! Save final restart files if required:
+    !    if(SaveRestart % DoThis) call save_restart
+    ! Finalize components:
     !    do iComp=1,nComp
     !        call finalize_comp(iComp,tSimulation)
-    !    end do                                               \end{verbatim}
-    ! \item Finish the execution:                             \begin{verbatim}
-    !    call world_clean                                     \end{verbatim}
-    ! end{itemize}
+    !    end do
+    ! Finish the execution:
+    !    call world_clean
+    !
     ! The actual code is longer: verbose information is printed, timing
     ! report is shown and the SWMF.SUCCESS and SWMF.DONE files are written.
 
     use ModConst, ONLY: &
          cSecondPerYear, cSecondPerDay, cSecondPerHour, cSecondPerMinute
-
     !--------------------------------------------------------------------------
     if(is_proc0())then
        if(lVerbose>=0)then
@@ -241,7 +239,6 @@ contains
     character (LEN=lNameVersion) :: NameVersion
 
     integer :: lComp, iComp, iProc0Comp, nProcComp, iStrideComp, nThread
-
     !--------------------------------------------------------------------------
     NameVersion  = 'SWMF by Univ. of Michigan'
 
@@ -284,8 +281,8 @@ contains
 
   end subroutine show_all_comp
   !============================================================================
-
   subroutine check_overlap_comp
+
     ! One may use the same source code for two non-overlapping components.
     ! For example GM and IH may use the same MHD source code. This is indicated
     ! by their NameVersion being the same. When the version names are the same
@@ -297,7 +294,6 @@ contains
 
     integer :: lComp, iComp, lComp2, iComp2, iProc, iProcMin, iError
     character (LEN=lNameVersion) :: NameVersion, NameVersion2
-
     !--------------------------------------------------------------------------
     do lComp=2,n_comp()
        iComp = i_comp(lComp)
@@ -338,7 +334,6 @@ contains
 
   end subroutine check_overlap_comp
   !============================================================================
-
 end module CON_main
 !==============================================================================
 
