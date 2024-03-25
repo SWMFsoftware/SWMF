@@ -6,7 +6,7 @@ module CON_session
 
   ! Execute one session based on the PARAM.in file where the sessions
   ! are separated by #RUN commands.
-  
+
   use CON_comp_param, ONLY: MaxComp, NameComp_I
   use CON_world, ONLY: i_comm, is_proc, is_proc0, i_proc, &
        i_comp, n_comp, use_comp, is_thread, world_used, CON_

@@ -19,7 +19,7 @@ module  CON_world
   ! Conversion from lComp to iComp can be done with the i_comp public
   ! function. A typical loop accessing all registered and used components
   ! is like this
-  ! 
+  !
   ! do lComp = 1,n_comp()
   !     iComp = i_comp(lComp)
   !     if(.not.use_comp(iComp)) CYCLE
@@ -27,7 +27,7 @@ module  CON_world
   !          'Number of processors for component ',lComp,&
   !          ' is ',n_proc(iComp)
   ! end do
-  ! 
+  !
   ! The above example shows three access functions, use_comp,
   ! is_proc0 and n_proc which are called with the fixed component
   ! ID argument.
@@ -280,7 +280,7 @@ contains
     ! Reads PARAM.in and registers the listed components. The MPI
     ! parameters are initialized using the init subroutine from
     ! CON_comp_info. The format is the following:
-    ! 
+    !
     ! Name      First   Last    Stride   nThread
     ! ============================================
     ! #COMPONENTMAP
