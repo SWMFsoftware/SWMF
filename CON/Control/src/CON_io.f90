@@ -822,6 +822,7 @@ contains
   end subroutine read_inputs
   !============================================================================
   subroutine set_stdout
+
     ! If UseStdout is true tell the components to use STDOUT with
     ! a prefix string.
     ! If UseStdout is false, open an output file for each component and
@@ -869,6 +870,7 @@ contains
           call timing_iounit(STDOUT_)
        end if
     end do
+
   end subroutine set_stdout
   !============================================================================
   subroutine save_restart(DoFinalize)
@@ -886,6 +888,7 @@ contains
     ! with the \#INCLUDE file command.
     ! Set the name of the restart directory based on the DATE-TIME if required.
     ! Set NameRestartOutDirComp for the components too.
+
     logical, optional :: DoFinalize
     integer :: lComp, iComp, iError
     integer :: i
