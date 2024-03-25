@@ -1,43 +1,26 @@
 !  Copyright (C) 2002 Regents of the University of Michigan,
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-!               Space Weather Modeling Framework (SWMF)                !
-!    Center for Space Environment Modeling, The University of Michigan !
-!-----------------------------------------------------------------------
-!
-!
-! This module provides a public derived type {\bf CompInfoType}
-! to store component information such as name, version name and number,
-! whether the component is used, the unit number for (redirected) STDOUT,
-! and 7 MPI parameters, such as the MPI communicator, MPI group,
-! number of processors used by the component, the global rank of the
-! first and last processors used by the component, the stride between
-! the used processors, and the rank of the current PE
-! within the component group.
-!
-! The MPI information is created with the {\bf init} subroutine.
-!
-! Other data can be set with the {\bf put} subroutine.
-!
-! All data can be accessed with the {\bf get} subroutine.
-!
-! The data can be released with the {\bf clean} subroutine.
 
-!
 module CON_comp_info
-  !
-  !
+
+  ! This module provides a public derived type CompInfoType
+  ! to store component information such as name, version name and number,
+  ! whether the component is used, the unit number for (redirected) STDOUT,
+  ! and 7 MPI parameters, such as the MPI communicator, MPI group,
+  ! number of processors used by the component, the global rank of the
+  ! first and last processors used by the component, the stride between
+  ! the used processors, and the rank of the current PE
+  ! within the component group.
+
   use CON_comp_param
   use ModMpi
   use ModIoUnit, ONLY : STDOUT_
+
   implicit none
 
   private ! except
 
-  !
-  !PUBLIC TYPES:
-  !
   public :: CompInfoType ! The class data structure
 
   type CompInfoType
@@ -51,25 +34,21 @@ module CON_comp_info
      integer                          :: nThread
   end type CompInfoType
 
-  !
   public :: init   ! constructor creates layout information from PE range
   public :: clean  ! destructor
   public :: get    ! get component information
   public :: put    ! put component information not set by init
 
-  !
   ! revision history:
   !
   !  June 2003 - O. Volberg <volov@umich.edu> - initial version
   !  July 2003 - G. Toth <gtoth@umich.edu>    - major rewrite
   !  Aug  2003 - G. Toth <gtoth@umich.edu>    - improved description
-  !
 
-  character(len=*),parameter :: NameMod='CON_comp_info'
+  character(len=*),parameter :: NameMod = 'CON_comp_info'
 
 contains
   !============================================================================
-
   subroutine init(Info, Name, iGroupWorld, iCommWorld, iProcRange_I, nThread, &
        iError)
 
@@ -87,7 +66,6 @@ contains
 
     character(len=*), parameter:: NameSub = 'init'
     !--------------------------------------------------------------------------
-
     iError = 0
 
     ! Check if the name of the component is valid
@@ -108,9 +86,9 @@ contains
 
     ! Check if the range is correct and fits into the world group
     if(iProcRange_I(ProcZero_) < 0 .or. &
-       iProcRange_I(ProcZero_) > iProcRange_I(ProcLast_) .or. &
-       iProcRange_I(ProcLast_) > nProcWorld - 1 .or. &
-       iProcRange_I(ProcStride_) < 0  ) then
+         iProcRange_I(ProcZero_) > iProcRange_I(ProcLast_) .or. &
+         iProcRange_I(ProcLast_) > nProcWorld - 1 .or. &
+         iProcRange_I(ProcStride_) < 0  ) then
        iError = 1
        write(*,'(a,3i4,a,i4,a)')NameSub// &
             ' SWMF_ERROR: incorrect iProcRange_I = ',iProcRange_I,&
@@ -192,7 +170,6 @@ contains
 
   end subroutine init
   !============================================================================
-
   subroutine clean(Info, iError)
 
     type(CompInfoType), intent(inout) :: Info
@@ -212,7 +189,6 @@ contains
 
   end subroutine clean
   !============================================================================
-
   subroutine get(Info, iProc, nProc, iComm, iGroup, iFirst, iLast, iStride, &
        nThread, iUnitOut, Use, Name, NameVersion, Version)
 
@@ -223,7 +199,6 @@ contains
     character(len=lNameComp),    optional, intent(out) :: Name
     character(len=lNameVersion), optional, intent(out) :: NameVersion
     real,                        optional, intent(out) :: Version
-
     !--------------------------------------------------------------------------
     if( present(iProc)   ) iProc   = Info%iMpiParam_I(Proc_)
     if( present(nProc)   ) nProc   = Info%iMpiParam_I(nProc_)
@@ -239,6 +214,7 @@ contains
     if( present(Name)        ) Name         = Info%Name
     if( present(NameVersion) ) NameVersion  = Info%NameVersion
     if( present(Version)     ) Version      = Info%Version
+
   end subroutine get
   !============================================================================
   subroutine put(Info, iUnitOut, Use, NameVersion, Version)
@@ -248,7 +224,6 @@ contains
     logical,          optional, intent(in) :: use
     character(len=*), optional, intent(in) :: NameVersion
     real,             optional, intent(in) :: Version
-
     !--------------------------------------------------------------------------
     if( present(iUnitOut)    ) Info%iUnitOut    = iUnitOut
     if( present(Use)         ) Info%Use         = Use
@@ -257,6 +232,5 @@ contains
 
   end subroutine put
   !============================================================================
-
 end module CON_comp_info
 !==============================================================================
