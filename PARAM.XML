@@ -251,7 +251,7 @@ The default value is nStep=0.
 <command name="STOP">
 	<parameter name="MaxIter" type="integer" min="-1" default="-1" />
 	<parameter name="TimeMax" type="real"    min="-1" default="-1" />
-	<set name="_STOP" type="logical" value="1"/>
+	<set name="_STOP" type="logical" value="T"/>
 
 #STOP
 100			MaxIter
@@ -623,6 +623,7 @@ components can be called at different frequencies.
 Components which are not used in a session can be switched off.
 
 <command name="#COMPONENTMAP" alias="LAYOUT" if="$_IsFirstSession">
+  <set name="_COMPONENTMAP" type="logical" value="T"/>
   <foreach values="$_Components">
     <parameter name="CompMap" type="strings" min="1" max="5">
       <part name="NameComp"  type="string"  length="2" required="T"/>
@@ -646,6 +647,7 @@ PC  0 -3 -1 -1        CompMap PC runs on PEs ..nProc-3 with MaxThread threads
 IM -2 -2  1           CompMap IM runs on PE  nProc-2
 IE -2 -1  1           CompMap IE runs on PEs nProc-2 and nProc-1
 
+This command can only occur in the first session, where it is required.
 The #COMPONENTMAP (or #LAYOUT) command lists the active components and
 their processor layout including the number of OpenMP threads for
 components that can run with OpenMP. To use multithreading, the code
@@ -1797,6 +1799,10 @@ the run.
 !!!!!!!!!!!!!!!!!!!!!!!!! GLOBAL RULES !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 -->
+<rule expr="$_COMPONENTMAP">
+  Missing #COMPONENTMAP/#LAYOUT command
+</rule>
+
 <rule expr="$IsTimeAccurate or not $_ENDTIME">
   The #ENDTIME command can only be used in time-accurate mode
 </rule>
