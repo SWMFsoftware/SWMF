@@ -622,7 +622,7 @@ time. In steady state mode there is no limit on the time step, and
 components can be called at different frequencies.
 Components which are not used in a session can be switched off.
 
-<command name="#COMPONENTMAP" multiple="F" alias="LAYOUT">
+<command name="#COMPONENTMAP" alias="LAYOUT" if="$_IsFirstSession">
   <foreach values="$_Components">
     <parameter name="CompMap" type="strings" min="1" max="5">
       <part name="NameComp"  type="string"  length="2" required="T"/>
