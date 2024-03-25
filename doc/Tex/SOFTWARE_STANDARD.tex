@@ -469,8 +469,8 @@ module ModLinearSolver
   ! There are both serial and parallel solvers, and direct and 
   ! iterative solvers.
 
-  use ModMpi, only: iComm
-  use ModBlasLapack, only: dgemm, dcopy
+  use ModMpi, ONLY: iComm
+  use ModBlasLapack, ONLY: dgemm, dcopy
 
   implicit none
   save
@@ -520,7 +520,7 @@ they belong to module ModLinear. Private variables and methods can have
 simpler names as they do not conflict with the name space of other modules.
 Although one can rename the variables in the use statement, e.g.
 \begin{verbatim}
-use ModLinear, only: solve_linear => solve
+use ModLinear, ONLY: solve_linear => solve
 \end{verbatim}
 we did not find this style useful for a number of reasons. One is that certain
 compilers get confused if two modules contain methods with identical names. 
@@ -716,8 +716,8 @@ or they can be allocated in an initialization subroutine of a module:
 \begin{verbatim}
 module ModAdvance
 
-  use ModEquation, only: nVar
-  use BALT_lib, only: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, MaxBlock
+  use ModEquation, ONLY: nVar
+  use BALT_lib, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, MaxBlock
   real, allocatable:: State_VGB(:,:,:,:,:)
 
 contains
@@ -830,6 +830,13 @@ expressions, tricks, and counter-intuitive solutions.
 
 \section{Guidelines for formatting source code}
 
+Many of the suggestions in this document can be implemented by
+running the {\tt share/Scripts/FormatFortran.pl} script for one
+or multiple F90 source files. In fact, the nightly tests perform
+this for several directories and even commit the modified files.
+The goal is to have uniformly formatted code in the SWMF and its
+models.
+
 Formatting the source code has the following purposes:
 \begin{itemize}
 \item Help developers to easily find appropriate parts of the code
@@ -857,10 +864,10 @@ these in future development.
       case comments should be avoided unless there is a really good reason.
 \item No line can exceed 80 character width. 
 \item Subroutines and functions are separated from each other 
-      by a single line {\tt !=========} that extends to about 78 characters.
+      by a single line {\tt !=========} that extends to 79 characters.
 \item The declaration and the executable part of subroutines and functions
       are separated by a single line {\tt !------------} that extends to 
-      about 78 characters
+      79 characters
 \item Blanks are used to make the source code more readable. In particular
       commas, single or double colons, semi-colons should be followed
       by a single space. Exception: indexes of multi-dimensional arrays
@@ -937,6 +944,7 @@ module ModUser
 contains
   !=========================================================================
   subroutine read_parameters 
+
     integer:: iError
     !-----------------------------------------------------------------------
     do
@@ -948,12 +956,15 @@ contains
        if(x + y > z) EXIT
        write(*,*) 'x+y should be larger than z. Try again'
     end do
+
   end subroutine read_parameters
   !=========================================================================
   logical function is_ok()
-    is_ok = .true.
-  end function is_ok
 
+    is_ok = .true.
+
+  end function is_ok
+  !=========================================================================
 end module ModUser
 \end{verbatim}
 \caption{Well formatted source code}
@@ -965,15 +976,22 @@ Figure~\ref{fig:goodformat}.
 Hopefully this example is convincing enough that formatting is important.
 Indentation is very helpful in visually showing the beginning and end of
 conditional statements and loops. Sometimes nested loops can result in 
-a very deep indentation that is difficult to read, for example:
+a very deep indentation that is difficult to read, as shown at the
+top of Figure~\ref{fig:nested}. A better formatting is shown below.
+Note that the beginning and the end of the 3 nested loops are written into
+single lines. The CYCLE statement is often easier to read than an if statement
+that extends over the whole loop. 
+
+\begin{figure}
 \begin{verbatim}
   select case(NamePlotVar)
   case('rho')
      do k = 1, nK
         do j = 1, nJ
            do i = 1, nI
-              if(IsTrueCell_GB(i,j,k,iBlock))then
-                 Plot_VGB(iPlotVar,i,j,k,iBlock) = State_VGB(Rho_,i,j,k,iBlock)
+              if(Used_GB(i,j,k,iBlock))then
+                 Plot_VGB(iPlotVar,i,j,k,iBlock) &
+                     = State_VGB(Rho_,i,j,k,iBlock)
               end if
            end do
         end do
@@ -984,15 +1002,16 @@ An alternative way to write this code is
   select case(NamePlotVar)
   case('rho')
      do k = 1, nK; do j = 1, nJ; do i = 1, nI
-        if(.not. IsTrueCell(i,j,k,iBlock)) CYCLE
+        if(.not. Used_GB(i,j,k,iBlock)) CYCLE
 
         Plot_VGB(iPlotVar,i,j,k,iBlock) = State_VGB(Rho_,i,j,k,iBlock)
 
      end do; end do; end do
 \end{verbatim}
-Note that the beginning and the end of the 3 nested loops are written into a 
-single line. The CYCLE statement is often easier to read than an if statement
-that extends over the whole loop. 
+\caption{Nested loops and CYCLE statement}
+\label{fig:nested}
+\end{figure}
+
 
 \section{Data Naming}
 
@@ -1106,7 +1125,7 @@ real   :: cTen           ! = 10.0
 logical:: FirstOrder     ! .true. = first order, .false. = second order
 character(len=4):: VersionNumber = "8.01"
 \end{verbatim}
-The name of a methods should not be encripted into numbers. One could
+The name of a method should not be encripted into numbers. One could
 potentially introduce named constants, like {\tt Roe\_=1}, {\tt Hll\_=2} etc,
 but it is still more complicated than using a character string.
 
@@ -1168,7 +1187,7 @@ the {\tt selected\_real\_kind} function of Fortran 90 to define
 real kinds {\tt Real4\_} and {\tt Real8\_} in module ModKind.
 These are used like this:
 \begin{verbatim}
-use ModKind, only: Real4_, Real8_
+use ModKind, ONLY: Real4_, Real8_
 implicit none
 real(Real8_):: DoublePrecisionVariable
 real(Real4_):: SinglePrecisionVariable
@@ -1295,7 +1314,7 @@ module CON_session
 module PW_ModMain
 subroutine GM_set_parameters
 function IE_is_spherical_grid
-NameLogFile = 'GM/plot/log.dat'
+NameLogFile = 'GM/plots/log.dat'
 \end{verbatim}
 Note that internal (contained) subroutines and functions cannot create
 a name conflict and their name should not start with a component identifier. 
