@@ -26,13 +26,13 @@ rundir: ${RUNDIR}
 	cd ${RUNDIR}; ln -sf ${BINDIR}/ESMF_SWMF.exe .
 
 test:
-	@echo "test_compile" > test_esmf.diff
+	@echo "test_compile..." > test_esmf.diff
 	${MAKE} test_compile
-	@echo "test_rundir" >> test_esmf.diff
+	@echo "test_rundir..." >> test_esmf.diff
 	${MAKE} test_rundir
-	@echo "test_run" >> test_esmf.diff
+	@echo "test_run..." >> test_esmf.diff
 	${MAKE} test_run
-	@echo "test_check" >> test_esmf.diff
+	@echo "test_check..." >> test_esmf.diff
 	${MAKE} test_check
 
 test_compile:
