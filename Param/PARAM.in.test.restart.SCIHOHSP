@@ -4,7 +4,7 @@ Begin session: 1
 SC  0 -1  1		CompMap
 IH  0 -1  1		CompMap
 OH  0 -1  1		CompMap
-SP  0 -1  2		CompMap
+SP  0 30  2		CompMap
 
 #DESCRIPTION
 Param/PARAM.in.test.restart.SCIHOHSP: restart SC-IH-OH-SP		StringDescription
