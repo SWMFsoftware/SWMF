@@ -146,7 +146,7 @@ contains
     logical :: UseComp
     character(len=lNameComp) :: NameComp, NameComp1, NameComp2
     character(len=lNameComp) :: NameSourceTarget_I(2)
-    character(len=lStringLine) :: NameSourceTarget, StringLayout
+    character(len=lStringLine) :: NameSourceTarget, StringLayout="???"
 
     ! Lookup table related parameters
     character(len=lStringLine) :: StringCompTable
@@ -476,7 +476,7 @@ contains
           end if
        case("#FIELDLINE","#COUPLEFIELDLINE")
           call BL_read_param(NameCommand, iErrorSWMF)
-          if(iErrorSWMF/=0)RETURN
+          if(iErrorSWMF /= 0)RETURN
 
        case("#COUPLE1TIGHT", "#COUPLE2TIGHT")
           call read_var('NameMaster', NameComp1)
@@ -634,6 +634,14 @@ contains
           dLongitudeHgi = dLongitudeHgiDeg * cDegToRad
 
        case("#COMPONENTMAP", "#LAYOUT")
+          ! Can only be read in the first session and only once
+          if(.not.is_first_read() .or. StringLayout /= "???")then
+             if(is_proc0())write(*,*) &
+                  'Multiple #COMPONENTMAP/#LAYOUT commands are not allowed!'
+             iErrorSwmf = 21
+             RETURN
+          end if
+
           ! This is already done in CON_WORLD. Hear we just echo back.
           do
              call read_in(StringLayout, iError, DoReadWholeLine=.true.)
@@ -814,6 +822,7 @@ contains
   end subroutine read_inputs
   !============================================================================
   subroutine set_stdout
+
     ! If UseStdout is true tell the components to use STDOUT with
     ! a prefix string.
     ! If UseStdout is false, open an output file for each component and
@@ -861,6 +870,7 @@ contains
           call timing_iounit(STDOUT_)
        end if
     end do
+
   end subroutine set_stdout
   !============================================================================
   subroutine save_restart(DoFinalize)
@@ -878,6 +888,7 @@ contains
     ! with the \#INCLUDE file command.
     ! Set the name of the restart directory based on the DATE-TIME if required.
     ! Set NameRestartOutDirComp for the components too.
+
     logical, optional :: DoFinalize
     integer :: lComp, iComp, iError
     integer :: i

@@ -1,60 +1,53 @@
 !  Copyright (C) 2002 Regents of the University of Michigan,
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!
-!               Space Weather Modeling Framework (SWMF)                !
-!    Center for Space Environment Modeling, The University of Michigan !
-!-----------------------------------------------------------------------
-!
-!
-!
-! CON\_world reads, stores and provides information about all the
-! registered components. Components are registered by being listed
-! in the LAYOUT.in file which is read by the {\bf setup} subroutine.
-! The information is stored in the private {\bf CompInfo\_C} array
-! of derived type CompInfoType which is defined in CON\_comp\_info.
-! The array is indexed from 1 to the number of registered components
-! which can be obtained with the {\bf n\_comp} public function.
-!
-! The variable holding the index for the registered components should be
-! named {\bf lComp} where {\bf l} stands for {\it listed}.
-! The fixed component ID, on the other hand, is referred to as {\bf iComp}.
-! Conversion from {\bf lComp} to {\bf iComp} can be done with the
-! {\bf i\_comp} public function. A typical loop accessing all
-! registered and used components is like this
-! \begin{verbatim}
-! do lComp = 1,n_comp()
-!     iComp = i_comp(lComp)
-!     if(.not.use_comp(iComp)) CYCLE
-!     if(is_proc0(iComp)) write(*,*) &
-!          'Number of processors for component ',lComp,&
-!          ' is ',n_proc(iComp)
-! end do
-! \end{verbatim}
-! The above example shows three access functions, {\bf use\_comp},
-! {\bf is\_proc0} and {\bf n\_proc} which are called with the fixed component
-! ID argument.
-! All the similar functions, such as {\bf i\_comm, i\_group,
-! i\_proc, i\_proc0} and {is\_proc} can be called with the
-! fixed integer component ID, the two-character component name,
-! or no argument. The no argument call returns the value relevant for
-! the whole framework. Examples:
-! \begin{verbatim}
-!    write(*,*) n_proc(IE_)   ! number of processors used by the IE component
-!    write(*,*) n_proc('GM')  ! number of processors used by the GM component
-!    write(*,*) n_proc(CON_)  ! number of processors used by active components
-!    write(*,*) n_proc('CON') ! number of processors used by active components
-!    write(*,*) n_proc()      ! number of processors used by SWMF.
-! \end{verbatim}
-! While functions provide a convenient access to most of the information
-! about the components, the general {\bf get\_comp\_info} and
-! {\bf put\_comp\_info} subroutines provide access to any subset of
-! the available information with a single call.
 
-!
 module  CON_world
+
+  ! CON_world reads, stores and provides information about all the
+  ! registered components. Components are registered by being listed
+  ! in the #COMPONENTMAP/#LAYOUT command in the PARAM.in file,
+  ! which is read by the world_setup subroutine.
+  ! The information is stored in the private CompInfo_C array
+  ! of derived type CompInfoType which is defined in CON_comp_info.
+  ! The array is indexed from 1 to the number of registered components,
+  ! which can be obtained with the n_comp public function.
   !
+  ! The variable holding the index for the registered components should be
+  ! named lComp where l stands for "listed".
+  ! The fixed component ID, on the other hand, is referred to as iComp.
+  ! Conversion from lComp to iComp can be done with the i_comp public
+  ! function. A typical loop accessing all registered and used components
+  ! is like this
   !
+  ! do lComp = 1,n_comp()
+  !     iComp = i_comp(lComp)
+  !     if(.not.use_comp(iComp)) CYCLE
+  !     if(is_proc0(iComp)) write(*,*) &
+  !          'Number of processors for component ',lComp,&
+  !          ' is ',n_proc(iComp)
+  ! end do
+  !
+  ! The above example shows three access functions, use_comp,
+  ! is_proc0 and n_proc which are called with the fixed component
+  ! ID argument.
+  ! All the similar functions, such as i_comm, i_group,
+  ! i_proc, i_proc0 and {is_proc can be called with the
+  ! fixed integer component ID, the two-character component name,
+  ! or no argument. The no argument call returns the value relevant for
+  ! the whole framework. Examples:
+  !
+  ! write(*,*) n_proc(IE_)   ! number of processors used by the IE component
+  ! write(*,*) n_proc('GM')  ! number of processors used by the GM component
+  ! write(*,*) n_proc(CON_)  ! number of processors used by active components
+  ! write(*,*) n_proc('CON') ! number of processors used by active components
+  ! write(*,*) n_proc()      ! number of processors used by SWMF.
+  !
+  ! While functions provide a convenient access to most of the information
+  ! about the components, the general get_comp_info and
+  ! put_comp_info subroutines provide access to any subset of
+  ! the available information with a single call.
+
   use ModMpi
   use ModIoUnit, ONLY : UNITTMP_, io_unit_clean
   use ModUtilities, ONLY: CON_stop
@@ -71,7 +64,7 @@ module  CON_world
 
   public :: MaxComp         ! max number of components from CON_comp_param
   public :: world_init      ! constructor initializes registry for components
-  public :: world_setup     ! set registry values (reads from LAYOUT.in)
+  public :: world_setup     ! set registry values (reads from PARAM.in)
   public :: world_clean     ! destructor cleans up
   public :: world_used      ! setup group for PEs used by active components
   public :: n_comp          ! return number of components
@@ -123,34 +116,34 @@ module  CON_world
 
   interface world_setup; module procedure &
        setup_from_file
-  end interface
+  end interface world_setup
   interface use_comp; module procedure &
        use_comp_name, use_comp_id
-  end interface
+  end interface use_comp
   interface l_comp; module procedure &
        l_comp_name, l_comp_id
-  end interface
+  end interface l_comp
   interface i_comp; module procedure &
        i_comp_name, i_comp_id
-  end interface
+  end interface i_comp
   interface get_comp_info; module procedure &
        get_comp_info_name, get_comp_info_id
-  end interface
+  end interface get_comp_info
   interface put_comp_info; module procedure &
        put_comp_info_name, put_comp_info_id
-  end interface
+  end interface put_comp_info
   interface is_proc; module procedure &
        is_proc_name, is_proc_id, is_proc_world
-  end interface
+  end interface is_proc
   interface is_proc0; module procedure &
        is_proc0_name, is_proc0_id, is_proc0_world
-  end interface
+  end interface is_proc0
   interface i_proc; module procedure &
        i_proc_name, i_proc_id, i_proc_world
-  end interface
+  end interface i_proc
   interface i_proc0; module procedure &
        i_proc0_name, i_proc0_id, i_proc0_world
-  end interface
+  end interface i_proc0
   interface n_proc; module procedure &
        n_proc_name, n_proc_id, n_proc_world
   end interface n_proc
@@ -158,12 +151,12 @@ module  CON_world
      module procedure i_proc_stride_world
      module procedure i_proc_stride_id
      module procedure i_proc_stride_name
-  end interface
+  end interface i_proc_stride
   interface i_proc_last
      module procedure i_proc_last_world
      module procedure i_proc_last_name
      module procedure i_proc_last_id
-  end interface
+  end interface i_proc_last
   interface is_thread; module procedure &
        is_thread_name, is_thread_id
   end interface is_thread
@@ -175,10 +168,10 @@ module  CON_world
   end interface n_thread
   interface i_comm; module procedure &
        i_comm_name, i_comm_id, i_comm_world
-  end interface
+  end interface i_comm
   interface i_group; module procedure &
        i_group_name, i_group_id, i_group_world
-  end interface
+  end interface i_group
 
   ! revision history:
   !
@@ -284,25 +277,21 @@ contains
   !============================================================================
   subroutine setup_from_file
 
-    ! Reads LAYOUT.in or PARAM.in and registers the listed components. The MPI
-    ! parameters are initialized using the {\bf init} subroutine from
-    ! CON\_comp\_info. The format is the following:
-    ! \begin{verbatim}
-    ! remarks
+    ! Reads PARAM.in and registers the listed components. The MPI
+    ! parameters are initialized using the init subroutine from
+    ! CON_comp_info. The format is the following:
     !
     ! Name      First   Last    Stride   nThread
     ! ============================================
-    ! #LAYOUT
+    ! #COMPONENTMAP
     ! GM       0        9999    8        8   ! GM runs with 8 threads
     ! PW       0        9999   -1       -1   ! PW runs with MaxThread threads
     ! IE       -3      -2       1            ! IE runs on nProc-3:nProc-2
     ! IM       -1      -1       1            ! IM runs on nProc-1
     !
-    ! remarks
-    !\end{verbatim}
-    ! The layout information starts with the {\bf \#LAYOUT} command
-    ! (or the alternative name {\bf \#COMPONENTMAP})
-    ! and ends with an empty line. The first column contains the
+    ! The layout information starts with the #COMPONENTMAP command
+    ! (or the alternative name #LAYOUT) and ends with an empty line.
+    ! The first column contains the
     ! two-character component name, the 2nd, 3rd, and 4th columns
     ! are integers containing the ranks of the first and last processors
     ! used by the component, and the stride between the processor ranks.
@@ -703,7 +692,7 @@ contains
     type(CompInfoType),          optional, intent(out) :: CompInfo
 
     ! Obtain any information about the component which is identified
-    ! with its ID {\bf iComp}, or name (using {\bf get\_comp\_info\_name}).
+    ! with its ID iComp, or name (using get_comp_info_name).
 
     character(len=*), parameter:: NameSub = 'get_comp_info_id'
     !--------------------------------------------------------------------------
@@ -723,10 +712,9 @@ contains
     character(len=*), optional, intent(in) :: NameVersion ! version name
     real,             optional, intent(in) :: Version     ! version number
 
-    ! Set component information which is not set by {\bf setup}.
+    ! Set component information which is not set by setup.
     ! The first argument is either the two-character component name
-    ! {\bf NameComp} or the integer component ID (using
-    ! {\bf put\_comp\_info\_id}.
+    ! NameComp or the integer component ID (using put_comp_info_id).
 
     character(len=*), parameter:: NameSub = 'put_comp_info_name'
     !--------------------------------------------------------------------------

@@ -1,44 +1,35 @@
 !  Copyright (C) 2002 Regents of the University of Michigan,
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-!               Space Weather Modeling Framework (SWMF)                !
-!    Center for Space Environment Modeling, The University of Michigan !
-!-----------------------------------------------------------------------
-!
-! ! MODULE: CON_comp_param - parameters used by the SWMF Registry
-!          and query functions for them
-!
-! ! DESCRIPTION:
-! This module contains the constants specific to the SWMF components,
-! such as names, ID-s, number of components, etc.
-! It also contains constants such as named indexes and file names
-! used by CON\_world and CON\_comp\_info.
-!
-! The following Physics Components can occur in SWMF
-! (listed in alphabetical order):
-!
-! begin{itemize}
-! item[CZ] Convection Zone
-! item[EE] Eruptive Event
-! item[GM] Global Magnetosphere
-! item[IE] Ionospheric Electrodynamics
-! item[IH] Inner Heliosphere
-! item[IM] Inner Magnetosphere
-! item[OH] Outer Heliosphere
-! item[PC] Particle-in-Cell
-! item[PS] Plasmasphere
-! item[PT] Particle Tracker
-! item[PW] Polar Wind
-! item[RB] Radiation Belts
-! item[SC] Solar Corona
-! item[SP] Solar Energetic Particles
-! item[UA] Upper Atmosphere
-! end{itemize}
 
-!
 module CON_comp_param
+
+  ! parameters used by the SWMF Registry and query functions for them
   !
+  ! This module contains the constants specific to the SWMF components,
+  ! such as names, ID-s, number of components, etc.
+  ! It also contains constants such as named indexes and file names
+  ! used by CON_world and CON_comp_info.
+  !
+  ! The following Physics Components can occur in SWMF
+  ! (listed in alphabetical order):
+  !
+  !    CZ Convection Zone
+  !    EE Eruptive Event
+  !    GM Global Magnetosphere
+  !    IE Ionospheric Electrodynamics
+  !    IH Inner Heliosphere
+  !    IM Inner Magnetosphere
+  !    OH Outer Heliosphere
+  !    PC Particle-in-Cell
+  !    PS Plasmasphere
+  !    PT Particle Tracker
+  !    PW Polar Wind
+  !    RB Radiation Belts
+  !    SC Solar Corona
+  !    SP Solar Energetic Particles
+  !    UA Upper Atmosphere
+
   implicit none
 
   !PUBLIC DATA MEMBERS:
@@ -70,11 +61,9 @@ module CON_comp_param
 
   integer, parameter :: nMpiParam = 7  ! number of MPI parameters
 
-  ! Name of the processor map file
-  character(len=9)   :: NameMapFile = "LAYOUT.in"
+  ! Name of the file containing the processor map
+  character(len=9)   :: NameMapFile = "PARAM.in"
 
-  !
-  !
   public :: is_valid_comp_name ! return true if component name is valid
   public :: i_comp_name        ! return index for component name
 
@@ -88,8 +77,8 @@ module CON_comp_param
 
 contains
   !============================================================================
-
   logical function is_valid_comp_name(NameComp)
+
     character(len=*), intent(in) :: NameComp
     integer :: iComp
     character(len=*), parameter:: NameSub = 'is_valid_comp_name'
@@ -100,6 +89,7 @@ contains
   end function is_valid_comp_name
   !============================================================================
   integer function i_comp_name(Name)
+
     character(len=*), intent(in) :: Name
     integer :: iComp
 
@@ -119,6 +109,7 @@ contains
   end function i_comp_name
   !============================================================================
   subroutine check_i_comp(iComp,NameCaller)
+
     use ModUtilities, ONLY: CON_stop
 
     integer, intent(in) :: iComp
@@ -132,6 +123,5 @@ contains
 
   end subroutine check_i_comp
   !============================================================================
-
 end module CON_comp_param
 !==============================================================================

@@ -1,9 +1,11 @@
 !  Copyright (C) 2002 Regents of the University of Michigan,
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!
-!
+
 module CON_session
+
+  ! Execute one session based on the PARAM.in file where the sessions
+  ! are separated by #RUN commands.
 
   use CON_comp_param, ONLY: MaxComp, NameComp_I
   use CON_world, ONLY: i_comm, is_proc, is_proc0, i_proc, &
@@ -575,6 +577,7 @@ contains
   end function do_stop_now
   !============================================================================
   subroutine show_progress
+
     ! Print information about time and time step at the periodicity
     ! given by DnShowProgressShort and DnShowProgressLong which can
     ! be set with the \#PROGRESS command in the input parameter file.
