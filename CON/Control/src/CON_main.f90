@@ -69,7 +69,7 @@ contains
     !           call set_param_comp(iComp,"VERSION")
     !           call set_param_comp(iComp,"MPI")
     !       end do
-    ! Show the registered and unregistered components: 
+    ! Show the registered and unregistered components:
     !       call show_all_comp
     !
     ! The actual code is somewhat longer, since the main code also
