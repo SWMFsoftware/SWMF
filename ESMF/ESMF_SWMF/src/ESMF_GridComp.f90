@@ -2,9 +2,10 @@ module EsmfGridCompMod
 
   ! ESMF Framework module
   use ESMF
-
   use ESMF_SWMF_Mod, ONLY: add_fields, nVarEsmf, NameFieldEsmf_V, &
-       FieldEsmf_V, CoordCoefEsmf_D, dHall
+       DoTest, FieldTest_V, CoordCoefTest, dHallPerDtTest, iCoupleFreq
+  ! Conversion to radians
+  use ModNumConst, ONLY: cDegToRad
 
   implicit none
   private
@@ -13,15 +14,15 @@ module EsmfGridCompMod
 
   ! ESMF "dynamo" grid and domain. The real grid is not uniform in
   ! latitude, which will be implemented in the near future !!!
+  ! This is a 2D spherical grid in MAG coordinates (rotates with Earth):
+  ! +Z points to north magnetic dipole, +Y is towards rotational Omega x Z
+  
   integer, public:: nLonEsmf=81, nLatEsmf=97 ! Default ESMF grid size
   real(ESMF_KIND_R8), parameter:: LonMinEsmf = -180.! Min longitude
   real(ESMF_KIND_R8), parameter:: LonMaxEsmf = +180.0 ! Max longitude
   real(ESMF_KIND_R8), parameter:: LatMinEsmf = -90.0 ! Min latitude
   real(ESMF_KIND_R8), parameter:: LatMaxEsmf = +90.0 ! Max latitude
 
-  ! For testing
-  real(ESMF_KIND_R8), parameter:: LonMidEsmf = (LonMinEsmf + LonMaxEsmf)/2
-  
 contains
   !============================================================================
   subroutine SetServices(gcomp, rc)
@@ -38,12 +39,12 @@ contains
 
   end subroutine SetServices
   !============================================================================
-  subroutine my_init(gComp, importState, exportState, externalClock, rc)
+  subroutine my_init(gComp, importState, exportState, Clock, rc)
 
     type(ESMF_GridComp):: gComp
     type(ESMF_State)   :: importState
     type(ESMF_State)   :: exportState
-    type(ESMF_Clock)   :: externalClock
+    type(ESMF_Clock)   :: Clock
     integer, intent(out):: rc
 
     ! Access to the MHD data
@@ -52,8 +53,6 @@ contains
     real(ESMF_KIND_R8), pointer :: Ptr_II(:,:), Lon_I(:), Lat_I(:)
     integer                     :: iVar, i, j
     character(len=4):: NameField
-    ! Units
-    real, parameter :: nT=1e-9, amu=1.6726*1e-27, cc=1e-6, kms=1e3, kb=1.38E-23
     !-------------------------------------------------------------------------
     call ESMF_LogWrite("ESMFGridComp init called", ESMF_LOGMSG_INFO)
     rc = ESMF_FAILURE
@@ -98,20 +97,20 @@ contains
        if(rc /= ESMF_SUCCESS) RETURN
        select case(NameField)
        case('Hall')
-          Ptr_II = FieldEsmf_V(1)
+          Ptr_II = FieldTest_V(1)
        case('Ped')
-          Ptr_II = FieldEsmf_V(2)
+          Ptr_II = FieldTest_V(2)
        case default
           write(*,*)'ERROR in ESMF_GridComp:init: unknown NameField=',&
                NameField,' for iVar=',iVar
           rc = ESMF_FAILURE; return
        end select
 
-       ! Add coordinate dependence. abs(Lon-LonMid) is periodic at +-180.
+       ! Add coordinate dependence. abs(mod(Lon,360)-180) is periodic,
+       ! and abs(Lat)-90 is zero at both poles.
        do j = 1, nLatEsmf; do i = 1, nLonEsmf-1
-          Ptr_II(i,j) = Ptr_II(i,j) &
-               + CoordCoefEsmf_D(1)*abs(Lon_I(i)-LonMidEsmf) &
-               + CoordCoefEsmf_D(2)*Lat_I(j)
+          Ptr_II(i,j) = Ptr_II(i,j) + CoordCoefTest &
+               *sin(Lon_I(i)*cDegToRad)*cos(Lat_I(j)*cDegToRad)
        end do; end do
        
     end do
@@ -121,12 +120,12 @@ contains
 
   end subroutine my_init
   !============================================================================
-  subroutine my_run(gComp, importState, exportState, externalclock, rc)
+  subroutine my_run(gComp, ImportState, ExportState, Clock, rc)
 
     type(ESMF_GridComp):: gComp
-    type(ESMF_State)   :: importState
-    type(ESMF_State)   :: exportState
-    type(ESMF_Clock)   :: externalclock
+    type(ESMF_State)   :: ImportState
+    type(ESMF_State)   :: ExportState
+    type(ESMF_Clock)   :: Clock
     integer, intent(out):: rc
 
     type(ESMF_Field):: Field
@@ -137,29 +136,33 @@ contains
     call ESMF_LogWrite("ESMFGridComp run called", ESMF_LOGMSG_INFO)
     rc = ESMF_FAILURE
 
-    ! Get pointers to the MHD variables in the export state
-    nullify(Ptr_II)
-    call ESMF_StateGet(ExportState, itemName='Hall', field=Field, rc=rc)
-    if(rc /= ESMF_SUCCESS) call my_error("ESMF_StateGet for Hall")
-    call ESMF_FieldGet(Field, farrayPtr=Ptr_II, rc=rc) 
-    if(rc /= ESMF_SUCCESS) call my_error("ESMF_FieldGet for Hall")
+    ! We should execute the ESMF code here and put the result into
+    ! the fields of the ExportState
+    if(DoTest)then
+       ! Get pointers to the MHD variables in the export state
+       !!! This could be done in the initialization ?!
+       nullify(Ptr_II)
+       call ESMF_StateGet(ExportState, itemName='Hall', field=Field, rc=rc)
+       if(rc /= ESMF_SUCCESS) call my_error("ESMF_StateGet for Hall")
+       call ESMF_FieldGet(Field, farrayPtr=Ptr_II, rc=rc) 
+       if(rc /= ESMF_SUCCESS) call my_error("ESMF_FieldGet for Hall")
+       ! Update state by changing Hall conductivity
+       write(*,*)'ESMFGridComp:run old Hall=', Ptr_II(1,1)
+       Ptr_II = Ptr_II + iCoupleFreq*dHallPerdtTest
+       write(*,*)'ESMFGridComp:run new Hall=', Ptr_II(1,1)
+    end if
 
-    ! Update state by changing Hall conductivity
-    write(*,*)'ESMFGridComp:run old Hall=', Ptr_II(1,1)
-    Ptr_II = Ptr_II + dHall   ! Change Hall field by dHall
-    write(*,*)'ESMFGridComp:run new Hall=', Ptr_II(1,1)
-    
     rc = ESMF_SUCCESS
     call ESMF_LogWrite("ESMFGridComp run returned", ESMF_LOGMSG_INFO)
 
   end subroutine my_run
   !============================================================================
-  subroutine my_final(gcomp, importState, exportState, externalclock, rc)
+  subroutine my_final(gComp, ImportState, ExportState, Clock, rc)
 
-    type(ESMF_GridComp) :: gcomp
-    type(ESMF_State) :: importState
-    type(ESMF_State) :: exportState
-    type(ESMF_Clock) :: externalclock
+    type(ESMF_GridComp) :: gComp
+    type(ESMF_State) :: ImportState
+    type(ESMF_State) :: ExportState
+    type(ESMF_Clock) :: Clock
     integer, intent(out):: rc
 
     call ESMF_LogWrite("ESMFGridComp finalize called", ESMF_LOGMSG_INFO)
@@ -169,8 +172,10 @@ contains
   !============================================================================
   subroutine my_error(String)
 
+    ! Write out error message and stop
+    
     character(len=*), intent(in) :: String
-
+    !--------------------------------------------------------------------------
     write(*,*)'ERROR in EsmfGridCompMod: ',String
     
     call ESMF_finalize
@@ -178,5 +183,3 @@ contains
   end subroutine my_error
   !============================================================================
 end module EsmfGridCompMod
-
-!\end{verbatim}
