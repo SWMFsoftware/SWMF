@@ -23,6 +23,11 @@ module EsmfGridCompMod
   real(ESMF_KIND_R8), parameter:: LatMinEsmf = -90.0 ! Min latitude
   real(ESMF_KIND_R8), parameter:: LatMaxEsmf = +90.0 ! Max latitude
 
+  ! Coordinate arrays
+  real(ESMF_KIND_R8), pointer, save:: Lon_I(:), Lat_I(:)
+  
+  integer:: MinLon = 0, MaxLon = 0, MinLat = 0, MaxLat = 0
+  
 contains
   !============================================================================
   subroutine SetServices(gcomp, rc)
@@ -50,7 +55,7 @@ contains
     ! Access to the MHD data
     type(ESMF_Grid):: Grid
     type(ESMF_Field):: Field
-    real(ESMF_KIND_R8), pointer :: Ptr_II(:,:), Lon_I(:), Lat_I(:)
+    real(ESMF_KIND_R8), pointer :: Ptr_II(:,:)
     integer                     :: iVar, i, j
     character(len=4):: NameField
     !-------------------------------------------------------------------------
@@ -69,16 +74,20 @@ contains
     call ESMF_GridGetCoord(Grid, coordDim=1, &
          staggerloc=ESMF_STAGGERLOC_CORNER, farrayPtr=Lon_I, rc=rc)
     if(rc /= ESMF_SUCCESS)call	my_error('ESMF_GridGetCoord 1')
-    write(*,'(a,i4,3f8.2)')'ESMF grid: size(Lon_I), Lon_I(1,2,last)=', &
-         size(Lon_I), Lon_I([1,2,nLonEsmf-1])
+    MinLon = lbound(Lon_I, DIM=1); MaxLon = ubound(Lon_I, DIM=1)
+    write(*,'(a,2i4)')'ESMF grid: MinLon, MaxLon=', MinLon, MaxLon
+    if(MaxLon > MinLon) write(*,'(a,3f8.2)') &
+         'ESMF grid: Lon_I(Min,Min+1,Max)=', Lon_I([MinLon,MinLon+1,MaxLon])
 
     nullify(Lat_I)
     call ESMF_GridGetCoord(Grid, coordDim=2, &
          staggerloc=ESMF_STAGGERLOC_CORNER, farrayPtr=Lat_I, rc=rc)
     if(rc /= ESMF_SUCCESS)call	my_error('ESMF_GridGetCoord 2')
-    write(*,'(a,i4,3f8.2)')'ESMF grid: size(Lat_I), Lat_I(0,1,last)=', &
-         size(Lat_I), Lat_I([1,2,nLatEsmf])
-    
+    MinLat = lbound(Lat_I, DIM=1); MaxLat = ubound(Lat_I, DIM=1)
+    write(*,'(a,2i4)')'ESMF grid: MinLat, MaxLat=', MinLat, MaxLat
+    if(MaxLat > MinLat) write(*,'(a,3f8.2)') &
+         'ESMF grid: Lat_I(1,2,last)=', Lat_I([MinLat,MinLat+1,MaxLat])
+
     ! Add fields to the export state
     call add_fields(Grid, ExportState, IsFromEsmf=.true., rc=rc)
     if(rc /= ESMF_SUCCESS) call my_error("add_fields")
@@ -106,9 +115,8 @@ contains
           rc = ESMF_FAILURE; return
        end select
 
-       ! Add coordinate dependence. abs(mod(Lon,360)-180) is periodic,
-       ! and abs(Lat)-90 is zero at both poles.
-       do j = 1, nLatEsmf; do i = 1, nLonEsmf-1
+       ! Add coordinate dependence
+       do j = MinLat, MaxLat; do i = MinLon, MaxLon
           Ptr_II(i,j) = Ptr_II(i,j) + CoordCoefTest &
                *sin(Lon_I(i)*cDegToRad)*cos(Lat_I(j)*cDegToRad)
        end do; end do
@@ -147,9 +155,11 @@ contains
        call ESMF_FieldGet(Field, farrayPtr=Ptr_II, rc=rc) 
        if(rc /= ESMF_SUCCESS) call my_error("ESMF_FieldGet for Hall")
        ! Update state by changing Hall conductivity
-       write(*,*)'ESMFGridComp:run old Hall=', Ptr_II(1,1)
+       write(*,*)'ESMFGridComp:run old Hall=', &
+            Ptr_II((MinLon+MaxLon)/2,(MinLat+MaxLat)/2)
        Ptr_II = Ptr_II + iCoupleFreq*dHallPerdtTest
-       write(*,*)'ESMFGridComp:run new Hall=', Ptr_II(1,1)
+       write(*,*)'ESMFGridComp:run new Hall=', &
+            Ptr_II((MinLon+MaxLon)/2,(MinLat+MaxLat)/2)
     end if
 
     rc = ESMF_SUCCESS
