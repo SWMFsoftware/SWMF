@@ -47,6 +47,7 @@ test_run:
 test_check:
 	cd ${RUNDIR}; perl -ne 'print if /error/i and not /Multi_On_Error/' \
 		PET*.ESMF_LogFile > ../test_esmf.diff
+	cd ${RUNDIR}; perl -ne 'print if /ERROR/' runlog >> ../test_esmf.diff
 	ls -l test_esmf.diff
 
 clean:

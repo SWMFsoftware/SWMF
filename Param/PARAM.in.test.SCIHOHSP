@@ -4,7 +4,7 @@ SCURBegin session: 1
 SC  0 -1  1		CompMap
 IH  1 -1  2		CompMap
 OH  0 -1  2		CompMap
-SP  0 -1  1		CompMap
+SP  0 15  1		CompMap
 
 #DESCRIPTION
 Param/PARAM.in.test.SCIHOHSP		StringDescription
@@ -842,9 +842,9 @@ OH			NameSource
 #TIMEACCURATE
 F			IsTimeAccurate
 
-#COMPONENT
+#CYCLE
 SC			NameComp
-F			UseComp
+999999			DnRun
 
 #COMPONENT
 IH			NameComp

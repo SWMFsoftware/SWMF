@@ -9,7 +9,7 @@ module ESMF_SWMF_Mod
   public:: read_esmf_swmf_input, add_fields
 
   type(ESMF_Sync_Flag), public:: SyncFlag = ESMF_SYNC_BLOCKING
-  
+
   ! named integer indexes for integer time arrays
   integer, public, parameter :: &
        Year_=1, Month_=2, Day_=3, Hour_=4, Minute_=5, Second_=6, MilliSec_=7
@@ -18,12 +18,6 @@ module ESMF_SWMF_Mod
   integer, public, parameter :: nVarEsmf = 2
   character(len=4), public, parameter :: NameFieldEsmf_V(nVarEsmf) = &
        [ 'Hall', 'Ped ' ]
-  ! Field values and coordinate coefficients for testing
-  real, public, parameter:: FieldEsmf_V(nVarEsmf) = [300.0, 500.0]
-  real, public, parameter:: CoordCoefEsmf_D(2) = [0.05, 0.1]
-
-  ! Change of Hall field during ESMF run
-  real, public, parameter:: dHall = 0.0
   
   ! number of SWMF variables and their names to be sent to ESMF
   integer, public, parameter :: nVarSwmf = 4
@@ -60,13 +54,16 @@ module ESMF_SWMF_Mod
   ! SWMF overlap.
   logical, public:: DoBlockAllSwmf=.false.
 
-  ! Variables related to the grid used between the ESMF and SWMF components.
-  ! This is a 2D spherical grid representing the height integrated ionosphere.
-  ! In RIM it is in SM coordinates (aligned with Sun-Earth direction):
-  ! +Z points to north magnetic dipole and the Sun is in the +X-Z halfplane.
-  ! The ESMF grid is in MAG coordinates (rotates with Earth):
-  ! +Z points to north magnetic dipole, +Y is towards rotational Omega x Z
+  ! Testing
+  logical, public, parameter:: DoTest = .true.
 
+  ! Field values and coordinate coefficients for testing
+  real, public, parameter:: FieldTest_V(nVarEsmf) = [3.0, 5.0]
+  real, public, parameter:: CoordCoefTest = 0.01
+
+  ! Change of Hall field during ESMF run
+  real, public, parameter:: dHallPerDtTest = 0.4
+  
 contains
   !============================================================================
   subroutine read_esmf_swmf_input(nProc, iProc, rc)
