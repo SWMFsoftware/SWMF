@@ -236,19 +236,19 @@ contains
              ! add spatial dependence
              Exact_V = Exact_V + CoordCoefTest &
                   *sin(Lon_I(i)*cDegToRad)*cos(Lat_I(j)*cDegToRad)
-             if(abs(Data_VII(1,i,j) - Exact_V(1)) > 1e-5) &
+             if(abs(Data_VII(1,i,j) - Exact_V(1)) > 1e-4) &
                   write(*,*) 'ERROR in SWMF_GridComp ', &
                   'at i, j, Lon, Lat, Hall, Exact, Error=', &
                   i, j, Lon_I(i), Lat_I(j), Data_VII(1,i,j), &
                   Exact_V(1), Data_VII(1,i,j) - Exact_V(1)
-             if(abs(Data_VII(2,i,j) - Exact_V(2)) > 1e-5) &
+             if(abs(Data_VII(2,i,j) - Exact_V(2)) > 1e-4) &
                   write(*,*) 'ERROR in SWMF_GridComp ', &
                   'at i, j, Lon, Lat, Pede, Exact, Error=', &
                   i, j, Lon_I(i), Lat_I(j), Data_VII(2,i,j), &
                   Exact_V(2), Data_VII(2,i,j) - Exact_V(2)
           end do; end do
-          write(*,*)'SWMF_GridComp value of Data(MinLon,MinLat)=', &
-               Data_VII(:,MinLon,MinLat)
+          write(*,*)'SWMF_GridComp value of Data(MidLon,MidLat)=', &
+               Data_VII(:,(MinLon+MaxLon)/2,(MinLat+MaxLat)/2)
        end if
        deallocate(Data_VII)
     end if

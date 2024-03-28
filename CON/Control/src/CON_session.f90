@@ -500,16 +500,6 @@ contains
        ! Print progress report at given frequency
        call show_progress
 
-       ! Save restart files when scheduled except for the final save
-       ! with UseEndTime which overwrites tSimulation.
-       if(is_time_to(SaveRestart, nStep, tSimulation+DtTiny, DoTimeAccurate) &
-            .and. &
-            .not. (UseEndTime .and. tSimulation + DtTiny >= tSimulationMax)) &
-            then
-          call save_restart
-          IsRestartSaved = .true.
-       endif
-
        if(DoTestMe)write(*,*)NameSub,' couple components'
 
        ! Couple components as scheduled
@@ -532,6 +522,15 @@ contains
 
        end do
 
+       ! Save restart files when scheduled except for the final save
+       ! with UseEndTime which overwrites tSimulation.
+       if(is_time_to(SaveRestart, nStep, tSimulation+DtTiny, DoTimeAccurate) &
+            .and. &
+            .not. (UseEndTime .and. tSimulation + DtTiny >= tSimulationMax)) &
+            then
+          call save_restart
+          IsRestartSaved = .true.
+       endif
     end do TIMELOOP
 
     if(.not.IsLastSession)then
