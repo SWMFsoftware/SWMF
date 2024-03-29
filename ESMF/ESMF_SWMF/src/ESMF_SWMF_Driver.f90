@@ -57,7 +57,7 @@ program ESMF_SWMF_Driver
   call ESMF_Initialize(defaultCalkind=ESMF_CALKIND_GREGORIAN, rc=rc)
   if (rc /= ESMF_SUCCESS) stop 'ESMF_Initialize FAILED'
 
-  call ESMF_LogWrite("ESMF-SWMF Driver start", ESMF_LOGMSG_INFO)
+  call log_write("ESMF-SWMF Driver start")
 
   ! Get the default VM which contains all PEs this job was started on.
   call ESMF_VMGetGlobal(defaultVM, rc=rc)
@@ -76,7 +76,7 @@ program ESMF_SWMF_Driver
   ! Create the top Gridded component, passing in the default layout.
   EsmfSwmfComp = ESMF_GridCompCreate(name="ESMF-SWMF Component", rc=rc)
 
-  call ESMF_LogWrite("Component Create finished", ESMF_LOGMSG_INFO)
+  call log_write("Component Create finished")
 
   ! Register section
   call ESMF_GridCompSetServices(EsmfSwmfComp, &

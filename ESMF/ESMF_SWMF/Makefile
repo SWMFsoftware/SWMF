@@ -3,6 +3,20 @@ include ../../Makefile.def
 # Nothing should be done parallel in this Makefile
 .NOTPARALLEL:
 
+help:
+	@echo "Targets:"
+	@echo "help                - this help message"
+	@echo "install             - install ESMF_SWMF"
+	@echo "EXE                 - compile ESMF_SWMF.exe"
+	@echo "test                - run test on 2 processors"
+	@echo "test NP=4           - run test on 4 processors"
+	@echo "test_compile        - configure and compile for test"
+	@echo "test_rundir         - create run/ directory for test"
+	@echo "test_run NP=3       - create run/ directory for test"
+	@echo "test_check          - write test results into test_esmf.diff"
+	@echo "clean               - clean object files"
+	@echo "distclean           - uninstall"
+
 install:
 
 ESMF_SWMF:
@@ -26,6 +40,9 @@ rundir: ${RUNDIR}
 	cd ${RUNDIR}; ln -sf ${BINDIR}/ESMF_SWMF.exe .
 
 test:
+	@echo "Test is disabled for now"
+
+test_esmf:
 	@echo "test_compile..." > test_esmf.diff
 	${MAKE} test_compile
 	@echo "test_rundir..." >> test_esmf.diff

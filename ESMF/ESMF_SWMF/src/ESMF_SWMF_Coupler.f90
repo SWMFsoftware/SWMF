@@ -4,6 +4,7 @@ module EsmfSwmfCouplerMod
 
   ! ESMF Framework module
   use ESMF
+  use ESMF_SWMF_Mod, ONLY: log_write
 
   implicit none
   private
@@ -39,24 +40,30 @@ contains
 
     type(ESMF_Field):: Field1, FIeld2
     !--------------------------------------------------------------------------
-    call ESMF_LogWrite("Coupler Initialize routine called", ESMF_LOGMSG_INFO)
+    call log_write("Coupler Initialize routine called")
     rc = ESMF_FAILURE
 
+    call log_write("Coupler ESMF_CplCompGet")
     call ESMF_CplCompGet(cComp, vm=Vm, rc=rc)
     if (rc/=ESMF_SUCCESS) call my_error('ESMF_CplCompGet Vm')
 
+    call log_write("Coupler ESMF_StateReconcile(ImportState)")
     call ESMF_StateReconcile(ImportState, vm=Vm, rc=rc)
     if (rc/=ESMF_SUCCESS) call my_error('ESMF_StateReconcile Import')
 
+    call log_write("Coupler ESMF_StateReconcile(ExportState)")
     call ESMF_StateReconcile(ExportState, vm=Vm, rc=rc)
     if (rc/=ESMF_SUCCESS) call my_error('ESMF_StateReconcile Export')
 
+    call log_write("Coupler ESMF_StateGet(ImportState)")
     call ESMF_StateGet(ImportState, NameFieldEsmf_V(1), Field1, rc=rc)
     if(rc /= ESMF_SUCCESS) call my_error('ESMF_StateGet Import')
 
+    call log_write("Coupler ESMF_StateGet(ExportState)")
     call ESMF_StateGet(ExportState, NameFieldEsmf_V(1), Field2, rc=rc)
     if(rc /= ESMF_SUCCESS) call my_error('ESMF_StateGet Export')
 
+    call log_write("Coupler ESMF_FieldRegridStore")
     ! This should be moved into my_run when the grids rotate !!!
     call ESMF_FieldRegridStore(srcField=Field1, dstfield=Field2, &
          routeHandle=RouteHandle, &
@@ -65,8 +72,7 @@ contains
     if(rc /= ESMF_SUCCESS) call my_error('ESMF_FieldRegridStore')
 
     rc = ESMF_SUCCESS
-    call ESMF_LogWrite("Coupler Initialize routine returning", &
-         ESMF_LOGMSG_INFO)
+    call log_write("Coupler Initialize routine returning")
 
   end subroutine my_init
   !============================================================================
@@ -83,7 +89,7 @@ contains
     character(len=4):: NameField
     integer         :: iVar
     !--------------------------------------------------------------------------
-    call ESMF_LogWrite("Coupler Run routine called", ESMF_LOGMSG_INFO)
+    call log_write("Coupler Run routine called")
 
     rc = ESMF_FAILURE
 
@@ -107,7 +113,7 @@ contains
     end do
 
     rc = ESMF_SUCCESS
-    call ESMF_LogWrite("Coupler Run routine returning", ESMF_LOGMSG_INFO)
+    call log_write("Coupler Run routine returning")
 
   end subroutine my_run
   !============================================================================
@@ -118,13 +124,13 @@ contains
     type(ESMF_Clock):: Clock
     integer, intent(out):: rc
     !--------------------------------------------------------------------------
-    call ESMF_LogWrite("Coupler Finalize routine called", ESMF_LOGMSG_INFO)
+    call log_write("Coupler Finalize routine called")
     rc = ESMF_FAILURE
     call ESMF_FieldRegridRelease(RouteHandle, rc=rc)
     if (rc /= ESMF_SUCCESS) call my_error('ESMF_FieldRedistRelease')
 
     rc = ESMF_SUCCESS
-    call ESMF_LogWrite("Coupler Finalize routine returning", ESMF_LOGMSG_INFO)
+    call log_write("Coupler Finalize routine returning")
 
   end subroutine my_final
   !============================================================================

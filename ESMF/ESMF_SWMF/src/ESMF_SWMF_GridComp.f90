@@ -6,6 +6,7 @@ module ESMF_SWMF_GridCompMod
   
   ! ESMF Framework module
   use ESMF
+  use ESMF_SWMF_Mod, ONLY: log_write
 
   ! User Component registration routines
   use SwmfGridCompMod,    only : SwmfSetServices => SetServices
@@ -53,7 +54,7 @@ contains
 
     integer :: i, iProc, nProc
     !--------------------------------------------------------------------------
-    call ESMF_LogWrite("ESMF_SWMF_GridComp init called", ESMF_LOGMSG_INFO)
+    call log_write("ESMF_SWMF_GridComp init called")
     rc = ESMF_FAILURE
 
     ! Get the layout associated with this component
@@ -79,7 +80,7 @@ contains
          petlist = [ (i, i=0, nProc-1) ], rc=rc)
     if(rc /= ESMF_SUCCESS)call my_error('ESMF_GridCompCreate Coupler')
 
-    call ESMF_LogWrite("Component Creates finished", ESMF_LOGMSG_INFO)
+    call log_write("Component Creates finished")
 
     ! Call the SetServices routine for each so they can register their
     ! subroutines for Init, Run, and Finalize
@@ -117,8 +118,7 @@ contains
     if(rc /= ESMF_SUCCESS)call my_error('ESMF_CplCompInitialize')
 
     rc = ESMF_SUCCESS
-    call ESMF_LogWrite("ESMF-SWMF GridComp init finished", &
-         ESMF_LOGMSG_INFO)
+    call log_write("ESMF-SWMF GridComp init finished")
 
   end subroutine my_init
   !============================================================================
@@ -135,7 +135,7 @@ contains
     ! Local variables
     type(ESMF_Clock) :: localclock
     !-------------------------------------------------------------------------
-    call ESMF_LogWrite("ESMF-SWMF Run routine called", ESMF_LOGMSG_INFO)
+    call log_write("ESMF-SWMF Run routine called")
 
     rc = ESMF_FAILURE
 
@@ -172,7 +172,7 @@ contains
     if(rc /= ESMF_SUCCESS)call my_error('ESMF_ClockDestroy')
 
     rc = ESMF_SUCCESS
-    call ESMF_LogWrite("ESMF-SWMF Run finished", ESMF_LOGMSG_INFO)
+    call log_write("ESMF-SWMF Run finished")
 
   end subroutine my_run
   !============================================================================
@@ -186,7 +186,7 @@ contains
 
     integer :: iError 
     !-------------------------------------------------------------------------
-    call ESMF_LogWrite("ESMF-SWMF Finalize routine called", ESMF_LOGMSG_INFO)
+    call log_write("ESMF-SWMF Finalize routine called")
 
     ! If something fails, try finalizing other things, but return with failure
     ! Assume success 
@@ -217,8 +217,7 @@ contains
     if(rc /= ESMF_SUCCESS) iError = rc
 
     rc = iError
-    call ESMF_LogWrite( "ESMF-SWMF Finalize routine finished", &
-         ESMF_LOGMSG_INFO)
+    call log_write( "ESMF-SWMF Finalize routine finished")
 
   end subroutine my_final
   !============================================================================
