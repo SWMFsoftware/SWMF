@@ -6,7 +6,7 @@ module ESMF_SWMF_Mod
   implicit none
 
   private
-  public:: read_esmf_swmf_input, add_fields
+  public:: read_esmf_swmf_input, add_fields, log_write
 
   type(ESMF_Sync_Flag), public:: SyncFlag = ESMF_SYNC_BLOCKING
 
@@ -94,8 +94,7 @@ contains
     real(ESMF_KIND_R8)    :: DefaultTmp           ! Temporary default real
     character             :: StringTmp            ! Temporary string
     !--------------------------------------------------------------------------
-    call ESMF_LogWrite("ESMF_SWMF_Mod:read_esmf_swmf_input called", &
-         ESMF_LOGMSG_INFO)
+    call log_write("ESMF_SWMF_Mod:read_esmf_swmf_input called")
     rc = ESMF_FAILURE
 
     ! Read in Configuration information from NameParamFile
@@ -275,8 +274,7 @@ contains
     if(rc /= ESMF_SUCCESS) RETURN
 
     rc = ESMF_SUCCESS
-    call ESMF_LogWrite("ESMF_SWMF_Mod:read_esmf_swmf_input returned", &
-         ESMF_LOGMSG_INFO)
+    call log_write("ESMF_SWMF_Mod:read_esmf_swmf_input returned")
 
   end subroutine read_esmf_swmf_input
   !============================================================================
@@ -368,7 +366,7 @@ contains
     ! Name of the component
     character(len=100) :: Name="UNKNOWN"
     !--------------------------------------------------------------------------
-    call ESMF_LogWrite("ESMF_SWMF_Mod:add_fields called", ESMF_LOGMSG_INFO)
+    call log_write("ESMF_SWMF_Mod:add_fields called")
     rc = ESMF_FAILURE
 
     call ESMF_VMGetCurrent(Vm, rc=rc)
@@ -417,8 +415,7 @@ contains
        end do
     endif
     rc = ESMF_SUCCESS
-    call ESMF_LogWrite("ESMF_SWMF_Mod:add_fields returned", &
-         ESMF_LOGMSG_INFO)
+    call log_write("ESMF_SWMF_Mod:add_fields returned")
 
   end subroutine add_fields
   !============================================================================
@@ -432,6 +429,14 @@ contains
 
   end subroutine my_error
   !============================================================================
+  subroutine log_write(String)
 
+    character(len=*), intent(in):: String
+    !--------------------------------------------------------------------------
+    call ESMF_LogWrite(String, ESMF_LOGMSG_INFO)
+    call ESMF_LogFlush()
+
+  end subroutine log_write
+    
 end module ESMF_SWMF_Mod
 !==============================================================================
