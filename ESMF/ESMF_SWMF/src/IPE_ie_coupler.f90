@@ -5,6 +5,7 @@ module IPE_ie_coupler
   ! ESMF Framework module
   use ESMF
   use ESMFSWMF_variables, ONLY: &
+       nVarEsmf, NameFieldEsmf_V, &
        write_log, write_error, iProc, iProcRootEsmf, iProcRootSwmf
 
   implicit none
@@ -31,8 +32,6 @@ contains
   end subroutine SetServices
   !============================================================================
   subroutine my_init(cComp, ImportState, ExportState, Clock, rc)
-
-    use ESMF_SWMF_Mod, ONLY: NameFieldEsmf_V
 
     type(ESMF_CplComp):: cComp
     type(ESMF_VM):: Vm
@@ -80,8 +79,6 @@ contains
   end subroutine my_init
   !============================================================================
   subroutine my_run(cComp, ImportState, ExportState, Clock, rc)
-
-    use ESMF_SWMF_Mod, only: nVarEsmf, NameFieldEsmf_V
 
     type(ESMF_CplComp):: cComp
     type(ESMF_State):: ImportState, ExportState
