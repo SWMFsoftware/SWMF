@@ -17,12 +17,13 @@ EXE = ${BINDIR}/ESMF_SWMF.exe
 
 # object files which need to be compiled into the executable.
 OBJECTS = \
-	ESMF_SWMF_Coupler.o \
-	SWMF_GridComp.o \
-	ESMF_GridComp.o \
-	ESMF_SWMF_GridComp.o \
-	ESMF_SWMF_Driver.o \
-	ESMF_SWMF_Mod.o
+	ESMF_driver.o \
+	ESMFSWMF_variables.o \
+	ESMF_grid_comp.o \
+	SWMF_grid_comp.o \
+	IPE_grid_comp.o \
+	IE_grid_comp.o \
+	IPE_ie_coupler.o
 
 # Dependencies:
 DEPEND:

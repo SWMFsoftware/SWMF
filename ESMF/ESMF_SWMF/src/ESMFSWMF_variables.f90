@@ -1,4 +1,4 @@
-module ESMF_SWMF_Mod
+module ESMFSWMF_variables
 
   ! Various entities needed for the ESMF-SWMF coupling
 
@@ -6,7 +6,7 @@ module ESMF_SWMF_Mod
   implicit none
 
   private
-  public:: read_esmf_swmf_input, add_fields, log_write
+  public:: read_esmf_swmf_input, add_fields, write_log, write_error
 
   type(ESMF_Sync_Flag), public:: SyncFlag = ESMF_SYNC_BLOCKING
 
@@ -34,6 +34,7 @@ module ESMF_SWMF_Mod
 
   ! SWMF runs on processor ranks iProcRootSwmf to iProcLastSwmf
   ! ESMF runs on processor ranks iProcRootEsmf to iProcLastEsmf
+  integer, public :: iProc=0, nProc=1
   integer, public :: iProcRootSwmf=1, iProcLastSwmf=-1, nProcSwmf
   integer, public :: iProcRootEsmf=0, iProcLastEsmf=0
 
@@ -94,7 +95,7 @@ contains
     real(ESMF_KIND_R8)    :: DefaultTmp           ! Temporary default real
     character             :: StringTmp            ! Temporary string
     !--------------------------------------------------------------------------
-    call log_write("ESMF_SWMF_Mod:read_esmf_swmf_input called")
+    call write_log("ESMF_SWMF_Mod:read_esmf_swmf_input called")
     rc = ESMF_FAILURE
 
     ! Read in Configuration information from NameParamFile
@@ -274,7 +275,7 @@ contains
     if(rc /= ESMF_SUCCESS) RETURN
 
     rc = ESMF_SUCCESS
-    call log_write("ESMF_SWMF_Mod:read_esmf_swmf_input returned")
+    call write_log("ESMF_SWMF_Mod:read_esmf_swmf_input returned")
 
   end subroutine read_esmf_swmf_input
   !============================================================================
@@ -358,7 +359,7 @@ contains
 
     type(ESMF_Field)     :: Field
     type(ESMF_ArraySpec) :: ArraySpec
-    integer              :: iVar, iPet
+    integer              :: iVar
     character(len=4)     :: NameField
     ! real(ESMF_KIND_R8), pointer :: Ptr_C(:,:)
     type(ESMF_VM)      :: Vm
@@ -366,12 +367,12 @@ contains
     ! Name of the component
     character(len=100) :: Name="UNKNOWN"
     !--------------------------------------------------------------------------
-    call log_write("ESMF_SWMF_Mod:add_fields called")
+    call write_log("ESMF_SWMF_Mod:add_fields called")
     rc = ESMF_FAILURE
 
     call ESMF_VMGetCurrent(Vm, rc=rc)
     if (rc /= ESMF_SUCCESS) call my_error('ESMF_VMGetCurrent')
-    call ESMF_VMGet(Vm, localPet=iPet, rc=rc)
+    call ESMF_VMGet(Vm, localPet=iProc, rc=rc)
     if (rc /= ESMF_SUCCESS) call my_error('ESMF_VMGet')
 
     call ESMF_GridGet(Grid, name=Name)
@@ -383,20 +384,12 @@ contains
     if(IsFromEsmf)then
        do iVar = 1, nVarEsmf
           NameField = NameFieldEsmf_V(iVar)
-          write(*,*) iPet,' Adding ESMF field=', NameField,' to ',trim(Name)
+          write(*,*) iProc,' Adding ESMF field=', NameField,' to ',trim(Name)
           Field = ESMF_FieldCreate(Grid, arrayspec=ArraySpec, &
                staggerloc=ESMF_STAGGERLOC_CORNER, name=NameField, rc=rc)
           if(rc /= ESMF_SUCCESS) call my_error('ESMF_FieldCreate ' &
                //NameField//' for '//trim(Name))
-          ! nullify(Ptr_C)
-          ! call ESMF_FieldGet(Field, farrayPtr=Ptr_C, rc=rc)
-          ! if(rc /= ESMF_SUCCESS) call my_error("ESMF_FieldGet for "//NameField// &
-          !      ' for '//trim(Name))
-          ! if(size(Ptr_C) == 0)then
-          !    write(*,*)'!!! size(Ptr_C)=', size(Ptr_C)
-          !    call my_error("ESMF_FieldGet "//NameField//' for  '//trim(Name))
-          ! end if
-          ! Ptr_C = -7.77
+
           call ESMF_StateAdd(State, [Field], rc=rc)
           if(rc /= ESMF_SUCCESS) call my_error('ESMF_StateAdd '//NameField// &
                 ' to '//trim(Name))
@@ -415,7 +408,7 @@ contains
        end do
     endif
     rc = ESMF_SUCCESS
-    call log_write("ESMF_SWMF_Mod:add_fields returned")
+    call write_log("ESMF_SWMF_Mod:add_fields returned")
 
   end subroutine add_fields
   !============================================================================
@@ -429,14 +422,28 @@ contains
 
   end subroutine my_error
   !============================================================================
-  subroutine log_write(String)
+  subroutine write_log(String)
 
+    ! write out the log message in String and flush the file
+    
     character(len=*), intent(in):: String
     !--------------------------------------------------------------------------
     call ESMF_LogWrite(String, ESMF_LOGMSG_INFO)
     call ESMF_LogFlush()
 
-  end subroutine log_write
+  end subroutine write_log
+  !============================================================================
+  subroutine write_error(String)
+
+    ! Write out processor index and the error message String and stop
     
-end module ESMF_SWMF_Mod
+    character(len=*), intent(in):: String
+    !--------------------------------------------------------------------------
+    write(*,'(a,i4,a,a)') 'ERROR (iProc=',iProc,'):', String
+    call ESMF_finalize
+    stop
+
+  end subroutine write_error
+  !============================================================================
+end module ESMFSWMF_variables
 !==============================================================================

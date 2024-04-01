@@ -1,22 +1,24 @@
-module ESMF_SWMF_GridCompMod
+module ESMF_grid_comp
 
-  ! Code for the ESMF_SWMF Gridded Component which creates 3 child Components:
-  !  an ESMF and an SWMF Gridded Component which perform a computation 
-  !  and a Coupler component which mediates the data exchange between them.
+  ! Code for the ESMFSWMF Gridded Component which creates 4 child Components:
+  ! IPE, SWMF, IE and IPE_ie_coupler.
   
   ! ESMF Framework module
   use ESMF
-  use ESMF_SWMF_Mod, ONLY: log_write
+  use ESMFSWMF_variables, ONLY: write_log, write_error
 
   ! User Component registration routines
-  use SwmfGridCompMod,    only : SwmfSetServices => SetServices
-  use EsmfGridCompMod,    only : EsmfSetServices => SetServices
-  use EsmfSwmfCouplerMod, only : CouplerSetServices => SetServices
+  use ESMFSWMF_variables, ONLY: &
+       iProcRootSwmf, iProcRootEsmf, iProcLastEsmf, iProcLastSwmf, SyncFlag
+
+  use SWMF_grid_comp, ONLY: SwmfSetServices => SetServices
+  use IPE_grid_comp,  ONLY: EsmfSetServices => SetServices
+  use IPE_ie_coupler, ONLY: CouplerSetServices => SetServices
 
   implicit none
   private
 
-  public:: ESMF_SWMF_SetServices
+  public:: ESMF_set_services
 
   type(ESMF_GridComp), save :: SwmfComp, SwmfRootComp, EsmfComp
   type(ESMF_CplComp),  save :: CouplerComp
@@ -24,24 +26,21 @@ module ESMF_SWMF_GridCompMod
 
 contains
   !============================================================================
-  subroutine ESMF_SWMF_SetServices(gcomp, rc)
+  subroutine ESMF_set_services(gComp, rc)
 
-    type(ESMF_GridComp) :: gcomp
+    type(ESMF_GridComp) :: gComp
     integer, intent(out):: rc
     !--------------------------------------------------------------------------
-    call ESMF_GridCompSetEntryPoint(gcomp, ESMF_METHOD_INITIALIZE, &
+    call ESMF_GridCompSetEntryPoint(gComp, ESMF_METHOD_INITIALIZE, &
          userRoutine=my_init, rc=rc)
-    call ESMF_GridCompSetEntryPoint(gcomp, ESMF_METHOD_RUN, &
+    call ESMF_GridCompSetEntryPoint(gComp, ESMF_METHOD_RUN, &
          userRoutine=my_run, rc=rc)
-    call ESMF_GridCompSetEntryPoint(gcomp, ESMF_METHOD_FINALIZE, &
+    call ESMF_GridCompSetEntryPoint(gComp, ESMF_METHOD_FINALIZE, &
          userRoutine=my_final, rc=rc)
 
-  end subroutine ESMF_SWMF_SetServices
+  end subroutine ESMF_set_services
   !============================================================================
   subroutine my_init(gComp, ImportState, ExportState, ParentClock, rc)
-
-    use ESMF_SWMF_Mod, ONLY: &
-         iProcRootSwmf, iProcRootEsmf, iProcLastEsmf, iProcLastSwmf
 
     type(ESMF_GridComp):: gComp
     type(ESMF_State):: ImportState, ExportState
@@ -54,7 +53,7 @@ contains
 
     integer :: i, iProc, nProc
     !--------------------------------------------------------------------------
-    call log_write("ESMF_SWMF_GridComp init called")
+    call write_log("ESMF_gric_comp init called")
     rc = ESMF_FAILURE
 
     ! Get the layout associated with this component
@@ -80,7 +79,7 @@ contains
          petlist = [ (i, i=0, nProc-1) ], rc=rc)
     if(rc /= ESMF_SUCCESS)call my_error('ESMF_GridCompCreate Coupler')
 
-    call log_write("Component Creates finished")
+    call write_log("Component Creates finished")
 
     ! Call the SetServices routine for each so they can register their
     ! subroutines for Init, Run, and Finalize
@@ -118,29 +117,27 @@ contains
     if(rc /= ESMF_SUCCESS)call my_error('ESMF_CplCompInitialize')
 
     rc = ESMF_SUCCESS
-    call log_write("ESMF-SWMF GridComp init finished")
+    call write_log("ESMF_grid_comp init finished")
 
   end subroutine my_init
   !============================================================================
-  subroutine my_run(gcomp, importState, exportState, parentclock, rc)
+  subroutine my_run(gComp, ImportState, ExportState, ParentClock, rc)
 
-    use ESMF_SWMF_Mod, ONLY: SyncFlag
-
-    type(ESMF_GridComp):: gcomp
-    type(ESMF_State)   :: importState
-    type(ESMF_State)   :: exportState
-    type(ESMF_Clock)   :: parentclock
+    type(ESMF_GridComp):: gComp
+    type(ESMF_State)   :: ImportState
+    type(ESMF_State)   :: ExportState
+    type(ESMF_Clock)   :: Parentclock
     integer, intent(out):: rc
 
     ! Local variables
     type(ESMF_Clock) :: localclock
     !-------------------------------------------------------------------------
-    call log_write("ESMF-SWMF Run routine called")
+    call write_log("ESMF_grid_comp run routine called")
 
     rc = ESMF_FAILURE
 
     ! make our own local copy of the clock
-    localclock = ESMF_ClockCreate(parentclock, rc=rc)
+    LocalClock = ESMF_ClockCreate(parentclock, rc=rc)
     if(rc /= ESMF_SUCCESS)call my_error('ESMF_ClockCreate')
 
     do
@@ -172,11 +169,11 @@ contains
     if(rc /= ESMF_SUCCESS)call my_error('ESMF_ClockDestroy')
 
     rc = ESMF_SUCCESS
-    call log_write("ESMF-SWMF Run finished")
+    call write_log("ESMF_grid_comp run finished")
 
   end subroutine my_run
   !============================================================================
-  subroutine my_final(gcomp, importState, exportState, parentclock, rc)
+  subroutine my_final(gComp, ImportState, ExportState, Parentclock, rc)
 
     type(ESMF_GridComp):: gcomp
     type(ESMF_State):: importState
@@ -186,7 +183,7 @@ contains
 
     integer :: iError 
     !-------------------------------------------------------------------------
-    call log_write("ESMF-SWMF Finalize routine called")
+    call write_log("ESMF-SWMF Finalize routine called")
 
     ! If something fails, try finalizing other things, but return with failure
     ! Assume success 
@@ -217,7 +214,7 @@ contains
     if(rc /= ESMF_SUCCESS) iError = rc
 
     rc = iError
-    call log_write( "ESMF-SWMF Finalize routine finished")
+    call write_log( "ESMF-SWMF Finalize routine finished")
 
   end subroutine my_final
   !============================================================================
@@ -225,10 +222,8 @@ contains
     
     character(len=*), intent(in) :: String
 
-    write(*,*)'ERROR in ESMF_SWMF_GridCompMod: ',String
-    
-    call ESMF_finalize
+    call write_error("ESMF_grid_comp "//String)
 
   end subroutine my_error
   !============================================================================
-end module ESMF_SWMF_GridCompMod
+end module ESMF_grid_comp
