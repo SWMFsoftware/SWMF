@@ -1,4 +1,4 @@
-program ESMF_SWMF_Driver
+program ESMF_driver
 
   !  Application Driver for the coupled ESMF-SWMF system.  
   !  Creates the top ESMF_SWMF Gridded Component and calls the 
@@ -12,10 +12,10 @@ program ESMF_SWMF_Driver
   use ESMF
   
   ! Top ESMF-SWMF Gridded Component registration routines
-  use ESMF_SWMF_GridCompMod, ONLY: ESMF_SWMF_SetServices
+  use ESMF_grid_comp, ONLY: ESMF_set_services
 
   ! Various variables
-  use ESMF_SWMF_Mod
+  use ESMFSWMF_variables
 
   implicit none
 
@@ -26,7 +26,6 @@ program ESMF_SWMF_Driver
   type(ESMF_GridComp) :: EsmfSwmfComp
   ! States, Virtual Machines, Layouts and processor index
   type(ESMF_VM)       :: DefaultVM
-  integer             :: iProc, nProc
 
   ! The grid used to pass MHD state at the SWFM/GM inflow boundary
   type(ESMF_Grid) :: grid
@@ -57,7 +56,7 @@ program ESMF_SWMF_Driver
   call ESMF_Initialize(defaultCalkind=ESMF_CALKIND_GREGORIAN, rc=rc)
   if (rc /= ESMF_SUCCESS) stop 'ESMF_Initialize FAILED'
 
-  call log_write("ESMF-SWMF Driver start")
+  call write_log("ESMF-SWMF Driver start")
 
   ! Get the default VM which contains all PEs this job was started on.
   call ESMF_VMGetGlobal(defaultVM, rc=rc)
@@ -76,11 +75,11 @@ program ESMF_SWMF_Driver
   ! Create the top Gridded component, passing in the default layout.
   EsmfSwmfComp = ESMF_GridCompCreate(name="ESMF-SWMF Component", rc=rc)
 
-  call log_write("Component Create finished")
+  call write_log("Component Create finished")
 
   ! Register section
   call ESMF_GridCompSetServices(EsmfSwmfComp, &
-       userRoutine=ESMF_SWMF_SetServices, rc=rc)
+       userRoutine=ESMF_set_services, rc=rc)
 
   if (ESMF_LogFoundError(rcToCheck=rc, msg='Registration failed', &
        line=__LINE__, file=__FILE__)) &
@@ -183,12 +182,8 @@ contains
 
     character(len=*), intent(in) :: String
 
-    write(*,*)'ERROR in ESMF_SWMF_Driver, iProc=', iProc
-    write(*,*) String
-    call ESMF_Finalize
-    stop
+    call write_error('ESMF_driver '//String)
 
   end subroutine my_error
   !============================================================================
-end program ESMF_SWMF_Driver
-
+end program ESMF_driver

@@ -1,10 +1,10 @@
-module EsmfGridCompMod
+module IPE_grid_comp
 
   ! ESMF Framework module
   use ESMF
-  use ESMF_SWMF_Mod, ONLY: add_fields, nVarEsmf, NameFieldEsmf_V, &
+  use ESMFSWMF_variables, ONLY: add_fields, nVarEsmf, NameFieldEsmf_V, &
        DoTest, FieldTest_V, CoordCoefTest, dHallPerDtTest, iCoupleFreq, &
-       log_write
+       write_log, write_error
   ! Conversion to radians
   use ModNumConst, ONLY: cDegToRad
 
@@ -23,24 +23,18 @@ module EsmfGridCompMod
   ! Coordinate arrays
   real(ESMF_KIND_R8), pointer:: Lon_I(:), Lat_I(:)
 
-  ! Define which ESMF procesor contains the full grid
-  integer:: PetMap(1,1,1) = 0, iPet=0
-
-  ! Only true for the PET having the grid
-  logical:: IsGridPet = .false.
-
 contains
   !============================================================================
-  subroutine SetServices(gcomp, rc)
+  subroutine SetServices(gComp, rc)
 
-    type(ESMF_GridComp) :: gcomp
+    type(ESMF_GridComp) :: gComp
     integer, intent(out):: rc
 
-    call ESMF_GridCompSetEntryPoint(gcomp, ESMF_METHOD_INITIALIZE, &
+    call ESMF_GridCompSetEntryPoint(gComp, ESMF_METHOD_INITIALIZE, &
          userRoutine=my_init, rc=rc)
-    call ESMF_GridCompSetEntryPoint(gcomp, ESMF_METHOD_RUN, &
+    call ESMF_GridCompSetEntryPoint(gComp, ESMF_METHOD_RUN, &
          userRoutine=my_run, rc=rc)
-    call ESMF_GridCompSetEntryPoint(gcomp, ESMF_METHOD_FINALIZE, &
+    call ESMF_GridCompSetEntryPoint(gComp, ESMF_METHOD_FINALIZE, &
          userRoutine=my_final, rc=rc)
 
   end subroutine SetServices
@@ -60,89 +54,79 @@ contains
     integer                     :: iVar, i, j
     character(len=4):: NameField
     !-------------------------------------------------------------------------
-    call log_write("ESMFGridComp init called")
+    call write_log("ESMFGridComp init called")
     rc = ESMF_FAILURE
 
-    call ESMF_VMGetCurrent(Vm, rc=rc)
-    if (rc /= ESMF_SUCCESS) call my_error('ESMF_VMGetCurrent')
-    call ESMF_VMGet(Vm, localPet=iPet, rc=rc)
-    if (rc /= ESMF_SUCCESS) call my_error('ESMF_VMGet')
-
-    IsGridPet = iPet == 0
-    write(*,*)'ESMF_GridComp: iPet, IsGridPet=', iPet, IsGridPet
-    
     ! Create Lon-Lat grid where -180<=Lon<=180-dLon, -90<=Lat<=90
     Grid = ESMF_GridCreateNoPeriDim(maxIndex=[nLonEsmf-1, nLatEsmf-1], &
-         regDecomp=[1,1], coordDep1=[1], coordDep2=[2], &
-         coordSys=ESMF_COORDSYS_CART, &
-         petMap=PetMap, name="ESMF grid", rc=rc)
+         coordDep1=[1], coordDep2=[2], coordSys=ESMF_COORDSYS_CART, &
+         name="dynamo grid", rc=rc)
     if(rc /= ESMF_SUCCESS)call my_error('ESMF_GridCreateNoPeriDim')
 
     call ESMF_GridAddCoord(Grid, staggerloc=ESMF_STAGGERLOC_CORNER, rc=rc)
     if(rc /= ESMF_SUCCESS)call my_error('ESMF_GridAddCoord')
 
-    if(IsGridPet)then
-       nullify(Lon_I)
-       call ESMF_GridGetCoord(Grid, CoordDim=1, &
-            staggerLoc=ESMF_STAGGERLOC_CORNER, farrayPtr=Lon_I, rc=rc)
-       if(rc /= ESMF_SUCCESS)call my_error('ESMF_GridGetCoord 1')
-       write(*,*)'ESMF_GridComp size(Lon_I)=', size(Lon_I)
+    nullify(Lon_I)
+    call ESMF_GridGetCoord(Grid, CoordDim=1, &
+         staggerLoc=ESMF_STAGGERLOC_CORNER, farrayPtr=Lon_I, rc=rc)
+    if(rc /= ESMF_SUCCESS)call my_error('ESMF_GridGetCoord 1')
+    write(*,*)'ESMF_GridComp size(Lon_I)=', size(Lon_I)
 
-       call ESMF_GridGetCoord(Grid, CoordDim=2, &
-            staggerLoc=ESMF_STAGGERLOC_CORNER, farrayPtr=Lat_I, rc=rc)
-       if(rc /= ESMF_SUCCESS)call my_error('ESMF_GridGetCoord 2')
+    call ESMF_GridGetCoord(Grid, CoordDim=2, &
+         staggerLoc=ESMF_STAGGERLOC_CORNER, farrayPtr=Lat_I, rc=rc)
+    if(rc /= ESMF_SUCCESS)call my_error('ESMF_GridGetCoord 2')
 
-       write(*,*)'ESMF_GridComp size(Lat_I)=', size(Lat_I)
-       ! Uniform longitude grid
-       do i = 1, nLonEsmf
-          Lon_I(i) = (i-1)*(360.0/(nLonEsmf-1)) - 180
-       end do
-       write(*,*)'ESMF grid: Lon_I(1,2,last)=', Lon_I([1,2,nLonEsmf])
-       ! Uniform latitude grid (for now!!!)
-       do i = 1, nLatEsmf
-          Lat_I(i) = (i-1)*(180./(nLatEsmf-1)) - 90
-       end do
-       write(*,*)'ESMF grid: Lat_I(1,2,last)=', Lat_I([1,2,nLatEsmf])
-       
-       ! Add fields to the export state
-       call add_fields(Grid, ExportState, IsFromEsmf=.true., rc=rc)
-       if(rc /= ESMF_SUCCESS) call my_error("add_fields")
+    write(*,*)'ESMF_GridComp size(Lat_I)=', size(Lat_I)
+    ! Uniform longitude grid
+    do i = 1, nLonEsmf
+       Lon_I(i) = (i-1)*(360.0/(nLonEsmf-1)) - 180
+    end do
+    write(*,*)'ESMF grid: Lon_I(1,2,last)=', Lon_I([1,2,nLonEsmf])
+    ! Uniform latitude grid (for now!!!)
+    do i = 1, nLatEsmf
+       Lat_I(i) = (i-1)*(180./(nLatEsmf-1)) - 90
+    end do
+    write(*,*)'ESMF grid: Lat_I(1,2,last)=', Lat_I([1,2,nLatEsmf])
 
-       ! Initialize the data
-       do iVar = 1, nVarEsmf
-          ! Get pointers to the variables in the export state
-          nullify(Ptr_II)
-          NameField = NameFieldEsmf_V(iVar)
-          call ESMF_StateGet(ExportState, itemName=NameField, field=Field, &
-               rc=rc)
-          if(rc /= ESMF_SUCCESS) call my_error("ESMF_StateGet for "//NameField)
-            
-          call ESMF_FieldGet(Field, farrayPtr=Ptr_II, rc=rc) 
-          if(rc /= ESMF_SUCCESS) call my_error("ESMF_FieldGet for "//NameField)
+    ! Add fields to the export state
+    call add_fields(Grid, ExportState, IsFromEsmf=.true., rc=rc)
+    if(rc /= ESMF_SUCCESS) call my_error("add_fields")
 
-          if(rc /= ESMF_SUCCESS) RETURN
-          select case(NameField)
-          case('Hall')
-             Ptr_II = FieldTest_V(1)
-          case('Ped')
-             Ptr_II = FieldTest_V(2)
-          case default
-             write(*,*)'ERROR in ESMF_GridComp:init: unknown NameField=',&
-                  NameField,' for iVar=',iVar
-             rc = ESMF_FAILURE; return
-          end select
+    ! Initialize the data
+    do iVar = 1, nVarEsmf
+       ! Get pointers to the variables in the export state
+       nullify(Ptr_II)
+       NameField = NameFieldEsmf_V(iVar)
+       call ESMF_StateGet(ExportState, itemName=NameField, field=Field, &
+            rc=rc)
+       if(rc /= ESMF_SUCCESS) call my_error("ESMF_StateGet for "//NameField)
 
-          ! Add coordinate dependence
-          do j = 1, nLatEsmf; do i = 1, nLonEsmf
-             Ptr_II(i,j) = Ptr_II(i,j) + CoordCoefTest &
-                  *abs(Lon_I(i))*(90-abs(Lat_I(j)))
-             !*sin(Lon_I(i)*cDegToRad)*cos(Lat_I(j)*cDegToRad)
-          end do; end do
+       call ESMF_FieldGet(Field, farrayPtr=Ptr_II, rc=rc) 
+       if(rc /= ESMF_SUCCESS) call my_error("ESMF_FieldGet for "//NameField)
 
-       end do ! iVar
-    end if ! IsGridPet
+       if(rc /= ESMF_SUCCESS) RETURN
+       select case(NameField)
+       case('Hall')
+          Ptr_II = FieldTest_V(1)
+       case('Ped')
+          Ptr_II = FieldTest_V(2)
+       case default
+          write(*,*)'ERROR in ESMF_GridComp:init: unknown NameField=',&
+               NameField,' for iVar=',iVar
+          rc = ESMF_FAILURE; return
+       end select
+
+       ! Add coordinate dependence
+       do j = 1, nLatEsmf; do i = 1, nLonEsmf
+          Ptr_II(i,j) = Ptr_II(i,j) + CoordCoefTest &
+               *abs(Lon_I(i))*(90-abs(Lat_I(j)))
+          !*sin(Lon_I(i)*cDegToRad)*cos(Lat_I(j)*cDegToRad)
+       end do; end do
+
+    end do ! iVar
+
     rc = ESMF_SUCCESS
-    call log_write("ESMFGridComp init returned")
+    call write_log("ESMFGridComp init returned")
     call ESMF_LogFlush()
 
   end subroutine my_init
@@ -160,12 +144,12 @@ contains
     ! Access to the MHD data
     real(ESMF_KIND_R8), pointer :: Ptr_II(:,:)
     !--------------------------------------------------------------------------
-    call log_write("ESMFGridComp run called")
+    call write_log("ESMFGridComp run called")
     rc = ESMF_FAILURE
 
     ! We should execute the ESMF code here and put the result into
     ! the fields of the ExportState
-    if(DoTest .and. IsGridPet)then
+    if(DoTest)then
        ! Get pointers to the MHD variables in the export state
        !!! This could be done in the initialization ?!
        nullify(Ptr_II)
@@ -180,7 +164,7 @@ contains
     end if
 
     rc = ESMF_SUCCESS
-    call log_write("ESMFGridComp run returned")
+    call write_log("ESMFGridComp run returned")
 
   end subroutine my_run
   !============================================================================
@@ -192,8 +176,8 @@ contains
     type(ESMF_Clock) :: Clock
     integer, intent(out):: rc
 
-    call log_write("ESMFGridComp finalize called")
-    call log_write("ESMFGridComp finalize returned")
+    call write_log("ESMFGridComp finalize called")
+    call write_log("ESMFGridComp finalize returned")
 
   end subroutine my_final
   !============================================================================
@@ -203,10 +187,8 @@ contains
     
     character(len=*), intent(in) :: String
     !--------------------------------------------------------------------------
-    write(*,'(a,i2,a,a)') 'ERROR in EsmfGridCompMod (iPet=',iPet,'): ',String
-
-    call ESMF_finalize
+    call write_error('IPE_grid_comp '//String)
 
   end subroutine my_error
   !============================================================================
-end module EsmfGridCompMod
+end module IPE_grid_comp
