@@ -17,7 +17,7 @@ module IPE_grid_comp
   ! This is a 2D spherical grid in MAG coordinates (rotates with Earth):
   ! +Z points to north magnetic dipole, +Y is towards rotational Omega x Z
 
-  integer, public:: nLonEsmf=81, nLatEsmf=97 ! Default ESMF grid size
+  integer, public:: nLon=81, nLat=97 ! Default ESMF grid size
 
   ! Coordinate arrays
   real(ESMF_KIND_R8), pointer:: Lon_I(:), Lat_I(:)
@@ -58,7 +58,7 @@ contains
     iError = ESMF_FAILURE
 
     ! Create Lon-Lat grid where -180<=Lon<=180-dLon, -90<=Lat<=90
-    Grid = ESMF_GridCreateNoPeriDim(maxIndex=[nLonEsmf-1, nLatEsmf-1], &
+    Grid = ESMF_GridCreateNoPeriDim(maxIndex=[nLon-1, nLat-1], &
          coordDep1=[1], coordDep2=[2], coordSys=ESMF_COORDSYS_CART, &
          name="dynamo grid", rc=iError)
     if(iError /= ESMF_SUCCESS)call my_error('ESMF_GridCreateNoPeriDim')
@@ -70,23 +70,23 @@ contains
     call ESMF_GridGetCoord(Grid, CoordDim=1, &
          staggerLoc=ESMF_STAGGERLOC_CORNER, farrayPtr=Lon_I, rc=iError)
     if(iError /= ESMF_SUCCESS)call my_error('ESMF_GridGetCoord 1')
-    write(*,*)'ESMF_GridComp size(Lon_I)=', size(Lon_I)
+    write(*,*)'IPE size(Lon_I)=', size(Lon_I)
 
     call ESMF_GridGetCoord(Grid, CoordDim=2, &
          staggerLoc=ESMF_STAGGERLOC_CORNER, farrayPtr=Lat_I, rc=iError)
     if(iError /= ESMF_SUCCESS)call my_error('ESMF_GridGetCoord 2')
 
-    write(*,*)'ESMF_GridComp size(Lat_I)=', size(Lat_I)
-    ! Uniform longitude grid
-    do i = 1, nLonEsmf
-       Lon_I(i) = (i-1)*(360.0/(nLonEsmf-1)) - 180
+    write(*,*)'IPE size(Lat_I)=', size(Lat_I)
+    ! Uniform longitude grid from -180 to 180
+    do i = 1, nLon
+       Lon_I(i) = (i-1)*(360.0/(nLon-1)) - 180
     end do
-    write(*,*)'IPE grid: Lon_I(1,2,last)=', Lon_I([1,2,nLonEsmf])
+    write(*,*)'IPE grid: Lon_I(1,2,last)=', Lon_I([1, 2, nLon])
     ! Uniform latitude grid (for now!!!)
-    do i = 1, nLatEsmf
-       Lat_I(i) = (i-1)*(180./(nLatEsmf-1)) - 90
+    do i = 1, nLat
+       Lat_I(i) = (i-1)*(180./(nLat-1)) - 90
     end do
-    write(*,*)'IPE grid: Lat_I(1,2,last)=', Lat_I([1,2,nLatEsmf])
+    write(*,*)'IPE grid: Lat_I(1,2,last)=', Lat_I([1, 2, nLat])
 
     ! Add fields to the export state
     call add_fields(Grid, ExportState, IsFromEsmf=.true., iError=iError)
@@ -117,7 +117,7 @@ contains
        end select
 
        ! Add coordinate dependence
-       do j = 1, nLatEsmf; do i = 1, nLonEsmf
+       do j = 1, nLat; do i = 1, nLon
           Ptr_II(i,j) = Ptr_II(i,j) + CoordCoefTest &
                *abs(Lon_I(i))*(90-abs(Lat_I(j)))
        end do; end do
@@ -159,9 +159,9 @@ contains
        if(iError /= ESMF_SUCCESS) call my_error("ESMF_FieldGet for Hall")
 
        ! Update state by changing Hall conductivity
-       write(*,*)'IPE_grid_comp:run old Hall=', Ptr_II(nLonEsmf/2,nLatEsmf/2)
+       write(*,*)'IPE_grid_comp:run old Hall=', Ptr_II(nLon/2,nLat/2)
        Ptr_II = Ptr_II + iCoupleFreq*dHallPerdtTest
-       write(*,*)'IPE_grid_comp:run new Hall=', Ptr_II(nLonEsmf/2,nLatEsmf/2)
+       write(*,*)'IPE_grid_comp:run new Hall=', Ptr_II(nLon/2,nLat/2)
     end if
 
     iError = ESMF_SUCCESS

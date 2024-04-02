@@ -170,11 +170,17 @@ contains
             clock=LocalClock, syncflag=SyncFlag, rc=iError)
        if(iError /= ESMF_SUCCESS)call my_error('ESMF_CplCompRun')
 
-       ! Run the subcomponents concurrently if possible
-       call ESMF_GridCompRun(SwmfComp, importState=RimImport, &
+       ! Run RIM to copy/check the received state
+       call ESMF_GridCompRun(RimComp, importState=RimImport, &
             clock=LocalClock, syncflag=SyncFlag, rc=iError)
        if(iError /= ESMF_SUCCESS)call my_error('ESMF_GridCompRun Swmf')
 
+       ! Run SWMF
+       call ESMF_GridCompRun(SwmfComp, &
+            clock=LocalClock, syncflag=SyncFlag, rc=iError)
+       if(iError /= ESMF_SUCCESS)call my_error('ESMF_GridCompRun Swmf')
+
+       ! Run IPE
        call ESMF_GridCompRun(IpeComp, exportState=IpeExport, &
             clock=LocalClock, syncflag=SyncFlag, rc=iError)
        if(iError /= ESMF_SUCCESS)call my_error('ESMF_GridCompRun Esmf')

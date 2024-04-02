@@ -112,11 +112,11 @@ contains
     MinLat = lbound(Lat_I, DIM=1); MaxLat = ubound(Lat_I, DIM=1)
     write(*,'(a,2i4)')'RIM grid: MinLat, MaxLat=', MinLat, MaxLat
 
-    ! Uniform longitude grid from -180 to 180
+    ! Uniform longitude grid from -180 to 180 (to match IPE)
     do i = 1, nLon
        Lon_I(i) = (i-1)*(360.0/(nLon-1)) - 180
     end do
-    write(*,*)'RIM grid: Lon_I(1,2,last)=', Lon_I([1,1,nLon])
+    write(*,*)'RIM grid: Lon_I(1,2,last)=', Lon_I([1, 1, nLon])
     ! Uniform latitude grid
     do i = MinLat, MaxLat
        Lat_I(i) = (i-1)*(180./(nLat-1)) - 90
@@ -171,7 +171,7 @@ contains
     tCurrent = iSec + 0.001*iMilliSec
 
     ! Obtain pointer to the data obtained from the ESMF component
-    allocate(Data_VII(nVarEsmf,1:nLon,MinLat:MaxLat), stat=iError)
+    allocate(Data_VII(nVarEsmf,nLon,MinLat:MaxLat), stat=iError)
     if(iError /= 0) call my_error('allocate(Data_VII)')
 
     ! Copy fields into an array
