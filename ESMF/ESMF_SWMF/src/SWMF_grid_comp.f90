@@ -29,28 +29,28 @@ module SWMF_grid_comp
 
 contains
   !============================================================================
-  subroutine set_services(gComp, rc)
+  subroutine set_services(gComp, iError)
 
     type(ESMF_GridComp) :: gComp
-    integer, intent(out):: rc
+    integer, intent(out):: iError
 
     !--------------------------------------------------------------------------
     call ESMF_GridCompSetEntryPoint(gComp, ESMF_METHOD_INITIALIZE, &
-         userRoutine=my_init, rc=rc)
+         userRoutine=my_init, rc=iError)
     call ESMF_GridCompSetEntryPoint(gComp, ESMF_METHOD_RUN, &
-         userRoutine=my_run, rc=rc)
+         userRoutine=my_run, rc=iError)
     call ESMF_GridCompSetEntryPoint(gComp, ESMF_METHOD_FINALIZE, &
-         userRoutine=my_final, rc=rc)
+         userRoutine=my_final, rc=iError)
 
   end subroutine set_services
   !============================================================================
-  subroutine my_init(gComp, ImportState, ExportState, ExternalClock, rc)
+  subroutine my_init(gComp, ImportState, ExportState, ExternalClock, iError)
 
     type(ESMF_GridComp) :: gComp
     type(ESMF_State) :: ImportState
     type(ESMF_State) :: ExportState
     type(ESMF_Clock) :: ExternalClock
-    integer, intent(out):: rc
+    integer, intent(out):: iError
 
     logical          :: IsLastSession ! true if SWMF has a single session
     type(ESMF_VM)    :: Vm
@@ -64,20 +64,20 @@ contains
 
     !--------------------------------------------------------------------------
     call write_log("SWMF_grid_comp:init routine called")
-    rc = ESMF_FAILURE
+    iError = ESMF_FAILURE
 
     ! Obtain the VM for the SWMF gridded component
-    call ESMF_GridCompGet(gComp, vm=Vm, rc=rc)
-    if(rc /= ESMF_SUCCESS) call my_error('ESMF_GridCompGet')
+    call ESMF_GridCompGet(gComp, vm=Vm, rc=iError)
+    if(iError /= ESMF_SUCCESS) call my_error('ESMF_GridCompGet')
 
     ! Obtain the MPI communicator for the VM
-    call ESMF_VMGet(Vm, mpiCommunicator=iComm,  rc=rc)
-    if(rc /= ESMF_SUCCESS) call my_error('ESMF_VMGet')
+    call ESMF_VMGet(Vm, mpiCommunicator=iComm,  rc=iError)
+    if(iError /= ESMF_SUCCESS) call my_error('ESMF_VMGet')
 
     ! Obtain the start time from the clock
     call ESMF_ClockGet(externalclock, startTime=StartTime, &
-         currSimTime=SimTime, runDuration=RunDuration, rc=rc)
-    if(rc /= ESMF_SUCCESS) call	my_error('ESMF_ClockGet')
+         currSimTime=SimTime, runDuration=RunDuration, rc=iError)
+    if(iError /= ESMF_SUCCESS) call	my_error('ESMF_ClockGet')
 
     call ESMF_TimeGet(StartTime,   &
          yy=iStartTime_I(Year_),   &
@@ -87,38 +87,38 @@ contains
          m =iStartTime_I(Minute_), &
          s =iStartTime_I(Second_), &
          ms=iStartTime_I(Millisec_), &
-         rc=rc)
-    if(rc /= ESMF_SUCCESS) call my_error('ESMF_TimeGet')
+         rc=iError)
+    if(iError /= ESMF_SUCCESS) call my_error('ESMF_TimeGet')
 
     ! Obtain the simulation time from the clock
-    call ESMF_TimeIntervalGet(SimTime, s=iSecond, ms=iMillisec, rc=rc)
-    if(rc /= ESMF_SUCCESS) call my_error('ESMF_TimeIntervalGet Sim')
+    call ESMF_TimeIntervalGet(SimTime, s=iSecond, ms=iMillisec, rc=iError)
+    if(iError /= ESMF_SUCCESS) call my_error('ESMF_TimeIntervalGet Sim')
     TimeSim = iSecond + iMillisec/1000.0
 
     ! Obtain the final simulation time from the clock
-    call ESMF_TimeIntervalGet(RunDuration, s=iSecond, ms=iMillisec, rc=rc)
-    if(rc /= ESMF_SUCCESS) call my_error('ESMF_TimeIntervalGet Run')
+    call ESMF_TimeIntervalGet(RunDuration, s=iSecond, ms=iMillisec, rc=iError)
+    if(iError /= ESMF_SUCCESS) call my_error('ESMF_TimeIntervalGet Run')
     TimeStop = iSecond + iMillisec/1000.0
 
     ! Initialze the SWMF with this MPI communicator and start time
     call write_log("SWMF_initialize routine called")
     call SWMF_initialize(iComm, iStartTime_I, &
-         TimeSim, TimeStop, IsLastSession, rc)
+         TimeSim, TimeStop, IsLastSession, iError)
     call write_log("SWMF_initialize routine returned")
-    if(rc /= 0)call my_error('SWMF_initialize')
+    if(iError /= 0)call my_error('SWMF_initialize')
 
-    rc = ESMF_SUCCESS
+    iError = ESMF_SUCCESS
     call write_log("SWMF_grid_comp:init routine returned")
 
   end subroutine my_init
   !============================================================================
-  subroutine my_run(gComp, ImportState, ExportState, Clock, rc)
+  subroutine my_run(gComp, ImportState, ExportState, Clock, iError)
 
     type(ESMF_GridComp):: gComp
     type(ESMF_State):: ImportState
     type(ESMF_State):: ExportState
     type(ESMF_Clock):: Clock
-    integer, intent(out):: rc
+    integer, intent(out):: iError
 
     ! Access to the data
 
@@ -133,19 +133,20 @@ contains
 
     !--------------------------------------------------------------------------
     call write_log("SWMF_grid_comp:run routine called")
-    rc = ESMF_FAILURE
+    iError = ESMF_FAILURE
 
     ! Get the current time from the clock
-    call ESMF_ClockGet(Clock, CurrSimTime=SimTime, TimeStep=TimeStep, rc=rc)
-    if(rc /= ESMF_SUCCESS) call my_error('ESMF_ClockGet')
-    call ESMF_TimeIntervalGet(SimTime, s=iSec, ms=iMilliSec, rc=rc)
-    if(rc /= ESMF_SUCCESS) call my_error('ESMF_TimeIntervalGet current')
+    call ESMF_ClockGet(Clock, CurrSimTime=SimTime, TimeStep=TimeStep, &
+         rc=iError)
+    if(iError /= ESMF_SUCCESS) call my_error('ESMF_ClockGet')
+    call ESMF_TimeIntervalGet(SimTime, s=iSec, ms=iMilliSec, rc=iError)
+    if(iError /= ESMF_SUCCESS) call my_error('ESMF_TimeIntervalGet current')
     tCurrent = iSec + 0.001*iMilliSec
 
     ! Calculate simulation time for next coupling
     SimTime = SimTime + TimeStep
-    call ESMF_TimeIntervalGet(SimTime, s=iSec, ms=iMilliSec, rc=rc)
-    if(rc /= ESMF_SUCCESS) call my_error('ESMF_TimeIntervalGet couple')
+    call ESMF_TimeIntervalGet(SimTime, s=iSec, ms=iMilliSec, rc=iError)
+    if(iError /= ESMF_SUCCESS) call my_error('ESMF_TimeIntervalGet couple')
     tCouple = iSec + 0.001*iMilliSec
 
     call write_log("SWMF_run routine called!")
@@ -153,35 +154,35 @@ contains
     if(.not.DoRunSwmf)then
        ! Pretend that SWMF reached the coupling time
        tSimSwmf = tCouple
-       rc = 0
+       iError = 0
     elseif(DoBlockAllSwmf)then
-       call SWMF_run('**', tCouple, tSimSwmf, DoStop, rc)
+       call SWMF_run('**', tCouple, tSimSwmf, DoStop, iError)
     else
-       call SWMF_run(NameSwmfComp, tCouple, tSimSwmf, DoStop, rc)
+       call SWMF_run(NameSwmfComp, tCouple, tSimSwmf, DoStop, iError)
     end if
     write(*,*)'SWMF_run returns with tSimSwmf=', tSimSwmf
     call write_log("SWMF_run routine returned!")
-    if(rc /= 0)call my_error('SWMF_run')
+    if(iError /= 0)call my_error('SWMF_run')
 
     call write_log("SWMF_grid_comp:run routine returned")
 
-    rc = ESMF_SUCCESS
+    iError = ESMF_SUCCESS
 
   end subroutine my_run
   !============================================================================
-  subroutine my_final(gComp, ImportState, ExportState, ExternalClock, rc)
+  subroutine my_final(gComp, ImportState, ExportState, ExternalClock, iError)
 
     type(ESMF_GridComp) :: gComp
     type(ESMF_State) :: ImportState
     type(ESMF_State) :: ExportState
     type(ESMF_Clock) :: ExternalClock
-    integer, intent(out) :: rc
+    integer, intent(out) :: iError
     !--------------------------------------------------------------------------
     call write_log("SWMF_finalize routine called")
 
-    call SWMF_finalize(rc)
+    call SWMF_finalize(iError)
     call write_log("SWMF_finalize routine returned")
-    if(rc /= 0) call my_error("SWMF_finalize FAILED")
+    if(iError /= 0) call my_error("SWMF_finalize FAILED")
 
   end subroutine my_final
   !============================================================================

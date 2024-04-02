@@ -38,27 +38,27 @@ module RIM_grid_comp
 
 contains
   !============================================================================
-  subroutine set_services(gComp, rc)
+  subroutine set_services(gComp, iError)
     type(ESMF_GridComp) :: gComp
-    integer, intent(out):: rc
+    integer, intent(out):: iError
 
     !--------------------------------------------------------------------------
     call ESMF_GridCompSetEntryPoint(gComp, ESMF_METHOD_INITIALIZE, &
-         userRoutine=my_init, rc=rc)
+         userRoutine=my_init, rc=iError)
     call ESMF_GridCompSetEntryPoint(gComp, ESMF_METHOD_RUN, &
-         userRoutine=my_run, rc=rc)
+         userRoutine=my_run, rc=iError)
     call ESMF_GridCompSetEntryPoint(gComp, ESMF_METHOD_FINALIZE, &
-         userRoutine=my_final, rc=rc)
+         userRoutine=my_final, rc=iError)
 
   end subroutine set_services
   !============================================================================
-  subroutine my_init(gComp, ImportState, ExportState, ExternalClock, rc)
+  subroutine my_init(gComp, ImportState, ExportState, ExternalClock, iError)
 
     type(ESMF_GridComp) :: gComp
     type(ESMF_State) :: ImportState
     type(ESMF_State) :: ExportState
     type(ESMF_Clock) :: ExternalClock
-    integer, intent(out):: rc
+    integer, intent(out):: iError
 
     type(ESMF_VM)    :: Vm
     type(ESMF_Grid)  :: Grid
@@ -68,15 +68,15 @@ contains
     integer:: i
     !--------------------------------------------------------------------------
     call write_log("RIM_grid_comp:init routine called")
-    rc = ESMF_FAILURE
+    iError = ESMF_FAILURE
 
     ! Obtain the VM for the IE gridded component
-    call ESMF_GridCompGet(gComp, vm=Vm, rc=rc)
-    if(rc /= ESMF_SUCCESS) call my_error('ESMF_GridCompGet')
+    call ESMF_GridCompGet(gComp, vm=Vm, rc=iError)
+    if(iError /= ESMF_SUCCESS) call my_error('ESMF_GridCompGet')
 
     ! Obtain the MPI communicator for the VM
-    call ESMF_VMGet(Vm, mpiCommunicator=iComm, localPet=iPet, rc=rc)
-    if(rc /= ESMF_SUCCESS) call my_error('ESMF_VMGet')
+    call ESMF_VMGet(Vm, mpiCommunicator=iComm, localPet=iPet, rc=iError)
+    if(iError /= ESMF_SUCCESS) call my_error('ESMF_VMGet')
 
     ! RIM grid is node based. Internally it is Colat-Lon grid, but we pretend
     ! here that it is a Lat-Lon grid, so ESMF can use it.
@@ -92,22 +92,22 @@ contains
     Grid = ESMF_GridCreateNoPeriDim(maxIndex=[nLon-1, nLat-1], &
          RegDecomp = [1, nProcSwmfComp], &
          coordDep1=[1], coordDep2=[2], coordSys=ESMF_COORDSYS_CART, &
-         name="RIM grid", rc=rc)
-    if(rc /= ESMF_SUCCESS)call my_error('ESMF_GridCreateNoPeriDim')
+         name="RIM grid", rc=iError)
+    if(iError /= ESMF_SUCCESS)call my_error('ESMF_GridCreateNoPeriDim')
     deallocate(iPetMap_III)
 
-    call ESMF_GridAddCoord(Grid, staggerloc=ESMF_STAGGERLOC_CORNER, rc=rc)
-    if(rc /= ESMF_SUCCESS)call my_error('ESMF_GridAddCoord')
+    call ESMF_GridAddCoord(Grid, staggerloc=ESMF_STAGGERLOC_CORNER, rc=iError)
+    if(iError /= ESMF_SUCCESS)call my_error('ESMF_GridAddCoord')
 
     nullify(Lon_I)
     call ESMF_GridGetCoord(Grid, CoordDim=1, &
-         staggerLoc=ESMF_STAGGERLOC_CORNER, farrayPtr=Lon_I, rc=rc)
-    if(rc /= ESMF_SUCCESS)call my_error('ESMF_GridGetCoord 1')
+         staggerLoc=ESMF_STAGGERLOC_CORNER, farrayPtr=Lon_I, rc=iError)
+    if(iError /= ESMF_SUCCESS)call my_error('ESMF_GridGetCoord 1')
     write(*,*)'ESMF_GridComp size(Lon_I)=', size(Lon_I)
 
     call ESMF_GridGetCoord(Grid, CoordDim=2, &
-         staggerLoc=ESMF_STAGGERLOC_CORNER, farrayPtr=Lat_I, rc=rc)
-    if(rc /= ESMF_SUCCESS)call my_error('ESMF_GridGetCoord 2')
+         staggerLoc=ESMF_STAGGERLOC_CORNER, farrayPtr=Lat_I, rc=iError)
+    if(iError /= ESMF_SUCCESS)call my_error('ESMF_GridGetCoord 2')
 
     MinLat = lbound(Lat_I, DIM=1); MaxLat = ubound(Lat_I, DIM=1)
     write(*,'(a,2i4)')'RIM grid: MinLat, MaxLat=', MinLat, MaxLat
@@ -125,21 +125,21 @@ contains
          Lat_I([MinLat,MinLat+1,MaxLat])
 
     ! Add fields to the RIM import state
-    call add_fields(Grid, ImportState, IsFromEsmf=.true., rc=rc)
-    if(rc /= ESMF_SUCCESS) call my_error('add_fields')
+    call add_fields(Grid, ImportState, IsFromEsmf=.true., iError=iError)
+    if(iError /= ESMF_SUCCESS) call my_error('add_fields')
 
-    rc = ESMF_SUCCESS
+    iError = ESMF_SUCCESS
     call write_log("RIM_grid_comp:init routine returned")
 
   end subroutine my_init
   !============================================================================
-  subroutine my_run(gComp, ImportState, ExportState, Clock, rc)
+  subroutine my_run(gComp, ImportState, ExportState, Clock, iError)
 
     type(ESMF_GridComp):: gComp
     type(ESMF_State):: ImportState
     type(ESMF_State):: ExportState
     type(ESMF_Clock):: Clock
-    integer, intent(out):: rc
+    integer, intent(out):: iError
 
     ! Access to the data
     real(ESMF_KIND_R8), pointer     :: Ptr_II(:,:)
@@ -160,28 +160,29 @@ contains
     real(ESMF_KIND_R8):: Exact_V(2)
     !--------------------------------------------------------------------------
     call write_log("RIM_grid_comp:run routine called")
-    rc = ESMF_FAILURE
+    iError = ESMF_FAILURE
 
     ! Get the current time from the clock
-    call ESMF_ClockGet(Clock, CurrSimTime=SimTime, TimeStep=TimeStep, rc=rc)
-    if(rc /= ESMF_SUCCESS) call my_error('ESMF_ClockGet')
-    call ESMF_TimeIntervalGet(SimTime, s=iSec, ms=iMilliSec, rc=rc)
-    if(rc /= ESMF_SUCCESS) call my_error('ESMF_TimeIntervalGet current')
+    call ESMF_ClockGet(Clock, CurrSimTime=SimTime, TimeStep=TimeStep, &
+         rc=iError)
+    if(iError /= ESMF_SUCCESS) call my_error('ESMF_ClockGet')
+    call ESMF_TimeIntervalGet(SimTime, s=iSec, ms=iMilliSec, rc=iError)
+    if(iError /= ESMF_SUCCESS) call my_error('ESMF_TimeIntervalGet current')
     tCurrent = iSec + 0.001*iMilliSec
 
     ! Obtain pointer to the data obtained from the ESMF component
-    allocate(Data_VII(nVarEsmf,1:nLon,MinLat:MaxLat), stat=rc)
-    if(rc /= 0) call my_error('allocate(Data_VII)')
+    allocate(Data_VII(nVarEsmf,1:nLon,MinLat:MaxLat), stat=iError)
+    if(iError /= 0) call my_error('allocate(Data_VII)')
 
     ! Copy fields into an array
     do iVar = 1, nVarEsmf
        nullify(Ptr_II)
        NameField = NameFieldEsmf_V(iVar)
        call ESMF_StateGet(ImportState, itemName=NameField, &
-            field=Field, rc=rc)
-       if(rc /= ESMF_SUCCESS) call my_error("ESMF_StateGet")
-       call ESMF_FieldGet(Field, farrayPtr=Ptr_II, rc=rc)
-       if(rc /= ESMF_SUCCESS) call my_error("ESMF_FieldGet")
+            field=Field, rc=iError)
+       if(iError /= ESMF_SUCCESS) call my_error("ESMF_StateGet")
+       call ESMF_FieldGet(Field, farrayPtr=Ptr_II, rc=iError)
+       if(iError /= ESMF_SUCCESS) call my_error("ESMF_FieldGet")
 
        Data_VII(iVar,:,:) = Ptr_II
     end do
@@ -215,17 +216,17 @@ contains
 
     call write_log("RIM_grid_comp:run routine returned")
 
-    rc = ESMF_SUCCESS
+    iError = ESMF_SUCCESS
 
   end subroutine my_run
   !============================================================================
-  subroutine my_final(gComp, ImportState, ExportState, Externalclock, rc)
+  subroutine my_final(gComp, ImportState, ExportState, Externalclock, iError)
 
     type(ESMF_GridComp) :: gComp
     type(ESMF_State) :: ImportState
     type(ESMF_State) :: ExportState
     type(ESMF_Clock) :: Externalclock
-    integer, intent(out) :: rc
+    integer, intent(out) :: iError
     !--------------------------------------------------------------------------
     call write_log("RIM_finalize routine called")
 
