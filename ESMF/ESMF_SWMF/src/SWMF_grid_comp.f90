@@ -1,7 +1,8 @@
 module SWMF_grid_comp
 
   ! This is the SWMF Gridded Component, which acts as an interface
-  ! to the SWMF.
+  ! to the SWMF. It does not actually have a grid, but it does
+  ! the initialization, running and finalization of the SWMF.
 
   ! ESMF Framework module
   use ESMF
@@ -11,8 +12,7 @@ module SWMF_grid_comp
        NameSwmfComp, iProc0SwmfComp, iProcLastSwmfComp, &
        NameFieldEsmf_V, nVarEsmf, &
        Year_, Month_, Day_, Hour_, Minute_, Second_, MilliSec_, &
-       add_fields, write_log, write_error, &
-       DoTest, FieldTest_V, CoordCoefTest, dHallPerDtTest
+       write_log, write_error
 
   ! Size of ionosphere grid in SWMF/IE model
   use IE_ModSize, ONLY: nLat => IONO_nTheta, nLon => IONO_nPsi
@@ -34,11 +34,6 @@ module SWMF_grid_comp
 
   ! Coordinate arrays
   real(ESMF_KIND_R8), pointer, save:: Lon_I(:), Lat_I(:)
-
-  integer:: MinLat = 0, MaxLat = 0
-  integer:: PetMap(1,1,1) = 0
-  integer:: iPet = 0
-  logical:: IsGridPet = .false.
 
 contains
   !============================================================================
@@ -76,63 +71,17 @@ contains
 
     integer:: i
     !--------------------------------------------------------------------------
-    call write_log("SWMF_GridComp:init routine called")
+    call write_log("SWMF_grid_comp:init routine called")
     rc = ESMF_FAILURE
 
     ! Obtain the VM for the SWMF gridded component
     call ESMF_GridCompGet(gComp, vm=Vm, rc=rc)
     if(rc /= ESMF_SUCCESS) call my_error('ESMF_GridCompGet')
 
-       ! Obtain the MPI communicator for the VM
-    call ESMF_VMGet(Vm, mpiCommunicator=iComm, localPet=iPet, rc=rc)
+    ! Obtain the MPI communicator for the VM
+    call ESMF_VMGet(Vm, mpiCommunicator=iComm,  rc=rc)
     if(rc /= ESMF_SUCCESS) call my_error('ESMF_VMGet')
     
-    IsGridPet = iPet == 0
-    write(*,*)'SWMF_GridComp: iPet, IsGridPet=', iPet, IsGridPet
-
-    ! RIM grid is node based. Internally it is Colat-Lon grid, but we pretend
-    ! here that it is a Lat-Lon grid, so ESMF can use it.
-    ! Lon from 0 to 360-dPhi (periodic), Lat from -90 to +90
-    Grid = ESMF_GridCreateNoPeriDim(maxIndex=[nLon-1, nLat-1], &
-         regDecomp=[1,1], coordDep1=[1], coordDep2=[2], &
-         coordSys=ESMF_COORDSYS_CART, &
-         petMap=PetMap, name="ESMF grid", rc=rc)
-    if(rc /= ESMF_SUCCESS)call my_error('ESMF_GridCreateNoPeriDim')
-
-    call ESMF_GridAddCoord(Grid, staggerloc=ESMF_STAGGERLOC_CORNER, rc=rc)
-    if(rc /= ESMF_SUCCESS)call my_error('ESMF_GridAddCoord')
-
-    nullify(Lon_I)
-    call ESMF_GridGetCoord(Grid, CoordDim=1, &
-         staggerLoc=ESMF_STAGGERLOC_CORNER, farrayPtr=Lon_I, rc=rc)
-    if(rc /= ESMF_SUCCESS)call my_error('ESMF_GridGetCoord 1')
-    write(*,*)'ESMF_GridComp size(Lon_I)=', size(Lon_I)
-
-    call ESMF_GridGetCoord(Grid, CoordDim=2, &
-         staggerLoc=ESMF_STAGGERLOC_CORNER, farrayPtr=Lat_I, rc=rc)
-    if(rc /= ESMF_SUCCESS)call my_error('ESMF_GridGetCoord 2')
-
-    MinLat = lbound(Lat_I, DIM=1); MaxLat = ubound(Lat_I, DIM=1)
-    write(*,'(a,2i4)')'SWMF grid: MinLat, MaxLat=', MinLat, MaxLat
-
-    if(IsGridPet)then
-       ! Uniform longitude grid from -180 to 180
-       do i = 1, nLon
-          Lon_I(i) = (i-1)*(360.0/(nLon-1)) - 180
-       end do
-       write(*,*)'SWMF grid: Lon_I(1,2,last)=', Lon_I([1,1,nLon])
-       ! Uniform latitude grid (for now!!!)
-       do i = MinLat, MaxLat
-          Lat_I(i) = (i-1)*(180./(nLat-1)) - 90
-       end do
-       write(*,*)'SWMF grid: Lat_I(Min,Min+1,Max)=', &
-            Lat_I([MinLat,MinLat+1,MaxLat])
-
-       ! Add ESMF fields to the SWMF import state
-       call add_fields(Grid, ImportState, IsFromEsmf=.true., rc=rc)
-       if(rc /= ESMF_SUCCESS) call my_error('add_fields')
-    end if
-
     ! Obtain the start time from the clock 
     call ESMF_ClockGet(externalclock, startTime=StartTime, &
          currSimTime=SimTime, runDuration=RunDuration, rc=rc)
@@ -167,7 +116,7 @@ contains
     if(rc /= 0)call my_error('SWMF_initialize')
 
     rc = ESMF_SUCCESS
-    call write_log("SWMF_GridComp:init routine returned")
+    call write_log("SWMF_grid_comp:init routine returned")
 
   end subroutine my_init
   !============================================================================
@@ -193,21 +142,9 @@ contains
     real(ESMF_KIND_R8) :: tCurrent, tCouple ! Current and next coupling times
     real(ESMF_KIND_R8) :: tSimSwmf          ! SWMF Simulation time
 
-    ! Misc variables
-    type(ESMF_Field):: Field
-    character(len=4):: NameField
-    type(ESMF_VM):: Vm
-    integer:: iProc, i, j
-    real(ESMF_KIND_R8):: Exact_V(2)
     !--------------------------------------------------------------------------
-    call write_log("SWMF_GridComp:run routine called")
+    call write_log("SWMF_grid_comp:run routine called")
     rc = ESMF_FAILURE
-
-    ! Get processor rank
-    call ESMF_GridCompGet(gComp, vm=vm, rc=rc)
-    if(rc /= ESMF_SUCCESS) call my_error('ESMF_GridCompGet')
-    call ESMF_VMGet(vm, localPET=iProc, rc=rc)
-    if(rc /= ESMF_SUCCESS) call my_error('ESMF_VMGet')
 
     ! Get the current time from the clock
     call ESMF_ClockGet(Clock, CurrSimTime=SimTime, TimeStep=TimeStep, rc=rc)
@@ -222,58 +159,6 @@ contains
     if(rc /= ESMF_SUCCESS) call my_error('ESMF_TimeIntervalGet couple')
     tCouple = iSec + 0.001*iMilliSec
     
-    if(iProc >= iProc0SwmfComp .and. iProc <= iProcLastSwmfComp)then
-       ! Obtain pointer to the data obtained from the ESMF component
-       allocate(Data_VII(nVarEsmf,1:nLon,MinLat:MaxLat), stat=rc)
-       if(rc /= 0) call my_error('allocate(Data_VII)')
-
-       ! Copy fields into an array
-       do iVar = 1, nVarEsmf
-          nullify(Ptr)
-          NameField = NameFieldEsmf_V(iVar)
-          call ESMF_StateGet(ImportState, itemName=NameField, &
-               field=Field, rc=rc)
-          if(rc /= ESMF_SUCCESS) call my_error("ESMF_StateGet")
-          call ESMF_FieldGet(Field, farrayPtr=Ptr, rc=rc) 
-          if(rc /= ESMF_SUCCESS) call my_error("ESMF_FieldGet")
-
-          Data_VII(iVar,:,:) = Ptr
-       end do
-       if(DoTest)then
-          write(*,*)'SWMF_GridComp shape of Ptr =', shape(Ptr)
-          ! Do not check the poles
-          do j = MinLat, MaxLat; do i = 1, nLon
-             ! Calculate exact solution
-             Exact_V = FieldTest_V
-             ! add time dependence for Hall field
-             Exact_V(1) = Exact_V(1) + tCurrent*dHallPerDtTest
-             ! add spatial dependence
-             Exact_V = Exact_V + CoordCoefTest &
-                  *abs(Lon_I(i))*(90-abs(Lat_I(j)))
-                  ! *sin(Lon_I(i)*cDegToRad)*cos(Lat_I(j)*cDegToRad)
-             if(abs(Data_VII(1,i,j) - Exact_V(1)) > 1e-10) &
-                  write(*,*) 'ERROR in SWMF_GridComp ', &
-                  'at i, j, Lon, Lat, Hall, Exact, Error=', &
-                  i, j, Lon_I(i), Lat_I(j), Data_VII(1,i,j), &
-                  Exact_V(1), Data_VII(1,i,j) - Exact_V(1)
-             if(abs(Data_VII(2,i,j) - Exact_V(2)) > 1e-10) &
-                  write(*,*) 'ERROR in SWMF_GridComp ', &
-                  'at i, j, Lon, Lat, Pede, Exact, Error=', &
-                  i, j, Lon_I(i), Lat_I(j), Data_VII(2,i,j), &
-                  Exact_V(2), Data_VII(2,i,j) - Exact_V(2)
-          end do; end do
-          write(*,*)'SWMF_GridComp value of Data(MidLon,MidLat)=', &
-               Data_VII(:,nLon/2,(MinLat+MaxLat)/2)
-       end if
-       deallocate(Data_VII)
-    end if
-
-    ! Send the data to the processors in the SWMF
-    ! This should not be necessary. We should have pointers instead.
-    !call SWMF_couple('ESMF_IPE', NameSwmfComp, 'SMG', &
-    !     nVarEsmf, nLon-1, nLat, 0.0, 360.0, -90.0, 90.0, Data_VII, rc)
-    !if(rc /= 0)call my_error('SWMF_couple')
-
     call write_log("SWMF_run routine called!")
     write(*,*)'SWMF_run starts  with tCouple =',tCouple
     if(.not.DoRunSwmf)then
@@ -289,13 +174,13 @@ contains
     call write_log("SWMF_run routine returned!")
     if(rc /= 0)call my_error('SWMF_run')
     
-    call write_log("SWMF_GridComp:run routine returned")
+    call write_log("SWMF_grid_comp:run routine returned")
 
     rc = ESMF_SUCCESS
 
   end subroutine my_run
   !============================================================================
-  subroutine my_final(gcomp, importState, exportState, externalclock, rc)
+  subroutine my_final(gComp, ImportState, ExportState, ExternalClock, rc)
 
     type(ESMF_GridComp) :: gcomp
     type(ESMF_State) :: importState
@@ -310,13 +195,8 @@ contains
 
     call SWMF_finalize(rc)
     call write_log("SWMF_finalize routine returned")
-    if(rc /= 0)then
-       call write_log("SWMF_finalize FAILED")
-       call ESMF_VMGet(vm, localPET=iProc)
-       if(iProc == 0)write(0, *) "SWMF_finalize FAILED"
-       rc = ESMF_FAILURE
-    endif
-    
+    if(rc /= 0) call my_error("SWMF_finalize FAILED")
+
   end subroutine my_final
   !============================================================================
   subroutine my_error(String)
@@ -327,8 +207,6 @@ contains
     !--------------------------------------------------------------------------
     call write_error('SWMF_grid_comp '//String)
     
-    call ESMF_Finalize
-
   end subroutine my_error
   !============================================================================
 end module SWMF_grid_comp

@@ -1,6 +1,6 @@
-module IPE_ie_coupler
+module IPERIM_coupler
 
-  !  A skeletal coupler component for coupling the SWMF with ESMF component(s).
+  ! Couple IPE with RIM
 
   ! ESMF Framework module
   use ESMF
@@ -138,8 +138,8 @@ contains
 
     character(len=*), intent(in) :: String
     !-------------------------------------------------------------------------
-    call write_error('IPE_ie_coupler '//String)
+    call write_error('IPERIM_coupler '//String)
 
   end subroutine my_error
   !============================================================================
-end module IPE_ie_coupler
+end module IPERIM_coupler

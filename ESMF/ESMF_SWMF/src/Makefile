@@ -22,8 +22,8 @@ OBJECTS = \
 	ESMF_grid_comp.o \
 	SWMF_grid_comp.o \
 	IPE_grid_comp.o \
-	IE_grid_comp.o \
-	IPE_ie_coupler.o
+	RIM_grid_comp.o \
+	IPERIM_coupler.o
 
 # Dependencies:
 DEPEND:

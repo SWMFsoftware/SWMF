@@ -15,7 +15,10 @@ program ESMF_driver
   use ESMF_grid_comp, ONLY: ESMF_set_services
 
   ! Various variables
-  use ESMFSWMF_variables
+  use ESMFSWMF_variables, ONLY: iProc, nProc, &
+       Year_, Month_, Day_, Hour_, Minute_, Second_, MilliSec_, &
+       iStartTime_I, iFinishTime_I, TimeSimulation, iCoupleFreq, &
+       read_esmf_swmf_input, write_log, write_error
 
   implicit none
 
@@ -74,16 +77,13 @@ program ESMF_driver
 
   ! Create the top Gridded component, passing in the default layout.
   EsmfSwmfComp = ESMF_GridCompCreate(name="ESMF-SWMF Component", rc=rc)
-
+  if(rc /= ESMF_SUCCESS) call my_error('ESMF_GridCompCreate')
   call write_log("Component Create finished")
 
   ! Register section
   call ESMF_GridCompSetServices(EsmfSwmfComp, &
        userRoutine=ESMF_set_services, rc=rc)
-
-  if (ESMF_LogFoundError(rcToCheck=rc, msg='Registration failed', &
-       line=__LINE__, file=__FILE__)) &
-       call ESMF_Finalize
+  if(rc /= ESMF_SUCCESS) call my_error('ESMF_GridCompSetServices')
 
   !  Create and initialize a clock, and a grid.
 
@@ -96,7 +96,7 @@ program ESMF_driver
      call my_error('ESMF_TimeIntervalSet(s=iCoupleFreq) failed')
   end if
 
-  call ESMF_TimeSet(startTime,    &
+  call ESMF_TimeSet(StartTime,    &
        yy=iStartTime_I(Year_),    &
        mm=iStartTime_I(Month_),   &
        dd=iStartTime_I(Day_),     &
@@ -106,13 +106,9 @@ program ESMF_driver
        ms=iStartTime_I(Millisec_),&
        rc=rc)
 
-  if(rc /= ESMF_SUCCESS) then
-     if(iProc == 0)write(*,*) 'ESMF_SWMF ERROR: ',&
-          'Setting start time failed:', iStartTime_I
-     call ESMF_Finalize
-  end if
+  if(rc /= ESMF_SUCCESS) call my_error('ESMF_TimeSet StartTime')
 
-  call ESMF_TimeSet(stopTime,     &
+  call ESMF_TimeSet(StopTime,     &
        yy=iFinishTime_I(Year_),   &
        mm=iFinishTime_I(Month_),  &
        dd=iFinishTime_I(Day_),    &
@@ -121,59 +117,42 @@ program ESMF_driver
        s =iFinishTime_I(Second_), &
        ms=iFinishTime_I(Millisec_))
 
-  if(rc /= ESMF_SUCCESS) then
-     if(iProc == 0)write(*,*) 'ESMF_SWMF ERROR: ',&
-          'Setting finish time failed:',iFinishTime_I
-     call ESMF_Finalize
-  end if
-
+  if(rc /= ESMF_SUCCESS) call my_error('ESMF_TimeSet StopTime')
+  
   Clock = ESMF_ClockCreate(TimeStep, StartTime, stopTime=StopTime, &
        name="application Clock", rc=rc)
 
-  if(rc /= ESMF_SUCCESS)then
-     if(iProc == 0)write(*,*) 'ESMF_SWMF ERROR: ',&
-          'Setting clock failed, start time=',iStartTime_I, &
-          ' finish time=',iFinishTime_I,' coupling freq=',iCoupleFreq
-     call my_error('ESMF_ClockCreate failed')
-  end if
+  if(rc /= ESMF_SUCCESS) call my_error('ESMF_ClockCreate')
 
   if(TimeSimulation /= 0.0)then
      iSecond   = int(TimeSimulation)
      iMillisec = nint(1000*(TimeSimulation-iSecond))
      call ESMF_TimeIntervalSet(SimTime, s=iSecond, ms=iMillisec, rc=rc)
-     if(rc /= ESMF_SUCCESS)then
-        if(iProc == 0)write(*,*) 'ESMF_SWMF ERROR: ',&
-             'Setting time interval failed for simulation time=',&
-             TimeSimulation,' s=',iSecond,' ms=',iMillisec
-        call my_error('ESMF_TimeIntervalSet failed')
-     end if
+     if(rc /= ESMF_SUCCESS) call my_error('SMF_TimeIntervalSet SimTime')
 
      CurrentTime = StartTime + SimTime
      call ESMF_ClockSet(Clock, currtime = CurrentTime, rc=rc)
-
-     if(rc /= ESMF_SUCCESS)then
-        if(iProc == 0)write(*,*) 'ESMF_SWMF ERROR: ',&
-             'Setting clock to Simulation time=',TimeSimulation,' failed'
-        call my_error('ESMF_ClockSet failed')
-     end if
+     if(rc /= ESMF_SUCCESS) call my_error('ESMF_ClockSet Clock')
   end if
 
   !  Init, Run, and Finalize section
   call ESMF_GridCompInitialize(EsmfSwmfComp, clock=Clock, rc=rc)
-  if (rc /= ESMF_SUCCESS) call my_error('EsmfSwmfComp:init failed')
+  if (rc /= ESMF_SUCCESS) call my_error('ESMF_GridCompInitialize')
 
   call ESMF_GridCompRun(EsmfSwmfComp, clock=Clock, rc=rc)
-  if (rc /= ESMF_SUCCESS) call my_error('EsmfSwmfComp:run failed')
+  if (rc /= ESMF_SUCCESS) call my_error('ESMF_GridCompRun')
 
   call ESMF_GridCompFinalize(EsmfSwmfComp, clock=Clock, rc=rc)
-  if (rc /= ESMF_SUCCESS) call my_error('EsmfSwmfComp:finalize failed')
+  if (rc /= ESMF_SUCCESS) call my_error('ESMF_GridCompFinalize')
 
   ! Clean up
 
   call ESMF_ClockDestroy(clock, rc=rc)
-
+  if (rc /= ESMF_SUCCESS) call my_error('SMF_ClockDestroy')
+  
   call ESMF_GridCompDestroy(EsmfSwmfComp, rc=rc)
-
+  if (rc /= ESMF_SUCCESS) call my_error('ESMF_GridCompDestroy')
+  
   call ESMF_Finalize
 
 contains

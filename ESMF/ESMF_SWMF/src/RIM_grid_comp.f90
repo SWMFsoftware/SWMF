@@ -1,21 +1,21 @@
-module IE_grid_comp
+module RIM_grid_comp
 
-  ! This is the SWMF/IE Gridded Component, which acts as an interface
-  ! to the SWMF/IE model.
+  ! This is the RIM Gridded Component, which acts as an interface
+  ! to the SWMF/IE/RIM model.
 
   ! ESMF Framework module
   use ESMF
 
   use ESMFSWMF_variables, ONLY: &
        DoRunSwmf, DoBlockAllSwmf, &
-       NameSwmfComp, iProc0SwmfComp, iProcLastSwmfComp, &
-       NameFieldEsmf_V, nVarEsmf, &
+       NameSwmfComp, nProcSwmfComp, NameFieldEsmf_V, nVarEsmf, &
        Year_, Month_, Day_, Hour_, Minute_, Second_, MilliSec_, &
        add_fields, write_log, write_error, &
        DoTest, FieldTest_V, CoordCoefTest, dHallPerDtTest
 
   ! Size of ionosphere grid in SWMF/IE model
   use IE_ModSize, ONLY: nLat => IONO_nTheta, nLon => IONO_nPsi
+
   ! Conversion to radians
   use ModNumConst, ONLY: cDegToRad
 
@@ -36,9 +36,8 @@ module IE_grid_comp
   real(ESMF_KIND_R8), pointer, save:: Lon_I(:), Lat_I(:)
 
   integer:: MinLat = 0, MaxLat = 0
-  integer:: PetMap(1,1,1) = 0
+  integer, allocatable:: iPetMap_III(:,:,:)
   integer:: iPet = 0
-  logical:: IsGridPet = .false.
 
 contains
   !============================================================================
@@ -75,7 +74,7 @@ contains
 
     integer:: i
     !--------------------------------------------------------------------------
-    call write_log("IE_grid_comp:init routine called")
+    call write_log("RIM_grid_comp:init routine called")
     rc = ESMF_FAILURE
 
     ! Obtain the VM for the IE gridded component
@@ -85,18 +84,24 @@ contains
     ! Obtain the MPI communicator for the VM
     call ESMF_VMGet(Vm, mpiCommunicator=iComm, localPet=iPet, rc=rc)
     if(rc /= ESMF_SUCCESS) call my_error('ESMF_VMGet')
-    
-    IsGridPet = iPet == 0
-    write(*,*)'IE_grid_comp: iPet, IsGridPet=', iPet, IsGridPet
 
     ! RIM grid is node based. Internally it is Colat-Lon grid, but we pretend
     ! here that it is a Lat-Lon grid, so ESMF can use it.
     ! Lon from 0 to 360-dPhi (periodic), Lat from -90 to +90
+    if(nProcSwmfComp == 1)then
+       allocate(iPetMap_III(1,1,1))
+       iPetMap_III(1,1,1) = 0
+    else
+       allocate(iPetMap_III(1,2,1))
+       iPetMap_III(1,:,1) = [ 0, 1 ]
+    end if
+    
     Grid = ESMF_GridCreateNoPeriDim(maxIndex=[nLon-1, nLat-1], &
-         regDecomp=[1,1], coordDep1=[1], coordDep2=[2], &
-         coordSys=ESMF_COORDSYS_CART, &
-         petMap=PetMap, name="ESMF grid", rc=rc)
+         RegDecomp = [1, nProcSwmfComp], &
+         coordDep1=[1], coordDep2=[2], coordSys=ESMF_COORDSYS_CART, &
+         name="RIM grid", rc=rc)
     if(rc /= ESMF_SUCCESS)call my_error('ESMF_GridCreateNoPeriDim')
+    deallocate(iPetMap_III)
 
     call ESMF_GridAddCoord(Grid, staggerloc=ESMF_STAGGERLOC_CORNER, rc=rc)
     if(rc /= ESMF_SUCCESS)call my_error('ESMF_GridAddCoord')
@@ -112,28 +117,26 @@ contains
     if(rc /= ESMF_SUCCESS)call my_error('ESMF_GridGetCoord 2')
 
     MinLat = lbound(Lat_I, DIM=1); MaxLat = ubound(Lat_I, DIM=1)
-    write(*,'(a,2i4)')'IE grid: MinLat, MaxLat=', MinLat, MaxLat
+    write(*,'(a,2i4)')'RIM grid: MinLat, MaxLat=', MinLat, MaxLat
 
-    if(IsGridPet)then
-       ! Uniform longitude grid from -180 to 180
-       do i = 1, nLon
-          Lon_I(i) = (i-1)*(360.0/(nLon-1)) - 180
-       end do
-       write(*,*)'IE grid: Lon_I(1,2,last)=', Lon_I([1,1,nLon])
-       ! Uniform latitude grid (for now!!!)
-       do i = MinLat, MaxLat
-          Lat_I(i) = (i-1)*(180./(nLat-1)) - 90
-       end do
-       write(*,*)'IE grid: Lat_I(Min,Min+1,Max)=', &
-            Lat_I([MinLat,MinLat+1,MaxLat])
+    ! Uniform longitude grid from -180 to 180
+    do i = 1, nLon
+       Lon_I(i) = (i-1)*(360.0/(nLon-1)) - 180
+    end do
+    write(*,*)'RIM grid: Lon_I(1,2,last)=', Lon_I([1,1,nLon])
+    ! Uniform latitude grid
+    do i = MinLat, MaxLat
+       Lat_I(i) = (i-1)*(180./(nLat-1)) - 90
+    end do
+    write(*,*)'RIM grid: Lat_I(Min,Min+1,Max)=', &
+         Lat_I([MinLat,MinLat+1,MaxLat])
 
-       ! Add fields to the IE import state
-       call add_fields(Grid, ImportState, IsFromEsmf=.true., rc=rc)
-       if(rc /= ESMF_SUCCESS) call my_error('add_fields')
-    end if
+    ! Add fields to the RIM import state
+    call add_fields(Grid, ImportState, IsFromEsmf=.true., rc=rc)
+    if(rc /= ESMF_SUCCESS) call my_error('add_fields')
 
     rc = ESMF_SUCCESS
-    call write_log("IE_grid_comp:init routine returned")
+    call write_log("RIM_grid_comp:init routine returned")
 
   end subroutine my_init
   !============================================================================
@@ -162,18 +165,11 @@ contains
     ! Misc variables
     type(ESMF_Field):: Field
     character(len=4):: NameField
-    type(ESMF_VM):: Vm
-    integer:: iProc, i, j
+    integer:: i, j
     real(ESMF_KIND_R8):: Exact_V(2)
     !--------------------------------------------------------------------------
-    call write_log("SWMF_GridComp:run routine called")
+    call write_log("RIM_grid_comp:run routine called")
     rc = ESMF_FAILURE
-
-    ! Get processor rank
-    call ESMF_GridCompGet(gComp, vm=vm, rc=rc)
-    if(rc /= ESMF_SUCCESS) call my_error('ESMF_GridCompGet')
-    call ESMF_VMGet(vm, localPET=iProc, rc=rc)
-    if(rc /= ESMF_SUCCESS) call my_error('ESMF_VMGet')
 
     ! Get the current time from the clock
     call ESMF_ClockGet(Clock, CurrSimTime=SimTime, TimeStep=TimeStep, rc=rc)
@@ -182,59 +178,51 @@ contains
     if(rc /= ESMF_SUCCESS) call my_error('ESMF_TimeIntervalGet current')
     tCurrent = iSec + 0.001*iMilliSec
 
-    ! Calculate simulation time for next coupling
-    SimTime = SimTime + TimeStep
-    call ESMF_TimeIntervalGet(SimTime, s=iSec, ms=iMilliSec, rc=rc)
-    if(rc /= ESMF_SUCCESS) call my_error('ESMF_TimeIntervalGet couple')
-    tCouple = iSec + 0.001*iMilliSec
-    
-    if(iProc >= iProc0SwmfComp .and. iProc <= iProcLastSwmfComp)then
-       ! Obtain pointer to the data obtained from the ESMF component
-       allocate(Data_VII(nVarEsmf,1:nLon,MinLat:MaxLat), stat=rc)
-       if(rc /= 0) call my_error('allocate(Data_VII)')
+    ! Obtain pointer to the data obtained from the ESMF component
+    allocate(Data_VII(nVarEsmf,1:nLon,MinLat:MaxLat), stat=rc)
+    if(rc /= 0) call my_error('allocate(Data_VII)')
 
-       ! Copy fields into an array
-       do iVar = 1, nVarEsmf
-          nullify(Ptr)
-          NameField = NameFieldEsmf_V(iVar)
-          call ESMF_StateGet(ImportState, itemName=NameField, &
-               field=Field, rc=rc)
-          if(rc /= ESMF_SUCCESS) call my_error("ESMF_StateGet")
-          call ESMF_FieldGet(Field, farrayPtr=Ptr, rc=rc) 
-          if(rc /= ESMF_SUCCESS) call my_error("ESMF_FieldGet")
+    ! Copy fields into an array
+    do iVar = 1, nVarEsmf
+       nullify(Ptr)
+       NameField = NameFieldEsmf_V(iVar)
+       call ESMF_StateGet(ImportState, itemName=NameField, &
+            field=Field, rc=rc)
+       if(rc /= ESMF_SUCCESS) call my_error("ESMF_StateGet")
+       call ESMF_FieldGet(Field, farrayPtr=Ptr, rc=rc) 
+       if(rc /= ESMF_SUCCESS) call my_error("ESMF_FieldGet")
 
-          Data_VII(iVar,:,:) = Ptr
-       end do
-       if(DoTest)then
-          write(*,*)'SWMF_GridComp shape of Ptr =', shape(Ptr)
-          ! Do not check the poles
-          do j = MinLat, MaxLat; do i = 1, nLon
-             ! Calculate exact solution
-             Exact_V = FieldTest_V
-             ! add time dependence for Hall field
-             Exact_V(1) = Exact_V(1) + tCurrent*dHallPerDtTest
-             ! add spatial dependence
-             Exact_V = Exact_V + CoordCoefTest &
-                  *abs(Lon_I(i))*(90-abs(Lat_I(j)))
-                  ! *sin(Lon_I(i)*cDegToRad)*cos(Lat_I(j)*cDegToRad)
-             if(abs(Data_VII(1,i,j) - Exact_V(1)) > 1e-10) &
-                  write(*,*) 'ERROR in SWMF_GridComp ', &
-                  'at i, j, Lon, Lat, Hall, Exact, Error=', &
-                  i, j, Lon_I(i), Lat_I(j), Data_VII(1,i,j), &
-                  Exact_V(1), Data_VII(1,i,j) - Exact_V(1)
-             if(abs(Data_VII(2,i,j) - Exact_V(2)) > 1e-10) &
-                  write(*,*) 'ERROR in SWMF_GridComp ', &
-                  'at i, j, Lon, Lat, Pede, Exact, Error=', &
-                  i, j, Lon_I(i), Lat_I(j), Data_VII(2,i,j), &
-                  Exact_V(2), Data_VII(2,i,j) - Exact_V(2)
-          end do; end do
-          write(*,*)'SWMF_GridComp value of Data(MidLon,MidLat)=', &
-               Data_VII(:,nLon/2,(MinLat+MaxLat)/2)
-       end if
-       deallocate(Data_VII)
+       Data_VII(iVar,:,:) = Ptr
+    end do
+    if(DoTest)then
+       write(*,*)'SWMF_GridComp shape of Ptr =', shape(Ptr)
+       ! Do not check the poles
+       do j = MinLat, MaxLat; do i = 1, nLon
+          ! Calculate exact solution
+          Exact_V = FieldTest_V
+          ! add time dependence for Hall field
+          Exact_V(1) = Exact_V(1) + tCurrent*dHallPerDtTest
+          ! add spatial dependence
+          Exact_V = Exact_V + CoordCoefTest &
+               *abs(Lon_I(i))*(90-abs(Lat_I(j)))
+          ! *sin(Lon_I(i)*cDegToRad)*cos(Lat_I(j)*cDegToRad)
+          if(abs(Data_VII(1,i,j) - Exact_V(1)) > 1e-10) &
+               write(*,*) 'ERROR in SWMF_GridComp ', &
+               'at i, j, Lon, Lat, Hall, Exact, Error=', &
+               i, j, Lon_I(i), Lat_I(j), Data_VII(1,i,j), &
+               Exact_V(1), Data_VII(1,i,j) - Exact_V(1)
+          if(abs(Data_VII(2,i,j) - Exact_V(2)) > 1e-10) &
+               write(*,*) 'ERROR in SWMF_GridComp ', &
+               'at i, j, Lon, Lat, Pede, Exact, Error=', &
+               i, j, Lon_I(i), Lat_I(j), Data_VII(2,i,j), &
+               Exact_V(2), Data_VII(2,i,j) - Exact_V(2)
+       end do; end do
+       write(*,*)'SWMF_GridComp value of Data(MidLon,MidLat)=', &
+            Data_VII(:,nLon/2,(MinLat+MaxLat)/2)
     end if
+    deallocate(Data_VII)
 
-    call write_log("IE_grid_comp:run routine returned")
+    call write_log("RIM_grid_comp:run routine returned")
 
     rc = ESMF_SUCCESS
 
@@ -251,9 +239,9 @@ contains
     type(ESMF_VM)    :: vm
     integer          :: iProc
     !--------------------------------------------------------------------------
-    call write_log("IE_finalize routine called")
+    call write_log("RIM_finalize routine called")
 
-    call write_log("IE_finalize routine returned")
+    call write_log("RIM_finalize routine returned")
     
   end subroutine my_final
   !============================================================================
@@ -264,8 +252,8 @@ contains
     character(len=*), intent(in) :: String
     !--------------------------------------------------------------------------
     
-    call write_error('IE_grid_comp '//String)
+    call write_error('RIM_grid_comp '//String)
 
   end subroutine my_error
   !============================================================================
-end module IE_grid_comp
+end module RIM_grid_comp

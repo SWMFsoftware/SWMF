@@ -54,7 +54,7 @@ contains
     integer                     :: iVar, i, j
     character(len=4):: NameField
     !-------------------------------------------------------------------------
-    call write_log("ESMFGridComp init called")
+    call write_log("IPE_grid_comp init called")
     rc = ESMF_FAILURE
 
     ! Create Lon-Lat grid where -180<=Lon<=180-dLon, -90<=Lat<=90
@@ -81,12 +81,12 @@ contains
     do i = 1, nLonEsmf
        Lon_I(i) = (i-1)*(360.0/(nLonEsmf-1)) - 180
     end do
-    write(*,*)'ESMF grid: Lon_I(1,2,last)=', Lon_I([1,2,nLonEsmf])
+    write(*,*)'IPE grid: Lon_I(1,2,last)=', Lon_I([1,2,nLonEsmf])
     ! Uniform latitude grid (for now!!!)
     do i = 1, nLatEsmf
        Lat_I(i) = (i-1)*(180./(nLatEsmf-1)) - 90
     end do
-    write(*,*)'ESMF grid: Lat_I(1,2,last)=', Lat_I([1,2,nLatEsmf])
+    write(*,*)'IPE grid: Lat_I(1,2,last)=', Lat_I([1,2,nLatEsmf])
 
     ! Add fields to the export state
     call add_fields(Grid, ExportState, IsFromEsmf=.true., rc=rc)
@@ -120,13 +120,12 @@ contains
        do j = 1, nLatEsmf; do i = 1, nLonEsmf
           Ptr_II(i,j) = Ptr_II(i,j) + CoordCoefTest &
                *abs(Lon_I(i))*(90-abs(Lat_I(j)))
-          !*sin(Lon_I(i)*cDegToRad)*cos(Lat_I(j)*cDegToRad)
        end do; end do
 
     end do ! iVar
 
     rc = ESMF_SUCCESS
-    call write_log("ESMFGridComp init returned")
+    call write_log("IPE_grid_comp init returned")
     call ESMF_LogFlush()
 
   end subroutine my_init
@@ -144,7 +143,7 @@ contains
     ! Access to the MHD data
     real(ESMF_KIND_R8), pointer :: Ptr_II(:,:)
     !--------------------------------------------------------------------------
-    call write_log("ESMFGridComp run called")
+    call write_log("IPE_grid_comp run called")
     rc = ESMF_FAILURE
 
     ! We should execute the ESMF code here and put the result into
@@ -155,16 +154,18 @@ contains
        nullify(Ptr_II)
        call ESMF_StateGet(ExportState, itemName='Hall', field=Field, rc=rc)
        if(rc /= ESMF_SUCCESS) call my_error("ESMF_StateGet for Hall")
+
        call ESMF_FieldGet(Field, farrayPtr=Ptr_II, rc=rc) 
        if(rc /= ESMF_SUCCESS) call my_error("ESMF_FieldGet for Hall")
+
        ! Update state by changing Hall conductivity
-       write(*,*)'ESMFGridComp:run old Hall=', Ptr_II(nLonEsmf/2,nLatEsmf/2)
+       write(*,*)'IPE_grid_comp:run old Hall=', Ptr_II(nLonEsmf/2,nLatEsmf/2)
        Ptr_II = Ptr_II + iCoupleFreq*dHallPerdtTest
-       write(*,*)'ESMFGridComp:run new Hall=', Ptr_II(nLonEsmf/2,nLatEsmf/2)
+       write(*,*)'IPE_grid_comp:run new Hall=', Ptr_II(nLonEsmf/2,nLatEsmf/2)
     end if
 
     rc = ESMF_SUCCESS
-    call write_log("ESMFGridComp run returned")
+    call write_log("IPE_grid_comp run returned")
 
   end subroutine my_run
   !============================================================================
@@ -176,8 +177,8 @@ contains
     type(ESMF_Clock) :: Clock
     integer, intent(out):: rc
 
-    call write_log("ESMFGridComp finalize called")
-    call write_log("ESMFGridComp finalize returned")
+    call write_log("IPE_grid_comp finalize called")
+    call write_log("IPE_grid_comp finalize returned")
 
   end subroutine my_final
   !============================================================================
