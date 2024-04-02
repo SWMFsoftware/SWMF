@@ -16,7 +16,7 @@ module SWMF_grid_comp
 
   private
 
-  public:: SetServices
+  public:: set_services
 
   ! Local variables
 
@@ -29,11 +29,12 @@ module SWMF_grid_comp
 
 contains
   !============================================================================
-  subroutine SetServices(gComp, rc)
+  subroutine set_services(gComp, rc)
 
     type(ESMF_GridComp) :: gComp
     integer, intent(out):: rc
 
+    !--------------------------------------------------------------------------
     call ESMF_GridCompSetEntryPoint(gComp, ESMF_METHOD_INITIALIZE, &
          userRoutine=my_init, rc=rc)
     call ESMF_GridCompSetEntryPoint(gComp, ESMF_METHOD_RUN, &
@@ -41,7 +42,7 @@ contains
     call ESMF_GridCompSetEntryPoint(gComp, ESMF_METHOD_FINALIZE, &
          userRoutine=my_final, rc=rc)
 
-  end subroutine SetServices
+  end subroutine set_services
   !============================================================================
   subroutine my_init(gComp, ImportState, ExportState, ExternalClock, rc)
 
@@ -72,8 +73,8 @@ contains
     ! Obtain the MPI communicator for the VM
     call ESMF_VMGet(Vm, mpiCommunicator=iComm,  rc=rc)
     if(rc /= ESMF_SUCCESS) call my_error('ESMF_VMGet')
-    
-    ! Obtain the start time from the clock 
+
+    ! Obtain the start time from the clock
     call ESMF_ClockGet(externalclock, startTime=StartTime, &
          currSimTime=SimTime, runDuration=RunDuration, rc=rc)
     if(rc /= ESMF_SUCCESS) call	my_error('ESMF_ClockGet')
@@ -146,7 +147,7 @@ contains
     call ESMF_TimeIntervalGet(SimTime, s=iSec, ms=iMilliSec, rc=rc)
     if(rc /= ESMF_SUCCESS) call my_error('ESMF_TimeIntervalGet couple')
     tCouple = iSec + 0.001*iMilliSec
-    
+
     call write_log("SWMF_run routine called!")
     write(*,*)'SWMF_run starts  with tCouple =',tCouple
     if(.not.DoRunSwmf)then
@@ -161,7 +162,7 @@ contains
     write(*,*)'SWMF_run returns with tSimSwmf=', tSimSwmf
     call write_log("SWMF_run routine returned!")
     if(rc /= 0)call my_error('SWMF_run')
-    
+
     call write_log("SWMF_grid_comp:run routine returned")
 
     rc = ESMF_SUCCESS
@@ -170,13 +171,11 @@ contains
   !============================================================================
   subroutine my_final(gComp, ImportState, ExportState, ExternalClock, rc)
 
-    type(ESMF_GridComp) :: gcomp
-    type(ESMF_State) :: importState
-    type(ESMF_State) :: exportState
-    type(ESMF_Clock) :: externalclock
+    type(ESMF_GridComp) :: gComp
+    type(ESMF_State) :: ImportState
+    type(ESMF_State) :: ExportState
+    type(ESMF_Clock) :: ExternalClock
     integer, intent(out) :: rc
-
-    type(ESMF_VM)    :: vm
     !--------------------------------------------------------------------------
     call write_log("SWMF_finalize routine called")
 
@@ -189,11 +188,12 @@ contains
   subroutine my_error(String)
 
     ! Write out error message and stop
-    
+
     character(len=*), intent(in) :: String
     !--------------------------------------------------------------------------
     call write_error('SWMF_grid_comp '//String)
-    
+
   end subroutine my_error
   !============================================================================
 end module SWMF_grid_comp
+!==============================================================================

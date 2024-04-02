@@ -18,12 +18,12 @@ module ESMFSWMF_variables
   integer, public, parameter :: nVarEsmf = 2
   character(len=4), public, parameter :: NameFieldEsmf_V(nVarEsmf) = &
        [ 'Hall', 'Ped ' ]
-  
+
   ! number of SWMF variables and their names to be sent to ESMF
   integer, public, parameter :: nVarSwmf = 4
   character(len=4), public, parameter :: NameFieldSwmf_V(nVarSwmf) = &
        [ 'jFac', 'Epot', 'Aver', 'Diff' ]
-  
+
   ! Time related variables
   integer, public:: iStartTime_I(Year_:MilliSec_)  = & ! Start date-time
        [2000, 3, 21, 10, 45, 0, 0]                     !   with defaults
@@ -64,7 +64,7 @@ module ESMFSWMF_variables
 
   ! Change of Hall field during ESMF run
   real, public, parameter:: dHallPerDtTest = 0.4
-  
+
 contains
   !============================================================================
   subroutine read_esmf_swmf_input(rc)
@@ -223,10 +223,10 @@ contains
             StringTmp == 't' .or. StringTmp == 'T'
     endif
     write(*,*)'DoRunSwmf=', DoRunSwmf
-    
+
     call ESMF_ConfigGetAttribute(Config, StringTmp, &
          label='Block all SWMF [y/n]:', rc=rc)
-    
+
     if(rc == ESMF_SUCCESS) then
        DoBlockAllSwmf = StringTmp == 'y' .or. StringTmp == 'Y' .or. &
             StringTmp == 't' .or. StringTmp == 'T'
@@ -296,7 +296,7 @@ contains
     DoRead = .false.
     READLAYOUT: do
        read(iUnit,'(a)',iostat=rc) String
-    
+
        if(rc /= 0)then
           if(iProc==0)write(*,*)'ESMF_SWMF ERROR: '// &
                'could not read PARAM.in file'
@@ -356,7 +356,7 @@ contains
     character(len=4)     :: NameField
     ! real(ESMF_KIND_R8), pointer :: Ptr_C(:,:)
     type(ESMF_VM)      :: Vm
-    
+
     ! Name of the component
     character(len=100) :: Name="UNKNOWN"
     !--------------------------------------------------------------------------
@@ -370,10 +370,10 @@ contains
 
     call ESMF_GridGet(Grid, name=Name)
     if (rc /= ESMF_SUCCESS) call my_error('ESMF_GridGet')
-    
+
     call ESMF_ArraySpecSet(ArraySpec, rank=2, typekind=ESMF_TYPEKIND_R8)
     if (rc /= ESMF_SUCCESS) call my_error('ESMF_ArraySpecSet')
-    
+
     if(IsFromEsmf)then
        do iVar = 1, nVarEsmf
           NameField = NameFieldEsmf_V(iVar)
@@ -408,7 +408,7 @@ contains
   subroutine my_error(String)
 
     ! Write out error message and stop
-    
+
     character(len=*), intent(in) :: String
     !--------------------------------------------------------------------------
     call write_error('ESMFSWMF_variables '//String)
@@ -418,7 +418,7 @@ contains
   subroutine write_log(String)
 
     ! write out the log message in String and flush the file
-    
+
     character(len=*), intent(in):: String
     !--------------------------------------------------------------------------
     call ESMF_LogWrite(String, ESMF_LOGMSG_INFO)
@@ -429,7 +429,7 @@ contains
   subroutine write_error(String)
 
     ! Write out processor index and the error message String and stop
-    
+
     character(len=*), intent(in):: String
     !--------------------------------------------------------------------------
     write(*,'(a,i4,a,a)') 'ERROR (iProc=',iProc,'):', String

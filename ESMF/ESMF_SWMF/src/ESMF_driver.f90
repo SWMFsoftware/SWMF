@@ -1,16 +1,16 @@
 program ESMF_driver
 
-  !  Application Driver for the coupled ESMF-SWMF system.  
-  !  Creates the top ESMF_SWMF Gridded Component and calls the 
-  !  Initialize, Run, and Finalize routines for it.  
+  !  Application Driver for the coupled ESMF-SWMF system.
+  !  Creates the top ESMF_SWMF Gridded Component and calls the
+  !  Initialize, Run, and Finalize routines for it.
   !
-  !  The top Gridded Component creates and manages the ESMF and SWMF 
+  !  The top Gridded Component creates and manages the ESMF and SWMF
   !  subcomponents internally. The SWMF is treated as a single component
   !  which is coupled to (some of) the ESMF component(s) periodically.
-  
+
   ! ESMF module, defines all ESMF data types and procedures
   use ESMF
-  
+
   ! Top ESMF-SWMF Gridded Component registration routines
   use ESMF_grid_comp, ONLY: ESMF_set_services
 
@@ -29,9 +29,6 @@ program ESMF_driver
   type(ESMF_GridComp) :: EsmfSwmfComp
   ! States, Virtual Machines, Layouts and processor index
   type(ESMF_VM)       :: DefaultVM
-
-  ! The grid used to pass MHD state at the SWFM/GM inflow boundary
-  type(ESMF_Grid) :: grid
 
   ! A clock, starting and stop times and timestep
   type(ESMF_Clock)        :: Clock
@@ -83,8 +80,7 @@ program ESMF_driver
   if(rc /= ESMF_SUCCESS) call my_error('ESMF_GridCompSetServices')
 
   ! Create and initialize a clock
-
-  ! Based on values from the Config file, create a Clock.  
+  ! Based on values from the Config file, create a Clock.
 
   call ESMF_TimeIntervalSet(TimeStep, s=iCoupleFreq, rc=rc)
 
@@ -112,7 +108,7 @@ program ESMF_driver
        ms=iFinishTime_I(Millisec_))
 
   if(rc /= ESMF_SUCCESS) call my_error('ESMF_TimeSet StopTime')
-  
+
   Clock = ESMF_ClockCreate(TimeStep, StartTime, stopTime=StopTime, &
        name="application Clock", rc=rc)
 
@@ -143,10 +139,10 @@ program ESMF_driver
 
   call ESMF_ClockDestroy(clock, rc=rc)
   if (rc /= ESMF_SUCCESS) call my_error('SMF_ClockDestroy')
-  
+
   call ESMF_GridCompDestroy(EsmfSwmfComp, rc=rc)
   if (rc /= ESMF_SUCCESS) call my_error('ESMF_GridCompDestroy')
-  
+
   call ESMF_Finalize
 
 contains
@@ -155,8 +151,10 @@ contains
 
     character(len=*), intent(in) :: String
 
+    !--------------------------------------------------------------------------
     call write_error('ESMF_driver '//String)
 
   end subroutine my_error
   !============================================================================
 end program ESMF_driver
+!==============================================================================

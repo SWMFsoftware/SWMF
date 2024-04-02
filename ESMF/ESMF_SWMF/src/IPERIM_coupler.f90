@@ -11,17 +11,17 @@ module IPERIM_coupler
   implicit none
   private
 
-  public SetServices
+  public:: set_services
 
   type(ESMF_RouteHandle), save :: RouteHandle
 
 contains
   !============================================================================
-  subroutine SetServices(cComp, rc)
+  subroutine set_services(cComp, rc)
 
     type(ESMF_CplComp) :: cComp
     integer, intent(out):: rc
-
+    !--------------------------------------------------------------------------
     call ESMF_CplCompSetEntryPoint(cComp, ESMF_METHOD_INITIALIZE, &
          userRoutine=my_init, rc=rc)
     call ESMF_CplCompSetEntryPoint(cComp, ESMF_METHOD_RUN, &
@@ -29,7 +29,7 @@ contains
     call ESMF_CplCompSetEntryPoint(cComp, ESMF_METHOD_FINALIZE, &
          userRoutine=my_final, rc=rc)
 
-  end subroutine SetServices
+  end subroutine set_services
   !============================================================================
   subroutine my_init(cComp, ImportState, ExportState, Clock, rc)
 
@@ -137,9 +137,10 @@ contains
   subroutine my_error(String)
 
     character(len=*), intent(in) :: String
-    !-------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     call write_error('IPERIM_coupler '//String)
 
   end subroutine my_error
   !============================================================================
 end module IPERIM_coupler
+!==============================================================================

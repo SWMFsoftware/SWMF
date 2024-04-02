@@ -10,13 +10,13 @@ module IPE_grid_comp
   implicit none
   private
 
-  public:: SetServices
+  public:: set_services
 
   ! ESMF "dynamo" grid and domain. The real grid is not uniform in
   ! latitude, which will be implemented in the near future !!!
   ! This is a 2D spherical grid in MAG coordinates (rotates with Earth):
   ! +Z points to north magnetic dipole, +Y is towards rotational Omega x Z
-  
+
   integer, public:: nLonEsmf=81, nLatEsmf=97 ! Default ESMF grid size
 
   ! Coordinate arrays
@@ -24,11 +24,12 @@ module IPE_grid_comp
 
 contains
   !============================================================================
-  subroutine SetServices(gComp, rc)
+  subroutine set_services(gComp, rc)
 
     type(ESMF_GridComp) :: gComp
     integer, intent(out):: rc
 
+    !--------------------------------------------------------------------------
     call ESMF_GridCompSetEntryPoint(gComp, ESMF_METHOD_INITIALIZE, &
          userRoutine=my_init, rc=rc)
     call ESMF_GridCompSetEntryPoint(gComp, ESMF_METHOD_RUN, &
@@ -36,13 +37,13 @@ contains
     call ESMF_GridCompSetEntryPoint(gComp, ESMF_METHOD_FINALIZE, &
          userRoutine=my_final, rc=rc)
 
-  end subroutine SetServices
+  end subroutine set_services
   !============================================================================
-  subroutine my_init(gComp, importState, exportState, Clock, rc)
+  subroutine my_init(gComp, ImportState, ExportState, Clock, rc)
 
     type(ESMF_GridComp):: gComp
-    type(ESMF_State)   :: importState
-    type(ESMF_State)   :: exportState
+    type(ESMF_State)   :: ImportState
+    type(ESMF_State)   :: ExportState
     type(ESMF_Clock)   :: Clock
     integer, intent(out):: rc
 
@@ -50,9 +51,9 @@ contains
     type(ESMF_Field):: Field
     type(ESMF_VM):: Vm
     real(ESMF_KIND_R8), pointer :: Ptr_II(:,:)
-    integer                     :: iVar, i, j
+    integer:: iVar, i, j
     character(len=4):: NameField
-    !-------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     call write_log("IPE_grid_comp init called")
     rc = ESMF_FAILURE
 
@@ -100,7 +101,7 @@ contains
             rc=rc)
        if(rc /= ESMF_SUCCESS) call my_error("ESMF_StateGet for "//NameField)
 
-       call ESMF_FieldGet(Field, farrayPtr=Ptr_II, rc=rc) 
+       call ESMF_FieldGet(Field, farrayPtr=Ptr_II, rc=rc)
        if(rc /= ESMF_SUCCESS) call my_error("ESMF_FieldGet for "//NameField)
 
        if(rc /= ESMF_SUCCESS) RETURN
@@ -112,7 +113,7 @@ contains
        case default
           write(*,*)'ERROR in ESMF_GridComp:init: unknown NameField=',&
                NameField,' for iVar=',iVar
-          rc = ESMF_FAILURE; return
+          rc = ESMF_FAILURE; RETURN
        end select
 
        ! Add coordinate dependence
@@ -138,7 +139,7 @@ contains
     integer, intent(out):: rc
 
     type(ESMF_Field):: Field
-    
+
     ! Access to the MHD data
     real(ESMF_KIND_R8), pointer :: Ptr_II(:,:)
     !--------------------------------------------------------------------------
@@ -154,7 +155,7 @@ contains
        call ESMF_StateGet(ExportState, itemName='Hall', field=Field, rc=rc)
        if(rc /= ESMF_SUCCESS) call my_error("ESMF_StateGet for Hall")
 
-       call ESMF_FieldGet(Field, farrayPtr=Ptr_II, rc=rc) 
+       call ESMF_FieldGet(Field, farrayPtr=Ptr_II, rc=rc)
        if(rc /= ESMF_SUCCESS) call my_error("ESMF_FieldGet for Hall")
 
        ! Update state by changing Hall conductivity
@@ -176,6 +177,7 @@ contains
     type(ESMF_Clock) :: Clock
     integer, intent(out):: rc
 
+    !--------------------------------------------------------------------------
     call write_log("IPE_grid_comp finalize called")
     call write_log("IPE_grid_comp finalize returned")
 
@@ -184,7 +186,7 @@ contains
   subroutine my_error(String)
 
     ! Write out error message and stop
-    
+
     character(len=*), intent(in) :: String
     !--------------------------------------------------------------------------
     call write_error('IPE_grid_comp '//String)
@@ -192,3 +194,4 @@ contains
   end subroutine my_error
   !============================================================================
 end module IPE_grid_comp
+!==============================================================================

@@ -20,7 +20,7 @@ module RIM_grid_comp
 
   private
 
-  public:: SetServices
+  public:: set_services
 
   ! Local variables
 
@@ -38,25 +38,26 @@ module RIM_grid_comp
 
 contains
   !============================================================================
-  subroutine SetServices(gcomp, rc)
-    type(ESMF_GridComp) :: gcomp
+  subroutine set_services(gComp, rc)
+    type(ESMF_GridComp) :: gComp
     integer, intent(out):: rc
 
-    call ESMF_GridCompSetEntryPoint(gcomp, ESMF_METHOD_INITIALIZE, &
+    !--------------------------------------------------------------------------
+    call ESMF_GridCompSetEntryPoint(gComp, ESMF_METHOD_INITIALIZE, &
          userRoutine=my_init, rc=rc)
-    call ESMF_GridCompSetEntryPoint(gcomp, ESMF_METHOD_RUN, &
+    call ESMF_GridCompSetEntryPoint(gComp, ESMF_METHOD_RUN, &
          userRoutine=my_run, rc=rc)
-    call ESMF_GridCompSetEntryPoint(gcomp, ESMF_METHOD_FINALIZE, &
+    call ESMF_GridCompSetEntryPoint(gComp, ESMF_METHOD_FINALIZE, &
          userRoutine=my_final, rc=rc)
 
-  end subroutine SetServices
+  end subroutine set_services
   !============================================================================
   subroutine my_init(gComp, ImportState, ExportState, ExternalClock, rc)
 
-    type(ESMF_GridComp) :: gcomp
-    type(ESMF_State) :: importState
-    type(ESMF_State) :: exportState
-    type(ESMF_Clock) :: externalclock
+    type(ESMF_GridComp) :: gComp
+    type(ESMF_State) :: ImportState
+    type(ESMF_State) :: ExportState
+    type(ESMF_Clock) :: ExternalClock
     integer, intent(out):: rc
 
     type(ESMF_VM)    :: Vm
@@ -87,7 +88,7 @@ contains
        allocate(iPetMap_III(1,2,1))
        iPetMap_III(1,:,1) = [ 0, 1 ]
     end if
-    
+
     Grid = ESMF_GridCreateNoPeriDim(maxIndex=[nLon-1, nLat-1], &
          RegDecomp = [1, nProcSwmfComp], &
          coordDep1=[1], coordDep2=[2], coordSys=ESMF_COORDSYS_CART, &
@@ -141,7 +142,7 @@ contains
     integer, intent(out):: rc
 
     ! Access to the data
-    real(ESMF_KIND_R8), pointer     :: Ptr(:,:)
+    real(ESMF_KIND_R8), pointer     :: Ptr_II(:,:)
     real(ESMF_KIND_R8), allocatable :: Data_VII(:,:,:)
     integer                         :: iVar
 
@@ -150,7 +151,7 @@ contains
     integer(ESMF_KIND_I4)   :: iSec, iMilliSec
 
     ! Current time (needed for test only)
-    real(ESMF_KIND_R8) :: tCurrent  
+    real(ESMF_KIND_R8) :: tCurrent
 
     ! Misc variables
     type(ESMF_Field):: Field
@@ -174,18 +175,18 @@ contains
 
     ! Copy fields into an array
     do iVar = 1, nVarEsmf
-       nullify(Ptr)
+       nullify(Ptr_II)
        NameField = NameFieldEsmf_V(iVar)
        call ESMF_StateGet(ImportState, itemName=NameField, &
             field=Field, rc=rc)
        if(rc /= ESMF_SUCCESS) call my_error("ESMF_StateGet")
-       call ESMF_FieldGet(Field, farrayPtr=Ptr, rc=rc) 
+       call ESMF_FieldGet(Field, farrayPtr=Ptr_II, rc=rc)
        if(rc /= ESMF_SUCCESS) call my_error("ESMF_FieldGet")
 
-       Data_VII(iVar,:,:) = Ptr
+       Data_VII(iVar,:,:) = Ptr_II
     end do
     if(DoTest)then
-       write(*,*)'SWMF_GridComp shape of Ptr =', shape(Ptr)
+       write(*,*)'SWMF_GridComp shape of Ptr =', shape(Ptr_II)
        ! Do not check the poles
        do j = MinLat, MaxLat; do i = 1, nLon
           ! Calculate exact solution
@@ -220,29 +221,28 @@ contains
   !============================================================================
   subroutine my_final(gComp, ImportState, ExportState, Externalclock, rc)
 
-    type(ESMF_GridComp) :: gcomp
-    type(ESMF_State) :: importState
-    type(ESMF_State) :: exportState
-    type(ESMF_Clock) :: externalclock
+    type(ESMF_GridComp) :: gComp
+    type(ESMF_State) :: ImportState
+    type(ESMF_State) :: ExportState
+    type(ESMF_Clock) :: Externalclock
     integer, intent(out) :: rc
-
-    type(ESMF_VM)    :: vm
     !--------------------------------------------------------------------------
     call write_log("RIM_finalize routine called")
 
     call write_log("RIM_finalize routine returned")
-    
+
   end subroutine my_final
   !============================================================================
   subroutine my_error(String)
 
     ! Write out error message and stop
-    
+
     character(len=*), intent(in) :: String
     !--------------------------------------------------------------------------
-    
+
     call write_error('RIM_grid_comp '//String)
 
   end subroutine my_error
   !============================================================================
 end module RIM_grid_comp
+!==============================================================================

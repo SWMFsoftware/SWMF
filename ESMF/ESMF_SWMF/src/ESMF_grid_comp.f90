@@ -2,7 +2,7 @@ module ESMF_grid_comp
 
   ! Code for the ESMFSWMF Gridded Component which creates 4 child Components:
   ! IPE, SWMF, IE and IPE_ie_coupler.
-  
+
   ! ESMF Framework module
   use ESMF
 
@@ -12,10 +12,10 @@ module ESMF_grid_comp
        SyncFlag, write_log, write_error
 
   ! User Component registration routines
-  use SWMF_grid_comp, ONLY: swmf_set_services => SetServices
-  use IPE_grid_comp,  ONLY: ipe_set_services => SetServices
-  use RIM_grid_comp,  ONLY: rim_set_services => SetServices
-  use IPERIM_coupler, ONLY: coupler_set_services => SetServices
+  use SWMF_grid_comp, ONLY: swmf_set_services    => set_services
+  use IPE_grid_comp,  ONLY: ipe_set_services     => set_services
+  use RIM_grid_comp,  ONLY: rim_set_services     => set_services
+  use IPERIM_coupler, ONLY: coupler_set_services => set_services
 
   implicit none
   private
@@ -53,14 +53,14 @@ contains
     type(ESMF_Grid)    :: SwmfGrid, EsmfGrid
     type(ESMF_DELayout):: Layout
 
-    integer, allocatable:: iProcCouple(:)
+    integer, allocatable:: iProcCouple_I(:)
     integer :: i
     !--------------------------------------------------------------------------
     call write_log("ESMF_gric_comp init called")
     rc = ESMF_FAILURE
 
     ! Create the SWMF Gridded component
-    SwmfComp = ESMF_GridCompCreate(name="SWMF Gridded Component", & 
+    SwmfComp = ESMF_GridCompCreate(name="SWMF Gridded Component", &
          petlist = [ (i, i=iProcRootSwmf, iProcLastSwmf) ], rc=rc)
     if(rc /= ESMF_SUCCESS)call my_error('ESMF_GridCompCreate SWMF')
 
@@ -72,23 +72,23 @@ contains
     RimComp = ESMF_GridCompCreate(name="RIM Gridded Component", &
          petlist = [ (i, i=iProc0SwmfComp, iProcLastSwmfComp) ], rc=rc)
     if(rc /= ESMF_SUCCESS)call my_error('ESMF_GridCompCreate RIM')
-    
+
     ! Create the Coupler component.
     ! Assume iProcRootEsmf <= iProc0SwmfComp <= iProcLastSwmfComp
     if(iProcRootEsmf == iProc0SwmfComp .and. nProcSwmfComp == 1)then
        ! All share the same PET
-       iProcCouple = [ iProcRootEsmf ]
+       iProcCouple_I = [ iProcRootEsmf ]
     elseif(iProcRootEsmf < iProc0SwmfComp .and. nProcSwmfComp == 2)then
        ! All run on different PETs
-       iProcCouple = [ iProcRootEsmf, iProc0SwmfComp, iProcLastSwmfComp ]
+       iProcCouple_I = [ iProcRootEsmf, iProc0SwmfComp, iProcLastSwmfComp ]
     else
        ! They use 2 PETs
-       iProcCouple = [ iProcRootEsmf, iProcLastSwmfComp ]
+       iProcCouple_I = [ iProcRootEsmf, iProcLastSwmfComp ]
     end if
     CouplerComp = ESMF_CplCompCreate(name="ESMF-SWMF Coupler Component", &
-         petlist = iProcCouple, rc=rc)
+         petlist = iProcCouple_I, rc=rc)
     if(rc /= ESMF_SUCCESS)call my_error('ESMF_GridCompCreate Coupler')
-    deallocate(iProcCouple)
+    deallocate(iProcCouple_I)
 
     call write_log("Component Creates finished")
 
@@ -127,12 +127,12 @@ contains
     call ESMF_GridCompInitialize(SwmfComp, clock=parentclock, rc=rc)
     if(rc /= ESMF_SUCCESS)call my_error('ESMF_GridCompInitialize SWMF')
 
-    call ESMF_GridCompInitialize(RimComp, importState = RimImport, &
+    call ESMF_GridCompInitialize(RimComp, importState=RimImport, &
          clock=parentclock, rc=rc)
     if(rc /= ESMF_SUCCESS)call my_error('ESMF_GridCompInitialize RIM')
 
     call ESMF_CplCompInitialize(CouplerComp, &
-         importstate = IpeExport, exportstate = RimImport, &
+         importState = IpeExport, exportState=RimImport, &
          clock=ParentClock, rc=rc)
     if(rc /= ESMF_SUCCESS)call my_error('ESMF_CplCompInitialize')
 
@@ -150,18 +150,18 @@ contains
     integer, intent(out):: rc
 
     ! Local variables
-    type(ESMF_Clock) :: localclock
-    !-------------------------------------------------------------------------
+    type(ESMF_Clock) :: LocalClock
+    !--------------------------------------------------------------------------
     call write_log("ESMF_grid_comp run routine called")
 
     rc = ESMF_FAILURE
 
     ! make our own local copy of the clock
-    LocalClock = ESMF_ClockCreate(parentclock, rc=rc)
+    LocalClock = ESMF_ClockCreate(ParentClock, rc=rc)
     if(rc /= ESMF_SUCCESS)call my_error('ESMF_ClockCreate')
 
     do
-       if(ESMF_ClockIsStopTime(localclock, rc=rc)) EXIT
+       if(ESMF_ClockIsStopTime(LocalClock, rc=rc)) EXIT
        if(rc /= ESMF_SUCCESS)call my_error('ESMF_ClockIsStopTime')
 
        ! Couple the subcomponents first so that SWMF has the input from ESMF
@@ -172,11 +172,11 @@ contains
 
        ! Run the subcomponents concurrently if possible
        call ESMF_GridCompRun(SwmfComp, importState=RimImport, &
-            clock=localClock, syncflag=SyncFlag, rc=rc)
+            clock=LocalClock, syncflag=SyncFlag, rc=rc)
        if(rc /= ESMF_SUCCESS)call my_error('ESMF_GridCompRun Swmf')
 
        call ESMF_GridCompRun(IpeComp, exportState=IpeExport, &
-            clock=localClock, syncflag=SyncFlag, rc=rc)
+            clock=LocalClock, syncflag=SyncFlag, rc=rc)
        if(rc /= ESMF_SUCCESS)call my_error('ESMF_GridCompRun Esmf')
 
        ! Advance the time
@@ -195,24 +195,24 @@ contains
   !============================================================================
   subroutine my_final(gComp, ImportState, ExportState, Parentclock, rc)
 
-    type(ESMF_GridComp):: gcomp
-    type(ESMF_State):: importState
-    type(ESMF_State):: exportState
-    type(ESMF_Clock):: parentclock
+    type(ESMF_GridComp):: gComp
+    type(ESMF_State):: ImportState
+    type(ESMF_State):: ExportState
+    type(ESMF_Clock):: ParentClock
     integer, intent(out) :: rc
 
-    integer :: iError 
-    !-------------------------------------------------------------------------
+    integer :: iError
+    !--------------------------------------------------------------------------
     call write_log("ESMF-SWMF Finalize routine called")
 
     ! If something fails, try finalizing other things, but return with failure
-    ! Assume success 
+    ! Assume success
     iError = ESMF_SUCCESS
 
     call ESMF_GridCompFinalize(SwmfComp, clock=Parentclock, rc=rc)
     if(rc /= ESMF_SUCCESS) call my_error('ESMF_GridCompFinalize SwmfComp')
 
-    ! Give each of the subcomponents and the coupler a chance to finalize 
+    ! Give each of the subcomponents and the coupler a chance to finalize
     call ESMF_GridCompFinalize(RimComp, importState=RimImport, &
          clock=Parentclock, rc=rc)
     if(rc /= ESMF_SUCCESS) call my_error('ESMF_GridCompFinalize RimComp')
@@ -222,7 +222,7 @@ contains
     if(rc /= ESMF_SUCCESS) call my_error('ESMF_GridCompFinalize IpeComp')
 
     call ESMF_CplCompFinalize(CouplerComp, &
-         importstate=IpeExport, exportstate=RimImport, &
+         importState=IpeExport, exportState=RimImport, &
          clock=ParentClock, rc=rc)
     if(rc /= ESMF_SUCCESS) call	my_error('ESMF_CplCompFinalize CouplerComp')
 
@@ -245,11 +245,12 @@ contains
   end subroutine my_final
   !============================================================================
   subroutine my_error(String)
-    
-    character(len=*), intent(in) :: String
 
+    character(len=*), intent(in) :: String
+    !--------------------------------------------------------------------------
     call write_error("ESMF_grid_comp "//String)
 
   end subroutine my_error
   !============================================================================
 end module ESMF_grid_comp
+!==============================================================================
