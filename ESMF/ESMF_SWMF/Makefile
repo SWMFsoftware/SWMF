@@ -40,9 +40,6 @@ rundir: ${RUNDIR}
 	cd ${RUNDIR}; ln -sf ${BINDIR}/ESMF_SWMF.exe .
 
 test:
-	@echo "Test is disabled for now"
-
-test_esmf:
 	@echo "test_compile..." > test_esmf.diff
 	${MAKE} test_compile
 	@echo "test_rundir..." >> test_esmf.diff
