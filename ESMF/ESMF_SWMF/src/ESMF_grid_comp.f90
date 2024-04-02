@@ -6,7 +6,7 @@ module ESMF_grid_comp
   ! ESMF Framework module
   use ESMF
 
-  use ESMFSWMF_variables, ONLY: iProc, nProc, &
+  use ESMFSWMF_variables, ONLY: &
        iProcRootSwmf, iProcRootEsmf, iProcLastEsmf, iProcLastSwmf, &
        iProc0SwmfComp, iProcLastSwmfComp, nProcSwmfComp, &
        SyncFlag, write_log, write_error
@@ -89,7 +89,7 @@ contains
          petlist = iProcCouple, rc=rc)
     if(rc /= ESMF_SUCCESS)call my_error('ESMF_GridCompCreate Coupler')
     deallocate(iProcCouple)
-    
+
     call write_log("Component Creates finished")
 
     ! Call the SetServices routine for each so they can register their

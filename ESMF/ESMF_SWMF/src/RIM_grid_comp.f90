@@ -7,9 +7,7 @@ module RIM_grid_comp
   use ESMF
 
   use ESMFSWMF_variables, ONLY: &
-       DoRunSwmf, DoBlockAllSwmf, &
-       NameSwmfComp, nProcSwmfComp, NameFieldEsmf_V, nVarEsmf, &
-       Year_, Month_, Day_, Hour_, Minute_, Second_, MilliSec_, &
+       nProcSwmfComp, NameFieldEsmf_V, nVarEsmf, &
        add_fields, write_log, write_error, &
        DoTest, FieldTest_V, CoordCoefTest, dHallPerDtTest
 
@@ -17,7 +15,6 @@ module RIM_grid_comp
   use IE_ModSize, ONLY: nLat => IONO_nTheta, nLon => IONO_nPsi
 
   ! Conversion to radians
-  use ModNumConst, ONLY: cDegToRad
 
   implicit none
 
@@ -62,15 +59,10 @@ contains
     type(ESMF_Clock) :: externalclock
     integer, intent(out):: rc
 
-    logical          :: IsLastSession ! true if SWMF has a single session
     type(ESMF_VM)    :: Vm
     type(ESMF_Grid)  :: Grid
-    integer          :: iComm, iProc
-    type(ESMF_Time)  :: StartTime
-    integer          :: iStartTime_I(Year_:Millisec_)
+    integer          :: iComm
     type(ESMF_TimeInterval) :: SimTime, RunDuration
-    integer(ESMF_KIND_I4)   :: iSecond, iMilliSec
-    real(ESMF_KIND_R8)      :: TimeSim, TimeStop
 
     integer:: i
     !--------------------------------------------------------------------------
@@ -157,10 +149,8 @@ contains
     type(ESMF_TimeInterval) :: SimTime, TimeStep
     integer(ESMF_KIND_I4)   :: iSec, iMilliSec
 
-    ! Parameters for the SWMF_run interface
-    logical            :: DoStop            ! true if SWMF requests a stop
-    real(ESMF_KIND_R8) :: tCurrent, tCouple ! Current and next coupling times
-    real(ESMF_KIND_R8) :: tSimSwmf          ! SWMF Simulation time
+    ! Current time (needed for test only)
+    real(ESMF_KIND_R8) :: tCurrent  
 
     ! Misc variables
     type(ESMF_Field):: Field
@@ -237,7 +227,6 @@ contains
     integer, intent(out) :: rc
 
     type(ESMF_VM)    :: vm
-    integer          :: iProc
     !--------------------------------------------------------------------------
     call write_log("RIM_finalize routine called")
 

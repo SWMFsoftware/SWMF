@@ -67,10 +67,8 @@ module ESMFSWMF_variables
   
 contains
   !============================================================================
-  subroutine read_esmf_swmf_input(nProc, iProc, rc)
+  subroutine read_esmf_swmf_input(rc)
 
-    integer, intent(in)  :: nProc ! total number of processors
-    integer, intent(in)  :: iProc ! processor rank for this CPU
     integer, intent(out) :: rc    ! error code
 
     ! Labels used in the input file for the start and finish times
@@ -92,7 +90,6 @@ contains
 
     ! Store default values before reading
     integer               :: iDefaultTmp          ! Temporary default integer
-    real(ESMF_KIND_R8)    :: DefaultTmp           ! Temporary default real
     character             :: StringTmp            ! Temporary string
     !--------------------------------------------------------------------------
     call write_log("ESMF_SWMF_Mod:read_esmf_swmf_input called")
@@ -167,11 +164,7 @@ contains
     ! Read in layout information
     config = ESMF_ConfigCreate(rc=rc)
     call ESMF_ConfigLoadFile(Config, NameParamFile, rc=rc)
-    if(rc /= ESMF_SUCCESS) then
-       if(iProc == 0)write(*,*) 'ESMF_SWMF ERROR: ', &
-            'ESMF_ConfigLoadFile FAILED for file '//NameParamFile
-       RETURN
-    endif
+    if(rc /= ESMF_SUCCESS) call my_error('ESMF_ConfigLoadFile')
 
     ! Read root PE for the SWMF (default is 1)
     call ESMF_ConfigGetAttribute(Config, iProcRootSwmf, &
@@ -414,11 +407,11 @@ contains
   !============================================================================
   subroutine my_error(String)
 
+    ! Write out error message and stop
+    
     character(len=*), intent(in) :: String
-
-    write(*,*)'ERROR in ESMF_SWMF_Mod:', String
-    call ESMF_Finalize
-    stop
+    !--------------------------------------------------------------------------
+    call write_error('ESMFSWMF_variables '//String)
 
   end subroutine my_error
   !============================================================================

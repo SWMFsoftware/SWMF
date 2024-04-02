@@ -6,7 +6,6 @@ module IPE_grid_comp
        DoTest, FieldTest_V, CoordCoefTest, dHallPerDtTest, iCoupleFreq, &
        write_log, write_error
   ! Conversion to radians
-  use ModNumConst, ONLY: cDegToRad
 
   implicit none
   private

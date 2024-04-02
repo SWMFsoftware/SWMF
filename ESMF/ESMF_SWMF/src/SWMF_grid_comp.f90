@@ -8,16 +8,9 @@ module SWMF_grid_comp
   use ESMF
 
   use ESMFSWMF_variables, ONLY: &
-       DoRunSwmf, DoBlockAllSwmf, &
-       NameSwmfComp, iProc0SwmfComp, iProcLastSwmfComp, &
-       NameFieldEsmf_V, nVarEsmf, &
+       DoRunSwmf, DoBlockAllSwmf, NameSwmfComp, &
        Year_, Month_, Day_, Hour_, Minute_, Second_, MilliSec_, &
        write_log, write_error
-
-  ! Size of ionosphere grid in SWMF/IE model
-  use IE_ModSize, ONLY: nLat => IONO_nTheta, nLon => IONO_nPsi
-  ! Conversion to radians
-  use ModNumConst, ONLY: cDegToRad
 
   implicit none
 
@@ -33,7 +26,6 @@ module SWMF_grid_comp
   ! +Z points to north magnetic dipole and the Sun is in the +X-Z halfplane.
 
   ! Coordinate arrays
-  real(ESMF_KIND_R8), pointer, save:: Lon_I(:), Lat_I(:)
 
 contains
   !============================================================================
@@ -62,14 +54,13 @@ contains
     logical          :: IsLastSession ! true if SWMF has a single session
     type(ESMF_VM)    :: Vm
     type(ESMF_Grid)  :: Grid
-    integer          :: iComm, iProc
+    integer          :: iComm
     type(ESMF_Time)  :: StartTime
     integer          :: iStartTime_I(Year_:Millisec_)
     type(ESMF_TimeInterval) :: SimTime, RunDuration
     integer(ESMF_KIND_I4)   :: iSecond, iMilliSec
     real(ESMF_KIND_R8)      :: TimeSim, TimeStop
 
-    integer:: i
     !--------------------------------------------------------------------------
     call write_log("SWMF_grid_comp:init routine called")
     rc = ESMF_FAILURE
@@ -129,9 +120,6 @@ contains
     integer, intent(out):: rc
 
     ! Access to the data
-    real(ESMF_KIND_R8), pointer     :: Ptr(:,:)
-    real(ESMF_KIND_R8), allocatable :: Data_VII(:,:,:)
-    integer                         :: iVar
 
     ! Access to time
     type(ESMF_TimeInterval) :: SimTime, TimeStep
@@ -189,7 +177,6 @@ contains
     integer, intent(out) :: rc
 
     type(ESMF_VM)    :: vm
-    integer          :: iProc
     !--------------------------------------------------------------------------
     call write_log("SWMF_finalize routine called")
 

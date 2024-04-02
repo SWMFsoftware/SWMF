@@ -40,7 +40,6 @@ program ESMF_driver
   type(ESMF_TimeInterval) :: TimeStep
 
   ! Variables for the clock
-  integer :: iTime                              ! Index for date-time arrays
 
   ! Simulation time (non-zero for restart)
   type(ESMF_Time)         :: CurrentTime
@@ -48,8 +47,6 @@ program ESMF_driver
   integer(ESMF_KIND_I4)   :: iSecond, iMillisec
 
   ! Store default values before reading
-  integer :: iDefaultTmp                        ! Temporary default integer
-  real(ESMF_KIND_R8)    :: DefaultTmp           ! Temporary default real
 
   ! Return code for error checks
   integer :: rc
@@ -70,7 +67,7 @@ program ESMF_driver
   if(rc /= ESMF_SUCCESS) call my_error('ESMF_VMGet failed')
 
   ! Read input paramterers
-  call read_esmf_swmf_input(nProc, iProc, rc)
+  call read_esmf_swmf_input(rc)
   if(rc /= ESMF_SUCCESS) call my_error('call read_esmf_swmf_input failed')
 
   ! Create section
@@ -85,16 +82,13 @@ program ESMF_driver
        userRoutine=ESMF_set_services, rc=rc)
   if(rc /= ESMF_SUCCESS) call my_error('ESMF_GridCompSetServices')
 
-  !  Create and initialize a clock, and a grid.
+  ! Create and initialize a clock
 
   ! Based on values from the Config file, create a Clock.  
 
   call ESMF_TimeIntervalSet(TimeStep, s=iCoupleFreq, rc=rc)
 
-  if(rc /= ESMF_SUCCESS) then
-     if(iProc==0)write(*,*)'ESMF_SWMF ERROR: iCoupleFreq=', iCoupleFreq
-     call my_error('ESMF_TimeIntervalSet(s=iCoupleFreq) failed')
-  end if
+  if(rc /= ESMF_SUCCESS) call my_error('ESMF_TimeIntervalSet TimeStep')
 
   call ESMF_TimeSet(StartTime,    &
        yy=iStartTime_I(Year_),    &
