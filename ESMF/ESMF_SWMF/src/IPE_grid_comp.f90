@@ -17,11 +17,28 @@ module IPE_grid_comp
   ! This is a 2D spherical grid in MAG coordinates (rotates with Earth):
   ! +Z points to north magnetic dipole, +Y is towards rotational Omega x Z
 
-  integer, public:: nLon=81, nLat=97 ! Default ESMF grid size
+  integer, parameter:: nLon=81, nLat=97 ! Default ESMF grid size
 
   ! Coordinate arrays
   real(ESMF_KIND_R8), pointer:: Lon_I(:), Lat_I(:)
 
+  ! IPE dynamo grid latitudes
+  real, parameter:: LatIpe_I(nLat) = [ &
+       -90.0000, -88.1238, -86.2386, -84.3344, -82.4013, -80.4296, -78.4095, &
+       -76.3318, -74.1877, -71.9690, -69.6682, -67.2793, -64.7977, -62.2208, &
+       -59.5484, -56.7835, -53.9323, -51.0045, -48.0138, -44.9776, -41.9167, &
+       -38.8546, -35.8165, -32.8285, -29.9165, -27.1046, -24.4146, -21.8655, &
+       -19.4724, -17.2473, -15.1984, -13.3307, -11.6462, -10.1443,  -8.8219, &
+       -7.6733,   -6.6900,  -5.8603,  -5.1688,  -4.5959,  -4.1191,  -3.7133, &
+       -3.3532,   -3.0142,  -2.6728,  -2.3049,  -1.8786,  -1.3276,   0.0000, &
+       1.3276,   1.8786,  2.3049,  2.6728,  3.0142,  3.3532,  3.7133,  &
+       4.1191,   4.5959,  5.1688,  5.8603,  6.6900,  7.6733,  8.8219,  &
+       10.1443, 11.6462, 13.3307, 15.1984, 17.2473, 19.4724, 21.8655,  &
+       24.4146, 27.1046, 29.9165, 32.8285, 35.8165, 38.8546, 41.9167,  &
+       44.9776, 48.0138, 51.0045, 53.9323, 56.7835, 59.5484, 62.2208,  &
+       64.7977, 67.2793, 69.6682, 71.9690, 74.1877, 76.3318, 78.4095,  &
+       80.4296, 82.4013, 84.3344, 86.2386, 88.1238, 90.0000 ]
+  
 contains
   !============================================================================
   subroutine set_services(gComp, iError)
@@ -82,10 +99,8 @@ contains
        Lon_I(i) = (i-1)*(360.0/(nLon-1)) - 180
     end do
     write(*,*)'IPE grid: Lon_I(1,2,last)=', Lon_I([1, 2, nLon])
-    ! Uniform latitude grid (for now!!!)
-    do i = 1, nLat
-       Lat_I(i) = (i-1)*(180./(nLat-1)) - 90
-    end do
+    ! Nonuniform latitude grid
+    Lat_I = LatIpe_I
     write(*,*)'IPE grid: Lat_I(1,2,last)=', Lat_I([1, 2, nLat])
 
     ! Add fields to the export state
