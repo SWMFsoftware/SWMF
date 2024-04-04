@@ -166,7 +166,7 @@ ascii			TypeFile
 #LOOKUPTABLE
 TR			NameTable
 load			NameCommand
-SC/Param/TR8.dat	NameFile
+SC/Param/TR8.dat		NameFile
 real8			TypeFile
 
 
