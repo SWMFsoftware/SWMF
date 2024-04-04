@@ -80,7 +80,7 @@ uniform			TypeHeatPartitioning
 0.6			QionRatio
 
 #TEST
-radiative_cooling write_plot_los		StringTest
+trace_field_sphere  radiative_cooling write_plot_los		StringTest
 
 #TESTPIXEL
 200			iPixTest
@@ -159,8 +159,16 @@ none			TypeBc4
 none			TypeBc5
 none			TypeBc6
 
+#TRACEACCURACY
+5.0			AccuracyFactor
+
+#SQUASHFACTOR
+720                     nLonSquash
+360                     nLatSquash
+20.0                    AccuracyFactorSquash
+
 #SAVEPLOT
-6			nPlotFile
+7			nPlotFile
 x=0 VAR idl		StringPlot
 10			DnSavePlot
 -1.			DtSavePlot
@@ -208,6 +216,19 @@ HGR			TypeCoordPlot
 1.0			dLat
 {HD} te ti		NameVars
 {default}		NamePars
+los LGQ idl		StringPlot
+-1  			DnSavePlot
+100.0			DtSavePlot
+-215.0			ObsPosX
+0.0			ObsPosY
+0.0			ObsPosZ
+20.0			OffsetAngle
+6.0			rSizeImage
+0.0			xOffset
+0.0			yOffset
+0.0			rOccult
+0.0			MuLimbDarkening
+300			nPix
 
 #LOOKUPTABLE		OffsetAngle
 AiaXrt			NameTable
