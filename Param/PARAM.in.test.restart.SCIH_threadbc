@@ -163,9 +163,9 @@ none			TypeBc6
 5.0			AccuracyFactor
 
 #SQUASHFACTOR
-720                     nLonSquash
-360                     nLatSquash
-20.0                    AccuracyFactorSquash
+720			nLonSquash
+360			nLatSquash
+20.0			AccuracyFactorSquash
 
 #SAVEPLOT
 7			nPlotFile
