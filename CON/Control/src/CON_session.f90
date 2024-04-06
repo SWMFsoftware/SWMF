@@ -187,9 +187,9 @@ contains
 
     ! If true, save restart before coupling.
     logical:: DoSaveRestartBeforeCoupling
-    
-    logical:: DoSaveRestart 
-    
+
+    logical:: DoSaveRestart
+
     character(len=*), parameter:: NameSub = 'do_session'
     !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
@@ -258,13 +258,12 @@ contains
        write(*,*)NameSub,' tSimulation_C=',tSimulation_C(1:nComp)
     end if
 
-    
     DoSaveRestartBeforeCoupling = .false.
     ! Saving restar before coupling if PC_ or PT_ is involved
     if(use_comp(PC_) .or. use_comp(PT_)) then
        DoSaveRestartBeforeCoupling = .true.
     end if
-    
+
     TIMELOOP: do
 
        if(DoTestMe)write(*,*)NameSub,&
@@ -511,7 +510,7 @@ contains
 
        ! Print progress report at given frequency
        call show_progress
-       
+
        ! Save restart files when scheduled except for the final save
        ! with UseEndTime which overwrites tSimulation.
        DoSaveRestart = .false.
@@ -524,9 +523,9 @@ contains
 
        if(DoSaveRestartBeforeCoupling .and. DoSaveRestart) then
           call save_restart
-          IsRestartSaved = .true.          
-       end if       
-       
+          IsRestartSaved = .true.
+       end if
+
        if(DoTestMe)write(*,*)NameSub,' couple components'
 
        ! Couple components as scheduled
@@ -551,9 +550,9 @@ contains
 
        if(.not.DoSaveRestartBeforeCoupling .and. DoSaveRestart) then
           call save_restart
-          IsRestartSaved = .true.          
+          IsRestartSaved = .true.
        end if
-       
+
     end do TIMELOOP
 
     if(.not.IsLastSession)then
