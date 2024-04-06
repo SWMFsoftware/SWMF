@@ -7,7 +7,7 @@ module CON_session
   ! Execute one session based on the PARAM.in file where the sessions
   ! are separated by #RUN commands.
 
-  use CON_comp_param, ONLY: MaxComp, NameComp_I
+  use CON_comp_param, ONLY: MaxComp, NameComp_I, PC_, PT_
   use CON_world, ONLY: i_comm, is_proc, is_proc0, i_proc, &
        i_comp, n_comp, use_comp, is_thread, world_used, CON_
 
@@ -185,6 +185,11 @@ contains
     ! Smallest temporal frequency and a small fraction
     real:: DtTiny = 0.0
 
+    ! If true, save restart before coupling.
+    logical:: DoSaveRestartBeforeCoupling
+
+    logical:: DoSaveRestart
+
     character(len=*), parameter:: NameSub = 'do_session'
     !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
@@ -251,6 +256,12 @@ contains
     if(DoTestMe)then
        write(*,*)NameSub,' nIteration, nStep=', nIteration, nStep
        write(*,*)NameSub,' tSimulation_C=',tSimulation_C(1:nComp)
+    end if
+
+    DoSaveRestartBeforeCoupling = .false.
+    ! Saving restar before coupling if PC_ or PT_ is involved
+    if(use_comp(PC_) .or. use_comp(PT_)) then
+       DoSaveRestartBeforeCoupling = .true.
     end if
 
     TIMELOOP: do
@@ -500,6 +511,21 @@ contains
        ! Print progress report at given frequency
        call show_progress
 
+       ! Save restart files when scheduled except for the final save
+       ! with UseEndTime which overwrites tSimulation.
+       DoSaveRestart = .false.
+       if(is_time_to(SaveRestart, nStep, tSimulation+DtTiny, DoTimeAccurate) &
+            .and. &
+            .not. (UseEndTime .and. tSimulation + DtTiny >= tSimulationMax)) &
+            then
+          DoSaveRestart = .true.
+       end if
+
+       if(DoSaveRestartBeforeCoupling .and. DoSaveRestart) then
+          call save_restart
+          IsRestartSaved = .true.
+       end if
+
        if(DoTestMe)write(*,*)NameSub,' couple components'
 
        ! Couple components as scheduled
@@ -522,15 +548,11 @@ contains
 
        end do
 
-       ! Save restart files when scheduled except for the final save
-       ! with UseEndTime which overwrites tSimulation.
-       if(is_time_to(SaveRestart, nStep, tSimulation+DtTiny, DoTimeAccurate) &
-            .and. &
-            .not. (UseEndTime .and. tSimulation + DtTiny >= tSimulationMax)) &
-            then
+       if(.not.DoSaveRestartBeforeCoupling .and. DoSaveRestart) then
           call save_restart
           IsRestartSaved = .true.
-       endif
+       end if
+
     end do TIMELOOP
 
     if(.not.IsLastSession)then
