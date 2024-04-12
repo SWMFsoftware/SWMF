@@ -220,7 +220,7 @@ GEO			TypeCoordGrid
 -1			DnSaveMagGrid
 20			DtSaveMagGrid
 
-#IE
+#TRACEIE
 T			DoTraceIE
 
 #END_COMP GM -----------------------------------------------------------------
