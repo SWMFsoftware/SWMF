@@ -164,11 +164,11 @@ contains
       if(DoTest)write(*,*)NameSubSub,' starting, iProc=', i_proc()
 
       if(DoMultiFluidIMCoupling) then
-         NameVar='vol:z0x:z0y:bmin:Hprho:Oprho:Hpp:Opp'
-         nVarGmIm = 8
+         NameVar='vol:z0x:z0y:bmin:Hprho:Oprho:Hpp:Opp:pe'
+         nVarGmIm = 9
       else
-         NameVar='vol:z0x:z0y:bmin:rho:p'
-         nVarGmIm = 6
+         NameVar='vol:z0x:z0y:bmin:rho:p:pe'
+         nVarGmIm = 7
       endif
 
       ! Get field line integrals from GM to IM
@@ -419,14 +419,14 @@ contains
       if(DoTest)write(*,*)NameSub,' starting, iProc=',i_proc()
 
       if(DoMultiFluidIMCoupling)then
-         NameVar='p:rho:Hpp:Opp:Hprho:Oprho'
-         nVarImGm=6
+         NameVar='pe:p:rho:Hpp:Opp:Hprho:Oprho'
+         nVarImGm=7
       else if(DoAnisoPressureIMCoupling)then
          NameVar='p:rho:ppar:bmin'
          nVarImGm=4
       else
-         NameVar='p:rho'
-         nVarImGm=2
+         NameVar='pe:p:rho'
+         nVarImGm=3
       end if
 
       allocate(Buffer_IIV(iSize,jSize,nVarImGm))
