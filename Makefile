@@ -420,11 +420,6 @@ EE/BATSRUS/src/Makefile:
 		cp ModGridDescriptor.f90 \
 		../../../EE/BATSRUS/srcInterface
 	cp GM/BATSRUS/srcUser/*.f90 EE/BATSRUS/srcUser/
-	if [ -d GM/BATSRUS/srcUserExtra ]; then \
-		cp GM/BATSRUS/srcUserExtra/ModUserEe*.f90 \
-		   GM/BATSRUS/srcUserExtra/ModUserSwarm*.f90 \
-			EE/BATSRUS/srcUser/; \
-	fi
 	cp GM/BATSRUS/srcEquation/*.f90 EE/BATSRUS/srcEquation/
 	cd GM/BATSRUS; \
 		cp Makefile.def Makefile.conf PARAM.XML Config.pl \
