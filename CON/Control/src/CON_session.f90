@@ -8,6 +8,7 @@ module CON_session
   ! are separated by #RUN commands.
 
   use CON_comp_param, ONLY: MaxComp, NameComp_I, PC_, PT_
+  use CON_bline,      ONLY: BL_
   use CON_world, ONLY: i_comm, is_proc, is_proc0, i_proc, &
        i_comp, n_comp, use_comp, is_thread, world_used, CON_
 
@@ -259,8 +260,8 @@ contains
     end if
 
     DoSaveRestartBeforeCoupling = .false.
-    ! Saving restar before coupling if PC_ or PT_ is involved
-    if(use_comp(PC_) .or. use_comp(PT_)) then
+    ! Saving restart before coupling if PC_ or PT_ is involved
+    if(use_comp(PC_) .or. (use_comp(PT_).and.PT_/=BL_)) then
        DoSaveRestartBeforeCoupling = .true.
     end if
 
