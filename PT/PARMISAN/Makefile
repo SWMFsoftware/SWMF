@@ -48,3 +48,42 @@ PARMISAN:
 	cd ${TIMINGDIR}; ${MAKE} LIB
 	cd src; ${MAKE} LIB
 	cd src; ${MAKE} PARMISAN
+NOMPI:
+	cd util/NOMPI/src; make LIB
+
+COMPONENT = SP
+
+rundir:
+	mkdir -p ${RUNDIR}/SP 
+	cd ${RUNDIR}/SP; \
+		mkdir restartIN restartOUT IO2; \
+		ln -s ${SPDIR}/Param .
+	@(if [ "$(STANDALONE)" != "NO" ]; then \
+		touch ${DIR}/share/JobScripts/job._TMP_${MACHINE}; \
+		touch ${DIR}/share/JobScripts/_TMP_.${MACHINE}.pl; \
+		cp ${DIR}/share/JobScripts/job.*${MACHINE}* ${RUNDIR}/; \
+		cp ${DIR}/share/JobScripts/*.${MACHINE}.pl ${RUNDIR}/; \
+		rm -f ${RUNDIR}/*_TMP_* ${DIR}/share/JobScripts/*_TMP_*; \
+		cp -f Param/PARAM.in.test ${RUNDIR}/PARAM.in; \
+		touch ${RUNDIR}/core; chmod 444 ${RUNDIR}/core; \
+		cd ${RUNDIR}; ln -s ${BINDIR}/${DEFAULT_EXE} .; \
+	fi);
+
+clean:  install
+	@(if [ -r "Makefile.conf" ]; then \
+		cd src; make clean; \
+		cd ../srcInterface; make clean; \
+	fi)
+
+distclean: 
+	./Config.pl -uninstall
+
+allclean:
+	cd src; $(MAKE) distclean
+	cd srcInterface; $(MAKE) distclean
+	cd Doc/Tex; $(MAKE) cleanpdf
+
+# Testing
+
+TESTDIR = run_test
+BLESS=NO
