@@ -60,7 +60,6 @@ if($SWMFsoftware){
 	"FLEKS_PT"      => "PT", 
 	"DGCPM"         => "PS", 
 	"AMPS_PT"       => "PT", 
-	"AMPS_PC"       => "PC",
 	"PARMISAN"      => "PT",
 	"PWOM"          => "PW", 
 	"RBE"           => "RB",
