@@ -43,7 +43,6 @@ test_help:
 	@(if [ -d PW/PWOM    ]; then echo "    test_swpc_cimi_pwom_species (run multispecies GM-IE-CIMI-PWOM SWPC test)"; fi)
 	@(if [ -d PC/FLEKS   ]; then echo "    test_swpc_aepic             (run MHD-AEPIC GM-IE-RCM2-PC SWPC test)"; fi)	
 	@(if [ -d PW/PWOM    ]; then echo "    test1                       (run GM-IE-PWOM test)"; fi)
-	@(if [ -d UA/GITM    ]; then echo "    test3                       (run GM-IE-IM-UA test)"; fi)
 	@(if [ -d IM/HEIDI   ]; then echo "    test4                       (run GM-IE-HEIDI test)"; fi)
 	@(if [ -d GM/BATSRUS/srcUserExtra ]; then echo "    test5                       (run EE-SC test)"; fi)
 	@(if [ -d GM/BATSRUS ]; then echo "    test6                       (run SC-IH coupling test: stream-aligned)"; fi)
@@ -51,7 +50,6 @@ test_help:
 	@(if [ -d GM/BATSRUS ]; then echo "    test8                       (run SC-IH coupling test with AWSoM-R)"; fi)
 	@(if [ -d GM/BATSRUS ]; then echo "    test9                       (run SC-IH coupling test with AWSoM)"; fi)
 	@(if [ -d GM/BATSRUS ]; then echo "    test10                      (run SC-IH like in a real-time)"; fi)
-	@(if [ -d PT/AMPS    ]; then echo "    test11                      (run GM-PT/AMPS coupler test)"; fi)
 	@(if [ -d PT/AMPS    ]; then echo "    test13                      (run GM-PT/AMPS test: Europa)"; fi)
 	@(if [ -d PT/PARMISAN ]; then echo "    test14                      (run SC-IH-PT/PARMISAN test)"; fi)
 	@(if [ -d SP/MFLAMPA ]; then echo "    test15                      (run SC-IH-SP/MFLAMPA test)"; fi)
@@ -398,171 +396,6 @@ test1_check:
 		output/test1/IE*.idl.gz \
 		>> test01_ie.diff)
 	ls -l test01_*.diff
-
-### test2: GM+IE+RCM with multifluid GM-IM coupling ###
-
-test2:  
-	@echo "test2_compile..." > test02_gm_multi.diff
-	@echo "test2_compile..." > test02_ie.diff	
-	@echo "test2_compile..." > test02_im_rcm_multi.diff
-	${MAKE} test2_compile
-	@echo "test2_rundir..." >> test02_gm_multi.diff
-	@echo "test2_rundir..." >> test02_ie.diff
-	@echo "test2_rundir..." >> test02_im_rcm_multi.diff
-	${MAKE} test2_rundir
-	@echo "test2_run..." >> test02_gm_multi.diff
-	@echo "test2_run..." >> test02_ie.diff
-	@echo "test2_run..." >> test02_im_rcm_multi.diff
-	${MAKE} test2_run
-	@echo "test2_restart..." >> test02_gm_multi.diff
-	@echo "test2_restart..." >> test02_ie.diff
-	@echo "test2_restart..." >> test02_im_rcm_multi.diff
-	${MAKE} test2_restart
-	@echo "test2_check..." >> test02_gm_multi.diff
-	@echo "test2_check..." >> test02_ie.diff
-	@echo "test2_check..." >> test02_im_rcm_multi.diff
-	${MAKE} test2_check
-
-test2_compile:
-	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2
-	./Config.pl -o=GM:u=Default,e=MhdIons,ng=2,g=8,8,8,IE:g=91,181
-	${MAKE} SWMF
-	make PIDL
-
-test2_rundir:
-	rm -rf ${TESTDIR}
-	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
-	cp Param/PARAM.in.test.GMIERCM_Multi ${TESTDIR}/PARAM.in
-	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
-
-test2_run:
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}; ./Restart.pl
-
-test2_restart:
-	cd ${TESTDIR}; mv PARAM.in PARAM.in_start; rm -f PARAM.in_orig_
-	cd ${TESTDIR}; cp Param/PARAM.in.test.restart.GMIERCM_Multi PARAM.in
-	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_restart
-	cd ${TESTDIR}/IM/plots/; cp 2d__max_t00000020.dat t20.txt
-	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS; \
-		mv runlog_restart RESULTS
-
-test2_check:
-	-@(${DIFFNUM} -b -r=1e-5 -a=1e-8 \
-		${TESTDIR}/RESULTS/GM/log_n000001.log \
-		output/test2/GM_log_n000001.log \
-		> test02_gm_multi.diff)
-	-@(${DIFFNUM} -b -r=1e-5 -a=1e-8 \
-		${TESTDIR}/RESULTS/GM/magnetometers_n*.mag \
-		output/test2/magnetometers.mag \
-		>> test02_gm_multi.diff)
-	-@(${DIFFNUM} -b -r=1e-5 -a=1e-8 \
-		${TESTDIR}/RESULTS/GM/geoindex_n*.log \
-		output/test2/GM_geoindex.log \
-		>> test02_gm_multi.diff)
-	-@(${DIFFNUM} -b -r=1e-5 -a=1e-4 \
-		${TESTDIR}/RESULTS/RESTART/GM/x_geoindex.rst \
-		output/test2/GM_restart_geoindex.txt \
-		>> test02_gm_multi.diff)
-	-@(${DIFFNUM} -b -r=1e-5 \
-		${TESTDIR}/RESULTS/IE/IE_t000321_104500.log \
-		output/test2/IE.log \
-		> test02_ie.diff) 
-	-@(${DIFFNUM} -b -r=1e-3 -a=1e-8 -p="grep -v 'AUXDATA SAVEDATE='" \
-		${TESTDIR}/RESULTS/IM/t20.dat \
-		output/test2/IM_2d__max_t00000020.dat.gz \
-		> test02_im_rcm_multi.diff)
-	ls -l test02_*.diff
-
-### test_3: configure SWMF with GM+IE+IM+UA only. ###
-test3_build:
-	rm -rf Test3_Build
-	Scripts/Configure.pl -d=Test3_Build
-	cd ${BUILD}; ./Config.pl -install \
-	   	     	-compiler=${FORTRAN_COMPILER_NAME},${C_COMPILER_NAME}
-	cd Test3_Build; make test3
-	
-test3:  
-	@echo "test3_compile..." > test03_UAcouple_gm.diff
-	@echo "test3_compile..." > test03_UAcouple_ie.diff	
-	@echo "test3_compile..." > test03_UAcouple_ua_gitm.diff
-	${MAKE} test3_compile
-	@echo "test3_rundir..." >> test03_UAcouple_gm.diff
-	@echo "test3_rundir..." >> test03_UAcouple_ie.diff
-	@echo "test3_rundir..." >> test03_UAcouple_ua_gitm.diff
-	${MAKE} test3_rundir
-	@echo "test3_run..." >> test03_UAcouple_gm.diff
-	@echo "test3_run..." >> test03_UAcouple_ie.diff
-	@echo "test3_run..." >> test03_UAcouple_ua_gitm.diff
-	${MAKE} test3_run
-	#@echo "test3_restart..." >> test03_UAcouple_gm.diff
-	#@echo "test3_restart..." >> test03_UAcouple_ie.diff
-	#@echo "test3_restart..." >> test03_UAcouple_ua_gitm.diff
-	#${MAKE} test3_restart
-	@echo "test3_check..." >> test03_UAcouple_gm.diff
-	@echo "test3_check..." >> test03_UAcouple_ie.diff
-	@echo "test3_check..." >> test03_UAcouple_ua_gitm.diff
-	${MAKE} test3_check
-
-test3_compile:
-	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2,UA/GITM
-	./Config.pl -o=GM:u=Default,e=Mhd,ng=2,g=8,8,8,IE:g=181,361
-	${MAKE} SWMF
-	make PIDL
-	cd UA/GITM; make POST
-
-test3_rundir:
-	rm -rf ${TESTDIR}
-	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
-	cp Param/PARAM.in.test.GMIEIMUA ${TESTDIR}/
-	cp Param/PARAM.in.test.restart.GMIEIMUA ${TESTDIR}/
-	cp ${TESTDIR}/PARAM.in.test.GMIEIMUA ${TESTDIR}/PARAM.in
-	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
-
-test3_run:
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}; ./Restart.pl
-	cd ${TESTDIR}; ./pGITM.py
-	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS
-
-test3_check:
-	-@(${DIFFNUM} -b -r=1e-5 -a=2e-2 \
-		${TESTDIR}/RESULTS/UA/ua_ie_buffer_t20000321_104530.out\
-	 	output/test3/ua_ie_buffer_t20000321_104530.out.gz \
-		> test03_UAcouple_ua_gitm.diff)
-	-@(${DIFFNUM} -b -r=1e-5 -a=2e-4 \
-		${TESTDIR}/RESULTS/IE/it000321_104530_000.idl \
-	 	output/test3/it000321_104530_000.idl.gz \
-		> test03_UAcouple_ie.diff)
-	-@(${DIFFNUM} -b -r=1e-5 -a=2e-8 \
-		${TESTDIR}/RESULTS/GM/log_n000001.log \
-	 	output/test3/log_n000001.log \
-		> test03_UAcouple_gm.diff)
-
-# Restart capability forthcoming.
-test3_restart:
-	cd ${TESTDIR}; cp PARAM.in.test.restart.GMIEIMUA PARAM.in
-	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_restart
-	cd ${TESTDIR}; ./pGITM.py
-	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS; \
-		mv runlog_restart RESULTS
-
-# Restart capability forthcoming
-test3_check_restart:
-	-@(${DIFFNUM} -b -r=1e-5 -a=2e-2 \
-		${TESTDIR}/RESULTS/UA/ua_ie_buffer_t20000321_104600.out \
-	 	output/test3/ua_ie_buffer_t20000321_104600.out.gz \
-		> test03_UAcouple_ua_gitm.diff)
-	-@(${DIFFNUM} -b -r=1e-5 -a=2e-4 \
-		${TESTDIR}/RESULTS/IE/it000321_104600_000.idl \
-	 	output/test3/it000321_104600_000.idl.gz \
-		> test03_UAcouple_ie.diff)
-	-@(${DIFFNUM} -b -r=1e-5 -a=2e-8 \
-		${TESTDIR}/RESULTS/GM/log_n000001.log \
-	 	output/test3/log_n000001.log \
-		> test03_UAcouple_gm.diff)
 
 ### test_swpc_build: configure SWMF with GM+IE+IM+RB only. ###
 
@@ -1959,58 +1792,6 @@ test10_check:
 		output/test10/IH_log_n000000.log \
 		> test10_ih.diff)
 	ls -l test10_*.diff
-
-### test11: Dipole field with solar wind coupled with an exosphere model, to test the GM/PT coupler ###
-
-test11:
-	@echo "test11_compile..." > test11_gm.diff
-	@echo "test11_compile..." > test11_pt.diff
-	${MAKE} test11_compile
-	@echo "test11_rundir..." >> test11_gm.diff
-	@echo "test11_rundir..." >> test11_pt.diff
-	${MAKE} test11_rundir
-	@echo "test11_run..." >> test11_gm.diff
-	@echo "test11_run..." >> test11_pt.diff
-	${MAKE} test11_run
-	@echo "test11_check..." >> test11_gm.diff
-	@echo "test11_check..." >> test11_pt.diff
-	${MAKE} test11_check
-
-test11_compile:
-	./Config.pl -v=Empty,GM/BATSRUS,PT/AMPS
-	./Config.pl -o=GM:u=Default,e=Mhd,ng=2,g=8,8,8
-	./Config.pl -o=PT:spice-path=nospice,application=coupler-test
-	${MAKE} SWMF
-	make PIDL
-
-test11_rundir:
-	rm -rf ${TESTDIR}
-	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
-	cp Param/PARAM.in.test.GMPT ${TESTDIR}/PARAM.in
-	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
-
-test11_run:
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
-
-# Note: skip columns that depend on number of processors
-#       multiply density column by 1e20 to make it order unity
-test11_check:
-	-(${DIFFNUM} -b -a=1e-27 \
-	        ${TESTDIR}/RESULTS/GM/log_n000001.log \
-		output/test11/log_n000001.log \
-		> test11_gm.diff)
-	gunzip -c output/test11/pic.NA.s=0.out=19.dat.gz \
-	       	> ${TESTDIR}/RESULTS/PT/pic.NA.ref
-	cd ${TESTDIR}/RESULTS/PT; \
-	        cp -f pic.NA.s=0.out=19.dat pic.NA.dat; \
-	        perl -ai -ne 'print "@F[0..3] @F[6..14] ",1e20*$$F[15]," @F[16..$$#F]\n"' \
-			pic.NA.ref pic.NA.dat 
-	-(${DIFFNUM} -a=1e-19 -r=1e-6 -b \
-	        ${TESTDIR}/RESULTS/PT/pic.NA.dat \
-		${TESTDIR}/RESULTS/PT/pic.NA.ref \
-                > test11_pt.diff)
-		ls -l test11*.diff
 
 ### test13: Europa's exosphere model with GM and PT ###
 
