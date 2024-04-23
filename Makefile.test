@@ -55,9 +55,9 @@ test_help:
 	@(if [ -d PC/AMPS    ]; then echo "    test12                      (run GM-PC/AMPS tests)"; fi)
 	@(if [ -d PC/IPIC3D2 ]; then echo "    test12_ipic3d               (run GM-PC/IPIC3D2 tests)"; fi)
 	@(if [ -d PT/AMPS    ]; then echo "    test13                      (run GM-PT/AMPS test: Europa)"; fi)
+	@(if [ -d PT/PARMISAN ]; then echo "    test14                      (run SC-IH-PT/PARMISAN test)"; fi)
 	@(if [ -d SP/MFLAMPA ]; then echo "    test15                      (run SC-IH-SP/MFLAMPA test)"; fi)
 	@(if [ -d SP/MFLAMPA ]; then echo "    test15_build                (configure SC-IH-SP/MFLAMPA, run test15)"; fi)
-	@(if [ -d PT/AMPS    ]; then echo "    test15_pt                   (run SC-IH-PT/AMPS test)"; fi)
 	@(if [ -d PC/FLEKS   ]; then echo "    test16                      (run GM-PC/FLEKS test: periodic FLEKS)"; fi)
 	@(if [ -d PC/FLEKS   ]; then echo "    test17                      (run GM-PC/FLEKS test: 2D Alfven wave)"; fi)
 	@(if [ -d PC/FLEKS   ]; then echo "    test18                      (run GM-PC/FLEKS test: 3D reconnection)"; fi)
@@ -2050,162 +2050,49 @@ test13_check:
 		> test13_pt.diff)
 		ls -l test13*.diff
 
-### test14: OH/BATSRUS (single-ion) coupled with PT/AMPS ###
+### test14: SC+IH+PT
 
 test14:
-	@echo "test14_compile..." > test14_ohpt.diff
+	rm -f test14_scihpt.diff
+	@echo "test14_compile..." > test14_scihpt.diff
 	${MAKE} test14_compile
-	@echo "test14_rundir..." >> test14_ohpt.diff
+	@echo "test14_rundir..." >> test14_scihpt.diff
 	${MAKE} test14_rundir
-	@echo "test14_run..." >> test14_ohpt.diff
+	@echo "test14_run..." >> test14_scihpt.diff
 	${MAKE} test14_run
-	@echo "test14_restart..." >> test14_ohpt.diff
-	${MAKE} test14_restart
-	@echo "test14_check..." >> test14_ohpt.diff
+	@echo "test14_check..." >> test14_scihpt.diff
 	${MAKE} test14_check
 
 test14_compile:
-	./Config.pl -v=Empty,OH/BATSRUS,PT/AMPS
-	./Config.pl -o=OH:u=OuterHelio,e=Swh,ng=2,g=4,4,4
-	./Config.pl -o=PT:spice-path=nospice,spice-kernels=nospice,application=oh,amps-test=on,no-signals 
+	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS,PT/AMPS
+	./Config.pl -o=SC:u=Awsom,e=Awsom,ng=2,g=4,4,4
+	./Config.pl -o=IH:u=Awsom,e=Awsom,ng=2,g=4,4,4
+	./Config.pl -o=PT:spice-path=nospice,spice-kernels=nospice,\
+	application=test/sep_focused_transport-ih-mflampa-fl,amps-test=on
 	${MAKE} SWMF
 	make PIDL
 
 test14_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
+	cp Param/PARAM.in.test.SCIHPT ${TESTDIR}/PARAM.in
+	cp GM/BATSRUS/Param/CORONA/RadCoolCorona.dat ${TESTDIR}/RadCoolCorona.dat
+	cp -r SP/MFLAMPA/data/input/test14/RESTART_t0020.0000s ${TESTDIR}/
+	cd ${TESTDIR}; ./Restart.pl -i RESTART_t0020.0000s
+	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test14_run:
-	cp Param/PARAM.in.test.OHPT ${TESTDIR}/PARAM.in
-	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_start
-	cd ${TESTDIR}; rm -rf RESTART_n000120; ./Restart.pl
-	cd ${TESTDIR}; mv PARAM.in PARAM.in.start; rm -f PARAM.in_orig
-
-test14_restart:
-	cd ${TESTDIR}; cp Param/PARAM.in.test.restart.OHPT PARAM.in
-	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M -cat RESULTS
+	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
 
 test14_check:
-	-(${DIFFNUM} -b -r=1e-5 -a=1e-29\
-		${TESTDIR}/RESULTS/OH/log_n000000.log \
-		output/test14/OH_log_n000000.log_np${NAMPS} \
-		> test14_ohpt.diff)
-	ls -l test14_ohpt.diff
-
-### test14_1d: OH/BATSRUS (single-ion) coupled with PT/AMPS in a shocktube ###
-
-test14_1d:
-	@echo "test14_1d_compile..." > test14_1d_ohpt.diff
-	${MAKE} test14_1d_compile
-	@echo "test14_1d_rundir..." >> test14_1d_ohpt.diff
-	${MAKE} test14_1d_rundir
-	@echo "test14_1d_run..." >> test14_1d_ohpt.diff
-	${MAKE} test14_1d_run
-	@echo "test14_1d_check..." >> test14_1d_ohpt.diff
-	${MAKE} test14_1d_check
-
-test14_1d_compile:
-	./Config.pl -v=Empty,OH/BATSRUS,PT/AMPS
-	./Config.pl -o=OH:u=OuterHelio,e=Swh,ng=2,g=4,4,4
-	./Config.pl -o=PT:spice-path=nospice,spice-kernels=nospice,application=test/oh.shocktube,amps-test=on
-	${MAKE} SWMF
-	make PIDL
-
-test14_1d_rundir:
-	rm -rf ${TESTDIR}
-	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
-	cp Param/PARAM.in.test.OHPTshocktube ${TESTDIR}/PARAM.in
-	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
-
-test14_1d_run:
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
-
-test14_1d_check:
-	-(${DIFFNUM} -b -r=1e-3 -a=1e-21\
-                ${TESTDIR}/RESULTS/OH/log_n000000.log \
-                output/test14_1d/OH_log_n000000.log_np${NAMPS} \
-		> test14_1d_ohpt.diff)
-	-(${DIFFNUM} -b -r=1e-3 \
-                ${TESTDIR}/RESULTS/PT/amps.dat \
-                output/test14_1d/amps.dat_np${NAMPS} \
-		>> test14_1d_ohpt.diff)	
-	ls -l test14_1d_ohpt.diff
-
-### test14pui: OH/BATSRUS with PUI (multi-ion) coupled with PT/AMPS ###
-
-test14pui:
-	@echo "test14pui_compile..." > test14pui_ohpt.diff
-	${MAKE} test14pui_compile
-	@echo "test14pui_rundir..." >> test14pui_ohpt.diff
-	${MAKE} test14pui_rundir
-	@echo "test14pui_run..." >> test14pui_ohpt.diff
-	${MAKE} test14pui_run
-	@echo "test14pui_check..." >> test14pui_ohpt.diff
-	${MAKE} test14pui_check
-
-test14pui_compile:
-	./Config.pl -v=Empty,OH/BATSRUS,PT/AMPS
-	./Config.pl -o=OH:u=OuterHelio,e=SwhPui,ng=2,g=4,4,4
-	./Config.pl -o=PT:spice-path=nospice,spice-kernels=nospice,application=oh,amps-test=on 
-	${MAKE} SWMF
-	make PIDL
-
-test14pui_rundir:
-	rm -rf ${TESTDIR}
-	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
-	cp Param/PARAM.in.test.OHPTpui ${TESTDIR}/PARAM.in
-	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
-
-test14pui_run:
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
-
-test14pui_check:
-	-(${DIFFNUM} -b -r=1e-5 -a=2e-21 \
-		${TESTDIR}/RESULTS/OH/log_n000000.log \
-		output/test14pui/OH_log_n000000_np${NAMPS}.log \
-		> test14pui_ohpt.diff)
-	ls -l test14pui_ohpt.diff
-
-### test14pui1d: OH/BATSRUS with PUI (multi-ion) coupled with PT/AMPS in shock tube ###
-
-test14pui1d:
-	@echo "test14pui1d_compile..." > test14pui1d_ohpt.diff
-	${MAKE} test14pui1d_compile
-	@echo "test14pui1d_rundir..." >> test14pui1d_ohpt.diff
-	${MAKE} test14pui1d_rundir
-	@echo "test14pui1d_run..." >> test14pui1d_ohpt.diff
-	${MAKE} test14pui1d_run
-	@echo "test14pui1d_check..." >> test14pui1d_ohpt.diff
-	${MAKE} test14pui1d_check
-
-test14pui1d_compile:
-	./Config.pl -v=Empty,OH/BATSRUS,PT/AMPS
-	./Config.pl -o=OH:u=OuterHelio,e=SwhPui,ng=2,g=4,4,4
-	./Config.pl -o=PT:spice-path=nospice,spice-kernels=nospice,application=test/oh.shocktubepui,amps-test=on
-	${MAKE} SWMF
-	make PIDL
-
-test14pui1d_rundir:
-	rm -rf ${TESTDIR}
-	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
-	cp Param/PARAM.in.test.OHPTpuishocktube ${TESTDIR}/PARAM.in
-	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
-
-test14pui1d_run:
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
-
-test14pui1d_check:
-	-(${DIFFNUM} -b -r=1e-3 -a=1e-21 \
-                ${TESTDIR}/RESULTS/OH/log_n000000.log \
-                output/test14pui1d/OH_log_n000000.log_np${NAMPS} \
-                > test14pui1d_ohpt.diff)
-	ls -l test14pui1d_ohpt.diff
+	cat ${TESTDIR}/RESULTS/PT/MH_data_*_*_t00000030.out \
+	    > ${TESTDIR}/RESULTS/PT/MH_data.outs
+	-(${DIFFNUM} -a=1e-6 -r=1e-6 -b \
+		${TESTDIR}/RESULTS/PT/MH_data.outs \
+		output/test14/MH_data.ref.gz \
+		> test14_scihpt.diff)
+	ls -l test14_scihpt.diff
 
 ### test15: SP/MFLAMPA model coupled with SC and IH models ###
 
@@ -2266,50 +2153,6 @@ test15_check:
 		output/test15/MH_data.ref.gz \
 		> test15_scihsp.diff)
 	ls -l test15_scihsp.diff
-
-### test15_pt: same as test15, but PT/AMPS coupled with SC and IH ###
-
-test15_pt:
-	rm -f test15_scihpt.diff
-	@echo "test15_pt_compile..." > test15_scihpt.diff
-	${MAKE} test15_pt_compile
-	@echo "test15_pt_rundir..." >> test15_scihpt.diff
-	${MAKE} test15_pt_rundir
-	@echo "test15_pt_run..." >> test15_scihpt.diff
-	${MAKE} test15_pt_run
-	@echo "test15_pt_check..." >> test15_scihpt.diff
-	${MAKE} test15_pt_check
-
-test15_pt_compile:
-	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS,PT/AMPS
-	./Config.pl -o=SC:u=Awsom,e=Awsom,ng=2,g=4,4,4
-	./Config.pl -o=IH:u=Awsom,e=Awsom,ng=2,g=4,4,4
-	./Config.pl -o=PT:spice-path=nospice,spice-kernels=nospice,\
-	application=test/sep_focused_transport-ih-mflampa-fl,amps-test=on
-	${MAKE} SWMF
-	make PIDL
-
-test15_pt_rundir:
-	rm -rf ${TESTDIR}
-	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
-	cp Param/PARAM.in.test.SCIHPT ${TESTDIR}/PARAM.in
-	cp GM/BATSRUS/Param/CORONA/RadCoolCorona.dat ${TESTDIR}/RadCoolCorona.dat
-	cp -r SP/MFLAMPA/data/input/test15/RESTART_t0020.0000s ${TESTDIR}/
-	cd ${TESTDIR}; ./Restart.pl -i RESTART_t0020.0000s
-	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
-
-test15_pt_run:
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
-
-test15_pt_check:
-	cat ${TESTDIR}/RESULTS/PT/MH_data_*_*_t00000030.out \
-	    > ${TESTDIR}/RESULTS/PT/MH_data.outs
-	-(${DIFFNUM} -a=1e-6 -r=1e-6 -b \
-		${TESTDIR}/RESULTS/PT/MH_data.outs \
-		output/test15_pt/MH_data.ref.gz \
-		> test15_scihpt.diff)
-	ls -l test15_scihpt.diff
 
 # test for MFLAMPA inside the SWMF
 
