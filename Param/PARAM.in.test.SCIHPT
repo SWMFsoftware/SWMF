@@ -22,7 +22,7 @@ IH			NameSource
 220			RIhMax
 
 #SAVERESTART
-F
+F			DoSaveRestart
 
 #INCLUDE
 RESTART.in
@@ -210,7 +210,7 @@ T			UseParticles
 -1			SpaceStepMax
 import			InitMode
 T			UseBRAlignment
-0.7			ConBRAngleMax
+0.7			CosBRAngleMax
 F			UseBUAlignment
 
 

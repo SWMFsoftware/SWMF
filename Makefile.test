@@ -1843,11 +1843,10 @@ test14:
 	${MAKE} test14_check
 
 test14_compile:
-	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS,PT/AMPS
+	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS,PT/PARMISAN
 	./Config.pl -o=SC:u=Awsom,e=Awsom,ng=2,g=4,4,4
 	./Config.pl -o=IH:u=Awsom,e=Awsom,ng=2,g=4,4,4
-	./Config.pl -o=PT:spice-path=nospice,spice-kernels=nospice,\
-	application=test/sep_focused_transport-ih-mflampa-fl,amps-test=on
+	./Config.pl -o=PT:g=2000
 	${MAKE} SWMF
 	make PIDL
 
@@ -1856,7 +1855,7 @@ test14_rundir:
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/PARAM.in.test.SCIHPT ${TESTDIR}/PARAM.in
 	cp GM/BATSRUS/Param/CORONA/RadCoolCorona.dat ${TESTDIR}/RadCoolCorona.dat
-	cp -r SP/MFLAMPA/data/input/test14/RESTART_t0020.0000s ${TESTDIR}/
+	cp -r PT/PARMISAN/data/input/test14/RESTART_t0020.0000s ${TESTDIR}/
 	cd ${TESTDIR}; ./Restart.pl -i RESTART_t0020.0000s
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
 
