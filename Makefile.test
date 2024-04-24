@@ -43,7 +43,6 @@ test_help:
 	@(if [ -d PW/PWOM    ]; then echo "    test_swpc_cimi_pwom_species (run multispecies GM-IE-CIMI-PWOM SWPC test)"; fi)
 	@(if [ -d PC/FLEKS   ]; then echo "    test_swpc_aepic             (run MHD-AEPIC GM-IE-RCM2-PC SWPC test)"; fi)	
 	@(if [ -d PW/PWOM    ]; then echo "    test1                       (run GM-IE-PWOM test)"; fi)
-	@(if [ -d UA/GITM    ]; then echo "    test3                       (run GM-IE-IM-UA test)"; fi)
 	@(if [ -d IM/HEIDI   ]; then echo "    test4                       (run GM-IE-HEIDI test)"; fi)
 	@(if [ -d GM/BATSRUS/srcUserExtra ]; then echo "    test5                       (run EE-SC test)"; fi)
 	@(if [ -d GM/BATSRUS ]; then echo "    test6                       (run SC-IH coupling test: stream-aligned)"; fi)
@@ -51,13 +50,10 @@ test_help:
 	@(if [ -d GM/BATSRUS ]; then echo "    test8                       (run SC-IH coupling test with AWSoM-R)"; fi)
 	@(if [ -d GM/BATSRUS ]; then echo "    test9                       (run SC-IH coupling test with AWSoM)"; fi)
 	@(if [ -d GM/BATSRUS ]; then echo "    test10                      (run SC-IH like in a real-time)"; fi)
-	@(if [ -d PT/AMPS    ]; then echo "    test11                      (run GM-PT/AMPS coupler test)"; fi)
-	@(if [ -d PC/AMPS    ]; then echo "    test12                      (run GM-PC/AMPS tests)"; fi)
-	@(if [ -d PC/IPIC3D2 ]; then echo "    test12_ipic3d               (run GM-PC/IPIC3D2 tests)"; fi)
 	@(if [ -d PT/AMPS    ]; then echo "    test13                      (run GM-PT/AMPS test: Europa)"; fi)
+	@(if [ -d PT/PARMISAN ]; then echo "    test14                      (run SC-IH-PT/PARMISAN test)"; fi)
 	@(if [ -d SP/MFLAMPA ]; then echo "    test15                      (run SC-IH-SP/MFLAMPA test)"; fi)
 	@(if [ -d SP/MFLAMPA ]; then echo "    test15_build                (configure SC-IH-SP/MFLAMPA, run test15)"; fi)
-	@(if [ -d PT/AMPS    ]; then echo "    test15_pt                   (run SC-IH-PT/AMPS test)"; fi)
 	@(if [ -d PC/FLEKS   ]; then echo "    test16                      (run GM-PC/FLEKS test: periodic FLEKS)"; fi)
 	@(if [ -d PC/FLEKS   ]; then echo "    test17                      (run GM-PC/FLEKS test: 2D Alfven wave)"; fi)
 	@(if [ -d PC/FLEKS   ]; then echo "    test18                      (run GM-PC/FLEKS test: 3D reconnection)"; fi)
@@ -400,171 +396,6 @@ test1_check:
 		output/test1/IE*.idl.gz \
 		>> test01_ie.diff)
 	ls -l test01_*.diff
-
-### test2: GM+IE+RCM with multifluid GM-IM coupling ###
-
-test2:  
-	@echo "test2_compile..." > test02_gm_multi.diff
-	@echo "test2_compile..." > test02_ie.diff	
-	@echo "test2_compile..." > test02_im_rcm_multi.diff
-	${MAKE} test2_compile
-	@echo "test2_rundir..." >> test02_gm_multi.diff
-	@echo "test2_rundir..." >> test02_ie.diff
-	@echo "test2_rundir..." >> test02_im_rcm_multi.diff
-	${MAKE} test2_rundir
-	@echo "test2_run..." >> test02_gm_multi.diff
-	@echo "test2_run..." >> test02_ie.diff
-	@echo "test2_run..." >> test02_im_rcm_multi.diff
-	${MAKE} test2_run
-	@echo "test2_restart..." >> test02_gm_multi.diff
-	@echo "test2_restart..." >> test02_ie.diff
-	@echo "test2_restart..." >> test02_im_rcm_multi.diff
-	${MAKE} test2_restart
-	@echo "test2_check..." >> test02_gm_multi.diff
-	@echo "test2_check..." >> test02_ie.diff
-	@echo "test2_check..." >> test02_im_rcm_multi.diff
-	${MAKE} test2_check
-
-test2_compile:
-	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2
-	./Config.pl -o=GM:u=Default,e=MhdIons,ng=2,g=8,8,8,IE:g=91,181
-	${MAKE} SWMF
-	make PIDL
-
-test2_rundir:
-	rm -rf ${TESTDIR}
-	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
-	cp Param/PARAM.in.test.GMIERCM_Multi ${TESTDIR}/PARAM.in
-	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
-
-test2_run:
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}; ./Restart.pl
-
-test2_restart:
-	cd ${TESTDIR}; mv PARAM.in PARAM.in_start; rm -f PARAM.in_orig_
-	cd ${TESTDIR}; cp Param/PARAM.in.test.restart.GMIERCM_Multi PARAM.in
-	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_restart
-	cd ${TESTDIR}/IM/plots/; cp 2d__max_t00000020.dat t20.txt
-	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS; \
-		mv runlog_restart RESULTS
-
-test2_check:
-	-@(${DIFFNUM} -b -r=1e-5 -a=1e-8 \
-		${TESTDIR}/RESULTS/GM/log_n000001.log \
-		output/test2/GM_log_n000001.log \
-		> test02_gm_multi.diff)
-	-@(${DIFFNUM} -b -r=1e-5 -a=1e-8 \
-		${TESTDIR}/RESULTS/GM/magnetometers_n*.mag \
-		output/test2/magnetometers.mag \
-		>> test02_gm_multi.diff)
-	-@(${DIFFNUM} -b -r=1e-5 -a=1e-8 \
-		${TESTDIR}/RESULTS/GM/geoindex_n*.log \
-		output/test2/GM_geoindex.log \
-		>> test02_gm_multi.diff)
-	-@(${DIFFNUM} -b -r=1e-5 -a=1e-4 \
-		${TESTDIR}/RESULTS/RESTART/GM/x_geoindex.rst \
-		output/test2/GM_restart_geoindex.txt \
-		>> test02_gm_multi.diff)
-	-@(${DIFFNUM} -b -r=1e-5 \
-		${TESTDIR}/RESULTS/IE/IE_t000321_104500.log \
-		output/test2/IE.log \
-		> test02_ie.diff) 
-	-@(${DIFFNUM} -b -r=1e-3 -a=1e-8 -p="grep -v 'AUXDATA SAVEDATE='" \
-		${TESTDIR}/RESULTS/IM/t20.dat \
-		output/test2/IM_2d__max_t00000020.dat.gz \
-		> test02_im_rcm_multi.diff)
-	ls -l test02_*.diff
-
-### test_3: configure SWMF with GM+IE+IM+UA only. ###
-test3_build:
-	rm -rf Test3_Build
-	Scripts/Configure.pl -d=Test3_Build
-	cd ${BUILD}; ./Config.pl -install \
-	   	     	-compiler=${FORTRAN_COMPILER_NAME},${C_COMPILER_NAME}
-	cd Test3_Build; make test3
-	
-test3:  
-	@echo "test3_compile..." > test03_UAcouple_gm.diff
-	@echo "test3_compile..." > test03_UAcouple_ie.diff	
-	@echo "test3_compile..." > test03_UAcouple_ua_gitm.diff
-	${MAKE} test3_compile
-	@echo "test3_rundir..." >> test03_UAcouple_gm.diff
-	@echo "test3_rundir..." >> test03_UAcouple_ie.diff
-	@echo "test3_rundir..." >> test03_UAcouple_ua_gitm.diff
-	${MAKE} test3_rundir
-	@echo "test3_run..." >> test03_UAcouple_gm.diff
-	@echo "test3_run..." >> test03_UAcouple_ie.diff
-	@echo "test3_run..." >> test03_UAcouple_ua_gitm.diff
-	${MAKE} test3_run
-	#@echo "test3_restart..." >> test03_UAcouple_gm.diff
-	#@echo "test3_restart..." >> test03_UAcouple_ie.diff
-	#@echo "test3_restart..." >> test03_UAcouple_ua_gitm.diff
-	#${MAKE} test3_restart
-	@echo "test3_check..." >> test03_UAcouple_gm.diff
-	@echo "test3_check..." >> test03_UAcouple_ie.diff
-	@echo "test3_check..." >> test03_UAcouple_ua_gitm.diff
-	${MAKE} test3_check
-
-test3_compile:
-	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2,UA/GITM
-	./Config.pl -o=GM:u=Default,e=Mhd,ng=2,g=8,8,8,IE:g=181,361
-	${MAKE} SWMF
-	make PIDL
-	cd UA/GITM; make POST
-
-test3_rundir:
-	rm -rf ${TESTDIR}
-	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
-	cp Param/PARAM.in.test.GMIEIMUA ${TESTDIR}/
-	cp Param/PARAM.in.test.restart.GMIEIMUA ${TESTDIR}/
-	cp ${TESTDIR}/PARAM.in.test.GMIEIMUA ${TESTDIR}/PARAM.in
-	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
-
-test3_run:
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}; ./Restart.pl
-	cd ${TESTDIR}; ./pGITM.py
-	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS
-
-test3_check:
-	-@(${DIFFNUM} -b -r=1e-5 -a=2e-2 \
-		${TESTDIR}/RESULTS/UA/ua_ie_buffer_t20000321_104530.out\
-	 	output/test3/ua_ie_buffer_t20000321_104530.out.gz \
-		> test03_UAcouple_ua_gitm.diff)
-	-@(${DIFFNUM} -b -r=1e-5 -a=2e-4 \
-		${TESTDIR}/RESULTS/IE/it000321_104530_000.idl \
-	 	output/test3/it000321_104530_000.idl.gz \
-		> test03_UAcouple_ie.diff)
-	-@(${DIFFNUM} -b -r=1e-5 -a=2e-8 \
-		${TESTDIR}/RESULTS/GM/log_n000001.log \
-	 	output/test3/log_n000001.log \
-		> test03_UAcouple_gm.diff)
-
-# Restart capability forthcoming.
-test3_restart:
-	cd ${TESTDIR}; cp PARAM.in.test.restart.GMIEIMUA PARAM.in
-	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_restart
-	cd ${TESTDIR}; ./pGITM.py
-	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS; \
-		mv runlog_restart RESULTS
-
-# Restart capability forthcoming
-test3_check_restart:
-	-@(${DIFFNUM} -b -r=1e-5 -a=2e-2 \
-		${TESTDIR}/RESULTS/UA/ua_ie_buffer_t20000321_104600.out \
-	 	output/test3/ua_ie_buffer_t20000321_104600.out.gz \
-		> test03_UAcouple_ua_gitm.diff)
-	-@(${DIFFNUM} -b -r=1e-5 -a=2e-4 \
-		${TESTDIR}/RESULTS/IE/it000321_104600_000.idl \
-	 	output/test3/it000321_104600_000.idl.gz \
-		> test03_UAcouple_ie.diff)
-	-@(${DIFFNUM} -b -r=1e-5 -a=2e-8 \
-		${TESTDIR}/RESULTS/GM/log_n000001.log \
-	 	output/test3/log_n000001.log \
-		> test03_UAcouple_gm.diff)
 
 ### test_swpc_build: configure SWMF with GM+IE+IM+RB only. ###
 
@@ -1962,58 +1793,6 @@ test10_check:
 		> test10_ih.diff)
 	ls -l test10_*.diff
 
-### test11: Dipole field with solar wind coupled with an exosphere model, to test the GM/PT coupler ###
-
-test11:
-	@echo "test11_compile..." > test11_gm.diff
-	@echo "test11_compile..." > test11_pt.diff
-	${MAKE} test11_compile
-	@echo "test11_rundir..." >> test11_gm.diff
-	@echo "test11_rundir..." >> test11_pt.diff
-	${MAKE} test11_rundir
-	@echo "test11_run..." >> test11_gm.diff
-	@echo "test11_run..." >> test11_pt.diff
-	${MAKE} test11_run
-	@echo "test11_check..." >> test11_gm.diff
-	@echo "test11_check..." >> test11_pt.diff
-	${MAKE} test11_check
-
-test11_compile:
-	./Config.pl -v=Empty,GM/BATSRUS,PT/AMPS
-	./Config.pl -o=GM:u=Default,e=Mhd,ng=2,g=8,8,8
-	./Config.pl -o=PT:spice-path=nospice,application=coupler-test
-	${MAKE} SWMF
-	make PIDL
-
-test11_rundir:
-	rm -rf ${TESTDIR}
-	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
-	cp Param/PARAM.in.test.GMPT ${TESTDIR}/PARAM.in
-	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
-
-test11_run:
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
-
-# Note: skip columns that depend on number of processors
-#       multiply density column by 1e20 to make it order unity
-test11_check:
-	-(${DIFFNUM} -b -a=1e-27 \
-	        ${TESTDIR}/RESULTS/GM/log_n000001.log \
-		output/test11/log_n000001.log \
-		> test11_gm.diff)
-	gunzip -c output/test11/pic.NA.s=0.out=19.dat.gz \
-	       	> ${TESTDIR}/RESULTS/PT/pic.NA.ref
-	cd ${TESTDIR}/RESULTS/PT; \
-	        cp -f pic.NA.s=0.out=19.dat pic.NA.dat; \
-	        perl -ai -ne 'print "@F[0..3] @F[6..14] ",1e20*$$F[15]," @F[16..$$#F]\n"' \
-			pic.NA.ref pic.NA.dat 
-	-(${DIFFNUM} -a=1e-19 -r=1e-6 -b \
-	        ${TESTDIR}/RESULTS/PT/pic.NA.dat \
-		${TESTDIR}/RESULTS/PT/pic.NA.ref \
-                > test11_pt.diff)
-		ls -l test11*.diff
-
 ### test13: Europa's exosphere model with GM and PT ###
 
 test13:
@@ -2050,162 +1829,49 @@ test13_check:
 		> test13_pt.diff)
 		ls -l test13*.diff
 
-### test14: OH/BATSRUS (single-ion) coupled with PT/AMPS ###
+### test14: SC+IH+PT
 
 test14:
-	@echo "test14_compile..." > test14_ohpt.diff
+	rm -f test14_scihpt.diff
+	@echo "test14_compile..." > test14_scihpt.diff
 	${MAKE} test14_compile
-	@echo "test14_rundir..." >> test14_ohpt.diff
+	@echo "test14_rundir..." >> test14_scihpt.diff
 	${MAKE} test14_rundir
-	@echo "test14_run..." >> test14_ohpt.diff
+	@echo "test14_run..." >> test14_scihpt.diff
 	${MAKE} test14_run
-	@echo "test14_restart..." >> test14_ohpt.diff
-	${MAKE} test14_restart
-	@echo "test14_check..." >> test14_ohpt.diff
+	@echo "test14_check..." >> test14_scihpt.diff
 	${MAKE} test14_check
 
 test14_compile:
-	./Config.pl -v=Empty,OH/BATSRUS,PT/AMPS
-	./Config.pl -o=OH:u=OuterHelio,e=Swh,ng=2,g=4,4,4
-	./Config.pl -o=PT:spice-path=nospice,spice-kernels=nospice,application=oh,amps-test=on,no-signals 
+	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS,PT/AMPS
+	./Config.pl -o=SC:u=Awsom,e=Awsom,ng=2,g=4,4,4
+	./Config.pl -o=IH:u=Awsom,e=Awsom,ng=2,g=4,4,4
+	./Config.pl -o=PT:spice-path=nospice,spice-kernels=nospice,\
+	application=test/sep_focused_transport-ih-mflampa-fl,amps-test=on
 	${MAKE} SWMF
 	make PIDL
 
 test14_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
+	cp Param/PARAM.in.test.SCIHPT ${TESTDIR}/PARAM.in
+	cp GM/BATSRUS/Param/CORONA/RadCoolCorona.dat ${TESTDIR}/RadCoolCorona.dat
+	cp -r SP/MFLAMPA/data/input/test14/RESTART_t0020.0000s ${TESTDIR}/
+	cd ${TESTDIR}; ./Restart.pl -i RESTART_t0020.0000s
+	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test14_run:
-	cp Param/PARAM.in.test.OHPT ${TESTDIR}/PARAM.in
-	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_start
-	cd ${TESTDIR}; rm -rf RESTART_n000120; ./Restart.pl
-	cd ${TESTDIR}; mv PARAM.in PARAM.in.start; rm -f PARAM.in_orig
-
-test14_restart:
-	cd ${TESTDIR}; cp Param/PARAM.in.test.restart.OHPT PARAM.in
-	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M -cat RESULTS
+	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
 
 test14_check:
-	-(${DIFFNUM} -b -r=1e-5 -a=1e-29\
-		${TESTDIR}/RESULTS/OH/log_n000000.log \
-		output/test14/OH_log_n000000.log_np${NAMPS} \
-		> test14_ohpt.diff)
-	ls -l test14_ohpt.diff
-
-### test14_1d: OH/BATSRUS (single-ion) coupled with PT/AMPS in a shocktube ###
-
-test14_1d:
-	@echo "test14_1d_compile..." > test14_1d_ohpt.diff
-	${MAKE} test14_1d_compile
-	@echo "test14_1d_rundir..." >> test14_1d_ohpt.diff
-	${MAKE} test14_1d_rundir
-	@echo "test14_1d_run..." >> test14_1d_ohpt.diff
-	${MAKE} test14_1d_run
-	@echo "test14_1d_check..." >> test14_1d_ohpt.diff
-	${MAKE} test14_1d_check
-
-test14_1d_compile:
-	./Config.pl -v=Empty,OH/BATSRUS,PT/AMPS
-	./Config.pl -o=OH:u=OuterHelio,e=Swh,ng=2,g=4,4,4
-	./Config.pl -o=PT:spice-path=nospice,spice-kernels=nospice,application=test/oh.shocktube,amps-test=on
-	${MAKE} SWMF
-	make PIDL
-
-test14_1d_rundir:
-	rm -rf ${TESTDIR}
-	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
-	cp Param/PARAM.in.test.OHPTshocktube ${TESTDIR}/PARAM.in
-	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
-
-test14_1d_run:
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
-
-test14_1d_check:
-	-(${DIFFNUM} -b -r=1e-3 -a=1e-21\
-                ${TESTDIR}/RESULTS/OH/log_n000000.log \
-                output/test14_1d/OH_log_n000000.log_np${NAMPS} \
-		> test14_1d_ohpt.diff)
-	-(${DIFFNUM} -b -r=1e-3 \
-                ${TESTDIR}/RESULTS/PT/amps.dat \
-                output/test14_1d/amps.dat_np${NAMPS} \
-		>> test14_1d_ohpt.diff)	
-	ls -l test14_1d_ohpt.diff
-
-### test14pui: OH/BATSRUS with PUI (multi-ion) coupled with PT/AMPS ###
-
-test14pui:
-	@echo "test14pui_compile..." > test14pui_ohpt.diff
-	${MAKE} test14pui_compile
-	@echo "test14pui_rundir..." >> test14pui_ohpt.diff
-	${MAKE} test14pui_rundir
-	@echo "test14pui_run..." >> test14pui_ohpt.diff
-	${MAKE} test14pui_run
-	@echo "test14pui_check..." >> test14pui_ohpt.diff
-	${MAKE} test14pui_check
-
-test14pui_compile:
-	./Config.pl -v=Empty,OH/BATSRUS,PT/AMPS
-	./Config.pl -o=OH:u=OuterHelio,e=SwhPui,ng=2,g=4,4,4
-	./Config.pl -o=PT:spice-path=nospice,spice-kernels=nospice,application=oh,amps-test=on 
-	${MAKE} SWMF
-	make PIDL
-
-test14pui_rundir:
-	rm -rf ${TESTDIR}
-	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
-	cp Param/PARAM.in.test.OHPTpui ${TESTDIR}/PARAM.in
-	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
-
-test14pui_run:
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
-
-test14pui_check:
-	-(${DIFFNUM} -b -r=1e-5 -a=2e-21 \
-		${TESTDIR}/RESULTS/OH/log_n000000.log \
-		output/test14pui/OH_log_n000000_np${NAMPS}.log \
-		> test14pui_ohpt.diff)
-	ls -l test14pui_ohpt.diff
-
-### test14pui1d: OH/BATSRUS with PUI (multi-ion) coupled with PT/AMPS in shock tube ###
-
-test14pui1d:
-	@echo "test14pui1d_compile..." > test14pui1d_ohpt.diff
-	${MAKE} test14pui1d_compile
-	@echo "test14pui1d_rundir..." >> test14pui1d_ohpt.diff
-	${MAKE} test14pui1d_rundir
-	@echo "test14pui1d_run..." >> test14pui1d_ohpt.diff
-	${MAKE} test14pui1d_run
-	@echo "test14pui1d_check..." >> test14pui1d_ohpt.diff
-	${MAKE} test14pui1d_check
-
-test14pui1d_compile:
-	./Config.pl -v=Empty,OH/BATSRUS,PT/AMPS
-	./Config.pl -o=OH:u=OuterHelio,e=SwhPui,ng=2,g=4,4,4
-	./Config.pl -o=PT:spice-path=nospice,spice-kernels=nospice,application=test/oh.shocktubepui,amps-test=on
-	${MAKE} SWMF
-	make PIDL
-
-test14pui1d_rundir:
-	rm -rf ${TESTDIR}
-	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
-	cp Param/PARAM.in.test.OHPTpuishocktube ${TESTDIR}/PARAM.in
-	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
-
-test14pui1d_run:
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
-
-test14pui1d_check:
-	-(${DIFFNUM} -b -r=1e-3 -a=1e-21 \
-                ${TESTDIR}/RESULTS/OH/log_n000000.log \
-                output/test14pui1d/OH_log_n000000.log_np${NAMPS} \
-                > test14pui1d_ohpt.diff)
-	ls -l test14pui1d_ohpt.diff
+	cat ${TESTDIR}/RESULTS/PT/MH_data_*_*_t00000030.out \
+	    > ${TESTDIR}/RESULTS/PT/MH_data.outs
+	-(${DIFFNUM} -a=1e-6 -r=1e-6 -b \
+		${TESTDIR}/RESULTS/PT/MH_data.outs \
+		output/test14/MH_data.ref.gz \
+		> test14_scihpt.diff)
+	ls -l test14_scihpt.diff
 
 ### test15: SP/MFLAMPA model coupled with SC and IH models ###
 
@@ -2266,50 +1932,6 @@ test15_check:
 		output/test15/MH_data.ref.gz \
 		> test15_scihsp.diff)
 	ls -l test15_scihsp.diff
-
-### test15_pt: same as test15, but PT/AMPS coupled with SC and IH ###
-
-test15_pt:
-	rm -f test15_scihpt.diff
-	@echo "test15_pt_compile..." > test15_scihpt.diff
-	${MAKE} test15_pt_compile
-	@echo "test15_pt_rundir..." >> test15_scihpt.diff
-	${MAKE} test15_pt_rundir
-	@echo "test15_pt_run..." >> test15_scihpt.diff
-	${MAKE} test15_pt_run
-	@echo "test15_pt_check..." >> test15_scihpt.diff
-	${MAKE} test15_pt_check
-
-test15_pt_compile:
-	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS,PT/AMPS
-	./Config.pl -o=SC:u=Awsom,e=Awsom,ng=2,g=4,4,4
-	./Config.pl -o=IH:u=Awsom,e=Awsom,ng=2,g=4,4,4
-	./Config.pl -o=PT:spice-path=nospice,spice-kernels=nospice,\
-	application=test/sep_focused_transport-ih-mflampa-fl,amps-test=on
-	${MAKE} SWMF
-	make PIDL
-
-test15_pt_rundir:
-	rm -rf ${TESTDIR}
-	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
-	cp Param/PARAM.in.test.SCIHPT ${TESTDIR}/PARAM.in
-	cp GM/BATSRUS/Param/CORONA/RadCoolCorona.dat ${TESTDIR}/RadCoolCorona.dat
-	cp -r SP/MFLAMPA/data/input/test15/RESTART_t0020.0000s ${TESTDIR}/
-	cd ${TESTDIR}; ./Restart.pl -i RESTART_t0020.0000s
-	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
-
-test15_pt_run:
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
-
-test15_pt_check:
-	cat ${TESTDIR}/RESULTS/PT/MH_data_*_*_t00000030.out \
-	    > ${TESTDIR}/RESULTS/PT/MH_data.outs
-	-(${DIFFNUM} -a=1e-6 -r=1e-6 -b \
-		${TESTDIR}/RESULTS/PT/MH_data.outs \
-		output/test15_pt/MH_data.ref.gz \
-		> test15_scihpt.diff)
-	ls -l test15_scihpt.diff
 
 # test for MFLAMPA inside the SWMF
 
@@ -2811,350 +2433,6 @@ test_ramscb_check:
 		${IMDIR}/output/test9/IE.log \
 		> test_ramscb_ie.diff)
 	ls -l test_ramscb*.diff
-
-######## test PC/AMPS coupled with GM/BATSRUS #########
-
-test12:
-	-@($(MAKE) test12_aniso_AMPS TESTDIR=run_test12_aniso_AMPS)
-	-@($(MAKE) test12_aniso_AMPS_divE_corr TESTDIR=run_test12_aniso_AMPS_divE_corr)
-	-@($(MAKE) test12_aniso_AMPS_dynamic   TESTDIR=run_test12_aniso_AMPS_dynamic)
-	-@($(MAKE) test12_aniso_AMPS_openmp    TESTDIR=run_test12_aniso_AMPS_openmp)
-	./Config.pl -noopenmp -o=PC:openmp=off
-
-### test12_aniso_AMPS_dynamic_fluxrope: test PC coupled with GM/BATSRUS ###
-test12_aniso_AMPS_dynamic_fluxrope:
-	@echo "test12_aniso_AMPS_dynamic_fluxrope_compile..." > test12_aniso_AMPS_dynamic_fluxrope_gmpc.diff
-	$(MAKE) test12_aniso_AMPS_dynamic_fluxrope_compile
-	@echo "test12_aniso_AMPS_dynamic_fluxrope_rundir..." > test12_aniso_AMPS_dynamic_fluxrope_gmpc.diff
-	$(MAKE) test12_aniso_AMPS_dynamic_fluxrope_rundir
-	@echo "test12_aniso_AMPS_dynamic_fluxrope_run..." > test12_aniso_AMPS_dynamic_fluxrope_gmpc.diff
-	$(MAKE) test12_aniso_AMPS_dynamic_fluxrope_run
-	@echo "test12_aniso_AMPS_dynamic_fluxrope_check..." > test12_aniso_AMPS_dynamic_fluxrope_gmpc.diff
-	$(MAKE) test12_aniso_AMPS_dynamic_fluxrope_check
-
-test12_aniso_AMPS_dynamic_fluxrope_compile:
-	./Config.pl -v=Empty,GM/BATSRUS,PC/AMPS
-	./Config.pl -o=GM:u=FluxRope,e=MhdHypPe,ng=2,g=8,8,4
-	./Config.pl -o=PC:spice-path=nospice,spice-kernels=nospice,application=fluxrope-dynamic,amps-test=on,avx=256
-	$(MAKE) SWMF
-	$(MAKE) PIDL
-
-test12_aniso_AMPS_dynamic_fluxrope_rundir:
-	rm -rf ${TESTDIR}
-	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR}
-	cp Param/PARAM.in.test.GMPC.aniso.AMPS.fluxrope  ${TESTDIR}/PARAM.in
-	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
-
-test12_aniso_AMPS_dynamic_fluxrope_run:
-	cd ${TESTDIR}; mpirun -np 8 ./SWMF.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl -m RESULTS/fluxrope
-
-test12_aniso_AMPS_dynamic_fluxrope_check:
-	-@(${DIFFNUM} -b -a=2.0e-3 \
-	   ${TESTDIR}/RESULTS/fluxrope/PC/z\=0_var_region0_0_t00000000_n00000010.out  \
-	   output/test12/3d_aniso_fluxrope.out.gz \
-		> test12_aniso_AMPS_dynamic_fluxrope_gmpc.diff)
-	ls -l test12_aniso_AMPS_dynamic_fluxrope_gmpc.diff
-
-#############################################################################
-
-test12_aniso_AMPS:
-	@echo "test12_aniso_AMPS_compile..." > test12_aniso_AMPS_gmpc.diff
-	$(MAKE) test12_aniso_AMPS_compile
-	@echo "test12_aniso_AMPS_rundir..." > test12_aniso_AMPS_gmpc.diff
-	$(MAKE) test12_aniso_AMPS_rundir
-	@echo "test12_aniso_AMPS_run..." > test12_aniso_AMPS_gmpc.diff
-	$(MAKE) test12_aniso_AMPS_run
-	@echo "test12_aniso_AMPS_check..." > test12_aniso_AMPS_gmpc.diff
-	$(MAKE) test12_aniso_AMPS_check
-
-test12_aniso_AMPS_compile:
-	./Config.pl -v=Empty,GM/BATSRUS,PC/AMPS
-	./Config.pl -o=GM:u=Default,e=MhdAnisoP,ng=2,g=8,8,8
-	./Config.pl -o=PC:spice-path=nospice,spice-kernels=nospice,application=fluid-pic-coupler,amps-test=on 
-	$(MAKE) SWMF
-	$(MAKE) PIDL
-	
-test12_aniso_AMPS_rundir:
-	rm -rf ${TESTDIR}
-	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR}
-	cp Param/PARAM.in.test.GMPC.aniso.AMPS  ${TESTDIR}/PARAM.in
-	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
-
-test12_aniso_AMPS_run:
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl -m RESULTS/5step
-	cp Param/PARAM.in.test.GMPC.aniso.AMPS.2step  ${TESTDIR}/PARAM.in
-	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl -m RESULTS/2step
-	cd ${TESTDIR}; ./Restart.pl -v -i RESULTS/2step/RESTART
-	cp Param/PARAM.in.test.GMPC.aniso.AMPS.2step.restart ${TESTDIR}/PARAM.in
-	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl -m RESULTS/2restart	
-
-test12_aniso_AMPS_check:
-	-@(${DIFFNUM} -b -a=2.0e-3 \
-	   ${TESTDIR}/RESULTS/5step/PC/3d_fluid_region0_0_t00000005_n00000005.out \
-	   output/test12/3d_aniso.out.gz \
-		> test12_aniso_AMPS_gmpc.diff)
-	-@(${DIFFNUM} -b -a=2.0e-3 \
-	   ${TESTDIR}/RESULTS/2restart/PC/3d_fluid_region0_0_t00000005_n00000005.out \
-	   output/test12/3d_aniso.out.gz \
-		>> test12_aniso_AMPS_gmpc.diff)
-	ls -l test12_aniso_AMPS_gmpc.diff
-
-#########################################################
-
-test12_aniso_AMPS_divE_corr:
-	@echo "test12_aniso_AMPS_divE_corr_compile..." > test12_aniso_AMPS_divE_corr_gmpc.diff
-	$(MAKE) test12_aniso_AMPS_divE_corr_compile
-	@echo "test12_aniso_AMPS_divE_corr_rundir..." > test12_aniso_AMPS_divE_corr_gmpc.diff
-	$(MAKE) test12_aniso_AMPS_divE_corr_rundir
-	@echo "test12_aniso_AMPS_divE_corr_run..." > test12_aniso_AMPS_divE_corr_gmpc.diff
-	$(MAKE) test12_aniso_AMPS_divE_corr_run
-	@echo "test12_aniso_AMPS_divE_corr_check..." > test12_aniso_AMPS_divE_corr_gmpc.diff
-	$(MAKE) test12_aniso_AMPS_divE_corr_check
-
-test12_aniso_AMPS_divE_corr_compile:
-	./Config.pl -v=Empty,GM/BATSRUS,PC/AMPS
-	./Config.pl -o=GM:u=Default,e=MhdAnisoP,ng=2,g=8,8,8
-	./Config.pl -o=PC:spice-path=nospice,spice-kernels=nospice,application=fluid-pic-coupler-with-correction,amps-test=on 
-	$(MAKE) SWMF
-	$(MAKE) PIDL
-	
-test12_aniso_AMPS_divE_corr_rundir:
-	rm -rf ${TESTDIR}
-	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR}
-	cp Param/PARAM.in.test.GMPC.aniso.AMPS.corr  ${TESTDIR}/PARAM.in
-	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
-
-test12_aniso_AMPS_divE_corr_run:
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl -m RESULTS/5step_corr
-
-test12_aniso_AMPS_divE_corr_check:
-	-@(${DIFFNUM} -b -a=2.0e-3 \
-	   ${TESTDIR}/RESULTS/5step_corr/PC/3d_fluid_region0_0_t00000005_n00000005.out \
-	   output/test12/3d_aniso_divE.out.gz \
-		> test12_aniso_AMPS_divE_corr_gmpc.diff)
-	ls -l test12_aniso_AMPS_divE_corr_gmpc.diff
-
-#########################################################
-
-test12_aniso_AMPS_openmp:
-	@echo "test12_aniso_AMPS_openmp_compile..." > test12_aniso_AMPS_openmp_gmpc.diff
-	$(MAKE) test12_aniso_AMPS_openmp_compile
-	@echo "test12_aniso_AMPS_openmp_rundir..." > test12_aniso_AMPS_openmp_gmpc.diff
-	$(MAKE) test12_aniso_AMPS_openmp_rundir
-	@echo "test12_aniso_AMPS_openmp_run..." > test12_aniso_AMPS_openmp_gmpc.diff
-	$(MAKE) test12_aniso_AMPS_openmp_run
-	@echo "test12_aniso_AMPS_openmp_check..." > test12_aniso_AMPS_openmp_gmpc.diff
-	$(MAKE) test12_aniso_AMPS_openmp_check
-
-test12_aniso_AMPS_openmp_compile:
-	./Config.pl -v=Empty,GM/BATSRUS,PC/AMPS
-	./Config.pl -o=GM:u=Default,e=MhdAnisoP,ng=2,g=8,8,8
-	./Config.pl -openmp -o=PC:spice-path=nospice,spice-kernels=nospice,application=fluid-pic-coupler,amps-test=on,openmp=on 
-	$(MAKE) SWMF
-	$(MAKE) PIDL
-	
-test12_aniso_AMPS_openmp_rundir:
-	rm -rf ${TESTDIR}
-	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR}
-	cp Param/PARAM.in.test.GMPC.aniso.AMPS  ${TESTDIR}/PARAM.in
-	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
-
-test12_aniso_AMPS_openmp_run:
-	cd ${TESTDIR}; ${OMPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl -m RESULTS
-
-test12_aniso_AMPS_openmp_check:
-	-@(${DIFFNUM} -b -a=2.0e-3 \
-	   ${TESTDIR}/RESULTS/PC/3d_fluid_region0_0_t00000005_n00000005.out \
-	   output/test12/3d_aniso.out.gz \
-		> test12_aniso_AMPS_openmp_gmpc.diff)
-	ls -l test12_aniso_AMPS_openmp_gmpc.diff
-
-#########################################################
-test12_aniso_AMPS_dynamic:
-	@echo "test12_aniso_AMPS_dynamic_compile..." > test12_aniso_AMPS_dynamic_gmpc.diff
-	$(MAKE) test12_aniso_AMPS_dynamic_compile
-	@echo "test12_aniso_AMPS_dynamic_rundir..." > test12_aniso_AMPS_dynamic_gmpc.diff
-	$(MAKE) test12_aniso_AMPS_dynamic_rundir
-	@echo "test12_aniso_AMPS_dynamic_run..." > test12_aniso_AMPS_dynamic_gmpc.diff
-	$(MAKE) test12_aniso_AMPS_dynamic_run
-	@echo "test12_aniso_AMPS_dynamic_check..." > test12_aniso_AMPS_dynamic_gmpc.diff
-	$(MAKE) test12_aniso_AMPS_dynamic_check
-
-test12_aniso_AMPS_dynamic_compile:
-	./Config.pl -v=Empty,GM/BATSRUS,PC/AMPS
-	./Config.pl -o=GM:u=Default,e=MhdAnisoP,ng=2,g=8,8,8
-	./Config.pl -o=PC:spice-path=nospice,spice-kernels=nospice,application=fluid-pic-coupler-dynamic,amps-test=on 
-	$(MAKE) SWMF
-	$(MAKE) PIDL
-	
-test12_aniso_AMPS_dynamic_rundir:
-	rm -rf ${TESTDIR}
-	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR}
-	cp Param/PARAM.in.test.GMPC.aniso.AMPS.dynamic  ${TESTDIR}/PARAM.in
-	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
-
-test12_aniso_AMPS_dynamic_run:
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl -m RESULTS
-
-test12_aniso_AMPS_dynamic_check:
-	-@(${DIFFNUM} -b -a=2.0e-3 \
-	   ${TESTDIR}/RESULTS/PC/3d_fluid_region0_0_t00000010_n00000010.out \
-	   output/test12/3d_AMPS_aniso_dynamic_gmpc.out.gz \
-		> test12_aniso_AMPS_dynamic_gmpc.diff)
-	ls -l test12_aniso_AMPS_dynamic_gmpc.diff
-
-### test12_ipic3d: test PC/IPIC3D2 coupled with GM/BATSRUS ###
-
-test12_ipic3d:
-	-@(if [ -d PC/IPIC3D2 ]; then $(MAKE) test12_aniso TESTDIR=run_test12_aniso; fi)
-	-@(if [ -d PC/IPIC3D2 ]; then $(MAKE) test12_iso   TESTDIR=run_test12_iso;   fi)
-	-@(if [ -d PC/IPIC3D2 ]; then $(MAKE) test12_3d    TESTDIR=run_test12_3d;    fi)
-
-#########################################################
-test12_aniso:
-	@echo "test12_aniso_compile..." > test12_aniso_gmpc.diff
-	$(MAKE) test12_aniso_compile
-	@echo "test12_aniso_rundir..." > test12_aniso_gmpc.diff
-	$(MAKE) test12_aniso_rundir
-	@echo "test12_aniso_run..." > test12_aniso_gmpc.diff
-	$(MAKE) test12_aniso_run
-	@echo "test12_aniso_check..." > test12_aniso_gmpc.diff
-	$(MAKE) test12_aniso_check
-
-test12_aniso_compile:
-	./Config.pl -v=Empty,PC/IPIC3D2,GM/BATSRUS
-	./Config.pl -o=GM:u=Default,e=MhdAnisoP,ng=2,g=8,8,1
-	$(MAKE) SWMF
-	$(MAKE) PIDL
-	
-test12_aniso_rundir:
-	rm -rf ${TESTDIR}
-	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR}
-	cp Param/PARAM.in.test.GMPC.start.aniso  ${TESTDIR}/PARAM.in
-	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
-
-test12_aniso_run:
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl -m RESULTS/4step
-	cp Param/PARAM.in.test.GMPC.start.2step.aniso ${TESTDIR}/PARAM.in
-	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl -m RESULTS/2step
-	cd ${TESTDIR}; ./Restart.pl -v -i RESULTS/2step/RESTART
-	cp Param/PARAM.in.test.GMPC.restart.2step.aniso ${TESTDIR}/PARAM.in
-	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl -m RESULTS/2restart	
-
-test12_aniso_check:
-	-@(${DIFFNUM} -b -a=2.0e-3 \
-	   ${TESTDIR}/RESULTS/4step/GM/z=0_var_1_t00000005_n00000004.out \
-	   output/test12/z=0_var.out.ref.aniso.gz \
-		> test12_aniso_gmpc.diff)
-	-@(${DIFFNUM} -b -a=2.0e-3 \
-	   ${TESTDIR}/RESULTS/2restart/GM/z=0_var_1_t00000005_n00000004.out \
-	   output/test12/z=0_var.out.ref.aniso.gz \
-		>> test12_aniso_gmpc.diff)
-	ls -l test12_aniso_gmpc.diff
-
-#### test12_3d: PC/IPIC3D2 + GM/BATSRUS for 3D reconetion ###
-
-test12_3d:
-	@echo "test12_3d_compile..." > test12_3d_gm.diff
-	$(MAKE) test12_3d_compile
-	@echo "test12_3d_rundir..." > test12_3d_gm.diff
-	$(MAKE) test12_3d_rundir
-	@echo "test12_3d_run..." > test12_3d_gm.diff
-	$(MAKE) test12_3d_run
-	@echo "test12_3d_check..." > test12_3d_gm.diff
-	$(MAKE) test12_3d_check
-
-test12_3d_compile:
-	./Config.pl -v=Empty,PC/IPIC3D2,GM/BATSRUS
-	./Config.pl -o=GM:u=GemReconnect,e=MhdHyp,ng=2,g=4,4,4
-	$(MAKE) SWMF
-	$(MAKE) PIDL
-	
-test12_3d_rundir:
-	rm -rf ${TESTDIR}
-	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR}
-	cp Param/PARAM.in.test.GMPC.3D.start  ${TESTDIR}/PARAM.in
-	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
-
-test12_3d_run:
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl RESULTS/4step
-
-test12_3d_check:
-	-@(${DIFFNUM} -b -a=1e-9 \
-	   ${TESTDIR}/RESULTS/4step/GM/x=0_var_1_t00000000_n00000004.out \
-	   output/test12/x=0_var.out.ref.3d.gz \
-		> test12_3d_gm.diff)
-	-@(${DIFFNUM} -b -a=1e-9 \
-	   ${TESTDIR}/RESULTS/4step/GM/y=0_var_2_t00000000_n00000004.out \
-	   output/test12/y=0_var.out.ref.3d.gz \
-		>> test12_3d_gm.diff)
-	-@(${DIFFNUM} -b -a=1e-9 \
-	   ${TESTDIR}/RESULTS/4step/GM/z=0_var_3_t00000000_n00000004.out \
-	   output/test12/z=0_var.out.ref.3d.gz \
-		>> test12_3d_gm.diff)
-	-@(${DIFFNUM} -b -a=1e-7 -r=1e-7 \
-	   ${TESTDIR}/RESULTS/4step/PC/cut_all_region0_0_t00000000_n00000004.out \
-	   output/test12/cut_all.out.ref.3d.gz \
-		> test12_3d_pc.diff)
-	ls -l test12_3d_*.diff
-
-#### test12_iso: PC/IPIC3D2 + GM/BATSRUS with isotropic MHD ###
-
-test12_iso:
-	@echo "test12_iso_compile..." > test12_iso_gm.diff
-	$(MAKE) test12_iso_compile
-	@echo "test12_iso_rundir..." > test12_iso_gm.diff
-	$(MAKE) test12_iso_rundir
-	@echo "test12_iso_run..." > test12_iso_gm.diff
-	$(MAKE) test12_iso_run
-	@echo "test12_iso_check..." > test12_iso_gm.diff
-	$(MAKE) test12_iso_check
-
-test12_iso_compile:
-	./Config.pl -v=Empty,PC/IPIC3D2,GM/BATSRUS
-	./Config.pl -o=GM:u=Default,e=MultiIonPe,ng=2,g=8,8,1
-	$(MAKE) SWMF
-	$(MAKE) PIDL
-	
-test12_iso_rundir:
-	rm -rf ${TESTDIR}
-	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR}
-	cp Param/PARAM.in.test.GMPC.start  ${TESTDIR}/PARAM.in
-	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
-
-test12_iso_run:
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl -m RESULTS
-
-test12_iso_check:
-	-@(${DIFFNUM} -t -a=1e-9 \
-	   ${TESTDIR}/RESULTS/GM/z=0_all_1_t00000002_n00000004.out \
-	   output/test12/z=0_all.out.ref.iso.gz \
-		> test12_iso_gm.diff)
-	-@(${DIFFNUM} -b -a=1e-8 \
-	   ${TESTDIR}/RESULTS/PC/z=0_fluid_region0_0_t00000002_n00000004.out \
-	   output/test12/z=0_fluid.out.ref.iso.gz \
-		> test12_iso_pc.diff)
-	-@(${DIFFNUM} -b -a=1e-9 \
-	   ${TESTDIR}/RESULTS/PC/cut_particles1_region0_1_t00000002_n00000004.out \
-	   output/test12/cut_particles1.out.ref.iso.gz \
-		>> test12_iso_pc.diff)
-	ls -l test12_iso*.diff
 
 ###############################################################################
 test_esmf:
