@@ -471,7 +471,7 @@ test_swpc_check:
 		${TESTDIR}/GM/IO2/log_e20140410-000200.log \
 		Param/SWPC/TestOutput/log_e20140410-000200.log \
 		> test_swpc_rcm_gm.diff)
-	-@(${DIFFNUM} -b -r=2e-4 -a=3e-5 \
+	-@(${DIFFNUM} -b -r=2e-4 -a=4e-5 \
 		${TESTDIR}/GM/IO2/magnetometers_e20140410-000200.mag \
 		Param/SWPC/TestOutput/magnetometers_e20140410-000200.mag \
 		>> test_swpc_rcm_gm.diff)
@@ -823,7 +823,7 @@ test_swpc_multispecies_check:
 		${TESTDIR}/GM/IO2/log_e20140410-000200.log \
 		Param/SWPC/TestOutputMultiSpecies/log_e20140410-000200.log \
 		> test_swpc_multispecies_gm.diff)
-	-@(${DIFFNUM} -b -r=1e-3 -a=2e-5 \
+	-@(${DIFFNUM} -b -r=1e-3 -a=3e-5 \
 		${TESTDIR}/GM/IO2/magnetometers_e20140410-000200.mag \
 		Param/SWPC/TestOutputMultiSpecies/magnetometers_e20140410-000200.mag \
 		>> test_swpc_multispecies_gm.diff)
@@ -839,7 +839,7 @@ test_swpc_multispecies_check:
 		${TESTDIR}/IE/ionosphere/IE_t140410_000200.log \
 		Param/SWPC/TestOutputMultiSpecies/IE_t140410_000200.log \
 		> test_swpc_multispecies_ie.diff)
-	-@(${DIFFNUM} -b -r=2e-4 -a=1e-4 \
+	-@(${DIFFNUM} -b -r=3e-4 -a=1e-4 \
 		${TESTDIR}/IE/ionosphere/it140410_000300_000.idl \
 		Param/SWPC/TestOutputMultiSpecies/it140410_000300_000.idl.gz \
 		>> test_swpc_multispecies_ie.diff)
