@@ -1,0 +1,6 @@
+# North, East and vertical components of magnetic field in nT
+# computed from magnetosphere and ionosphere currents
+# GEO lon, lat=    18.820    68.350
+# Station: ABK
+Year Month Day Hour Min Sec B_NorthGeomag B_EastGeomag B_DownGeomag SmLon SmLat
+2014  4 10  0  3  0    29.692    -1.536    55.560   225.270    66.113
