@@ -166,15 +166,15 @@ contains
        call read_var('NameTarget', NameCompBl)
        BL_ = i_comp(NameCompBl)
        if(.not.use_comp(BL_)) then
-          if(is_proc0()) write(*,*) NameSub//&
-               ' SWMF_ERROR for NameMaster: '// &
+          if(is_proc0()) write(*,'(a)') NameSub//&
+               ' SWMF_ERROR for NameMaster: '//&
                NameComp//' is OFF or not registered, not MFLAMPA target'
           iError = 34
           RETURN
        end if
        if(.not.(BL_ == PT_.or.BL_==SP_))then
-          if(is_proc0()) write(*,*) NameSub//&
-               ' SWMF_ERROR for NameMaster: '// &
+          if(is_proc0()) write(*,'(a)') NameSub//&
+               ' SWMF_ERROR for NameMaster: '//&
                'SP or PT can be BLine target, but '//NameComp//' cannot'
           iError = 34
           RETURN
@@ -186,8 +186,8 @@ contains
        call read_var('nSource', nSource)
        if(nSource==0)RETURN ! Uncoupled SP
        if(nSource>3)then
-          if(is_proc0()) write(*,*) NameSub//&
-               ' SWMF_ERROR for NameMaster: '// &
+          if(is_proc0()) write(*,'(a)') NameSub//&
+               ' SWMF_ERROR for NameMaster: '//&
                'there can be only not more than 3 source components in MFLAMPA'
           iError = 34
           RETURN
@@ -199,8 +199,8 @@ contains
           select case(iComp)
           case(SC_)
              if(.not.use_comp(SC_)) then
-                if(is_proc0()) write(*,*) NameSub//&
-                     ' SWMF_ERROR for NameMaster: '// &
+                if(is_proc0()) write(*,'(a)') NameSub//&
+                     ' SWMF_ERROR for NameMaster: '//&
                      ' SC  needed in MFLAMPA is OFF or not registered'
                 iError = 34
                 RETURN
@@ -210,8 +210,8 @@ contains
              IsSource4BL_C(SC_) = .true.
           case(IH_)
              if(.not.use_comp(IH_)) then
-                if(is_proc0()) write(*,*) NameSub//&
-                     ' SWMF_ERROR for NameMaster: '// &
+                if(is_proc0()) write(*,'(a)') NameSub//&
+                     ' SWMF_ERROR for NameMaster: '//&
                      ' IH  needed in MFLAMPA is OFF or not registered'
                 iError = 34
                 RETURN
@@ -221,8 +221,8 @@ contains
              IsSource4BL_C(IH_) = .true.
           case(OH_)
              if(.not.use_comp(OH_)) then
-                if(is_proc0()) write(*,*) NameSub//&
-                     ' SWMF_ERROR for NameMaster: '// &
+                if(is_proc0()) write(*,'(a)') NameSub//&
+                     ' SWMF_ERROR for NameMaster: '//&
                      ' OH  needed in MFLAMPA is OFF or not registered'
                 iError = 34
                 RETURN
@@ -232,7 +232,7 @@ contains
              IsSource4BL_C(OH_) = .true.
           case default
              if(is_proc0()) write(*,*) NameSub//&
-                  ' SWMF_ERROR for NameMaster: '// &
+                  ' SWMF_ERROR for NameMaster: '//&
                   'SC, IH and OH are only allowed as MFLAMPA sources'
              iError = 34
              RETURN
@@ -266,6 +266,13 @@ contains
           NameMHData = 'SP/IO2/MH_data'
        end select
     case("#COUPLEFIELDLINE")
+       if(BL_ < 1)then
+          if(is_proc0())write(*,'(a)') NameSub//&
+            ' SWMF_ERROR for NameMaster: '//&
+            '#FIELDLINE command must preceed '//NameCommand
+          iError = 34
+          RETURN
+       end if
        call read_var('DnCouple', DnCouple)
        call read_var('DtCouple', DtCouple)
        DoThis = DnCouple > 0 .or. DtCouple > 0.0
@@ -275,8 +282,8 @@ contains
           Couple_CC(:, BL_)%DoThis = DoThis
        end where
     case default
-       if(is_proc0()) write(*,*) NameSub//&
-            ' SWMF_ERROR for NameMaster: '// &
+       if(is_proc0()) write(*,'(a)') NameSub//&
+            ' SWMF_ERROR for NameMaster: '//&
             'Unknown command '//NameCommand
        iError = 34
        RETURN
