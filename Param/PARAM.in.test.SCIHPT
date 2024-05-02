@@ -330,6 +330,23 @@ pnt mhd tec		StringPlot
 
 #BEGIN_COMP PT ---------------------------------------------------------------
 
+#NSTEP
+0			nStep
+
+#DORUN
+F			DoRun
+
+#TRACESHOCK
+F			DoTraceShock
+
+
+#ORIGIN
+2.5			ROrigin
+-10			LonMin
+25			LatMin
+10			LonMax
+90			LatMax
+
 
 #END_COMP PT -----------------------------------------------------------------
 
