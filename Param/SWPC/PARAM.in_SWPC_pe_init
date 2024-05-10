@@ -122,6 +122,9 @@ float			TypeBc6
 #INNERBOUNDARY
 ionosphere		TypeBcBody
 
+#SHOCKHEATING
+0.25			PeShockHeatingFraction
+
 #ELECTRONPRESSURERATIO
 1.0			ElectronTemperatureRatio
 1/7.8			InnerBcPeRatio
