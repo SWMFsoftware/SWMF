@@ -872,7 +872,8 @@ F			DoTraceShock
 #POISSONBRACKET
 T			UsePoissonBracket
 
-#UPPERENDBC
+#ENDBC
+T			UseLowerEndBc
 T			UseUpperEndBc
 lism			TypeUpperEndBc
 default			TypeLisBc
