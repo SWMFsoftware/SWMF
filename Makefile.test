@@ -394,7 +394,7 @@ test1_check:
 		output/test1/IE.log \
 		> test01_ie.diff)
 	-@(${DIFFNUM} -b -r=1e-4 -a=1e-4 \
-		${TESTDIR}/RESULTS/IE/it000321_104510_000.idl \
+		${TESTDIR}/RESULTS/IE/it140410_000110_000.idl \
 		output/test1/IE*.idl.gz \
 		>> test01_ie.diff)
 	ls -l test01_*.diff
