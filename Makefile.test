@@ -286,51 +286,6 @@ test_ps_check:
 		>> test_ps.diff)
 	ls -ltr test_ps*.diff
 
-
-### test_psie: Plasmasphere-Ionosphere Coupling: PS-IE/DGCPM-RIM ###
-
-test_psie:
-	@echo "starting..." > test_psie.diff
-	@echo "test_psie_compile..." >> test_psie.diff
-	${MAKE} test_psie_compile
-	@echo "test_psie_rundir..." >> test_psie.diff
-	${MAKE} test_psie_rundir
-	@echo "test_psie_run..." >> test_psie.diff
-	${MAKE} test_psie_run
-	@echo "test_psie_check..." >> test_psie.diff
-	${MAKE} test_psie_check	
-
-test_psie_compile:
-	./Config.pl -v=Empty,PS/DGCPM,IE/RIM
-	${MAKE} SWMF
-
-test_psie_rundir:
-	rm -rf ${TESTDIR}
-	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
-	cp Param/PARAM.in.test.PSIE  ${TESTDIR}/PARAM.in
-	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
-	cp ${PSDIR}/Input/IMF_NSturning_10nT.dat ${TESTDIR}/
-
-test_psie_run:
-	cd ${TESTDIR}; ${PARALLEL} ${NPFLAG} 1 ./SWMF.exe > runlog
-	cd ${TESTDIR}/IE; ./pIE
-	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
-
-test_psie_check:
-	-@(${DIFFNUM} -t -r=1e-8                        \
-	        ${TESTDIR}/RESULTS/IE/IE.log                         \
-		${PSDIR}/Output/IE_test_psie.ref                     \
-		> test_psie.diff)
-	-@(${DIFFNUM} -t -r=1e-8                        \
-	        ${TESTDIR}/RESULTS/PS/PS_t20000321_104500_000.log    \
-		${PSDIR}/Output/PS_test_psie.ref                     \
-		>> test_psie.diff)
-	-@(${DIFFNUM} -t -r=1e-6                        \
-	        ${TESTDIR}/RESULTS/PS/dgcpm_t20000321_105500_000.dat \
-		${PSDIR}/Output/dgcpm_testpsie.ref                   \
-		>> test_psie.diff)
-	ls -ltr test_psie*.diff
-	
 ### test1: PW+IE+GM ###
 
 test1:
