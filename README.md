@@ -10,50 +10,16 @@ the instructions below.
 
 # Obtain SWMF
 
-Get the full source code from GitHub/SWMFsoftware or the open-source code from
-GitHub/MSTEM-QUDA.
+You can get the full source code from GitHub/SWMFsoftware after
+uploading your machine's ssh key to github. 
 
-The minimum requirement is the `SWMF` repository. 
+The minimum requirement is the `SWMF` repository.
 
-You may also need the open-source `SWMF_data` repository that contains
-large data files and can be downloaded into your home directory (or into
-the SWMF directory):
-
-```
-cd
-git clone https://github.com/SWMFsoftware/SWMF_data --depth=1
-```
-
-For solar applications (solar corona, inner heliosphere, CMEs) the
-`SWMFSOLAR` repository can be useful. This is typically downloaded
-into the SWMF directory, or to the (scratch/nobackup...) disk of
-a supercomputer where the runs are performed:
-```
-cd
-git clone https://github.com/SWMFsoftware/SWMFSOLAR --depth=1
-```
-
-Some data files used by the Center for Radiative Shock Hydrodynamics (CRASH)
-are in the `CRASH_data` repository that is available to registered users.
-If needed, it has to be placed into the home directory. 
-
-# Getting the open-source MSTEM-QUDA/SWMF:
-
-Clone the SWMF from GitHub/MSTEM-QUDA
-
-```
-cd {where_you_want_to_have_mstem-quda}
-git clone https://github.com/MSTEM-QUDA/SWMF
-```
-
-The rest of the repositories (share, util, BATSRUS ...)
-will be cloned from GitHub/MSTEM-QUDA during the installation.
-
-# Getting the full SWMF from GitHub/SWMFsoftware (requires access)
+# Getting the full SWMF from GitHub/SWMFsoftware
 
 Read the
-[Git instructions](http://herot.engin.umich.edu/~gtoth/SWMF/doc/Git_instructions.pdf)
-about registering, passwordless access, mail notifications, and
+[Git instructions](https://github.com/SWMFsoftware/SWMF/blob/master/doc/Git_instructions.pdf)
+about (optional) registration, passwordless access, mail notifications, and
 using the [gitclone](https://github.com/SWMFsoftware/share/blob/master/Scripts/gitclone) script.
 
 ## Clone the SWMF repository
@@ -62,6 +28,28 @@ using the [gitclone](https://github.com/SWMFsoftware/share/blob/master/Scripts/g
 cd {where_you_want_to_have_the_swmf}
 gitclone SWMF
 ```
+
+You may also need the open-source `SWMF_data` repository that contains
+large data files and can be downloaded into your home directory (or into
+the SWMF directory):
+
+```
+cd
+gitclone SWMF_data
+```
+
+For solar applications (solar corona, inner heliosphere, CMEs) the
+`SWMFSOLAR` repository can be useful. This is typically downloaded
+into the SWMF directory, or to the (scratch/nobackup...) disk of
+a supercomputer where the runs are performed:
+```
+cd SWMF
+gitclone SWMFSOLAR
+```
+
+Some data files used by the Center for Radiative Shock Hydrodynamics (CRASH)
+are in the `CRASH_data` repository. If needed, it has to be placed into
+the home directory. 
 
 ## Clone the CRASH_data repository into the home directory if needed
 ```
@@ -76,6 +64,7 @@ Many machines used by UofM are already recognized by the
 scripts in the SWMF.
 For these platform/compiler combinations installation is very simple:
 ```
+cd SWMF
 ./Config.pl -install
 ```
 On other platforms the Fortran (and C) compilers should be explicitly given.

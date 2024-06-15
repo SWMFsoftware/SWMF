@@ -26,11 +26,11 @@ F			DoSaveRestart
 T			IsTimeAccurate
 
 #STARTTIME
-2000			iYear
-3			iMonth
-21			iDay
-10			iHour
-45			iMinute
+2014			iYear
+4			iMonth
+10			iDay
+0			iHour
+1			iMinute
 0			iSecond
 0.0			FracSecond
 
@@ -154,9 +154,9 @@ RAW			StringLog
 1			nStage
 0.6			CflExpl
 
-#UPSTREAM_INPUT_FILE
+#SOLARWINDFILE
 T			UseSolarWindFile
-GM/Param/TESTSUITE/Inputfiles/IMF_NSturning_1nT.dat		NameSolarWindFile
+Param/SWPC/IMF.dat		NameSolarWindFile
 
 #SCHEME
 1			nOrder
@@ -257,26 +257,6 @@ F			DoAppendPlot
 10.0			TimeMax
 
 #BEGIN_COMP GM ---------------------------------------------------------------
-
-#AMR
-30			DnRefine
-T			DoAutoRefine
-10.			PercentCoarsen
-30.			PercentRefine
-800			MaxTotalBlocks
-
-#AMRCRITERIA
-3			nRefineCrit
-curlB			TypeRefine
-0.0			CoarsenLimit
-0.0			RefineLimit
-gradlogP		TypeRefine
-0.0			CoarsenLimit
-0.0			RefineLimit
-Rcurrents		TypeRefine
-0.0			CoarsenLimit
-0.0			RefineLimit
-
 
 #SCHEME
 2			nOrder

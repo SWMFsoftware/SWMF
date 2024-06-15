@@ -58,6 +58,7 @@ test_help:
 	@(if [ -d PC/FLEKS   ]; then echo "    test16                      (run GM-PC/FLEKS test: periodic FLEKS)"; fi)
 	@(if [ -d PC/FLEKS   ]; then echo "    test17                      (run GM-PC/FLEKS test: 2D Alfven wave)"; fi)
 	@(if [ -d PC/FLEKS   ]; then echo "    test18                      (run GM-PC/FLEKS test: 3D reconnection)"; fi)
+	@(if [ -d SP/MFLAMPA ]; then echo "    test19			   (run SC-IH-OH-SP/MFLAMPA test)"; fi)
 	@(if [ -d PT/FLEKS   ]; then echo "    test20                      (run OH-PT/FLEKS test: shocktube)"; fi)
 	@(if [ -d PT/FLEKS   ]; then echo "    test21                      (run OH-PT/FLEKS test: OuterHelio)"; fi)
 	@echo "    test_check                  (collect test results into test_swmf.res)"
@@ -85,7 +86,6 @@ test_swmf:
 	-@(${MAKE} test_eeggl TESTDIR=run_test_eeggl)
 	-@(if [ "${ESMF_DIR}" != "" ]; then ${MAKE} test_esmf; fi)
 	-@(if [ -d PS/DGCPM   ]; then ${MAKE} test_ps TESTDIR=run_test_ps; fi)
-	-@(if [ -d SP/MFLAMPA ]; then ${MAKE} test_sp TESTDIR=run_test_sp; fi)
 	-@(if [ -d IM/RCM2    ]; then ${MAKE} test_swpc_gpu TESTDIR=run_test_swpc_gpu; fi)
 	-@(if [ -d IM/RCM2    ]; then ./Config.pl -noacc; fi)
 	-@(if [ -d IM/RCM2    ]; then ${MAKE} test_swpc TESTDIR=run_test_swpc; fi)
@@ -286,51 +286,6 @@ test_ps_check:
 		>> test_ps.diff)
 	ls -ltr test_ps*.diff
 
-
-### test_psie: Plasmasphere-Ionosphere Coupling: PS-IE/DGCPM-RIM ###
-
-test_psie:
-	@echo "starting..." > test_psie.diff
-	@echo "test_psie_compile..." >> test_psie.diff
-	${MAKE} test_psie_compile
-	@echo "test_psie_rundir..." >> test_psie.diff
-	${MAKE} test_psie_rundir
-	@echo "test_psie_run..." >> test_psie.diff
-	${MAKE} test_psie_run
-	@echo "test_psie_check..." >> test_psie.diff
-	${MAKE} test_psie_check	
-
-test_psie_compile:
-	./Config.pl -v=Empty,PS/DGCPM,IE/RIM
-	${MAKE} SWMF
-
-test_psie_rundir:
-	rm -rf ${TESTDIR}
-	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
-	cp Param/PARAM.in.test.PSIE  ${TESTDIR}/PARAM.in
-	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
-	cp ${PSDIR}/Input/IMF_NSturning_10nT.dat ${TESTDIR}/
-
-test_psie_run:
-	cd ${TESTDIR}; ${PARALLEL} ${NPFLAG} 1 ./SWMF.exe > runlog
-	cd ${TESTDIR}/IE; ./pIE
-	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
-
-test_psie_check:
-	-@(${DIFFNUM} -t -r=1e-8                        \
-	        ${TESTDIR}/RESULTS/IE/IE.log                         \
-		${PSDIR}/Output/IE_test_psie.ref                     \
-		> test_psie.diff)
-	-@(${DIFFNUM} -t -r=1e-8                        \
-	        ${TESTDIR}/RESULTS/PS/PS_t20000321_104500_000.log    \
-		${PSDIR}/Output/PS_test_psie.ref                     \
-		>> test_psie.diff)
-	-@(${DIFFNUM} -t -r=1e-6                        \
-	        ${TESTDIR}/RESULTS/PS/dgcpm_t20000321_105500_000.dat \
-		${PSDIR}/Output/dgcpm_testpsie.ref                   \
-		>> test_psie.diff)
-	ls -ltr test_psie*.diff
-	
 ### test1: PW+IE+GM ###
 
 test1:
@@ -394,7 +349,7 @@ test1_check:
 		output/test1/IE.log \
 		> test01_ie.diff)
 	-@(${DIFFNUM} -b -r=1e-4 -a=1e-4 \
-		${TESTDIR}/RESULTS/IE/it000321_104510_000.idl \
+		${TESTDIR}/RESULTS/IE/it140410_000110_000.idl \
 		output/test1/IE*.idl.gz \
 		>> test01_ie.diff)
 	ls -l test01_*.diff
