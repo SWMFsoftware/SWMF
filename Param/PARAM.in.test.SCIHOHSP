@@ -873,7 +873,7 @@ F			DoTraceShock
 T			UsePoissonBracket
 
 #ENDBC
-T			UseLowerEndBc
+inject			TypeLowerEndBc
 T			UseUpperEndBc
 lism			TypeUpperEndBc
 default			TypeLisBc
