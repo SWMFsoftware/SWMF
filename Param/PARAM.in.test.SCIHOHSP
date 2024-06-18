@@ -869,12 +869,11 @@ T			DoRun
 #TRACESHOCK
 F			DoTraceShock
 
-#POISSONBRACKET
+#ADVECTION
 T			UsePoissonBracket
 
 #ENDBC
 inject			TypeLowerEndBc
-T			UseUpperEndBc
 lism			TypeUpperEndBc
 default			TypeLisBc
 T			UseModulationPot
@@ -892,7 +891,7 @@ mh2d flux ascii		StringPlot
 
 #SCALETURBULENCE
 constant		ScaleTurbulenceType
-0.2402397832		ScaleTurbulence [AU] at 1 AU
+0.2402397832		ScaleTurbulence1AU [AU]
 
 #END_COMP SP -----------------------------------------------------------------
 
