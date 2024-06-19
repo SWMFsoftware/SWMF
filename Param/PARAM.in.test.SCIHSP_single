@@ -100,10 +100,11 @@ pnt mhd tec		StringPlot
 #DORUN
 F			DoRun
 
-#TEST
+#TRACESHOCK
 F			DoTraceShock
-F			UseDiffusion
 
+#DIFFUSION
+F			UseDiffusion
 
 #ORIGIN
 2.5			ROrigin

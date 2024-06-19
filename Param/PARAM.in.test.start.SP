@@ -17,10 +17,10 @@ T			DoTimeAccurate
 3
 
 #DORUN
-T
+T			DoRun
 
 #DOREADMHDATA
-T
+T			DoReadMhData
 
 #VERBOSE
 1			lVerbose

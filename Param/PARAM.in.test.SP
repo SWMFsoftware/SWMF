@@ -13,7 +13,6 @@ Param/PARAM.in.test.SP: Input file for testing SP model for SEPs, uses input fil
       17		iHour
       26		iMinute
        0		iSecond
- 0.000000000000		FracSecond
 
 #TIMEACCURATE
 T			IsTimeAccurate
