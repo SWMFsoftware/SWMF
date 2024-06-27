@@ -872,8 +872,12 @@ F			DoTraceShock
 #ADVECTION
 T			UsePoissonBracket
 
-#ENDBC
+#LOWERENDBC
+T			UseLowerEndBc
 inject			TypeLowerEndBc
+
+#UPPERENDBC
+T			UseUpperEndBc
 lism			TypeUpperEndBc
 default			TypeLisBc
 T			UseModulationPot
