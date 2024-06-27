@@ -7,12 +7,13 @@ SP  0 -1  1		CompMap
 Param/PARAM.in.test.SP: Input file for testing SP model for SEPs, uses input files with background data		StringDescription
 
 #STARTTIME
-    2011		iYear
-       2		iMonth
-      16		iDay
-      17		iHour
-      26		iMinute
-       0		iSecond
+2011		iYear
+   2		iMonth
+  16		iDay
+  17		iHour
+  26		iMinute
+   0		iSecond
+   0		FracSecond
 
 #TIMEACCURATE
 T			IsTimeAccurate
