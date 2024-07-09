@@ -25,7 +25,7 @@ T			IsMagAxisPrimary (rest of parameters read if true)
 288.0			MagAxisPhi   [degree] tilt from x-axis clockwise
 
 #TEST
-CON_axes::init_axes CON_axes::set_axes		StringTest
+init_axes set_axes		StringTest
 
 #PROGRESS
 1			DnProgressShort (frequency of short reports to STDOUT)

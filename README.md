@@ -15,7 +15,7 @@ uploading your machine's ssh key to github.
 
 The minimum requirement is the `SWMF` repository.
 
-# Getting the full SWMF from GitHub/SWMFsoftware
+# Getting SWMF from GitHub/SWMFsoftware
 
 Read the
 [Git instructions](https://github.com/SWMFsoftware/SWMF/blob/master/doc/Git_instructions.pdf)
