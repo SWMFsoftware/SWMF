@@ -1,0 +1,338 @@
+#COMPONENTMAP
+OH 0 -1  1		CompMap runs on all PE-s
+PT 0 -1  1		CompMap runs on 1 or 2 PE-s
+
+#INCLUDE
+RESTART.in
+
+#DESCRIPTION
+Param/PARAM.in.test.OHPT.FLEKS.outerhelio.4neu.couple		StringDescription
+
+#COMPONENT
+PT			NameComp
+F			UseComp
+
+#STARTTIME		for 1985.102
+1985			iYear
+2			iMonth
+6			iDay
+5			iHour
+31			iMinute
+12			iSecond
+0.0			FracSecond
+
+#LOOKUPTABLE
+OH			StringCompTable
+ChargeExchange		NameTable
+load			NameCommand
+OH/Param/ChargeExchangeRate_LS.dat		NameFile
+ascii			TypeFile
+
+#TIMEACCURATE
+F  			IsTimeAccurate
+
+#BEGIN_COMP OH ---------------------------------------------------------------
+
+#GRAVITY
+F			UseGravity (rest of parameters read if true)
+
+#INCLUDE
+OH/restartIN/restart.H
+
+#UPDATECHECK
+T			UseUpdateCheck
+40.			RhoMinPercent
+400.			RhoMaxPercent
+40.			pMinPercent
+400.			pMaxPercent
+
+#PLOTFILENAME
+year			NameMaxTimeUnit
+
+#GRIDBLOCKALL
+3500			MaxBlock
+
+#INNERBOUNDARY
+user			TypeBcBody
+
+#OUTERBOUNDARY
+user			TypeBc1
+outflow			TypeBc2
+outflow			TypeBc3
+outflow			TypeBc4
+outflow			TypeBc5
+outflow			TypeBc6
+
+#NEUTRALFLUID
+F			DoConserveNeutrals
+Linde			TypeFluxNeutral
+
+#SCHEME
+2			nOrder
+Linde			TypeFlux
+mc			TypeLimiter
+1.5			LimiterBeta
+
+! 0.8 works fine for higher resolution
+#TIMESTEPPING
+2			nStage
+0.1			CflExpl
+
+#MINIMUMPRESSURE
+1.E-18			pMinDim for fluid SW
+1.E-23			pMinDim for fluid PUI
+1.E-23			pMinDim for Neu
+1.E-23			pMinDim for Ne2
+1.E-23			pMinDim for Ne3
+1.E-23			pMinDim for Ne4
+
+#MINIMUMDENSITY
+1.E-4			RhoMinDim for fluid SW
+1.E-9			RhoMinDim for fluid PUI
+1.E-9			RhoMinDim for Neu
+1.E-9			RhoMinDim for Ne2
+1.E-9			RhoMinDim for Ne3
+1.E-9			RhoMinDim for Ne4
+
+! Applies to the ions only if DoConserveNeutrals is false in #MULTIFLUID
+#NONCONSERVATIVE
+F			UseNonConservative
+
+#SAVERESTART
+T			DoSaveRestart
+1000			DnSaveRestart
+-1.0			DtSaveRestart
+
+#SAVELOGFILE
+T			DoSaveLogfile
+RAW			StringLog
+10			DnSaveLogfile
+-1.			DtSaveLogfile
+
+#SAVEINITIAL
+T			DoSaveInitial
+
+#SAVEPLOT
+2			nPlotFile
+y=0 VAR idl_ascii		StringPlot
+100			DnSavePlot
+-1.0			DtSavePlot
+-1.0			DxSavePlot
+{MHD} fluid mach		NameVars
+rbody			NamePars
+z=0 MHD idl_ascii		StringPlot
+100			DnSavePlot
+-1.0			DtSavePlot
+-1.0			DxSavePlot
+
+#OHBOUNDARY
+T			UseOhNeutralBc
+0.05			RhoNeuFactor
+1.0			uNeuFactor
+1.E-2			RhoNeuFactor Ne2
+0.2			uNeuFactor
+1.E-2			RhoNeuFactor Ne3
+1.0			uNeuFactor
+1.E-3			RhoNeuFactor Ne4
+0.1			uNeuFactor
+
+#OHNEUTRALS
+0.18			RhoNeutralsISW
+6519.0			TNeutralsISW
+26.3			UxNeutralsISW
+0.0			UyNeutralsISW
+-2.3			UzNeutralsISW
+1.0			mNeutral
+
+#USERSWITCH
++init +source_expl +perturb +progress +update		StringSwitch
+
+#USERINPUTBEGIN -----------------------------------
+
+#GLOBALHELIOSPHERE
+30.
+
+#SOLARWINDH
+0.00874			SWH_N_dim [n/cc]
+1.0868E5		SWH_T_dim [K]
+417.07			SWH_Ux_dim [km/s]
+0.0			    SWH_Uy_dim [km/s]
+0.0			    SWH_Uz_dim [km/s]
+7.17E-03		SWH_Bx_dim [nT]
+0.0			    SWH_By_dim [nT]
+0.0			    SWH_Bz_dim [nT]
+
+#PICKUPION3
+9.45E-4			PU3_rho_dim [n/cc]
+8.20E6			PU3_T_dim [K]
+417.07			PU3_Ux_dim [km/s]
+0			PU3_Uy_dim [km/s]
+0			PU3_Uz_dim [km/s]
+
+#VLISW
+0.06			VLISW_N_dim [n/cc]
+6519.0			VLISW_T_dim
+26.3			VLISW_Ux_dim
+0.0			    VLISW_Uy_dim
+-2.3			VLISW_Uz_dim
+0.3093			VLISW_Bx_dim
+-0.080			VLISW_By_dim
+-0.2988			VLISW_Bz_dim
+
+#REGIONS
+MultiIon                NameRegionFormula
+250.0                   uPop3LimitDim
+1.0                     MachPop3Limit
+0.7e5                   TempPop2LimitDim
+100.0                   uPop1LimitDim
+1.0                     MachPop1Limit
+
+#PU3HEATING
+T			UsePu3Heating
+1e7			TempPu3Si [K]
+20.0			FactorPu3 1/[au yr]
+
+#SOURCES
+T			    UseIonSource
+T			    UsePu3Source
+T			    UseNeuSource
+T			    UseNe2Source
+T			    UseNe3Source
+T			    UseNe4Source
+
+#USERINPUTEND -------------------------------------
+
+#END_COMP OH -----------------------------------------------------------------
+
+#STOP
+1000			MaxIter
+-1.0			TimeMax
+
+#RUN ##########################################################################
+
+LOOKUPTABLE
+OH			StringCompTable
+solarwind2d		NameTable
+load			NameCommand
+OH/Param/solarwind2D.dat		NameFile
+ascii			TypeFile
+
+#TIMEACCURATE
+T  			IsTimeAccurate
+
+#SAVERESTART
+T			DoSaveRestart
+-1			DnSaveRestart
+1 y			DtSaveRestart
+
+#BEGIN_COMP OH ---------------------------------------------------------------
+
+#SAVEPLOT
+1			nPlotFile
+y=0 MHD idl_ascii		StringPlot
+-1			DnSavePlot
+1 year			DtSavePlot
+-1.0			DxSavePlot
+
+#END_COMP OH -----------------------------------------------------------------
+
+#STOP
+-1			MaxIter
+0.1 year		TimeMax
+
+#RUN ##########################################################################
+
+#COMPONENT
+PT			NameComp
+T			UseComp
+
+#COUPLE1
+OH			NameSource
+PT			NameTarget
+-1			DnCouple
+0.2 year		DtCouple
+
+#BEGIN_COMP PT ---------------------------------------------------------------
+
+#RECEIVEICONLY
+T			receiveICOnly
+
+#NORMALIZATION
+1.495978707E11		lNorm [m]
+3.0e8			uNorm [m/s]
+
+#GEOMETRY
+-800			xMin
+800			xMax
+-800			yMin
+800			yMax
+-800			zMin
+800			zMax
+
+#NCELL
+16			nCellX
+16			nCellY
+16			nCellZ
+
+#MAXBLOCKSIZE
+4			nCellX
+4			nCellY
+4			nCellZ
+
+!===== Mesh Refinement=========
+#REGION
+pouter			regionName
+paraboloid		shape
+1			iAxis
+-300			centerX
+0			centerY
+0			centerZ
+600			height
+500			radius1
+800			radius2
+
+#REGION
+sphere1			regionName
+sphere			shape
+0			centerX
+0			centerY
+0			centerZ
+50			radius
+
+#REGION
+box1			regionName
+box			shape
+-2000			xMinBox
+2000			xMaxBox
+-2000			yMinBox
+2000			yMaxBox
+-2000			zMinBox
+-300			zMaxBox
+
+#REGION
+box2			regionName
+box			shape
+-200			xMinBox
+-60			xMaxBox
+-200			yMinBox
+200			yMaxBox
+-150			zMinBox
+200			zMaxBox
+
+#REFINEREGION
+0			refineLev
++pouter -sphere1 -box1		refineArea
+
+#REFINEREGION
+1			refineLev
++box2			refineArea
+
+!==========================
+
+#END_COMP PT -----------------------------------------------------------------
+
+#STOP
+-1			MaxIter
+0.1001 year		TimeMax
+
+#END

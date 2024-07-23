@@ -1,0 +1,313 @@
+#COMPONENTMAP
+OH 0 -1  1		CompMap runs on all PE-s
+PT 0 -1  1		CompMap runs on 1 or 2 PE-s
+
+#INCLUDE
+RESTART.in
+
+#DESCRIPTION
+Param/PARAM.in.test.OHPT.FLEKS.outerhelio.swh		StringDescription
+
+#COUPLE2
+OH			NameComp1
+PT			NameComp2
+-1			DnCouple
+0.2 year		DtCouple
+
+#STARTTIME		for 1985.102
+1985			iYear
+2			iMonth
+6			iDay
+5			iHour
+31			iMinute
+12			iSecond
+0.0			FracSecond
+
+#LOOKUPTABLE
+OH			StringCompTable
+ChargeExchange		NameTable
+load			NameCommand
+OH/Param/ChargeExchangeRate_LS.dat		NameFile
+ascii			TypeFile
+
+#TIMEACCURATE
+T  			IsTimeAccurate
+
+#SAVERESTART
+T			DoSaveRestart
+-1			DnSaveRestart
+1 y			DtSaveRestart
+
+
+
+#BEGIN_COMP OH ---------------------------------------------------------------
+
+#GRAVITY
+F			UseGravity (rest of parameters read if true)
+
+#CHANGEVARIABLES
+T			DoChangeRestartVariables
+
+#INCLUDE
+OH/restartIN/restart.H
+
+#PLOTFILENAME
+year			NameMaxTimeUnit
+
+#GRIDBLOCKALL
+3500			MaxBlock
+
+#INNERBOUNDARY
+user			TypeBcBody
+
+#OUTERBOUNDARY
+user			TypeBc1
+outflow			TypeBc2
+outflow			TypeBc3
+outflow			TypeBc4
+outflow			TypeBc5
+outflow			TypeBc6
+
+#NEUTRALFLUID
+F			DoConserveNeutrals
+Linde			TypeFluxNeutral
+
+#SCHEME
+2			nOrder
+Linde			TypeFlux
+mc			TypeLimiter
+1.5			LimiterBeta
+
+! 0.8 works fine for higher resolution
+#TIMESTEPPING
+2			nStage
+0.1			CflExpl
+
+
+#MINIMUMPRESSURE
+1.E-18			pMinDim for fluid SW
+1.E-23			pMinDim for fluid PUI
+
+#MINIMUMDENSITY
+1.E-4			RhoMinDim for fluid SW
+1.E-9			RhoMinDim for fluid PUI
+
+
+! Applies to the ions only if DoConserveNeutrals is false in #MULTIFLUID
+#NONCONSERVATIVE
+F			UseNonConservative
+
+#SAVERESTART
+T			DoSaveRestart
+1000			DnSaveRestart
+-1.0			DtSaveRestart
+
+#SAVELOGFILE
+T			DoSaveLogfile
+RAW			StringLog
+10			DnSaveLogfile
+-1.			DtSaveLogfile
+
+#SAVEINITIAL
+T			DoSaveInitial
+
+#SAVEPLOT
+2			nPlotFile
+y=0 MHD idl_ascii		StringPlot
+-1			DnSavePlot
+5 y			DtSavePlot
+-1.0			DxSavePlot
+z=0 MHD idl_ascii		StringPlot
+-1			DnSavePlot
+5 y			DtSavePlot
+-1.0			DxSavePlot
+
+OHBOUNDARY
+T			UseOhNeutralBc
+0.05			RhoNeuFactor
+1.0			uNeuFactor
+1.E-2			RhoNeuFactor Ne2
+0.2			uNeuFactor
+1.E-2			RhoNeuFactor Ne3
+1.0			uNeuFactor
+1.E-3			RhoNeuFactor Ne4
+0.1			uNeuFactor
+
+#OHNEUTRALS
+0.18			RhoNeutralsISW
+6519.0			TNeutralsISW
+26.3			UxNeutralsISW
+0.0			UyNeutralsISW
+-2.3			UzNeutralsISW
+1.0			mNeutral
+
+#USERSWITCH
++init +source_expl +progress +update		StringSwitch
+
+#USERINPUTBEGIN -----------------------------------
+
+#GLOBALHELIOSPHERE
+30.
+
+#SOLARWINDH
+0.00874			SWH_N_dim [n/cc]
+1.0868E5		SWH_T_dim [K]
+417.07			SWH_Ux_dim [km/s]
+0.0			SWH_Uy_dim [km/s]
+0.0			SWH_Uz_dim [km/s]
+7.17E-03		SWH_Bx_dim [nT]
+0.0			SWH_By_dim [nT]
+0.0			SWH_Bz_dim [nT]
+
+#PICKUPION3
+9.45E-4			PU3_rho_dim [n/cc]
+8.20E6			PU3_T_dim [K]
+417.07			PU3_Ux_dim [km/s]
+0			PU3_Uy_dim [km/s]
+0			PU3_Uz_dim [km/s]
+
+#VLISW
+0.06			VLISW_N_dim [n/cc]
+6519.0			VLISW_T_dim
+26.3			VLISW_Ux_dim
+0.0			VLISW_Uy_dim
+-2.3			VLISW_Uz_dim
+0.3093			VLISW_Bx_dim
+-0.080			VLISW_By_dim
+-0.2988			VLISW_Bz_dim
+
+#REGIONS
+MultiIon                NameRegionFormula
+250.0                   uPop3LimitDim
+1.0                     MachPop3Limit
+0.7e5                   TempPop2LimitDim
+100.0                   uPop1LimitDim
+1.0                     MachPop1Limit
+
+#PU3HEATING
+T			UsePu3Heating
+1e7			TempPu3Si [K]
+20.0			FactorPu3 1/[au yr]
+
+#SOURCES
+T			UseIonSource
+T			UsePu3Source
+T			UseNeuSource
+T			UseNe2Source
+T			UseNe3Source
+T			UseNe4Source
+
+#USERINPUTEND -------------------------------------
+
+#END_COMP OH -----------------------------------------------------------------
+
+
+#STOP
+-1			MaxIter
+2 year			TimeMax
+
+
+#BEGIN_COMP PT ---------------------------------------------------------------
+
+#INCLUDE
+PT/restartIN/FLEKS0_restart.H		NameIncludeFile
+
+#INITFROMSWMF
+F			initFromSWMF
+
+#LOADBALANCE
+particle		loadBalanceStrategy
+50			dn
+-1.0			dt
+
+#TIMESTEPPING
+T			useFixedDt
+0.2 y			dt
+
+#NORMALIZATION
+1.495978707E11		lNorm [m]
+3.0e8			uNorm [m/s]
+
+#PARTICLES
+5			nParticleX
+5			nParticleY
+5			nParticleZ
+
+#SOURCEPARTICLES
+2			nParticleX
+2			nParticleY
+2			nParticleZ
+
+#RESAMPLING
+T			doReSampling
+0.8			splittingLimit
+2.0			mergingLimit
+4.0			maxWeightRatio
+
+#FASTMERGE
+T			fastMerge
+10			nOld
+8			nNew
+6			nTry
+1.2			mergeRatioMax
+
+#MERGELIGHT
+T			MERGELIGHT
+20			mergePartRatioMax
+
+#ADAPTIVESOURCEPPC
+T			useAdaptiveSourcePPC
+
+#PARTICLELEVRATIO
+1.5			pLevRatio
+
+#VACUUM
+1e-4			vacuum
+
+#SAVEPLOT
+7			nPlotFile
+y=0 var ascii planet year		StringPlot
+-1			DnSavePlot
+5 y			DtSavePlot
+-1			DxSavePlot
+{fluid} neuregion ppcPop1 ppcPop2 ppcPop3 ppcPop4		NameVars
+z=0 var ascii planet year		StringPlot
+-1			DnSavePlot
+5 y			DtSavePlot
+-1			DxSavePlot
+{fluid} neuregion ppcPop1 ppcPop2 ppcPop3 ppcPop4		NameVars
+3d fluid amrex planet year		StringPlot
+-1			DnSavePlot
+10 y			DtSavePlot
+0			DxSavePlot
+cut particlePop1 amrex planet year		StringPlot
+-1			DnSavePlot
+100 y			DtSavePlot
+-400			xMinCut
+-200			xMaxCut
+-100			yMinCut
+100			yMaxCut
+-100			zMinCut
+100			zMaxCut
+0			DxSavePlot
+cut particlePop2 amrex planet year		StringPlot
+-1			DnSavePlot
+100 y			DtSavePlot
+-200			xMinCut
+500			xMaxCut
+-100			yMinCut
+100			yMaxCut
+-100			zMinCut
+100			zMaxCut
+0			DxSavePlot
+3d particlePop3 amrex planet year		StringPlot
+-1			DnSavePlot
+100 y			DtSavePlot
+0			DxSavePlot
+3d particlePop4 amrex planet year		StringPlot
+-1			DnSavePlot
+100 y			DtSavePlot
+0			DxSavePlot
+
+#END_COMP PT -----------------------------------------------------------------
+

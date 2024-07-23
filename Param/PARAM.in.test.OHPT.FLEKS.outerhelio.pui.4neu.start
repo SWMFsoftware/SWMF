@@ -1,0 +1,252 @@
+#COMPONENTMAP
+OH 0 -1  1		CompMap runs on all PE-s
+PT 0 -1  1		CompMap runs on 1 or 2 PE-s
+
+#COMPONENT
+PT			NameComp
+F			UseComp
+
+#DESCRIPTION
+Param/PARAM.in.test.OHPT.FLEKS.outerhelio.4neu.start		StringDescription
+
+#PLANET
+NONE			NamePlanet
+
+#TIMEACCURATE
+F  			IsTimeAccurate
+
+#BEGIN_COMP OH ---------------------------------------------------------------
+
+#GRAVITY
+F			UseGravity (rest of parameters read if true)
+
+#PLOTFILENAME
+year			NameMaxTimeUnit
+
+#GRID
+1			nRootBlock1
+1			nRootBlock2
+1			nRootBlock3
+-1500.0			xMin
+ 1500.0			xMax
+-1500.0			yMin
+ 1500.0			yMax
+-1500.0			zMin
+ 1500.0			zMax
+
+#GRIDBLOCKALL
+400			MaxBlock
+
+#GRIDLEVEL
+5			nLevel
+initial			StringShape
+
+#GRIDRESOLUTION
+187.5			Resolution
+box			StringShape
+750			xMinBox
+-1500			yMinBox
+-1500			zMinBox
+1500			xMaxBox
+1500			yMaxBox
+1500			zMaxBox
+
+GRIDRESOLUTION
+93.75			Resolution
+box			StringShape
+-1500			xMinBox
+-1500			yMinBox
+-1500			zMinBox
+750			xMaxBox
+1500			yMaxBox
+1500			zMaxBox
+
+GRIDRESOLUTION
+46.875			Resolution
+box			StringShape
+-1125			xMinBox
+-1125			yMinBox
+-1125			zMinBox
+375			xMaxBox
+1125			yMaxBox
+1125			zMaxBox
+
+GRIDRESOLUTION
+23.4375			Resolution
+box			StringShape
+-750			xMinBox
+-750			yMinBox
+-750			zMinBox
+0			xMaxBox
+750			yMaxBox
+750			zMaxBox
+
+#GRIDRESOLUTION
+23.4375			Resolution
+box			StringShape
+-80			xMinBox
+-80			yMinBox
+-80			zMinBox
+80			xMaxBox
+80			yMaxBox
+80			zMaxBox
+
+#INNERBOUNDARY
+user			TypeBcBody
+
+#OUTERBOUNDARY
+user			TypeBc1
+outflow			TypeBc2
+outflow			TypeBc3
+outflow			TypeBc4
+outflow			TypeBc5
+outflow			TypeBc6
+
+#NEUTRALFLUID
+F			DoConserveNeutrals
+Linde			TypeFluxNeutral
+
+#SCHEME
+1			nOrder
+Linde			TypeFlux
+
+#TIMESTEPPING
+1			nStage (1 or 2)
+0.10			CflExpl
+
+#MINIMUMPRESSURE
+1.E-18			pMinDim for fluid SW
+1.E-23			pMinDim for fluid PUI
+1.E-23			pMinDim for Neu
+1.E-23			pMinDim for Ne2
+1.E-23			pMinDim for Ne3
+1.E-23			pMinDim for Ne4
+
+#MINIMUMDENSITY
+1.E-4			RhoMinDim for fluid SW
+1.E-9			RhoMinDim for fluid PUI
+1.E-9			RhoMinDim for Neu
+1.E-9			RhoMinDim for Ne2
+1.E-9			RhoMinDim for Ne3
+1.E-9			RhoMinDim for Ne4
+
+#NONCONSERVATIVE
+T			UseNonConservative
+
+#SAVERESTART
+T			DoSaveRestart
+1000			DnSaveRestart
+-1.0			DtSaveRestart
+
+#SAVELOGFILE
+T			DoSaveLogfile
+RAW			StringLog
+10			DnSaveLogfile
+-1.			DtSaveLogfile
+
+#SAVEINITIAL
+F			DoSaveInitial
+
+#SAVEPLOT
+2			nPlotFile
+y=0 VAR idl_ascii	StringPlot
+1000			DnSavePlot
+-1.0			DtSavePlot
+-1.0			DxSavePlot
+{MHD} fluid mach		NameVars
+rbody			NamePars
+z=0 MHD idl_ascii	StringPlot
+1000			DnSavePlot
+-1.0			DtSavePlot
+-1.0			DxSavePlot
+
+
+#USERSWITCH
++init +ic +progress +update		StringSwitch
+
+#OHBOUNDARY
+T			UseOhNeutralBc
+0.05			RhoNeuFactor
+1.0			uNeuFactor
+1.E-2			RhoNeuFactor Ne2
+0.2			uNeuFactor
+1.E-2			RhoNeuFactor Ne3
+1.0			uNeuFactor
+1.E-3			RhoNeuFactor Ne4
+0.1			uNeuFactor
+
+#OHNEUTRALS
+0.18			RhoNeutralsISW
+6519.0			TNeutralsISW
+26.3			UxNeutralsISW
+0.0			UyNeutralsISW
+-2.3			UzNeutralsISW
+1.0			mNeutral
+
+#USERINPUTBEGIN -----------------------------------
+
+#GLOBALHELIOSPHERE
+30.
+
+#SOLARWINDH
+0.00874			SWH_N_dim [n/cc]
+1.0868E5		SWH_T_dim [K]
+417.07			SWH_Ux_dim [km/s]
+0.0			SWH_Uy_dim [km/s]
+0.0			SWH_Uz_dim [km/s]
+7.17E-03		SWH_Bx_dim [nT]
+0.0			SWH_By_dim [nT]
+0.0			SWH_Bz_dim [nT]
+
+#PICKUPION3
+9.45E-4			PU3_rho_dim [n/cc]
+8.20E6			PU3_T_dim [K]
+417.07			PU3_Ux_dim [km/s]
+0			PU3_Uy_dim [km/s]
+0			PU3_Uz_dim [km/s]
+
+#VLISW
+0.06			VLISW_N_dim [n/cc]
+6519.0			VLISW_T_dim
+26.3			VLISW_Ux_dim
+0.0			VLISW_Uy_dim
+-2.3			VLISW_Uz_dim
+0.3093			VLISW_Bx_dim
+-0.080			VLISW_By_dim
+-0.2988			VLISW_Bz_dim
+
+#REGIONS
+MultiIon                NameRegionFormula
+250.0                   uPop3LimitDim
+1.0                     MachPop3Limit
+0.7e5                   TempPop2LimitDim
+100.0                   uPop1LimitDim
+1.0                     MachPop1Limit
+
+#PU3HEATING
+T			UsePu3Heating
+1e7			TempPu3Si [K]
+20.0			FactorPu3 1/[au yr]
+
+#USERINPUTEND -------------------------------------
+
+#END_COMP OH -----------------------------------------------------------------
+
+#STOP
+2000			MaxIter
+-1.0			TimeMax
+
+#RUN ##########################################################################
+
+#BEGIN_COMP OH ---------------------------------------------------------------
+
+#SCHEME
+2			nOrder
+Linde			TypeFlux
+minmod			TypeLimiter
+
+#END_COMP OH -----------------------------------------------------------------
+
+#STOP
+3000			MaxIter
+-1.0			TimeMax
