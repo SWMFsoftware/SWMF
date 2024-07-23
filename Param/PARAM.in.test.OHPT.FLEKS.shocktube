@@ -85,7 +85,7 @@ z=0 MHD idl_ascii		StringPlot
 +init +Sexpl		StringSwitch
 
 #UNIFORMSTATE
-0.18			StateVar Rho
+0.144			StateVar Rho
 -100			StateVar Ux
 0			StateVar Uy
 0			StateVar Uz
@@ -93,7 +93,13 @@ z=0 MHD idl_ascii		StringPlot
 0.0			StateVar By
 0.0			StateVar Bz
 0.0			StateVar HpLim
-1.6E-13			StateVar P
+1.28E-13		StateVar P
+0.036			StateVar Pu3Rho
+-100			StateVar Pu3Ux
+0			StateVar Pu3Uy
+0			StateVar Pu3Uz
+0.32E-13		StateVar Pu3P
+
 
 UNIFORMSTATE
 0.01			StateVar Rho
@@ -136,6 +142,9 @@ UNIFORMSTATE
 
 #INITFROMSWMF
 F			initFromSWMF
+
+#MHDINFO
+2			nFluid
 
 #TIMESTEPPING
 T			useFixedDt

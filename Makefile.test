@@ -2293,7 +2293,7 @@ test20:
 
 test20_compile:
 	./Config.pl -v=Empty,OH/BATSRUS,PT/FLEKS
-	./Config.pl -o=OH:u=OuterHelio,e=Swh,ng=2,g=4,4,4
+	./Config.pl -o=OH:u=OuterHelio,e=SwhPui,ng=2,g=4,4,4
 	${MAKE} SWMF
 	make PIDL
 
