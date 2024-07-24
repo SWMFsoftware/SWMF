@@ -143,9 +143,6 @@ UNIFORMSTATE
 #INITFROMSWMF
 F			initFromSWMF
 
-#MHDINFO
-2			nFluid
-
 #TIMESTEPPING
 T			useFixedDt
 0.005 y			dt

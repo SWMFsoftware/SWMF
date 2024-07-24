@@ -61,6 +61,7 @@ test_help:
 	@(if [ -d SP/MFLAMPA ]; then echo "    test19			   (run SC-IH-OH-SP/MFLAMPA test)"; fi)
 	@(if [ -d PT/FLEKS   ]; then echo "    test20                      (run OH-PT/FLEKS test: shocktube)"; fi)
 	@(if [ -d PT/FLEKS   ]; then echo "    test21                      (run OH-PT/FLEKS test: OuterHelio)"; fi)
+	@(if [ -d PT/FLEKS   ]; then echo "    test22                      (run OH-PT/FLEKS test: OuterHelio)"; fi)
 	@echo "    test_check                  (collect test results into test_swmf.res)"
 
 # Nothing should be done parallel in this Makefile
@@ -113,6 +114,7 @@ test_swmf:
 	-@(if [ -d PC/FLEKS   ]; then ${MAKE} test_swpc_aepic TESTDIR=run_test_swpc_aepic; fi)
 	-@(if [ -d PT/FLEKS   ]; then ${MAKE} test20 TESTDIR=run_test20; fi)
 	-@(if [ -d PT/FLEKS   ]; then ${MAKE} test21 TESTDIR=run_test21; fi)
+	-@(if [ -d PT/FLEKS   ]; then ${MAKE} test22 TESTDIR=run_test22; fi)
 	./Config.pl -noamrex
 
 # Setting BLESS=YES or Y will copy the solution into the reference solution
@@ -2425,6 +2427,114 @@ test21_oh_pt_check:
                 output/test21/z=0_PT.ref.gz \
 		>> test21_oh_pt.diff)		
 	ls -l test21_oh_pt.diff
+
+### test22: OH/BATSRUS multi-ion coupled with PT/FLEKS  ###
+
+test22:
+	@echo "test22_4neu_compile..." > test22_ohpt.diff
+	${MAKE} test22_4neu_compile
+	@echo "test22_4neu_rundir..." >> test22_ohpt.diff
+	${MAKE} test22_4neu_rundir
+	@echo "test22_4neu_run..." >> test22_ohpt.diff
+	${MAKE} test22_4neu_run
+	@echo "test22_oh_pt_compile..." >> test22_ohpt.diff
+	${MAKE} test22_oh_pt_compile
+	@echo "test22_oh_pt_rundir..." >> test22_ohpt.diff
+	${MAKE} test22_oh_pt_rundir
+	@echo "test22_oh_pt_run..." >> test22_ohpt.diff
+	${MAKE} test22_oh_pt_run
+	@echo "test22_check..." >> test22_ohpt.diff
+	${MAKE} test22_check
+
+
+test22_check:
+	-@(${DIFFNUM} -b -a=1e-13 -r=1e-7 \
+                ${TESTDIR}/RESULTS/neu_couple/OH/y*0314_n*.out \
+                output/test22/y=0_neu_OH.ref.gz \
+		> test22_ohpt.diff)
+	-@(${DIFFNUM} -b -a=1e-13 -r=1e-7 \
+                ${TESTDIR}/RESULTS/swhpui/OH/z*206_n*.out \
+                output/test22/z=0_OH.ref.gz \
+		>> test22_ohpt.diff)
+	-@(${DIFFNUM} -b -a=1e-13 -r=1e-7 \
+                ${TESTDIR}/RESULTS/swhpui/PT/z*010.out \
+                output/test22/z=0_PT.ref.gz \
+		>> test22_ohpt.diff)		
+	ls -l test22_ohpt.diff
+
+test22_4neu:
+	@echo "test22_4neu_compile..." > test22_4neu.diff
+	${MAKE} test22_4neu_compile
+	@echo "test22_4neu_rundir..." >> test22_4neu.diff
+	${MAKE} test22_4neu_rundir
+	@echo "test22_4neu_run..." >> test22_4neu.diff
+	${MAKE} test22_4neu_run
+	@echo "test22_4neu_check..." >> test22_4neu.diff
+	${MAKE} test22_4neu_check
+
+test22_4neu_compile:
+	./Config.pl -v=Empty,OH/BATSRUS,PT/FLEKS
+	./Config.pl -o=OH:u=OuterHelio,e=OuterHelioPUI,ng=2,g=4,4,4 -o=PT:lev=5
+	${MAKE} SWMF
+	make PIDL
+
+test22_4neu_rundir:
+	rm -rf ${TESTDIR}
+	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
+
+test22_4neu_run:
+	cp Param/PARAM.in.test.OHPT.FLEKS.outerhelio.pui.4neu.start  ${TESTDIR}/PARAM.in
+	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl RESULTS/neu_start
+	cp Param/PARAM.in.test.OHPT.FLEKS.outerhelio.pui.4neu.couple  ${TESTDIR}/PARAM.in
+	cd ${TESTDIR}; ./Restart.pl -v -i RESULTS/neu_start/RESTART
+	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in	
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl RESULTS/neu_couple
+	
+test22_4neu_check:
+	-@(${DIFFNUM} -b -a=1e-13 -r=1e-7 \
+                ${TESTDIR}/RESULTS/neu_couple/OH/y*0314_n*.out \
+                output/test22/y=0_neu_OH.ref.gz \
+		> test22_4neu.diff)
+	ls -l test22_4neu.diff
+
+test22_oh_pt:
+	@echo "test22_oh_pt_compile..." > test22_oh_pt.diff
+	${MAKE} test22_oh_pt_compile
+	@echo "test22_oh_pt_rundir..." >> test22_oh_pt.diff
+	${MAKE} test22_oh_pt_rundir
+	@echo "test22_oh_pt_run..." >> test22_oh_pt.diff
+	${MAKE} test22_oh_pt_run
+	@echo "test22_oh_pt_check..." >> test22_oh_pt.diff
+	${MAKE} test22_oh_pt_check
+
+test22_oh_pt_compile:
+	./Config.pl -v=Empty,OH/BATSRUS,PT/FLEKS
+	./Config.pl -o=OH:u=OuterHelio,e=SwhPui,ng=2,g=4,4,4 -o=PT:lev=5
+	${MAKE} SWMF
+	make PIDL
+
+test22_oh_pt_rundir:
+	cp Param/PARAM.in.test.OHPT.FLEKS.outerhelio.swhpui  ${TESTDIR}/PARAM.in
+	cd ${TESTDIR}; ./Restart.pl -v -i RESULTS/neu_couple/RESTART	
+	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
+
+test22_oh_pt_run:
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl RESULTS/swhpui
+
+test22_oh_pt_check:
+	-@(${DIFFNUM} -b -a=1e-13 -r=1e-7 \
+                ${TESTDIR}/RESULTS/swhpui/OH/z*206_n*.out \
+                output/test22/z=0_OH.ref.gz \
+		> test22_oh_pt.diff)
+	-@(${DIFFNUM} -b -a=1e-13 -r=1e-7 \
+                ${TESTDIR}/RESULTS/swhpui/PT/z*010.out \
+                output/test22/z=0_PT.ref.gz \
+		>> test22_oh_pt.diff)		
+	ls -l test22_oh_pt.diff
 
 
 ### test_ramscb: GM+IE+IM/RAMSCB ###
