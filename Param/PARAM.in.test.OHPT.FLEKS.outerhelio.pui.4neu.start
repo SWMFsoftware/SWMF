@@ -149,13 +149,13 @@ F			DoSaveInitial
 
 #SAVEPLOT
 2			nPlotFile
-y=0 VAR idl_ascii	StringPlot
+y=0 VAR idl_ascii		StringPlot
 1000			DnSavePlot
 -1.0			DtSavePlot
 -1.0			DxSavePlot
 {MHD} fluid mach		NameVars
 rbody			NamePars
-z=0 MHD idl_ascii	StringPlot
+z=0 MHD idl_ascii		StringPlot
 1000			DnSavePlot
 -1.0			DtSavePlot
 -1.0			DxSavePlot
