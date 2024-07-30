@@ -2448,15 +2448,15 @@ test22:
 
 
 test22_check:
-	-@(${DIFFNUM} -b -a=1e-13 -r=1e-7 \
+	-@(${DIFFNUM} -b -a=1e-13 -r=1e-9 \
                 ${TESTDIR}/RESULTS/neu_couple/OH/y*0314_n*.out \
                 output/test22/y=0_neu_OH.ref.gz \
 		> test22_ohpt.diff)
-	-@(${DIFFNUM} -b -a=1e-13 -r=1e-7 \
+	-@(${DIFFNUM} -b -a=1e-13 -r=1e-9 \
                 ${TESTDIR}/RESULTS/swhpui/OH/z*206_n*.out \
                 output/test22/z=0_OH.ref.gz \
 		>> test22_ohpt.diff)
-	-@(${DIFFNUM} -b -a=1e-13 -r=1e-7 \
+	-@(${DIFFNUM} -b -a=1e-13 -r=1e-9 \
                 ${TESTDIR}/RESULTS/swhpui/PT/z*010.out \
                 output/test22/z=0_PT.ref.gz \
 		>> test22_ohpt.diff)		
@@ -2494,7 +2494,7 @@ test22_4neu_run:
 	cd ${TESTDIR}; ./PostProc.pl RESULTS/neu_couple
 	
 test22_4neu_check:
-	-@(${DIFFNUM} -b -a=1e-13 -r=1e-7 \
+	-@(${DIFFNUM} -b -a=1e-13 -r=1e-9 \
                 ${TESTDIR}/RESULTS/neu_couple/OH/y*0314_n*.out \
                 output/test22/y=0_neu_OH.ref.gz \
 		> test22_4neu.diff)
@@ -2526,11 +2526,11 @@ test22_oh_pt_run:
 	cd ${TESTDIR}; ./PostProc.pl RESULTS/swhpui
 
 test22_oh_pt_check:
-	-@(${DIFFNUM} -b -a=1e-13 -r=1e-7 \
+	-@(${DIFFNUM} -b -a=1e-13 -r=1e-9 \
                 ${TESTDIR}/RESULTS/swhpui/OH/z*206_n*.out \
                 output/test22/z=0_OH.ref.gz \
 		> test22_oh_pt.diff)
-	-@(${DIFFNUM} -b -a=1e-13 -r=1e-7 \
+	-@(${DIFFNUM} -b -a=1e-13 -r=1e-9 \
                 ${TESTDIR}/RESULTS/swhpui/PT/z*010.out \
                 output/test22/z=0_PT.ref.gz \
 		>> test22_oh_pt.diff)		

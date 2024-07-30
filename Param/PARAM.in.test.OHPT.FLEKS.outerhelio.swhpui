@@ -81,7 +81,7 @@ mc			TypeLimiter
 ! 0.8 works fine for higher resolution
 #TIMESTEPPING
 2			nStage
-0.1			CflExpl
+0.01			CflExpl
 
 
 #MINIMUMPRESSURE
@@ -117,10 +117,12 @@ y=0 MHD idl_ascii		StringPlot
 -1			DnSavePlot
 5 y			DtSavePlot
 -1.0			DxSavePlot
-z=0 MHD idl_ascii		StringPlot
+z=0 VAR idl_ascii		StringPlot
 -1			DnSavePlot
 5 y			DtSavePlot
 -1.0			DxSavePlot
+rho p pu3rho pu3p 		NameVars
+rbody			NamePars
 
 OHBOUNDARY
 T			UseOhNeutralBc
@@ -275,7 +277,7 @@ z=0 var ascii planet year		StringPlot
 -1			DnSavePlot
 5 y			DtSavePlot
 -1			DxSavePlot
-{fluid} neuregion ppcPop1 ppcPop2 ppcPop3 ppcPop4		NameVars
+pPop1 pPop2 pPop3 pPop4		NameVars
 3d fluid amrex planet year		StringPlot
 -1			DnSavePlot
 10 y			DtSavePlot

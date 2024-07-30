@@ -73,10 +73,11 @@ Linde			TypeFlux
 mc			TypeLimiter
 1.5			LimiterBeta
 
-! 0.8 works fine for higher resolution
+! For multi-ion + coarse grid, a small CFL is required to avoid
+! numerical instabilities.
 #TIMESTEPPING
 2			nStage
-0.1			CflExpl
+0.01			CflExpl
 
 #MINIMUMPRESSURE
 1.E-18			pMinDim for fluid SW
@@ -120,10 +121,12 @@ y=0 VAR idl_ascii		StringPlot
 -1.0			DxSavePlot
 {MHD} fluid mach		NameVars
 rbody			NamePars
-z=0 MHD idl_ascii		StringPlot
+z=0 VAR idl_ascii		StringPlot
 100			DnSavePlot
 -1.0			DtSavePlot
 -1.0			DxSavePlot
+{MHD} fluid mach		NameVars
+rbody			NamePars
 
 #OHBOUNDARY
 T			UseOhNeutralBc
@@ -229,10 +232,13 @@ T			DoSaveRestart
 
 #SAVEPLOT
 1			nPlotFile
-y=0 MHD idl_ascii		StringPlot
+y=0 VAR idl_ascii		StringPlot
 -1			DnSavePlot
 1 year			DtSavePlot
 -1.0			DxSavePlot
+rho p pu3rho pu3p neurho neup ne2rho ne2p ne3rho ne3p ne4rho ne4p 		NameVars
+rbody			NamePars
+
 
 #END_COMP OH -----------------------------------------------------------------
 
@@ -291,7 +297,7 @@ paraboloid		shape
 500			radius1
 800			radius2
 
-#REGION
+REGION
 sphere1			regionName
 sphere			shape
 0			centerX
@@ -313,7 +319,7 @@ box			shape
 box2			regionName
 box			shape
 -200			xMinBox
--60			xMaxBox
+200			xMaxBox
 -200			yMinBox
 200			yMaxBox
 -150			zMinBox
@@ -321,7 +327,7 @@ box			shape
 
 #REFINEREGION
 0			refineLev
-+pouter -sphere1 -box1		refineArea
++pouter -box1		refineArea
 
 #REFINEREGION
 1			refineLev
