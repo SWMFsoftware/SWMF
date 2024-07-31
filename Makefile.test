@@ -27,6 +27,7 @@ test_help:
 	@echo "    test_eeggl                  (run EEGGL test)"
 	@echo "    test_eegtd                  (run Titov-Demouline test)"
 	@echo "    test_esmf                   (run ESMF-SWMF coupling test)"
+	@echo "	   test_scgm		       (run SC-GM coupling test)"
 	@(if [ -d PW/PWOM    ]; then echo "    test_pw                     (run PW/PWOM test)"; fi)
 	@(if [ -d PS/DGCPM   ]; then echo "    test_ps                     (run PS/DGCPM test)"; fi)
 	@(if [ -d SP/MFLAMPA ]; then echo "    test_sp                     (run SP/MFLAMPA test)"; fi)
@@ -116,6 +117,7 @@ test_swmf:
 	-@(if [ -d PT/FLEKS   ]; then ${MAKE} test21 TESTDIR=run_test21; fi)
 	-@(if [ -d PT/FLEKS   ]; then ${MAKE} test22 TESTDIR=run_test22; fi)
 	./Config.pl -noamrex
+	-@(if [ -d GM/BATSRUS ]; then ${MAKE} test_scgm TESTDIR=run_test_scgm; fi)
 
 # Setting BLESS=YES or Y will copy the solution into the reference solution
 BLESS=NO
@@ -2694,8 +2696,8 @@ test_scgm:
 	${MAKE} test_scgm_rundir
 	@echo "test_scgm_run..." >> test_scgm.diff
 	${MAKE} test_scgm_run
-#	@echo "test_scgm_check..." >> test_scgm.diff
-#	${MAKE} test_scgm_check
+	@echo "test_scgm_check..." >> test_scgm.diff
+	${MAKE} test_scgm_check
 
 test_scgm_compile:
 	./Config.pl -v=Empty,SC/BATSRUS,GM/BATSRUS
@@ -2712,3 +2714,14 @@ test_scgm_rundir:
 test_scgm_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS
+
+test_scgm_check:
+	-(${DIFFNUM} -b -r=1e-5 -a=1e-26 \
+	${TESTDIR}/RESULTS/SC/log_n000000.log \
+	output/test_scgm/SC_log_n000000.log \
+	> test_scgm_sc.diff)
+	-(${DIFFNUM} -b -r=1e-5 \
+	${TESTDIR}/RESULTS/GM/log_n000000.log \
+	output/test_scgm/GM_log_n000000.log \
+	> test_scgm_gm.diff)
+	ls -l test_scgm_*.diff

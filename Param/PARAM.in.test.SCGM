@@ -41,7 +41,7 @@ init_axes CON_couple_sc_gm		StringTest
 F			DoSaveRestart
 
 #STAR
-New			NameStar
+NEW			NameStar
 1.			RadiusStar
 1.			MassStar
 25.38			RotationPeriodStar
@@ -86,6 +86,9 @@ CON_couple_sc_gm
 
 INCLUDE
 SC/restartIN/restart.H
+
+#TEST
+set_initial_condition SC_user_set_ics		StringTest
 
 #GRIDGEOMETRY
 spherical_lnr		TypeGeometry
@@ -139,15 +142,6 @@ T			UseFieldLineThreads
 180			nPointThreadMax
 1.0e-3			DsThreadMin
 
-#BODY
-T			UseBody
-1.0			rBody
-1.5e8			BodyNDim
-1.5e6			BodyTDim
-
-#BODY
-F			UseBody
-
 #SECONDBODY
 T			UseBody2 ! Rest of the parameters read if .true.
 0.2			rBody2
@@ -193,23 +187,16 @@ turbulentcascade		TypeCoronalHeating
 1.2			rMinWaveReflection
 F			UseReynoldsDecomposition
 
-#HEATCONDUCTION
-T			UseHeatConduction
-spitzer			TypeHeatConduction
 
 #PLASMA
 1.0			FluidMass [amu]
 1.0			IonCharge [e]
 1.0			ElectronTemperatureRatio
 
-#SEMIIMPLICIT
-T			UseSemiImplicit
-parcond			TypeSemiImplicit
-
-#SEMIKRYLOV
-GMRES			TypeKrylov
-1.0e-5			ErrorMaxKrylov
-10			MaxMatvecKrylov
+#CHROMOSPHERE
+F			UseChromosphereHeating
+3.125e11		NeChromosphereCgs
+3.2e4			TeChromosphereSi
 
 #RADIATIVECOOLING
 T			UseRadCooling
@@ -219,6 +206,13 @@ radcool			NameTable
 load			NameCommand
 SC/Param/RadCoolCorona_8.0.dat		NameFile
 ascii			TypeFile
+
+#LOOKUPTABLE
+TR			NameTable
+load			NameCommand
+SC/Param/TR8.dat		NameFile
+real8			TypeFile
+
 
 #MINIMUMPRESSURE
 1.0E-9			pMinDim
@@ -262,14 +256,10 @@ T			UseNonConservative
 #MESSAGEPASS
 all			TypeMessagePass
 
-#RESCHANGE
-T			UseAccurateReschange
 
-TVDRESCHANGE
+#TVDRESCHANGE
 T			UseTvdReschange
 
-#RESTARTOUTFILE
-one			StringRestartOutFile
 
 #SAVELOGFILE
 T			DoSaveLogfile
@@ -284,16 +274,15 @@ T			UseCoarseAxis
 #OUTERBOUNDARY
 fieldlinethreads		TypeBc1   user for spherical and user_outerbcs
 float			TypeBc2
-float			TypeBc3
-float			TypeBc4
-float			TypeBc5
-float			TypeBc6
+none			TypeBc3
+none			TypeBc4
+none			TypeBc5
+none			TypeBc6
 
 
 #INNERBOUNDARY
 user			TypeBcBody
 body2orbit		TypeBcBody2
-
 
 #SAVEPLOT
 1			nPlotFile
@@ -302,7 +291,7 @@ y=0 MHD tcp		StringPlot
 -1			DtSavePlot
 
 #SAVEINITIAL
-F			DoSaveInitial
+T			DoSaveInitial
 
 #END_COMP SC -----------------------------------------------------------------
 
