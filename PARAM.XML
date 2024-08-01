@@ -1479,7 +1479,7 @@ These modifier commands cannot proceed the #PLANET command!
 		<option name="COMET67P"			/>
 		<option name="HALEBOPP"			/>
 	</parameter>
-	<if expr="$NamePlanet eq 'New'">
+	<if expr="$NamePlanet eq 'NEW'">
 		<parameter name="RadiusPlanet" type="real" min="0" />
 		<parameter name="MassPlanet"   type="real" min="0" />
 		<parameter name="OmegaPlanet"  type="real" min="0" />
