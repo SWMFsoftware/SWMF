@@ -27,7 +27,7 @@ test_help:
 	@echo "    test_eeggl                  (run EEGGL test)"
 	@echo "    test_eegtd                  (run Titov-Demouline test)"
 	@echo "    test_esmf                   (run ESMF-SWMF coupling test)"
-	@echo "	   test_scgm		       (run SC-GM coupling test)"
+	@echo "	   test11		       (run SC-GM coupling test)"
 	@(if [ -d PW/PWOM    ]; then echo "    test_pw                     (run PW/PWOM test)"; fi)
 	@(if [ -d PS/DGCPM   ]; then echo "    test_ps                     (run PS/DGCPM test)"; fi)
 	@(if [ -d SP/MFLAMPA ]; then echo "    test_sp                     (run SP/MFLAMPA test)"; fi)
@@ -117,7 +117,7 @@ test_swmf:
 	-@(if [ -d PT/FLEKS   ]; then ${MAKE} test21 TESTDIR=run_test21; fi)
 	-@(if [ -d PT/FLEKS   ]; then ${MAKE} test22 TESTDIR=run_test22; fi)
 	./Config.pl -noamrex
-	-@(if [ -d GM/BATSRUS ]; then ${MAKE} test_scgm TESTDIR=run_test_scgm; fi)
+	-@(if [ -d GM/BATSRUS ]; then ${MAKE} test11 TESTDIR=run_test11; fi)
 
 # Setting BLESS=YES or Y will copy the solution into the reference solution
 BLESS=NO
@@ -1842,6 +1842,49 @@ test10_check:
 		> test10_ih.diff)
 	ls -l test10_*.diff
 
+# SC + GM test
+
+test11:
+	@echo "test11_compile..." > test11_gm.diff
+	@echo "test11_compile..." > test11_sc.diff
+	${MAKE} test11_compile
+	@echo "test11_rundir..." >> test11_gm.diff
+	@echo "test11_rundir..." >> test11_sc.diff
+	${MAKE} test11_rundir
+	@echo "test11_run..." >> test11_gm.diff
+	@echo "test11_run..." >> test11_sc.diff
+	${MAKE} test11_run
+	@echo "test11_check..." >> test11_gm.diff
+	@echo "test11_check..." >> test11_sc.diff
+	${MAKE} test11_check
+
+test11_compile:
+	./Config.pl -v=Empty,SC/BATSRUS,GM/BATSRUS
+	./Config.pl -o=SC:u=Awsom,e=Awsom,g=4,4,4,ng=2
+	./Config.pl -o=GM:g=4,4,4,ng=2
+	${MAKE} SWMF
+
+test11_rundir:
+	rm -rf ${TESTDIR}
+	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR}
+	cp Param/PARAM.in.test.SCGM ${TESTDIR}/PARAM.in
+	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
+
+test11_run:
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS
+
+test11_check:
+	-(${DIFFNUM} -b -r=1e-5 -a=1e-26 \
+		     ${TESTDIR}/RESULTS/SC/log_n000000.log \
+		     output/test11/SC_log_n000000.log \
+		     > test11_sc.diff)
+	-(${DIFFNUM} -b -r=1e-5 \
+		     ${TESTDIR}/RESULTS/GM/log_n000000.log \
+		     output/test11/GM_log_n000000.log \
+		     > test11_gm.diff)
+	ls -l test11_*.diff
+
 ### test13: Europa's exosphere model with GM and PT ###
 
 test13:
@@ -2689,39 +2732,3 @@ test_tdequil_run:
 
 #test_tdequil_check:
 
-test_scgm:
-	@echo "test_scgm_compile..." > test_scgm.diff
-	${MAKE} test_scgm_compile
-	@echo "test_scgm_rundir..." >> test_scgm.diff
-	${MAKE} test_scgm_rundir
-	@echo "test_scgm_run..." >> test_scgm.diff
-	${MAKE} test_scgm_run
-	@echo "test_scgm_check..." >> test_scgm.diff
-	${MAKE} test_scgm_check
-
-test_scgm_compile:
-	./Config.pl -v=Empty,SC/BATSRUS,GM/BATSRUS
-	./Config.pl -o=SC:u=Awsom,e=Awsom,g=4,4,4,ng=2
-	./Config.pl -o=GM:g=4,4,4,ng=2
-	${MAKE} SWMF
-
-test_scgm_rundir:
-	rm -rf ${TESTDIR}
-	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR}
-	cp Param/PARAM.in.test.SCGM ${TESTDIR}/PARAM.in
-	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
-
-test_scgm_run:
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS
-
-test_scgm_check:
-	-(${DIFFNUM} -b -r=1e-5 -a=1e-26 \
-	${TESTDIR}/RESULTS/SC/log_n000000.log \
-	output/test_scgm/SC_log_n000000.log \
-	> test_scgm_sc.diff)
-	-(${DIFFNUM} -b -r=1e-5 \
-	${TESTDIR}/RESULTS/GM/log_n000000.log \
-	output/test_scgm/GM_log_n000000.log \
-	> test_scgm_gm.diff)
-	ls -l test_scgm_*.diff
