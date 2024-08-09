@@ -57,7 +57,6 @@ module CON_couple_mh_sp
        BL_Grid, BL_LocalGrid        ! Grid descriptors (global and local)
 
   implicit none
-
   private ! Except
   public::couple_mh_sp_init
   public::couple_ih_sp
@@ -87,6 +86,7 @@ module CON_couple_mh_sp
   logical :: DoTest, DoTestMe
   character(LEN=*), parameter :: NameSub='couple_mh_sp'
   logical ::DoInit = .true., DoExtract = .false.
+  real, save :: DataInputTimeLast = -1.0
 contains
   !============================================================================
   subroutine BL_put_coupling_param(Source_, TimeIn)
@@ -300,10 +300,12 @@ contains
     call  transform_matrix_and_coef(DataInputTime, SC_)
     call SC_synchronize_refinement(RouterScBl%iProc0Source,&
          RouterScBl%iCommUnion)
-    ! The advected particles from SC are taken
-    if(.not.DoInit) call BL_put_lines_from_sc
-    ! Some particles may be lost, recover line intergity
-    if(is_proc(BL_))call BL_adjust_lines(SC_)
+    if(DataInputTime > DataInputTimeLast)then
+       ! The advected particles from SC are taken
+       if(.not.DoInit) call BL_put_lines_from_sc
+       ! Some particles may be lost, recover line intergity
+       if(is_proc(BL_))call BL_adjust_lines(SC_)
+    end if
     ! Set router SC=> BL to  receive MHD data
     call set_router(&
          GridSource             = SC_Grid                  ,&
@@ -457,6 +459,7 @@ contains
     if(.not.RouterIhBl%IsProc)then
        ! If OH is used, DoInit is reset to .false. there
        if(DoInit)DoInit = IsSource4BL_C(OH_)
+       if(.not.IsSource4BL_C(OH_))DataInputTimeLast = DataInputTime
        RETURN
     end if
     if(DoTest.and.is_proc0(IH_))&
@@ -470,9 +473,11 @@ contains
     call  transform_matrix_and_coef(DataInputTime, IH_)
     call IH_synchronize_refinement(RouterIhBl%iProc0Source,&
          RouterIhBl%iCommUnion)
-    if(.not.DoInit) call BL_put_lines_from_ih
-    ! Some points may be lost lost in IH
-    if(is_proc(BL_))call BL_adjust_lines(IH_)
+    if(DataInputTime > DataInputTimeLast)then
+       if(.not.DoInit) call BL_put_lines_from_ih
+       ! Some points may be lost lost in IH
+       if(is_proc(BL_))call BL_adjust_lines(IH_)
+    end if
     ! In points at RIhMin < R < RIhMax get the MHD data
     ! Set router IH=> BL to  receive MHD data
     call set_router(                                            &
@@ -497,8 +502,9 @@ contains
             iIndex_II               = nint(RouterIhBl%          &
             BufferSource_II(nDim+1:nDim+nAux, 1:nLength)))
     end if
-    ! If OH is used, DoInit is reset to .false. there
+    ! If OH is used, DoInit and DataInputTimeLast are reset in OH
     if(DoInit)DoInit = IsSource4BL_C(OH_)
+    if(.not.IsSource4BL_C(OH_))DataInputTimeLast = DataInputTime
   contains                                       !^CMP IF SC BEGIN
     !==========================================================================
     subroutine sort_out_sc_particles
@@ -647,6 +653,7 @@ contains
     !--------------------------------------------------------------------------
     if(.not.RouterOhBl%IsProc)then
        DoInit = .false.
+       DataInputTimeLast = DataInputTime
        RETURN
     end if
     if(DoTest.and.is_proc0(OH_))&
@@ -659,10 +666,12 @@ contains
     call  transform_matrix_and_coef(DataInputTime, OH_)
     call OH_synchronize_refinement(RouterOhBl%iProc0Source,&
          RouterOhBl%iCommUnion)
-    if(.not.DoInit) call BL_put_lines_from_oh
-    ! Now the full magnetic line is available, including probably
-    ! some points lost in IH
-    if(is_proc(BL_))call BL_adjust_lines(OH_)
+    if(DataInputTime > DataInputTimeLast)then
+       if(.not.DoInit) call BL_put_lines_from_oh
+       ! Now the full magnetic line is available, including probably
+       ! some points lost in IH
+       if(is_proc(BL_))call BL_adjust_lines(OH_)
+    end if
     ! In points at RIhMin < R < RIhMax get the MHD data
     ! Set router IH=> BL to  receive MHD data
     call set_router(                                            &
@@ -688,6 +697,7 @@ contains
             BufferSource_II(nDim+1:nDim+nAux, 1:nLength)))
     end if
     DoInit = .false.
+    DataInputTimeLast = DataInputTime
   contains
     !==========================================================================
     subroutine sort_out_ih_particles
