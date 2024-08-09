@@ -859,8 +859,8 @@ contains
               = State_VIB(R_        ,1:nVertex_B(iLine),     iLine)
          nVertex_B(iLine) = nVertex_B(iLine) + 1
          ! put the new particle just above the lower boundary
-         MHData_VIB(LagrID_:Z_,  1, iLine) = &
-              FootPoint_VB(LagrID_:Z_, iLine)*(1.0 + cTol)
+         MHData_VIB(X_:Z_,  1, iLine) = &
+              FootPoint_VB(X_:Z_, iLine)*(1.0 + cTol)
          State_VIB(R_,          1, iLine) = &
               sqrt(sum((MHData_VIB(X_:Z_,  1, iLine))**2))
          MHData_VIB(LagrID_,1, iLine) = MHData_VIB(LagrID_, 2, iLine) - 1.0
