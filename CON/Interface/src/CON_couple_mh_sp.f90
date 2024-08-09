@@ -454,7 +454,11 @@ contains
     real,   intent(in) :: DataInputTime
     integer            :: nLength
     !--------------------------------------------------------------------------
-    if(.not.RouterIhBl%IsProc)RETURN
+    if(.not.RouterIhBl%IsProc)then
+       ! If OH is used, DoInit is reset to .false. there
+       if(DoInit)DoInit = IsSource4BL_C(OH_)
+       RETURN
+    end if
     if(DoTest.and.is_proc0(IH_))&
          write(*,'(a,es12.5)')NameSub//': couple to IH,time=', DataInputTime
     if(is_proc(BL_))then
@@ -641,7 +645,10 @@ contains
     real,   intent(in) :: DataInputTime
     integer            :: nLength
     !--------------------------------------------------------------------------
-    if(.not.RouterOhBl%IsProc)RETURN
+    if(.not.RouterOhBl%IsProc)then
+       DoInit = .false.
+       RETURN
+    end if
     if(DoTest.and.is_proc0(OH_))&
          write(*,'(a,es12.5)')NameSub//': couple to OH,time=', DataInputTime
     if(is_proc(BL_))then
