@@ -2582,6 +2582,48 @@ test22_oh_pt_check:
 	ls -l test22_oh_pt.diff
 
 
+
+### test23: GM/BATSRUS+PC/FLEKS. 2D Fast Wave test with AMR-PC.
+###			BATSRUS only provides the initial condition.
+###         FLEKS runs with periodic boundary conditions. 
+
+test23:
+	@echo "test23_compile..." > test23_gmpc.diff
+	$(MAKE) test23_compile
+	@echo "test23_rundir..." > test23_gmpc.diff
+	$(MAKE) test23_rundir
+	@echo "test23_run..." > test23_gmpc.diff
+	$(MAKE) test23_run
+	@echo "test23_check..." > test23_gmpc.diff
+	$(MAKE) test23_check
+
+test23_compile:
+	./Config.pl -v=Empty,PC/FLEKS,GM/BATSRUS -amrex2d
+	./Config.pl -o=GM:u=Default,e=MhdAnisoP,ng=2,g=8,8,1 -o=PC:lev=9
+	$(MAKE) SWMF
+	$(MAKE) PIDL
+	
+test23_rundir:
+	rm -rf ${TESTDIR}
+	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR}
+	cp Param/PARAM.in.test.GMPC.FLEKS.AMR.FASTWAVE.2D  ${TESTDIR}/PARAM.in
+
+test23_run:
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl RESULTS/
+
+test23_check:
+	-@(${DIFFNUM} -b -a=1e-10 -r=1e-5 \
+	   ${TESTDIR}/RESULTS/PC/z=0*84.out \
+	   output/test23/z=0.ref.gz \
+		> test23_gmpc.diff)
+	-@(${DIFFNUM} -b -a=1e-12 -r=1e-12 \
+	   ${TESTDIR}/RESULTS/PC/log_pic_n00000000.log \
+	   output/test23/PC.log \
+		>> test23_gmpc.diff)	
+	ls -l test23_gmpc.diff
+
+
 ### test_ramscb: GM+IE+IM/RAMSCB ###
 
 test_ramscb:
