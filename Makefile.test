@@ -2581,8 +2581,6 @@ test22_oh_pt_check:
 		>> test22_oh_pt.diff)		
 	ls -l test22_oh_pt.diff
 
-
-
 ### test23: GM/BATSRUS+PC/FLEKS. 2D Fast Wave test with AMR-PC.
 ###			BATSRUS only provides the initial condition.
 ###         FLEKS runs with periodic boundary conditions. 
@@ -2607,6 +2605,7 @@ test23_rundir:
 	rm -rf ${TESTDIR}
 	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/PARAM.in.test.GMPC.FLEKS.AMR.FASTWAVE.2D  ${TESTDIR}/PARAM.in
+	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test23_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
@@ -2622,7 +2621,6 @@ test23_check:
 	   output/test23/PC.log \
 		>> test23_gmpc.diff)	
 	ls -l test23_gmpc.diff
-
 
 ### test_ramscb: GM+IE+IM/RAMSCB ###
 

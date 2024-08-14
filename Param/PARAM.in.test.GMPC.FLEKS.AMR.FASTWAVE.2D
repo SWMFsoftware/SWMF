@@ -9,11 +9,6 @@ Param/PARAM.in.test.GMPC.FLEKS.AMR.FASTWAVE.2D.: FastWave in periodic PIC with a
 #PLANET
 NONE			NamePlanet
 
-#SAVERESTART
-F			DoSaveRestart
--1			DnSaveRestart
-2.56			DtSaveRestart
-
 #COUPLE2
 GM			NameComp1
 PC			NameComp2
@@ -21,12 +16,12 @@ PC			NameComp2
 1.			DtCouple
 
 #COUPLETIME
-GM
-F
+GM			NameComp
+F			DoCoupleOnTime
 
 #COUPLETIME
-PC
-F
+PC			NameComp
+F			DoCoupleOnTime
 
 #PROGRESS
 1			DnProgressShort
@@ -55,15 +50,15 @@ NONE			TypeNormalization
 T			UseNonConservative
 
 #UNIFORMSTATE
-1.0			Rho
-0.0			Ux
-0.0			Uy
-0.0			Uz
-0.0			Bx
-0.04			By
-0.0			Bz
-4.5e-4			Ppar
-4.5e-4			p
+1.0			StateVar
+0.0			StateVar
+0.0			StateVar
+0.0			StateVar
+0.0			StateVar
+0.04			StateVar
+0.0			StateVar
+4.5e-4			StateVar
+4.5e-4			StateVar
 
 rho			= 1
 By			= 0.04
@@ -84,7 +79,7 @@ dt			= 0.2*dtmax   = 1.066
 USERINPUTBEGIN -----------------------------------
 
 #WAVE
-1			Rho_
+1			NameVar
 1000.0			Width
 0.1			Amplitude
 32.0			LambdaX
@@ -93,7 +88,7 @@ USERINPUTBEGIN -----------------------------------
 0.0			Phase
 
 #WAVE
-2			Ux_
+2			NameVar
 1000.0			Width
 0.005			Amplitude (rho1/rho0)*cF
 32.0			LambdaX
@@ -102,7 +97,7 @@ USERINPUTBEGIN -----------------------------------
 0.0			Phase
 
 #WAVE
-6			By_
+6			NameVar
 1000.0			Width
 0.004			Amplitude (rho1/rho0)*b0
 32.0			LambdaX
@@ -111,7 +106,7 @@ USERINPUTBEGIN -----------------------------------
 0.0			Phase
 
 #WAVE
-8			Ppar_
+8			NameVar
 10000.0			Width
 4.5e-5			Amplitude (rho1/rho0)*pPar0
 32.0			LambdaX
@@ -120,7 +115,7 @@ USERINPUTBEGIN -----------------------------------
 0.0			Phase
 
 #WAVE
-9			p_
+9			NameVar
 10000.0			Width
 7.5e-5			Amplitude (rho1/rho0)*5/3*p0
 32.0			LambdaX
@@ -139,7 +134,7 @@ SHOCKPOSITION
 4			nRootBlock2
 1			nRootBlock3
 -160			xMin
- 160  		xMax
+ 160  			xMax
 -160			yMin
  160			yMax
 -0.5			zMin
@@ -155,11 +150,11 @@ SHOCKPOSITION
  32			xMaxPic
 -32.0			yMinPic
  32.0			yMaxPic
- 1.0/1.0			Dx
- 1.0/1.0		Dy
+ 1.0/1.0		DxPic
+ 1.0/1.0		DyPic
 
 #PICPATCH
-8
+8			PatchSize
 
 1.25/3			DxPic
 1.25/3			DyPic
@@ -179,8 +174,6 @@ periodic		TypeBc1
 periodic		TypeBc2
 periodic		TypeBc3
 periodic		TypeBc4
-float			TypeBc5
-float			TypeBc6
 
 #TEST
 init_hall_resist		StringTest
@@ -210,7 +203,7 @@ z=0 var idl		StringPlot
 -1			DnSavePlot
 20			DtSavePlot
 0.			DxSavePlot
-{MHD} pic pic_active	NameVars
+{MHD} pic pic_active		NameVars
 g rbody			NamePars
 
 #END_COMP GM -----------------------------------------------------------------
@@ -222,9 +215,9 @@ F			useFixedDt
 0.2			cfl
 
 #MAXBLOCKSIZE
-8
-8
-1
+8			nCellX
+8			nCellY
+1			nCellZ
 
 #PERIODICITY
 T			isPeriodicX
@@ -240,10 +233,10 @@ EFIELDSOLVER
 0.1			ratioDivC2C
 
 #MONITOR
-1
+1			dnReport
 
 #DIVE
-F
+F			doCorrectDivE
 
 #ELECTRON_FLEKS0
 -25.0			electronChargePerMass ratio (qom)
@@ -261,28 +254,30 @@ z=0 fluid ascii si		StringPlot
 -1			DxSavePlot
 
 #REGION
-region2		regionName
-box			  shape
--16			xMin
-16			yMin
--16			zMin
-16			xMax
+region1			regionName
+box			shape
+-16.0			xMinBox
+16.0			xMaxBox
+-16.0			yMinBox
+16.0			yMaxBox
+0.0			zMinBox
+0.0			zMaxBox
 
 #REFINEREGION
-0                         refineLev
-+region2 	        StringHallRegion
+0			refineLev
++region1 		refineArea
 
 #GRIDEFFICIENCY
-1.0                      gridEfficiency
+1.0			gridEfficiency
 
 #RESAMPLING
-F
+F			doReSampling
 
 #RANDOMPARTICLESLOCATION
-T                  isParticleLocationRandom 
+T			isParticleLocationRandom
 
 #CONSTANTPPV
-T
+T			isPPVconstant
 
 #END_COMP PC -----------------------------------------------------------------
 
@@ -298,8 +293,7 @@ GM			NameComp
 F			UseComp
 
 #STOP
--1	MaxIter
+-1			MaxIter
 200.0			TimeMax
-
 
 
