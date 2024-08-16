@@ -1,0 +1,299 @@
+Name Root Last Stride
+#COMPONENTMAP
+GM  0 -1  1		CompMap
+PC  0 -1  1		CompMap
+
+#DESCRIPTION
+Param/PARAM.in.test.GMPC.FLEKS.AMR.FASTWAVE.2D.: FastWave in periodic PIC with adaptive mesh refinement		StringDescription
+
+#PLANET
+NONE			NamePlanet
+
+#COUPLE2
+GM			NameComp1
+PC			NameComp2
+-1			DnCouple
+1.			DtCouple
+
+#COUPLETIME
+GM			NameComp
+F			DoCoupleOnTime
+
+#COUPLETIME
+PC			NameComp
+F			DoCoupleOnTime
+
+#PROGRESS
+1			DnProgressShort
+1			DnProgressLong
+
+#BEGIN_COMP GM ---------------------------------------------------------------
+
+#CHECKGRIDSIZE
+  8			nI
+  8			nJ
+  1			nK
+800			MinBlockAll
+
+#IOUNITS
+NONE			TypeIoUnit
+
+#NORMALIZATION
+NONE			TypeNormalization
+
+#PLASMA
+1.0			FluidMass [amu]
+1.0			IonCharge [e]
+1.0			ElectronTemperatureRatio
+
+#NONCONSERVATIVE
+T			UseNonConservative
+
+#UNIFORMSTATE
+1.0			StateVar
+0.0			StateVar
+0.0			StateVar
+0.0			StateVar
+0.0			StateVar
+0.04			StateVar
+0.0			StateVar
+4.5e-4			StateVar
+4.5e-4			StateVar
+
+rho			= 1
+By			= 0.04
+cA			= By/sqrt(rho)   = 0.04
+cS			= sqrt(2*p/rho)  = 0.03
+cF			= sqrt(cA^2+cS^2)= 0.05
+lambda= 32
+t			= lambda/(cF) = 640.0
+
+p = pe = 2.25e-4
+vth			= sqrt(p/rho) = 0.015
+me = mi/25
+vthe  = 5*vth		= 0.075
+dx = 0.4
+dtmax = dx/vthe		= 5.333
+dt			= 0.2*dtmax   = 1.066
+
+USERINPUTBEGIN -----------------------------------
+
+#WAVE
+1			NameVar
+1000.0			Width
+0.1			Amplitude
+32.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+0.0			Phase
+
+#WAVE
+2			NameVar
+1000.0			Width
+0.005			Amplitude (rho1/rho0)*cF
+32.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+0.0			Phase
+
+#WAVE
+6			NameVar
+1000.0			Width
+0.004			Amplitude (rho1/rho0)*b0
+32.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+0.0			Phase
+
+#WAVE
+8			NameVar
+10000.0			Width
+4.5e-5			Amplitude (rho1/rho0)*pPar0
+32.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+0.0			Phase
+
+#WAVE
+9			NameVar
+10000.0			Width
+7.5e-5			Amplitude (rho1/rho0)*5/3*p0
+32.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+0.0			Phase
+
+USERINPUTEND -------------------------------------
+
+SHOCKPOSITION
+0.0			ShockPosition
+4/3			ShockSlope
+
+#GRID
+8			nRootBlock1
+4			nRootBlock2
+1			nRootBlock3
+-160			xMin
+ 160  			xMax
+-160			yMin
+ 160			yMax
+-0.5			zMin
+ 0.5			zMax
+
+#PICUNIT
+1			xUnitPicSi [m]
+0.5			uUnitPicSi [m/s] Speed of light for the first PIC region
+
+#PICGRID
+1			nPicGrid
+-32			xMinPic
+ 32			xMaxPic
+-32.0			yMinPic
+ 32.0			yMaxPic
+ 1.0/1.0		DxPic
+ 1.0/1.0		DyPic
+
+#PICPATCH
+8			PatchSize
+
+1.25/3			DxPic
+1.25/3			DyPic
+5			xMinPic
+25.1			xMaxPic
+-20.0			yMinPic
+ 20.0			yMaxPic
+1.25/3			DxPic
+1.25/3			DyPic
+
+PICADAPT
+T			UseAdaptivePic
+F			DoAdaptPic
+
+#OUTERBOUNDARY
+periodic		TypeBc1
+periodic		TypeBc2
+periodic		TypeBc3
+periodic		TypeBc4
+
+#TEST
+init_hall_resist		StringTest
+
+#SCHEME
+2			nOrder
+Linde			TypeFlux
+mc			TypeLimiter
+1.5			LimiterBeta
+
+#TIMESTEPPING
+2			nStage
+0.8			CflExpl
+
+#SAVELOGFILE
+T			DoSaveLogfile
+raw			StringLog
+1			DnSaveLogfile
+-1.			DtSaveLogfile
+
+#SAVEINITIAL
+T			DoSaveInitial
+
+#SAVEPLOT
+1			nPlotFile
+z=0 var idl		StringPlot
+-1			DnSavePlot
+20			DtSavePlot
+0.			DxSavePlot
+{MHD} pic pic_active		NameVars
+g rbody			NamePars
+
+#END_COMP GM -----------------------------------------------------------------
+
+#BEGIN_COMP PC ---------------------------------------------------------------
+
+#TIMESTEPPING
+F			useFixedDt
+0.2			cfl
+
+#MAXBLOCKSIZE
+8			nCellX
+8			nCellY
+1			nCellZ
+
+#PERIODICITY
+T			isPeriodicX
+T			isPeriodicY
+T			isPeriodicZ
+
+EFIELDSOLVER
+1e-13			EFieldTol
+200			EFieldIter
+
+#DISCRETIZATION
+0.51			theta
+0.1			ratioDivC2C
+
+#MONITOR
+1			dnReport
+
+#DIVE
+F			doCorrectDivE
+
+#ELECTRON_FLEKS0
+-25.0			electronChargePerMass ratio (qom)
+
+#PARTICLES
+20			nParticleX per cell in X Region 1
+20			nParticleY per cell in Y Region 1
+1			nParticleZ per cell in Z Region 1
+
+#SAVEPLOT
+1			nPlotFile
+z=0 fluid ascii si		StringPlot
+-1			DnSavePlot
+50			DtSavePlot
+-1			DxSavePlot
+
+#REGION
+region1			regionName
+box			shape
+-16.0			xMinBox
+16.0			xMaxBox
+-16.0			yMinBox
+16.0			yMaxBox
+0.0			zMinBox
+0.0			zMaxBox
+
+#REFINEREGION
+0			refineLev
++region1 		refineArea
+
+#GRIDEFFICIENCY
+1.0			gridEfficiency
+
+#RESAMPLING
+F			doReSampling
+
+#RANDOMPARTICLESLOCATION
+T			isParticleLocationRandom
+
+#CONSTANTPPV
+T			isPPVconstant
+
+#END_COMP PC -----------------------------------------------------------------
+
+#STOP
+0			MaxIter
+0			TimeMax
+
+
+#RUN ##########################################################################
+
+#COMPONENT
+GM			NameComp
+F			UseComp
+
+#STOP
+-1			MaxIter
+200.0			TimeMax
+
+
