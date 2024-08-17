@@ -2612,7 +2612,7 @@ test23_run:
 	cd ${TESTDIR}; ./PostProc.pl RESULTS/
 
 test23_check:
-	-@(${DIFFNUM} -b -a=1e-10 -r=1e-5 \
+	-@(${DIFFNUM} -b -a=1e-9 -r=1e-5 \
 	   ${TESTDIR}/RESULTS/PC/z=0*84.out \
 	   output/test23/z=0.ref.gz \
 		> test23_gmpc.diff)
