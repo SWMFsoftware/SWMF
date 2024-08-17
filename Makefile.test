@@ -63,6 +63,7 @@ test_help:
 	@(if [ -d PT/FLEKS   ]; then echo "    test20                      (run OH-PT/FLEKS test: shocktube)"; fi)
 	@(if [ -d PT/FLEKS   ]; then echo "    test21                      (run OH-PT/FLEKS test: OuterHelio)"; fi)
 	@(if [ -d PT/FLEKS   ]; then echo "    test22                      (run OH-PT/FLEKS test: OuterHelio)"; fi)
+	@(if [ -d PC/FLEKS   ]; then echo "    test23                      (run GM-PC/FLEKS test: Periodic 2D FastWave with AMR PIC)"; fi)
 	@echo "    test_check                  (collect test results into test_swmf.res)"
 
 # Nothing should be done parallel in this Makefile
@@ -116,6 +117,7 @@ test_swmf:
 	-@(if [ -d PT/FLEKS   ]; then ${MAKE} test20 TESTDIR=run_test20; fi)
 	-@(if [ -d PT/FLEKS   ]; then ${MAKE} test21 TESTDIR=run_test21; fi)
 	-@(if [ -d PT/FLEKS   ]; then ${MAKE} test22 TESTDIR=run_test22; fi)
+	-@(if [ -d PT/FLEKS   ]; then ${MAKE} test23 TESTDIR=run_test23; fi)
 	./Config.pl -noamrex
 	-@(if [ -d GM/BATSRUS ]; then ${MAKE} test11 TESTDIR=run_test11; fi)
 
