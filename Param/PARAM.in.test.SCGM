@@ -9,7 +9,8 @@ Begin session: 1
 SC  0 -1  1		CompMap
 GM  0 -1  1		CompMap
 
-
+#DESCRIPTION
+Param/PARAM.in.test.SCGM		StringDescription
 
 #COMPONENT
 GM			NameComp
@@ -241,7 +242,7 @@ T			UseSpeedMin
 
 #SCHEME
 2			nOrder (1 or 2)
-Sokolov			TypeFlux (Roe, Rusanov, Linde, Sokolov
+Sokolov			TypeFlux
 mc3			TypeLimiter
 1.2			LimiterBeta
 
@@ -396,7 +397,7 @@ Sokolov			TypeFlux
 
 #TIMESTEPPING
 1			nStage
-0.80			CflExpl
+0.3			CflExpl
 
 #SAVELOGFILE
 T			DoSaveLogfile
