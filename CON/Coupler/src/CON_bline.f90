@@ -46,7 +46,7 @@ module CON_bline
   public :: BL_n_particle             ! return number of points at the MF line
   public :: BL_put_from_mh            ! put MHD values from MH to SP
   public :: BL_interface_point_coords ! points rMinInterface<R<rMaxInterface
-  public :: BL_put_line               ! points rMin < R < rMax
+  public :: BL_put_line               ! points rMinBl < R < rMaxBl
   public :: BL_is_interface_block     ! to mark unusable lines
   public :: BL_set_line_foot_b
   public :: save_mhd
@@ -142,7 +142,7 @@ module CON_bline
   real :: rBufferLo, rBufferUp
 
   ! Allowed range of helocentric distances
-  real :: rMin, rMax
+  real :: rMinBl, rMaxBl
 
   ! Coefficient to transform energy
   real         :: EnergySi2Io = 1.0/cBoltzmann
@@ -241,23 +241,23 @@ contains
        if(.not.is_proc(BL_))RETURN
        if(IsSource4BL_C(SC_))then
           Lower_ = SC_
-          RMin   = RScMin
+          rMinBl   = RScMin
        elseif(IsSource4BL_C(IH_))then
           Lower_ = IH_
-          RMin   = RIhMin
+          rMinBl   = RIhMin
        else
           Lower_ = OH_
-          RMin   = ROhMin
+          rMinBl   = ROhMin
        end if
        if(IsSource4BL_C(OH_))then
           Upper_ = OH_
-          RMax   = ROhMax
+          rMaxBl   = ROhMax
        elseif(IsSource4BL_C(IH_))then
           Upper_ = IH_
-          RMax   = RIhMax
+          rMaxBl   = RIhMax
        else
           Upper_ = SC_
-          RMax   = RScMax
+          rMaxBl   = RScMax
        end if
        select  case(BL_)
        case(PT_)
@@ -614,7 +614,7 @@ contains
     iLine    = Put%iCB_II(4,iPutStart)
     iVertex  = Put%iCB_II(1,iPutStart) + iOffset_B(iLine)
     R = norm2(XyzBl_D)
-    if(R < RMin .or. R >= RMax)then
+    if(R < rMinBl .or. R >= rMaxBl)then
        ! Sort out particles left the SP domain
        MHData_VIB(X_:Z_,iVertex, iLine) = 0.0
     else
@@ -675,25 +675,35 @@ contains
     DoAdjustUp = Source_ == Upper_
     line:do iLine = 1, nLine
        if(.not. Used_B(iLine))CYCLE line
-       iBegin = 1
-       if(DoAdjustLo)then
-          iOffset_B(iLine) = 0
-       end if
-       iEnd   = nVertex_B(  iLine)
-       if(iEnd < 10)then
+       if(nVertex_B(iLine) < 10)then
+          write(*,*)NameSub//':Too short line deleted, iProc=',iProc,&
+               ' iLine=', iLine
           ! Remove too short lines
           Used_B(iLine) = .false.
           nVertex_B(iLine)=0
           CYCLE line
        end if
+       iBegin = 1
+       if(DoAdjustLo)then
+          iOffset_B(iLine) = 0
+          do while(all(MHData_VIB(X_:Z_,iBegin,iLine)==0.0))
+             iBegin = iBegin + 1
+          end do
+       end if
+       if(DoAdjustUp)then
+          do while(all(MHData_VIB(X_:Z_,nVertex_B(iLine),iLine)==0.0))
+             nVertex_B(iLine) = nVertex_B(iLine) - 1
+          end do
+       end if
+       iEnd   = nVertex_B(iLine)
        iParticle_I(:) = [iBegin, iEnd]
        if(DoAdjustUp) then
-          iLoop = Up_
+          iLoop = Up_     ! Vertexes are checked from the upper end
        else
-          iLoop = Lo_
+          iLoop = Lo_     ! Vertexes are checked from the lower end
        end if
        PARTICLE: do while(iParticle_I(1) < iParticle_I(2))
-          iVertex = iParticle_I(iLoop)
+          iVertex = iParticle_I(iLoop) ! iBegin for SC, iEnd for IH
           R = State_VIB(R_,iVertex,iLine)
           ! account for all missing partiles along the line;
           ! --------------------------------------------------------
@@ -917,20 +927,20 @@ contains
 
     ! there are 2 possible failures of the algorithm:
     ! Failure (1):
-    ! no intersection of smoothly extended line with the sphere R = RMin
-    if(Dot**2 - sum(Xyz1_D**2) + RMin**2 < 0)then
+    ! no intersection of smoothly extended line with the sphere R = rMinBl
+    if(Dot**2 - sum(Xyz1_D**2) + rMinBl**2 < 0)then
        ! project first particle for new footpoint
-       FootPoint_VB(X_:Z_,iLine) = Xyz1_D * RMin / sqrt(sum(Xyz1_D**2))
+       FootPoint_VB(X_:Z_,iLine) = Xyz1_D * rMinBl / sqrt(sum(Xyz1_D**2))
     else
        ! Xyz0, the footprint, is distance Alpha away from Xyz1:
-       ! Xyz0 = Xyz1 + Alpha * Dir0 and R0 = RMin =>
-       Alpha = S * sqrt(Dot**2 - sum(Xyz1_D**2) + RMin**2) - Dot
+       ! Xyz0 = Xyz1 + Alpha * Dir0 and R0 = rMinBl =>
+       Alpha = S * sqrt(Dot**2 - sum(Xyz1_D**2) + rMinBl**2) - Dot
        ! Failure (2):
        ! intersection is too far from the current beginning of the line,
        ! use distance between 2nd and 3rd particles on the line as measure
        if(abs(Alpha) > Dist2)then
           ! project first particle for new footpoint
-          FootPoint_VB(X_:Z_,iLine) = Xyz1_D * RMin / sqrt(sum(Xyz1_D**2))
+          FootPoint_VB(X_:Z_,iLine) = Xyz1_D * rMinBl / sqrt(sum(Xyz1_D**2))
        else
           ! store newly found footpoint of the line
           FootPoint_VB(X_:Z_,iLine) = Xyz1_D + Alpha * Dir0_D
