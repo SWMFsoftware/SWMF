@@ -736,14 +736,14 @@ contains
 
           ! when looping Up-2-Lo and particle is in other model ->
           ! adjustments are no longer allowed
-          if(iLoop == Up_ .and. (&
-               R <  RInterfaceMin&
-               .or.&
-               R >= RInterfaceMax)&
-               )then
-             DoAdjustLo = .false.
-             DoAdjustUp = .false.
-          end if
+          ! if(iLoop == Up_ .and. (&
+          !     R <  RInterfaceMin&
+          !     .or.&
+          !     R >= RInterfaceMax)&
+          !     )then
+          !   DoAdjustLo = .false.
+          !   DoAdjustUp = .false.
+          ! end if
 
           ! determine whether particle is missing
           IsMissing = all(MHData_VIB(X_:Z_,iVertex,iLine)==0.0)
@@ -751,7 +751,22 @@ contains
              iParticle_I = iParticle_I + iIncrement_II(:,iLoop)
              CYCLE PARTICLE
           end if
-
+          ! if need to adjust lower, but not upper boundary -> ADJUST
+          if(DoAdjustLo .and. R < 1.10*rMinBl)then
+             ! push iBegin in front of current particle;
+             ! it will be pushed until it finds a non-missing particle
+             iBegin = iVertex + 1
+             iParticle_I = iParticle_I + iIncrement_II(:,iLoop)
+             CYCLE PARTICLE
+          end if
+          ! if need to adjust upper, but not lower boundary -> ADJUST
+          if(DoAdjustUp .and. R > 0.90*rMaxBl)then
+             ! push nVertex_B() below current particle;
+             ! it will be pushed until it finds a non-missing particle
+             nVertex_B(iLine) = iVertex - 1
+             iParticle_I = iParticle_I + iIncrement_II(:,iLoop)
+             CYCLE PARTICLE
+          end if
           ! missing point in the lower part of the domain -> ERROR
           if(R < RInterfaceMin)then
              if(Source_==Lower_)write(*,*)'Is Lower Model'
@@ -773,53 +788,45 @@ contains
           ! switch left -> right end of range and start adjusting
           ! tail of the line, if it has reentered current part of the domain
           if(R >= RInterfaceMax)then
-             if(iLoop == Lo_)&
-                  iLoop = Up_
-             iParticle_I = iParticle_I + iIncrement_II(:,iLoop)
-             if(DoAdjustLo)then
-                DoAdjustLo = .false.
-                DoAdjustUp = .true.
-             end if
-             CYCLE PARTICLE
+             ! if(iLoop == Lo_)&
+             !     iLoop = Up_
+             ! iParticle_I = iParticle_I + iIncrement_II(:,iLoop)
+             ! if(DoAdjustLo)then
+             !   DoAdjustLo = .false.
+             !   DoAdjustUp = .true.
+             ! end if
+             ! CYCLE PARTICLE
+             EXIT PARTICLE
           end if
 
           ! if point used to be in a upper buffer -> IGNORE
-          if(R >= rBufferUp .and. R < rInterfaceMax)then
-             iParticle_I = iParticle_I + iIncrement_II(:,iLoop)
-             CYCLE PARTICLE
+          ! if(R >= rBufferUp .and. R < rInterfaceMax)then
+          !   iParticle_I = iParticle_I + iIncrement_II(:,iLoop)
+          !   CYCLE PARTICLE
+          ! end if
+
+          ! If this is the upper model and the missing point is not
+          ! near the upper boundary, nothing can be done
+          if(DoAdjustUp)then
+             write(*,*)'In the Upper Model'
+             write(*,*)'iProc in BL=', iProc
+             write(*,*)'RInterface Min, Max=', RInterfaceMin, RInterfaceMax
+             write(*,*)'iVertex, R=', iVertex, R
+             write(*,*)'iBegin, iEnd',  iBegin, iEnd
+             do iVertex = iBegin,iEnd
+                write(*,*)MHData_VIB(X_:Z_,iVertex,iLine)
+             end do
+             write(*,'(a)')NameSub//": particle has been lost"
+             Used_B(iLine)  = .false.
+             nVertex_B(iLine) = 0
+             CYCLE line
           end if
 
-          ! if need to adjust lower, but not upper boundary -> ADJUST
-          if(DoAdjustLo .and. .not.DoAdjustUp)then
-             ! push iBegin in front of current particle;
-             ! it will be pushed until it finds a non-missing particle
-             iBegin = iVertex + 1
-             iParticle_I = iParticle_I + iIncrement_II(:,iLoop)
-             CYCLE PARTICLE
-          end if
-
-          ! if need to adjust upper, but not lower boundary -> ADJUST
-          if(DoAdjustUp .and. .not.DoAdjustLo)then
-             ! push nVertex_B() below current particle;
-             ! it will be pushed until it finds a non-missing particle
-             nVertex_B(iLine) = iVertex - 1
-             iParticle_I = iParticle_I + iIncrement_II(:,iLoop)
-             CYCLE PARTICLE
-          end if
-
-          ! remaining case:
-          ! need to adjust both boudnaries -> ADJUST,but keep longest range
-          if(iVertex - iBegin > nVertex_B(iLine) - iVertex)then
-             nVertex_B(iLine) = iVertex - 1
-             EXIT PARTICLE
-          else
-             iBegin = iVertex + 1
-          end if
           iParticle_I = iParticle_I + iIncrement_II(:,iLoop)
        end do PARTICLE
 
-       DoAdjustLo = Source_ == Lower_
-       DoAdjustUp = Source_ == Upper_
+       ! DoAdjustLo = Source_ == Lower_
+       ! DoAdjustUp = Source_ == Upper_
        if(iBegin/=1)then
           ! Offset particle arrays
           iEnd   = nVertex_B(iLine)
