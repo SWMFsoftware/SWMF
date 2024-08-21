@@ -1863,7 +1863,7 @@ test11:
 test11_compile:
 	./Config.pl -v=Empty,SC/BATSRUS,GM/BATSRUS
 	./Config.pl -o=SC:u=Awsom,e=Awsom,g=4,4,4,ng=2
-	./Config.pl -o=GM:g=4,4,4,ng=2
+	./Config.pl -o=GM:u=Default,e=Mhd,g=4,4,4,ng=2
 	${MAKE} SWMF
 
 test11_rundir:

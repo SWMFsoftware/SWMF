@@ -397,7 +397,7 @@ Sokolov			TypeFlux
 
 #TIMESTEPPING
 1			nStage
-0.3			CflExpl
+0.8			CflExpl
 
 #SAVELOGFILE
 T			DoSaveLogfile
