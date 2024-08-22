@@ -191,6 +191,7 @@ contains
     call init_router(SC_LineGrid, BL_Grid, RouterLineScBl)
     if(.not.RouterScBl%IsProc)RETURN
     if(.not.DoExtract)RETURN
+    ! Now, in BL there are only origin points
     if(is_proc(BL_))then
        call BL_put_coupling_param(SC_, tNow)
        call BL_get_bounds(RScMin, RScMax)
@@ -211,6 +212,7 @@ contains
          interpolate           = interpolation_amr_gc)
     if(is_proc(SC_))then
        nLength = nlength_buffer_source(RouterScBl)
+       ! Trace the MF lines in SC, down to rScMin, up to rScMax
        call SC_extract_line(&
             Xyz_DI     = RouterScBl%BufferSource_II(1:nDim,&! Coord_D in SC
             1:nLength)                                    ,&
@@ -249,6 +251,7 @@ contains
          nVar                       = nDim                 ,&
          fill_buffer = SC_get_coord_for_sp_and_transform   ,&! Xyz_D for BL
          apply_buffer               = BL_put_line)           ! Put in place
+    ! Only points below RMinBl are removed.
   end subroutine BL_put_lines_from_sc
   !============================================================================
   subroutine mapping_line_sc_to_sp(nDimIn, XyzIn_D, nDimOut, CoordBl_D, &

@@ -163,6 +163,7 @@ foreach (@Arguments){
     if(/^-v=(.*)/)            {push(@NewVersion,split(/,/,$1)); next;}
     if(/^-o=(.*)/)            {$Options.=",$1";                 next;}
     if(/^-sleep=\d+/)         {next;}
+    if(/^-history/)           {next;}
     
     print "$WARNING Unknown switch: $_\n" if $Remaining{$_};
 }
