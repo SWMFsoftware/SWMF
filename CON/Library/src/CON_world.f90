@@ -496,7 +496,7 @@ contains
 
     logical, intent(in), optional:: IsVerbose
 
-    ! Create communicator for all PEs used by the active componenats
+    ! Create communicator for all PEs used by the active components
     ! at the beginning of a session.
     ! OpenMP or future sessions may use the rest.
     ! Write out basic information if IsVerbose is true
