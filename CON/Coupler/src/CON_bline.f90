@@ -676,8 +676,15 @@ contains
     line:do iLine = 1, nLine
        if(.not. Used_B(iLine))CYCLE line
        if(nVertex_B(iLine) < 10)then
-          write(*,*)NameSub//':Too short line deleted, iProc=',iProc,&
-               ' iLine=', iLine
+          write(*,*)NameSub//':iProc in BL=', iProc, ' iLine=',iLine
+          write(*,*)NameSub//':RInterface Min, Max=', RInterfaceMin, &
+               RInterfaceMax
+          write(*,*)NameSub//':nVertex_B', nVertex_B(iLine)
+          do iVertex = 1, nVertex_B(iLine)
+             write(*,*)iVertex, MHData_VIB(LagrID_:Z_,iVertex,iLine), &
+                  State_VIB(R_,iVertex,iLine)
+          end do
+          write(*,*)NameSub//':Too short line deleted'
           ! Remove too short lines
           Used_B(iLine) = .false.
           nVertex_B(iLine)=0
@@ -756,7 +763,7 @@ contains
              ! push iBegin in front of current particle;
              ! it will be pushed until it finds a non-missing particle
              iBegin = iVertex + 1
-             iParticle_I = iParticle_I + iIncrement_II(:,iLoop)
+             iParticle_I = iParticle_I + iIncrement_II(:,Lo_)
              CYCLE PARTICLE
           end if
           ! if need to adjust upper, but not lower boundary -> ADJUST
@@ -764,7 +771,7 @@ contains
              ! push nVertex_B() below current particle;
              ! it will be pushed until it finds a non-missing particle
              nVertex_B(iLine) = iVertex - 1
-             iParticle_I = iParticle_I + iIncrement_II(:,iLoop)
+             iParticle_I = iParticle_I + iIncrement_II(:,Up_)
              CYCLE PARTICLE
           end if
           ! missing point in the lower part of the domain -> ERROR
@@ -776,7 +783,8 @@ contains
              write(*,*)'iVertex, R=', iVertex, R
              write(*,*)'iBegin, iEnd',  iBegin, iEnd
              do iVertex = iBegin,iEnd
-                write(*,*)MHData_VIB(X_:Z_,iVertex,iLine)
+                write(*,*)iVertex, MHData_VIB(LagrID_:Z_,iVertex,iLine), &
+                     State_VIB(R_,iVertex,iLine)
              end do
              write(*,'(a)')NameSub//": particle has been lost"
              Used_B(iLine)  = .false.
@@ -795,8 +803,8 @@ contains
              !   DoAdjustLo = .false.
              !   DoAdjustUp = .true.
              ! end if
-             ! CYCLE PARTICLE
-             EXIT PARTICLE
+             iParticle_I = iParticle_I + iIncrement_II(:,iLoop)
+             CYCLE PARTICLE
           end if
 
           ! if point used to be in a upper buffer -> IGNORE
@@ -814,7 +822,8 @@ contains
              write(*,*)'iVertex, R=', iVertex, R
              write(*,*)'iBegin, iEnd',  iBegin, iEnd
              do iVertex = iBegin,iEnd
-                write(*,*)MHData_VIB(X_:Z_,iVertex,iLine)
+                write(*,*)iVertex, MHData_VIB(LagrID_:Z_,iVertex,iLine), &
+                     State_VIB(R_,iVertex,iLine)
              end do
              write(*,'(a)')NameSub//": particle has been lost"
              Used_B(iLine)  = .false.
