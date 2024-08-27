@@ -853,6 +853,7 @@ contains
       character(len=*), parameter:: NameSub = 'append_particles'
       !------------------------------------------------------------------------
       line:do iLine = 1, nLine
+         if(.not.Used_B(iLine))CYCLE line
          ! check current value of offset: if not zero, adjustments have just
          ! been made, no need to append new particles
          if(iOffset_B(iLine) /= 0 )CYCLE line
