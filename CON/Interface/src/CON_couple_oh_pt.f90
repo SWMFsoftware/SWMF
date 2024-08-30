@@ -40,8 +40,12 @@ contains
     ! Initialize OH->PT coupler.
     ! This subroutine should be called from all PE-s
 
-    logical :: DoTest, DoTestMe
+    integer :: nFluid
 
+    integer :: l, i, i0
+    
+    logical :: DoTest, DoTestMe
+    
     character(len=*), parameter:: NameSub = 'couple_oh_pt_init'
     !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
@@ -60,14 +64,34 @@ contains
     CouplerPtToOh%iCompSource = PT_
     CouplerPtToOh%iCompTarget = OH_
 
-    ! 5 source terms per fluid. Number of fluids is from number of MHD vars.
-    CouplerPtToOh%nVar    = 5 * (CouplerOhToPt%nVar / 5)
+
+    ! Find the number of fluids from MHD variable names
+    l = len(Grid_C(OH_)%NameVar)
+    nFluid = 0
+    i = 1
+    i0 = 1
+    do while(i0 < l .and. i > 0)
+       ! Assume the fluid density variable name is '*rho*'
+       i = index(Grid_C(OH_)%NameVar(i0:), 'rho')
+       if(i > 0) then
+          i0 = i0 + i + 3 
+          nFluid = nFluid + 1
+       end if
+    end do
+
+    ! 5 source terms per fluid
+    CouplerPtToOh%nVar    = 5 * nFluid
 
     ! charge exchange sources
-    if(CouplerPtToOh%nVar == 5)then
+    if(nFluid == 1)then
        CouplerPtToOh%NameVar = 'Srho Smx Smy Smz Se'
-    else
+    else if(nFluid == 2) then 
        CouplerPtToOh%NameVar = 'Srho Smx Smy Smz Se Srho2 Smx2 Smy2 Smz2 Se2'
+    else if(nFluid == 3) then 
+       CouplerPtToOh%NameVar = 'Srho Smx Smy Smz Se Srho2 Smx2 Smy2 Smz2 Se2 '&
+            //'Srho3 Smx3 Smy3 Smz3 Se3'
+    else
+       write(*,*)NameSub, ' Error!'
     end if
 
     call couple_points_init(CouplerPtToOh)
