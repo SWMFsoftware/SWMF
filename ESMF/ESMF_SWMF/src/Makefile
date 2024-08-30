@@ -9,7 +9,7 @@ ALL:  EXE
 -include Makefile.DEPEND
 
 # Add ESMF include directories
--include ${ESMF_DIR}/esmf.mk
+-include ${ESMFMKFILE}
 INCL_EXTRA = ${ESMF_F90COMPILEPATHS}
 
 # The executable
