@@ -65,7 +65,7 @@ test_check:
 	ls -l test_esmf.diff
 
 clean:
-	@(if([ "${ESMF_DIR}" != "" ]); then cd src; make clean; fi)
+	@(if([ "${ESMFMKFILE}" != "" ]); then cd src; make clean; fi)
 
 distclean:
-	@(if([ "${ESMF_DIR}" != "" ]); then cd src; make distclean; fi)
+	@(if([ "${ESMFMKFILE}" != "" ]); then cd src; make distclean; fi)

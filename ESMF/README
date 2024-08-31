@@ -1,17 +1,29 @@
 # This directory tree contains the ESMF related files inside the SWMF.
-# The ESMF library most be installed and the ESMF environment variables 
-# must be set. One could install the ESMF library in a subdirectory here.
+# The ESMF library most be installed and the
+# environment variable ESMFMKFILE must be set. 
 
-# The ESMF library can be downloaded from
+# The ESMF library can be downloaded with
 
-http://earthsystemmodeling.org/
+gitclone ESMF
 
-# Environment variables to set
+# Environment variables to set for installation of ESMF:
 setenv ESMF_DIR <top of ESMF source> 
-setenv ESMF_COMPILER gfortranclang
-setenv ESMF_COMM mpich
+setenv ESMF_COMPILER gfortran/gfortranclang/nag
+setenv ESMF_COMM mpich/openmpi/mpt
 setenv ESMF_BOPT g
+setenv ESMF_INSTALL_PREFIX ABSOLUTEPATHTOESMFINSTALLDIR
 
-# For Darwin + NAG compiler
-#setenv ESMF_COMPILER nag
-#setenv ESMF_TRACE_LIB_BUILD OFF 
+# Installing the ESMF
+cd ${ESMF_DIR}
+make
+make install
+
+# This should be in the .cshrc file (or equivalent):
+setenv ESMFMKFILE ABSOLUTEPATHTOESMFINSTALLDIR/lib/libg/SOMENAME/esmf.mk
+
+# Testing
+cd SWMFTOPDIR
+make -j test_esmf
+
+# It the test works, it  produces an empty ESMF/ESMF_SWMF/test_esmf.diff
+# file, otherwise the file contains information about the failure.
