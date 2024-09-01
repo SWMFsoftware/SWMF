@@ -43,9 +43,9 @@ contains
     integer :: nFluid
 
     integer :: l, i, i0
-    
+
     logical :: DoTest, DoTestMe
-    
+
     character(len=*), parameter:: NameSub = 'couple_oh_pt_init'
     !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
@@ -64,7 +64,6 @@ contains
     CouplerPtToOh%iCompSource = PT_
     CouplerPtToOh%iCompTarget = OH_
 
-
     ! Find the number of fluids from MHD variable names
     l = len(Grid_C(OH_)%NameVar)
     nFluid = 0
@@ -74,7 +73,7 @@ contains
        ! Assume the fluid density variable name is '*rho*'
        i = index(Grid_C(OH_)%NameVar(i0:), 'rho')
        if(i > 0) then
-          i0 = i0 + i + 3 
+          i0 = i0 + i + 3
           nFluid = nFluid + 1
        end if
     end do
@@ -85,9 +84,9 @@ contains
     ! charge exchange sources
     if(nFluid == 1)then
        CouplerPtToOh%NameVar = 'Srho Smx Smy Smz Se'
-    else if(nFluid == 2) then 
+    else if(nFluid == 2) then
        CouplerPtToOh%NameVar = 'Srho Smx Smy Smz Se Srho2 Smx2 Smy2 Smz2 Se2'
-    else if(nFluid == 3) then 
+    else if(nFluid == 3) then
        CouplerPtToOh%NameVar = 'Srho Smx Smy Smz Se Srho2 Smx2 Smy2 Smz2 Se2 '&
             //'Srho3 Smx3 Smy3 Smz3 Se3'
     else
