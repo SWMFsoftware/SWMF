@@ -55,17 +55,13 @@ contains
   !============================================================================
   subroutine couple_gm_im_init
 
-    ! Store IM grid size.
+    ! Store IM grid size and figure out coupling variables
 
     use ModProcessVarName,  ONLY: process_var_name
 
-    integer :: nSpeedGm, nPGm, nPparGm, nWaveGm, nMaterialGm, nChargeStateAllGm
-    integer :: nDensityIm, nSpeedIm, nPIm, nPparIm, nWaveIm, nMaterialIm, &
-         nChargeStateAllIm
-
-    ! General error code
+    integer :: nDensityGm, nPparGm
+    integer :: nDensityIm, nPparIm
     !--------------------------------------------------------------------------
-
     if(IsInitialized) RETURN
     IsInitialized = .true.
 
@@ -75,7 +71,7 @@ contains
     iSize = Grid_C(IM_) % nCoord_D(1)
     jSize = Grid_C(IM_) % nCoord_D(2)
 
-    call set_couple_var_info(GM_,IM_)
+    call set_couple_var_info(GM_, IM_)
     nRhoPCoupled = nVarBuffer
     ! if(is_proc0(GM_))then
     !   write(*,*)'(GM_)%NameVar    =', Grid_C(GM_)%NameVar
@@ -86,11 +82,8 @@ contains
     !   !    call con_stop('')
     ! end if
 
-    ! this will likely be removed when coupling generalization if done
-    call process_var_name(Grid_C(GM_)%NameVar, nDensityGm, nSpeedGm, &
-         nPGm, nPparGm, nWaveGm, nMaterialGm, nChargeStateAllGm)
-    call process_var_name(Grid_C(IM_)%NameVar, nDensityIm, nSpeedIm, &
-         nPIm, nPparIm, nWaveIm, nMaterialIm, nChargeStateAllIm)
+    call process_var_name(Grid_C(GM_)%NameVar, nDensityGm, nPpar=nPparGm)
+    call process_var_name(Grid_C(IM_)%NameVar, nDensityIm, nPpar=nPparIm)
 
     DoMultiFluidIMCoupling = nDensityGm > 1 .and. nDensityIm > 1
 

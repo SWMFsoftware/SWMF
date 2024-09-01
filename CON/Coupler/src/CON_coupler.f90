@@ -2,11 +2,12 @@
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
-! This class can be used in the couplers and wrappers.
-! It should contain everything needed for the coupling.
-! Provides simplified methods to access Igor Sokolov's
-! general coupler library.
 module CON_coupler
+
+  ! This module can be used in the couplers and wrappers.
+  ! It should contain everything needed for the coupling.
+  ! Provides simplified methods to access Igor Sokolov's
+  ! general coupler library.
 
   use CON_comp_param
   use CON_world
@@ -18,55 +19,46 @@ module CON_coupler
   use CON_router
   use CON_time, ONLY: FreqType
   use ModUtilities, ONLY: check_allocate, CON_set_do_test, CON_stop
+
   implicit none
 
   SAVE
 
-  !PUBLIC TYPES:
-  public :: CoordSystemType ! Extend grid descriptor type with coordinate info
-  integer, parameter :: lTypeCoord    = 3
-  integer, parameter :: lTypeGeometry = 15
-  integer, parameter :: lNameVar      = 500
+  public:: CoordSystemType ! Extend grid descriptor type with coordinate info
+  integer, parameter:: lTypeCoord    = 3
+  integer, parameter:: lTypeGeometry = 15
+  integer, parameter:: lNameVar      = 500
 
   type CoordSystemType
-
-     integer                       :: nCoord_D(3) = 0
-     real, pointer                 :: Coord1_I(:), Coord2_I(:), Coord3_I(:)
-     character (len=lTypeCoord)    :: TypeCoord
-     character (len=lTypeGeometry) :: TypeGeometry
-     integer                       :: nVar
-     character (len=lNameVar)      :: NameVar
-     real, pointer                 :: State_VGB(:,:,:,:,:) ! For BATSRUS
-     real                          :: UnitX
+     integer:: nCoord_D(3) = 0
+     real, pointer:: Coord1_I(:), Coord2_I(:), Coord3_I(:)
+     character(len=lTypeCoord):: TypeCoord
+     character(len=lTypeGeometry):: TypeGeometry
+     integer:: nVar
+     character(len=lNameVar):: NameVar
+     real, pointer:: State_VGB(:,:,:,:,:) ! For BATSRUS
+     real:: UnitX
   end type CoordSystemType
 
-  !PUBLIC DATA MEMBERS:
-  public :: Grid_C          ! Store the coordinate information for components
-
-  type(CoordSystemType), target :: Grid_C(MaxComp+3)
+  ! Store the coordinate information for components
+  type(CoordSystemType), public, target :: Grid_C(MaxComp+3)
 
   ! Name of the output restart directory for the component being coupled
-  public :: NameRestartOutDirComp
-  character(len=200):: NameRestartOutDirComp = ''
+  character(len=200), public:: NameRestartOutDirComp = ''
 
-  public :: Couple_CC           ! Frequency of couplings
-
-  type(FreqType) :: Couple_CC(MaxComp,MaxComp) = &
+  ! Frequency of couplings
+  type(FreqType), public:: Couple_CC(MaxComp,MaxComp) = &
        FreqType(.false.,-1,-1.0,0,0.0)
 
-  public :: MaxCouple           ! Maximum number of couplings
+  ! Maximum number of couplings
+  integer, public, parameter :: MaxCouple = 38
 
-  integer, parameter :: MaxCouple = 38
+  ! Actual number of couplings
+  integer, public :: nCouple = MaxCouple
 
-  public :: nCouple             ! Actual number of couplings
-
-  integer :: nCouple = MaxCouple
-
-  public :: iCompCoupleOrder_II ! The order of couplings
-
-  ! This is the default order based on the propagation of information
-  ! from component to component
-  integer :: iCompCoupleOrder_II(2,MaxCouple) = reshape ( [&
+  ! This is the default order of couplings based on the propagation
+  ! of information from component to component
+  integer, public :: iCompCoupleOrder_II(2,MaxCouple) = reshape ( [&
        EE_, GM_, &
        EE_, SC_, &
        SC_, EE_, &
@@ -108,22 +100,22 @@ module CON_coupler
        ], [2, MaxCouple] )
 
   ! Should do coupling limit the time step
-  logical, public :: DoCoupleOnTime_C(MaxComp) = .true.
+  logical, public:: DoCoupleOnTime_C(MaxComp) = .true.
 
   ! Is this a tight coupling?
-  logical, public :: IsTightCouple_CC(MaxComp,MaxComp)  = .false.
+  logical, public:: IsTightCouple_CC(MaxComp,MaxComp)  = .false.
 
   ! Variables related to share/Library/src/ModProcessVarName
-  integer, public :: iCompSourceCouple, iCompTargetCouple
+  integer, public:: iCompSourceCouple, iCompTargetCouple
 
   ! no. of variables to be coupled by any pair of source and target components
-  integer, public :: nVarCouple, nVarCouple_CC(MaxComp,MaxComp)
+  integer, public:: nVarCouple, nVarCouple_CC(MaxComp,MaxComp)
 
   ! no. of state variable groups for which coupling is implemented
-  integer, parameter, public     :: nCoupleVarGroup = 15
+  integer, parameter, public:: nCoupleVarGroup = 15
 
   ! named indices for variable groups for coupling
-  integer, parameter, public :: &
+  integer, parameter, public:: &
        Density_               =  1, &
        Momentum_              =  2, &
        Pressure_              =  3, &
@@ -136,11 +128,11 @@ module CON_coupler
        Material_              = 10, &
        ChargeState_           = 11, &
        CollisionlessHeatFlux_ = 12, &
-       SaMhd_                  = 13, &
+       SaMhd_                 = 13, &
        DoLPerp_               = 14, &
        DoWDiff_               = 15
 
-  logical, public :: &
+  logical, public:: &
        DoCoupleVar_V(nCoupleVarGroup) = .false. , &
        DoCoupleVar_VCC(nCoupleVarGroup,MaxComp,MaxComp) = .false.
 
@@ -582,22 +574,22 @@ contains
     use ModProcessVarName,  ONLY: process_var_name, nVarMax
     use ModUtilities,       ONLY: split_string, join_string
 
-    integer,intent(in)             :: iCompSource, iCompTarget
-    character(len=1500)            :: NameVarSource, NameVarTarget
-    character(len=15),allocatable  :: NameVarSource_V(:), NameVarTarget_V(:)
-    character(len=15)              :: NameList_V(nVarMax)
-    logical,allocatable            :: IsFoundVarSource_V(:)
-    integer      :: nVarSource, nVarTarget, iVarSource, iVarTarget
-    integer      :: nDensitySource, nDensityTarget, nDensityCouple
-    integer      :: nSpeedSource, nSpeedTarget, nSpeedCouple
-    integer      :: nPSource, nPTarget, nPCouple
-    integer      :: nPparSource, nPparTarget, nPparCouple
-    integer      :: nWaveSource, nWaveTarget, nWaveCouple
-    integer      :: nMaterialSource, nMaterialTarget, nMaterialCouple
-    integer      :: nChargeStateSource,nChargeStateTarget,nChargeStateCouple
+    integer, intent(in):: iCompSource, iCompTarget
+    character(len=1500):: NameVarSource, NameVarTarget
+    character(len=15), allocatable:: NameVarSource_V(:), NameVarTarget_V(:)
+    character(len=15):: NameList_V(nVarMax)
+    logical, allocatable:: IsFoundVarSource_V(:)
+    integer:: nVarSource, nVarTarget, iVarSource, iVarTarget
+    integer:: nDensitySource, nDensityTarget, nDensityCouple
+    integer:: nSpeedSource, nSpeedTarget, nSpeedCouple
+    integer:: nPSource, nPTarget, nPCouple
+    integer:: nPparSource, nPparTarget, nPparCouple
+    integer:: nWaveSource, nWaveTarget, nWaveCouple
+    integer:: nMaterialSource, nMaterialTarget, nMaterialCouple
+    integer:: nChargeStateSource,nChargeStateTarget,nChargeStateCouple
     integer:: lCompSource, lCompTarget
 
-    logical      :: DoTest, DoTestMe
+    logical:: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'set_couple_var_info'
     !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
@@ -614,7 +606,7 @@ contains
 
     DoCoupleVar_V = .false.
     ! The elements of DoCoupleVar_V will be set to true if:
-    ! Bfield_               :  Both have a magnetic field.
+    ! Bfield_            :  Both have a magnetic field.
     ! AnisoPressure_     :  Both use anisotropic pressure.
     ! ElectronPressure_  :  Both use electron pressure.
     ! Wave_              :  Both use the same # of waves.

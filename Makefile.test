@@ -27,7 +27,6 @@ test_help:
 	@echo "    test_eeggl                  (run EEGGL test)"
 	@echo "    test_eegtd                  (run Titov-Demouline test)"
 	@echo "    test_esmf                   (run ESMF-SWMF coupling test)"
-	@echo "	   test11		       (run SC-GM coupling test)"
 	@(if [ -d PW/PWOM    ]; then echo "    test_pw                     (run PW/PWOM test)"; fi)
 	@(if [ -d PS/DGCPM   ]; then echo "    test_ps                     (run PS/DGCPM test)"; fi)
 	@(if [ -d SP/MFLAMPA ]; then echo "    test_sp                     (run SP/MFLAMPA test)"; fi)
@@ -46,12 +45,13 @@ test_help:
 	@(if [ -d PC/FLEKS   ]; then echo "    test_swpc_aepic             (run MHD-AEPIC GM-IE-RCM2-PC SWPC test)"; fi)	
 	@(if [ -d PW/PWOM    ]; then echo "    test1                       (run GM-IE-PWOM test)"; fi)
 	@(if [ -d IM/HEIDI   ]; then echo "    test4                       (run GM-IE-HEIDI test)"; fi)
-	@(if [ -d GM/BATSRUS/srcUserExtra ]; then echo "    test5                       (run EE-SC test)"; fi)
+	@(if [ -d GM/BATSRUS ]; then echo "    test5                       (run EE-SC test)"; fi)
 	@(if [ -d GM/BATSRUS ]; then echo "    test6                       (run SC-IH coupling test: stream-aligned)"; fi)
-	@(if [ -d GM/BATSRUS/srcUserExtra ]; then echo "    test7                       (run IH-OH test)"; fi)
+	@(if [ -d GM/BATSRUS ]; then echo "    test7                       (run IH-OH test)"; fi)
 	@(if [ -d GM/BATSRUS ]; then echo "    test8                       (run SC-IH coupling test with AWSoM-R)"; fi)
 	@(if [ -d GM/BATSRUS ]; then echo "    test9                       (run SC-IH coupling test with AWSoM)"; fi)
 	@(if [ -d GM/BATSRUS ]; then echo "    test10                      (run SC-IH like in a real-time)"; fi)
+	@(if [ -d GM/BATSRUS ]; then echo "    test11                      (run SC-GM coupling test)"; fi)
 	@(if [ -d PT/AMPS    ]; then echo "    test13                      (run GM-PT/AMPS test: Europa)"; fi)
 	@(if [ -d PT/PARMISAN ]; then echo "    test14                      (run SC-IH-PT/PARMISAN test)"; fi)
 	@(if [ -d SP/MFLAMPA ]; then echo "    test15                      (run SC-IH-SP/MFLAMPA test)"; fi)
@@ -102,11 +102,12 @@ test_swmf:
 	-@(if [ -d PW/PWOM ] && [ -d IM/CIMI ]; then ${MAKE} test_swpc_cimi_pwom_species TESTDIR=run_test_swpc_cimi_pwom_species; fi)
 	-@(if [ -d PW/PWOM    ]; then ${MAKE} test1 TESTDIR=run_test01; fi)
 	-@(if [ -d IM/HEIDI   ]; then ${MAKE} test4 TESTDIR=run_test04; fi)
-	-@(if [ -d GM/BATSRUS/srcUserExtra ]; then ${MAKE} test5 TESTDIR=run_test05; fi)
+	-@(if [ -d GM/BATSRUS ]; then ${MAKE} test5 TESTDIR=run_test05; fi)
 	-@(if [ -d GM/BATSRUS ]; then ${MAKE} test6 TESTDIR=run_test06; fi)
-	-@(if [ -d GM/BATSRUS/srcUserExtra ]; then ${MAKE} test7 TESTDIR=run_test07; fi)
+	-@(if [ -d GM/BATSRUS ]; then ${MAKE} test7 TESTDIR=run_test07; fi)
 	-@(if [ -d GM/BATSRUS ]; then ${MAKE} test8 TESTDIR=run_test08; fi)
 	-@(if [ -d GM/BATSRUS ]; then ${MAKE} test9 TESTDIR=run_test09; fi)
+	-@(if [ -d GM/BATSRUS ]; then ${MAKE} test11 TESTDIR=run_test11; fi)
 	-@(if [ -d PT/AMPS    ]; then ${MAKE} test13 TESTDIR=run_test13; fi)
 	-@(if [ -d SP/MFLAMPA ]; then ${MAKE} test15 TESTDIR=run_test15; fi)
 	-@(if [ -d SP/MFLAMPA ]; then ${MAKE} test19 TESTDIR=run_test19; fi)
@@ -119,7 +120,6 @@ test_swmf:
 	-@(if [ -d PT/FLEKS   ]; then ${MAKE} test22 TESTDIR=run_test22; fi)
 	-@(if [ -d PT/FLEKS   ]; then ${MAKE} test23 TESTDIR=run_test23; fi)
 	./Config.pl -noamrex
-	-@(if [ -d GM/BATSRUS ]; then ${MAKE} test11 TESTDIR=run_test11; fi)
 
 # Setting BLESS=YES or Y will copy the solution into the reference solution
 BLESS=NO
