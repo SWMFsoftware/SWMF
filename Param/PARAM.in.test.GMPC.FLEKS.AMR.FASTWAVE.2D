@@ -212,7 +212,7 @@ g rbody			NamePars
 
 #TIMESTEPPING
 F			useFixedDt
-0.2			cfl
+0.4			cfl
 
 #MAXBLOCKSIZE
 8			nCellX
