@@ -36,13 +36,12 @@ module CON_couple_oh_pt
 contains
   !============================================================================
   subroutine couple_oh_pt_init
+    use ModProcessVarName, ONLY: process_var_name
 
     ! Initialize OH->PT coupler.
     ! This subroutine should be called from all PE-s
 
     integer :: nFluid
-
-    integer :: l, i, i0
 
     logical :: DoTest, DoTestMe
 
@@ -64,19 +63,9 @@ contains
     CouplerPtToOh%iCompSource = PT_
     CouplerPtToOh%iCompTarget = OH_
 
-    ! Find the number of fluids from MHD variable names
-    l = len(Grid_C(OH_)%NameVar)
-    nFluid = 0
-    i = 1
-    i0 = 1
-    do while(i0 < l .and. i > 0)
-       ! Assume the fluid density variable name is '*rho*'
-       i = index(Grid_C(OH_)%NameVar(i0:), 'rho')
-       if(i > 0) then
-          i0 = i0 + i + 3
-          nFluid = nFluid + 1
-       end if
-    end do
+    ! Obtain the fluid number from variable names. Assume the number
+    ! of fluid is equal to the number of density variables.
+    call process_var_name(Grid_C(OH_)%NameVar, nFluid)
 
     ! 5 source terms per fluid
     CouplerPtToOh%nVar    = 5 * nFluid
