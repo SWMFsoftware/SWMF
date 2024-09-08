@@ -10,7 +10,7 @@ IE -2 -1  1  		CompMap last 2 PE-s
 IM -2 -2  1		CompMap nProc-2 PE
 
 #DESCRIPTION
-Param/SWPC/PARAM.in_SWPC_pe_init: SWPC Version 2 with electron pressure		StringDescription
+Param/SWPC/PARAM.in_SWPC_v2_init: Example file to start a run for the SWPC Version 2 code selection		StringDescription
 
 #TIMEACCURATE
 F			IsTimeAccurate
@@ -106,9 +106,9 @@ shell0			StringShape
 
 #BODY
 T			UseBody
-2.5			rBody     (in planet radius)
-3.0			rCurrents (in planet radius)
-28.0			BodyNDim  (/cc)
+1.9			rBody     (in planet radius)
+2.4			rCurrents (in planet radius)
+64.0			BodyNDim  (/cc)
 25000.0			BodyTDim  (K)
 
 #OUTERBOUNDARY
@@ -122,18 +122,11 @@ float			TypeBc6
 #INNERBOUNDARY
 ionosphere		TypeBcBody
 
-#SHOCKHEATING
-0.25			PeShockHeatingFraction
-
-#ELECTRONPRESSURERATIO
-1/3			ElectronTemperatureRatio
-1/7.8			InnerBcPeRatio
-
 ! Set the inner boundary density as Rho0Cpcp + RhoPerCpcp*CPCP[keV]
 #CPCPBOUNDARY
 T			UseCpcpBc  (rest is read if true)
-28.0			Rho0Cpcp   [amu/cc]
-0.1			RhoPerCpcp [amu/cc / keV]
+64.0			Rho0Cpcp   [amu/cc]
+8.0			RhoPerCpcp [amu/cc / keV]
 
 #SOLARWINDFILE
 T			UseSolarWindFile
@@ -145,7 +138,6 @@ T			DoReadAgain
 #SCHEME
 1			nOrder
 Sokolov			TypeFlux
-
 
 #CONSERVATIVECRITERIA
 1			nConservCrit
@@ -387,7 +379,6 @@ End of setting 2
 ! Pressures below pMinDim are replaced with pMinDim.
 #MINIMUMPRESSURE
 1e-5			pMinDim [nPa]
-1e-5			PeMinDim [nPa]
 
 #SAVEPLOT
 4			nPlotFile
@@ -419,18 +410,6 @@ lcb nul tec		StringPlot  !last closed field line plots
 #BORIS
 T			UseBorisCorrection
 0.01			BorisClightFactor
-
-#REGION
-borisregion		NameRegion
-sphere tapered		StringShape
--4.0			xPosition
-0.0			yPosition
-0.0			zPosition
-14.0			Radius
-2.0			Taper
-
-#BORISREGION
-borisregion		NameBorisRegion
 
 #TIMESTEPPING
 1			nStage
