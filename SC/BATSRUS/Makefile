@@ -13,6 +13,22 @@ install:
 		cp -f srcBATL/BATL_size_orig.f90 srcBATL/BATL_size.f90; \
 	fi)
 
+newtr:
+	@(if([-f src/ModThreadedLC_New.f90 ]); then \
+		cd src; mv ModThreadedLC.f90 ModThreadedLC_Old.f90; \
+		mv ModFieldLineThread.f90 ModFieldLineThread_Old.f90; \
+		mv ModThreadedLC_New.f90 ModThreadedLC.f90; \
+		mv ModFieldLineThread_New.f90 ModFieldLineThread.f90; \
+	fi)
+
+oldtr:
+	@(if([-f src/ModThreadedLC_Old.f90 ]); then \
+		cd src; mv ModThreadedLC.f90 ModThreadedLC_New.f90; \
+		mv ModFieldLineThread.f90 ModFieldLineThread_New.f90; \
+		mv ModThreadedLC_Old.f90 ModThreadedLC.f90; \
+		mv ModFieldLineThread_Old.f90 ModFieldLineThread.f90; \
+	fi)
+
 LIB: check_src
 	cd srcBATL; $(MAKE) LIB
 	cd src; $(MAKE) LIB

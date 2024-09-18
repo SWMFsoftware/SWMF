@@ -1413,6 +1413,7 @@ test5_compile:
 	./Config.pl -v=Empty,EE/BATSRUS,SC/BATSRUS
 	./Config.pl -o=EE:u=Swarm,e=MhdEos,ng=2,g=10,10,10
 	./Config.pl -o=SC:u=Awsom,e=Awsom,ng=2,g=4,4,4
+	cd SC/BATSRUS; make newtr
 	${MAKE} SWMF
 	make PIDL
 
@@ -1569,6 +1570,7 @@ test8_compile:
 	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
 	./Config.pl -o=SC:u=Awsom,e=Awsom,ng=2,g=4,4,4
 	./Config.pl -o=IH:u=Awsom,e=Awsom,ng=2,g=4,4,4
+	cd SC/BATSRUS; make oldtr
 	${MAKE} SWMF
 	make PIDL
 
@@ -1993,6 +1995,7 @@ test15_compile:
 	./Config.pl -o=SC:u=Awsom,e=Awsom,ng=2,g=4,4,4
 	./Config.pl -o=IH:u=Awsom,e=Awsom,ng=2,g=4,4,4
 	./Config.pl -o=SP:g=2000
+	cd SC/BATSRUS; make newtr
 	${MAKE} SWMF
 	make PIDL
 
@@ -2284,6 +2287,7 @@ test19_compile:
 	./Config.pl -o=IH:u=Awsom,e=AwsomWdiff,ng=2,g=4,4,4
 	./Config.pl -o=OH:u=Awsom,e=Awsom,ng=2,g=4,4,4
 	./Config.pl -o=SP:g=2000
+	cd SC/BATSRUS; make oldtr
 	${MAKE} SWMF
 	make PIDL
 
