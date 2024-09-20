@@ -298,7 +298,7 @@ contains
 
       ! Number of variables in Buffer_IIV indexed by Lon, Lat
       ! x, y, B, densities and pressures at the min B surface
-      nVarBmin = nRhoPCoupled + 5
+      nVarBmin = nRhoPCoupled + 20
 
       NameVar = 'x:y:bmin:I_I:S_I:R_I:B_I:rho:p'
 
