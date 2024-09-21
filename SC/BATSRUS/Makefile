@@ -14,7 +14,7 @@ install:
 	fi)
 
 newtr:
-	@(if([-f src/ModThreadedLC_New.f90 ]); then \
+	@(if([ -f src/ModThreadedLC_New.f90 ]); then \
 		cd src; mv ModThreadedLC.f90 ModThreadedLC_Old.f90; \
 		mv ModFieldLineThread.f90 ModFieldLineThread_Old.f90; \
 		mv ModThreadedLC_New.f90 ModThreadedLC.f90; \
@@ -22,7 +22,7 @@ newtr:
 	fi)
 
 oldtr:
-	@(if([-f src/ModThreadedLC_Old.f90 ]); then \
+	@(if([ -f src/ModThreadedLC_Old.f90 ]); then \
 		cd src; mv ModThreadedLC.f90 ModThreadedLC_New.f90; \
 		mv ModFieldLineThread.f90 ModFieldLineThread_New.f90; \
 		mv ModThreadedLC_Old.f90 ModThreadedLC.f90; \
