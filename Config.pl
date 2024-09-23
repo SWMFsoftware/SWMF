@@ -64,8 +64,9 @@ if($SWMFsoftware){
 	"PWOM"          => "PW", 
 	"RBE"           => "RB",
 	"MFLAMPA"       => "SP",
-	"MGITM"         => "UA",
-	"GITM2"         => "UA");
+	"GITM"          => "UA",
+	"GITM2"         => "UA",
+	"MGITM"         => "UA");
 }else{
     %component = (
 	"BATSRUS"       => "GM", 
