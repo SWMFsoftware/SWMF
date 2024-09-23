@@ -1363,27 +1363,27 @@ test3_build:
 	cd ${BUILD}; ./Config.pl -install \
 	   	     	-compiler=${FORTRAN_COMPILER_NAME},${C_COMPILER_NAME}
 	cd Test3_Build; make test3
-	
+
 test3:  
-	@echo "test3_compile..." > test03_UAcouple_gm.diff
-	@echo "test3_compile..." > test03_UAcouple_ie.diff	
-	@echo "test3_compile..." > test03_UAcouple_ua_gitm.diff
+	@echo "test3_compile..." > test03_gm.diff
+	@echo "test3_compile..." > test03_ie.diff	
+	@echo "test3_compile..." > test03_ua_gitm.diff
 	${MAKE} test3_compile
-	@echo "test3_rundir..." >> test03_UAcouple_gm.diff
-	@echo "test3_rundir..." >> test03_UAcouple_ie.diff
-	@echo "test3_rundir..." >> test03_UAcouple_ua_gitm.diff
+	@echo "test3_rundir..." >> test03_gm.diff
+	@echo "test3_rundir..." >> test03_ie.diff
+	@echo "test3_rundir..." >> test03_ua_gitm.diff
 	${MAKE} test3_rundir
-	@echo "test3_run..." >> test03_UAcouple_gm.diff
-	@echo "test3_run..." >> test03_UAcouple_ie.diff
-	@echo "test3_run..." >> test03_UAcouple_ua_gitm.diff
+	@echo "test3_run..." >> test03_gm.diff
+	@echo "test3_run..." >> test03_ie.diff
+	@echo "test3_run..." >> test03_ua_gitm.diff
 	${MAKE} test3_run
-	@echo "test3_restart..." >> test03_UAcouple_gm.diff
-	@echo "test3_restart..." >> test03_UAcouple_ie.diff
-	@echo "test3_restart..." >> test03_UAcouple_ua_gitm.diff
+	@echo "test3_restart..." >> test03_gm.diff
+	@echo "test3_restart..." >> test03_ie.diff
+	@echo "test3_restart..." >> test03_ua_gitm.diff
 	${MAKE} test3_restart
-	@echo "test3_check..." >> test03_UAcouple_gm.diff
-	@echo "test3_check..." >> test03_UAcouple_ie.diff
-	@echo "test3_check..." >> test03_UAcouple_ua_gitm.diff
+	@echo "test3_check..." >> test03_gm.diff
+	@echo "test3_check..." >> test03_ie.diff
+	@echo "test3_check..." >> test03_ua_gitm.diff
 	${MAKE} test3_check
 
 test3_compile:
@@ -1412,20 +1412,20 @@ test3_restart:
 	cd ${TESTDIR}; ./pGITM.py
 	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS; \
 	mv runlog_restart RESULTS
-	
+
 test3_check:
 	-@(${DIFFNUM} -b -r=1e-5 -a=2e-2 \
 		${TESTDIR}/RESULTS/UA/ua_ie_buffer_t20021221_104600.out \
 	 	output/test3/ua_ie_buffer_t20021221_104600.out.gz \
-		> test03_UAcouple_ua_gitm.diff)
+		> test03_ua_gitm.diff)
 	-@(${DIFFNUM} -b -r=1e-5 -a=2e-4 \
 		${TESTDIR}/RESULTS/IE/IE_t021221_104500.log \
 	 	output/test3/IE_t021221_104500.log \
-		> test03_UAcouple_ie.diff)
+		> test03_ie.diff)
 	-@(${DIFFNUM} -b -r=1e-5 -a=2e-8 \
 		${TESTDIR}/RESULTS/GM/log_n000001.log \
 	 	output/test3/log_n000001.log \
-		> test03_UAcouple_gm.diff)
+		> test03_gm.diff)
 	@ls -l test03*.diff
 	
 ### test4: GM+IE+HEIDI ###
