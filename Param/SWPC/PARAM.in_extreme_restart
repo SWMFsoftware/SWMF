@@ -105,7 +105,7 @@ ionosphere		TypeBcBody
 #CPCPBOUNDARY
 T			UseCpcpBc  (rest is read if true)
 64.0			Rho0Cpcp   [amu/cc]
-8.0			RhoPerCpcp [amu/cc / keV]
+0.22			RhoPerCpcp [amu/cc / keV]
 
 #SOLARWINDFILE
 T			UseSolarWindFile
