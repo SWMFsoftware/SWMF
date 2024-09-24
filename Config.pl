@@ -116,8 +116,10 @@ foreach $repo ("util", @models){
     if($model eq "GM/BATSRUS"){
 	`cd GM/BATSRUS; $gitclone srcBATL`
 			    if not -d "$model/srcBATL";
-	`cd GM/BATSRUS; $gitclone srcUseExtra 2>&1"`
+	`cd GM/BATSRUS; $gitclone srcUserExtra 2>&1`
 			    if not -d "$model/srcUserExtra" and $SWMFsoftware;
+	print "Cannot clone $model/srcUserExtra...no access...\n"
+	    if $SWMFsoftware and not -d "$model/srcUserExtra";
     }
 }
 
