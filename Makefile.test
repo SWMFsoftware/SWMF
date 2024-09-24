@@ -44,6 +44,7 @@ test_help:
 	@(if [ -d PW/PWOM    ]; then echo "    test_swpc_cimi_pwom_species (run multispecies GM-IE-CIMI-PWOM SWPC test)"; fi)
 	@(if [ -d PC/FLEKS   ]; then echo "    test_swpc_aepic             (run MHD-AEPIC GM-IE-RCM2-PC SWPC test)"; fi)	
 	@(if [ -d PW/PWOM    ]; then echo "    test1                       (run GM-IE-PWOM test)"; fi)
+	@(if [ -d UA/GITM    ]; then echo "    test3                       (run GM-IE-IM-UA test)"; fi)
 	@(if [ -d IM/HEIDI   ]; then echo "    test4                       (run GM-IE-HEIDI test)"; fi)
 	@(if [ -d GM/BATSRUS ]; then echo "    test5                       (run EE-SC test)"; fi)
 	@(if [ -d GM/BATSRUS ]; then echo "    test6                       (run SC-IH coupling test: stream-aligned)"; fi)
@@ -1355,6 +1356,78 @@ test_swpc_amps_check:
 		> test_swpc_amps_rb.diff)
 	ls -l test_swpc_amps_??.diff
 
+### test_3: configure SWMF with GM+IE+IM+UA only. ###
+test3_build:
+	rm -rf Test3_Build
+	Scripts/Configure.pl -d=Test3_Build
+	cd ${BUILD}; ./Config.pl -install \
+	   	     	-compiler=${FORTRAN_COMPILER_NAME},${C_COMPILER_NAME}
+	cd Test3_Build; make test3
+
+test3:  
+	@echo "test3_compile..." > test03_gm.diff
+	@echo "test3_compile..." > test03_ie.diff	
+	@echo "test3_compile..." > test03_ua_gitm.diff
+	${MAKE} test3_compile
+	@echo "test3_rundir..." >> test03_gm.diff
+	@echo "test3_rundir..." >> test03_ie.diff
+	@echo "test3_rundir..." >> test03_ua_gitm.diff
+	${MAKE} test3_rundir
+	@echo "test3_run..." >> test03_gm.diff
+	@echo "test3_run..." >> test03_ie.diff
+	@echo "test3_run..." >> test03_ua_gitm.diff
+	${MAKE} test3_run
+	@echo "test3_restart..." >> test03_gm.diff
+	@echo "test3_restart..." >> test03_ie.diff
+	@echo "test3_restart..." >> test03_ua_gitm.diff
+	${MAKE} test3_restart
+	@echo "test3_check..." >> test03_gm.diff
+	@echo "test3_check..." >> test03_ie.diff
+	@echo "test3_check..." >> test03_ua_gitm.diff
+	${MAKE} test3_check
+
+test3_compile:
+	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2,UA/GITM
+	./Config.pl -o=GM:u=Default,e=Mhd,ng=2,g=8,8,8,IE:g=181,361
+	${MAKE} SWMF
+	make PIDL
+	cd UA/GITM; make POST
+
+test3_rundir:
+	rm -rf ${TESTDIR}
+	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
+	cp Param/PARAM.in.test.GMIEIMUA ${TESTDIR}/
+	cp Param/PARAM.in.test.restart.GMIEIMUA ${TESTDIR}/
+	cp ${TESTDIR}/PARAM.in.test.GMIEIMUA ${TESTDIR}/PARAM.in
+	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
+
+test3_run:
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./Restart.pl
+
+test3_restart:
+	cd ${TESTDIR}; cp PARAM.in.test.restart.GMIEIMUA PARAM.in
+	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_restart
+	cd ${TESTDIR}; ./pGITM.py
+	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS; \
+	mv runlog_restart RESULTS
+
+test3_check:
+	-@(${DIFFNUM} -b -r=1e-5 -a=2e-2 \
+		${TESTDIR}/RESULTS/UA/ua_ie_buffer_t20021221_104600.out \
+	 	output/test3/ua_ie_buffer_t20021221_104600.out.gz \
+		> test03_ua_gitm.diff)
+	-@(${DIFFNUM} -b -r=1e-5 -a=2e-4 \
+		${TESTDIR}/RESULTS/IE/IE_t021221_104500.log \
+	 	output/test3/IE_t021221_104500.log \
+		> test03_ie.diff)
+	-@(${DIFFNUM} -b -r=1e-5 -a=2e-8 \
+		${TESTDIR}/RESULTS/GM/log_n000001.log \
+	 	output/test3/log_n000001.log \
+		> test03_gm.diff)
+	@ls -l test03*.diff
+	
 ### test4: GM+IE+HEIDI ###
 
 test4:
