@@ -1357,12 +1357,6 @@ test_swpc_amps_check:
 	ls -l test_swpc_amps_??.diff
 
 ### test_3: configure SWMF with GM+IE+IM+UA only. ###
-test3_build:
-	rm -rf Test3_Build
-	Scripts/Configure.pl -d=Test3_Build
-	cd ${BUILD}; ./Config.pl -install \
-	   	     	-compiler=${FORTRAN_COMPILER_NAME},${C_COMPILER_NAME}
-	cd Test3_Build; make test3
 
 test3:  
 	@echo "test3_compile..." > test03_gm.diff
