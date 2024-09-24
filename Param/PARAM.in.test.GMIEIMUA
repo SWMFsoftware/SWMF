@@ -292,10 +292,10 @@ F               if you want to run with msis and iri only (i.e. not GITM)
 1.0             dt for output to a log file
 
 #SAVEPLOTS
-30.0		dt for writing restart files
+30.0		        dt for writing restart files
 2               how many output files do you want
-2DGEL
-30.0
+2DGEL           First file type
+30.0            Output cadence of first file
 3DALL
 30.0
 
@@ -322,7 +322,7 @@ F               UseMSISFlat
 T               UseMSISTides
 F               UseGSWMTides
 F               UseWACCMTides
-F		UseHmeTides
+F	            	UseHmeTides
 
 #GSWMCOMP
 F               Diurnal Migrating
@@ -381,12 +381,12 @@ T               UseIonAdvection
 T               UseNeutralChemistry
 
 #DYNAMO
-T
-88.0            Testing new coding of dynamo region
-500
-1.0
-F
-20
+T               Use Dynamo
+88.0            DynamoHighLatBoundary
+500             nItersMax
+1.0             MaxResidual
+F               IncludeCowling
+20              Longitudinal Averaging
 
 #STRETCH
 65.0            ! location of minimum grid spacing
