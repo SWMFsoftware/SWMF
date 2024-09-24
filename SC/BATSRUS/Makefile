@@ -19,6 +19,7 @@ newtr:
 		mv ModFieldLineThread.f90 ModFieldLineThread_Old.f90; \
 		mv ModThreadedLC_New.f90 ModThreadedLC.f90; \
 		mv ModFieldLineThread_New.f90 ModFieldLineThread.f90; \
+		touch ModFieldLineThread.f90; \
 	fi)
 
 oldtr:
@@ -27,6 +28,7 @@ oldtr:
 		mv ModFieldLineThread.f90 ModFieldLineThread_New.f90; \
 		mv ModThreadedLC_Old.f90 ModThreadedLC.f90; \
 		mv ModFieldLineThread_Old.f90 ModFieldLineThread.f90; \
+		touch ModFieldLineThread.f90; \
 	fi)
 
 LIB: check_src
