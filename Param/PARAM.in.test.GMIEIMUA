@@ -341,7 +341,7 @@ F               Use apex magnetic coordinate system
 10.0            hemispheric power
 
 
-MHD_INDICES
+#MHD_INDICES
 DataIn/imf20021221.dat
 
 
