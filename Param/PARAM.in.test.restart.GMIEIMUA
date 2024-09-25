@@ -154,10 +154,10 @@ max idl			StringPlot
 #BEGIN_COMP UA ---------------------------------------------------------------
 
 #DEBUG
-0
-0
--1
-F
+0		debug level (0 = no info, 10 = max info)
+0		cpu to watch
+-1		dt between normal code output to stdout
+F		usebarriers - forces the code to stop and wait more often
 
 #RESTART
 T               need to think about how to stitch in initialization
@@ -272,12 +272,13 @@ T               UseIonAdvection
 T               UseNeutralChemistry
 
 #DYNAMO
-T
-88.0            Testing new coding of dynamo region
-500
-1.0
-F
-20
+T               Use Dynamo
+88.0            DynamoHighLatBoundary
+500             nItersMax
+1.0             MaxResidual
+F               IncludeCowling
+20              Longitudinal Averaging
+
 
 #STRETCH
 65.0            ! location of minimum grid spacing
