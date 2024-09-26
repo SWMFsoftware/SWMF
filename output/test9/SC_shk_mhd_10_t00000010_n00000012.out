@@ -1,4 +1,4 @@
-R R R ? g/cm3 km/s km/s km/s G G G erg/cm3 erg/cm3 erg/cm3 dyne/cm^2 dyne/cm^2 dyne/cm^2 dyne/cm^2 uA/m2 uA/m2 uA/m2
+R R R km/s g/cm3 km/s km/s km/s G G G erg/cm3 erg/cm3 erg/cm3 dyne/cm^2 dyne/cm^2 dyne/cm^2 dyne/cm^2 uA/m2 uA/m2 uA/m2
         12  1.0000000000E+01  2  0 19
       37      19
 lon lat r divudx Rho Ux Uy Uz Bx By Bz Ehot I01 I02 Pe Ppar Pperp P jx jy jz
