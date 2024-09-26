@@ -14,20 +14,20 @@ install:
 	fi)
 
 newtr:
-	@(if([ -f src/ModThreadedLC_New.f90 ]); then \
-		cd src; mv ModThreadedLC.f90 ModThreadedLC_Old.f90; \
-		mv ModFieldLineThread.f90 ModFieldLineThread_Old.f90; \
-		mv ModThreadedLC_New.f90 ModThreadedLC.f90; \
-		mv ModFieldLineThread_New.f90 ModFieldLineThread.f90; \
+	@(if([ -f src/ModThreadedLCNew.f90 ]); then \
+		cd src; mv ModThreadedLC.f90 ModThreadedLCOld.f90; \
+		mv ModFieldLineThread.f90 ModFieldLineThreadOld.f90; \
+		mv ModThreadedLCNew.f90 ModThreadedLC.f90; \
+		mv ModFieldLineThreadNew.f90 ModFieldLineThread.f90; \
 		touch ModFieldLineThread.f90; \
 	fi)
 
 oldtr:
-	@(if([ -f src/ModThreadedLC_Old.f90 ]); then \
-		cd src; mv ModThreadedLC.f90 ModThreadedLC_New.f90; \
-		mv ModFieldLineThread.f90 ModFieldLineThread_New.f90; \
-		mv ModThreadedLC_Old.f90 ModThreadedLC.f90; \
-		mv ModFieldLineThread_Old.f90 ModFieldLineThread.f90; \
+	@(if([ -f src/ModThreadedLCOld.f90 ]); then \
+		cd src; mv ModThreadedLC.f90 ModThreadedLCNew.f90; \
+		mv ModFieldLineThread.f90 ModFieldLineThreadNew.f90; \
+		mv ModThreadedLCOld.f90 ModThreadedLC.f90; \
+		mv ModFieldLineThreadOld.f90 ModFieldLineThread.f90; \
 		touch ModFieldLineThread.f90; \
 	fi)
 
