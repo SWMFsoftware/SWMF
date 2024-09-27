@@ -2807,7 +2807,7 @@ test_eegtd_run:
 	perl -i -pe 's/#ELIMINATECMEBR/ELIMINATECMEBR/' CME.in; \
 	./HARMONICS.exe |tee harmonics.log
 	@echo " Reconstruction of potential field takes a while, please, wait"
-	cd ${RUNDIR}/SC; \
+	cd ${TESTDIR}/SC; \
 	${MPIRUN} ./CONVERTHARMONICS.exe > convert.log
 
 test_eegtd_check:
