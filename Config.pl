@@ -25,63 +25,47 @@ our $CloneOnly;
 
 # Figure out remote git server
 my $remote = `git config remote.origin.url`; $remote =~ s/\/SWMF(\.git)?\n//;
-my $SWMFsoftware = ($remote =~ /SWMFsoftware/);
 
 my $config = "share/Scripts/Config.pl";
 my $gitclone = `pwd`; chop $gitclone;
-if($SWMFsoftware){
-    $gitclone .= "/share/Scripts/gitclone -s";
-}else{
-    $gitclone .= "/share/Scripts/githubclone";
-}
+$gitclone .= "/share/Scripts/gitclone -s";
 
 # Git clone missing directories as needed. Start with share/ to get $gitclone.
-if (not -f $config){
-    `git clone $remote/share; git clone $remote/util`;
-}
-
-#print "remote=$remote SWMFsoftware=$SWMFsoftware\n";
+`git clone $remote/share` if not -f $config;
+die "Could not clone share\n" unless -d "share";
 
 # Fix component Makefile.def and .conf files if they exist
 &set_version_makefile_comp;
 
 # Hash of model names with corresponding component name
-my %component;
-
-if($SWMFsoftware){
-    %component = (
-	"BATSRUS"       => "GM", 
-	"Ridley_serial" => "IE", 
-	"CIMI"          => "IM", 
-	"HEIDI"         => "IM", 
-	"RCM2"          => "IM",
-	"ALTOR"         => "PC",
-	"FLEKS"         => "PC", 
-	"FLEKS_PT"      => "PT", 
-	"DGCPM"         => "PS", 
-	"AMPS_PT"       => "PT", 
-	"PARMISAN"      => "PT",
-	"PWOM"          => "PW", 
-	"RBE"           => "RB",
-	"MFLAMPA"       => "SP",
-	"GITM"          => "UA",
-	"GITM2"         => "UA",
-	"MGITM"         => "UA");
-}else{
-    %component = (
-	"BATSRUS"       => "GM", 
-	"Ridley_serial" => "IE", 
-	"RBE"           => "RB",
-	"RCM2"          => "IM");
-}	
+my %component = (
+    "BATSRUS"       => "GM", 
+    "Ridley_serial" => "IE", 
+    "CIMI"          => "IM", 
+    "HEIDI"         => "IM", 
+    "RCM2"          => "IM",
+    "ALTOR"         => "PC",
+    "FLEKS"         => "PC", 
+    "FLEKS_PT"      => "PT", 
+    "DGCPM"         => "PS", 
+    "AMPS_PT"       => "PT", 
+    "PARMISAN"      => "PT",
+    "PWOM"          => "PW", 
+    "RBE"           => "RB",
+    "MFLAMPA"       => "SP",
+    "GITM"          => "UA",
+    "GITM2"         => "UA",
+    "MGITM"         => "UA");
 
 my $History;
 my @models;
 my $Sleep = $ENV{GITHUBSLEEP};
 
 my $AddAmrex;
+my $InstallOrClone;
 foreach (@Arguments){
     if( /^-(install|clone)/){
+	$InstallOrClone = 1;
 	$CloneOnly = 1 if /^-clone/;
 	if( /^-(install|clone)=(.*)/){
 	    @models = split(/,/, $2);
@@ -105,21 +89,23 @@ push(@Arguments, '-amrex') if $AddAmrex;
 
 $gitclone .= " -history" if $History;
 
-my $repo;
-foreach $repo ("util", @models){
-    my $component = ($component{$repo} or ".");
-    my $repo1 = $repo;
-    $repo1 =~ s/AMPS_P[TC]/AMPS/; # remove _PC, _PT
-    $repo1 =~ s/FLEKS_PT/FLEKS/; # remove _PT
-    my $model = "$component/$repo1";
-    `cd $component; $gitclone $repo1` unless -d $model;
-    if($model eq "GM/BATSRUS"){
-	`cd GM/BATSRUS; $gitclone srcBATL`
-			    if not -d "$model/srcBATL";
-	`cd GM/BATSRUS; $gitclone srcUserExtra 2>&1`
-			    if not -d "$model/srcUserExtra" and $SWMFsoftware;
-	print "Cannot clone $model/srcUserExtra...no access...\n"
-	    if $SWMFsoftware and not -d "$model/srcUserExtra";
+if($InstallOrClone){
+    my $repo;
+    foreach $repo ("util", @models){
+	my $component = ($component{$repo} or ".");
+	my $repo1 = $repo;
+	$repo1 =~ s/AMPS_P[TC]/AMPS/; # remove _PC, _PT
+	$repo1 =~ s/FLEKS_PT/FLEKS/; # remove _PT
+	my $model = "$component/$repo1";
+	`cd $component; $gitclone $repo1` unless -d $model;
+	if($model eq "GM/BATSRUS"){
+	    `cd GM/BATSRUS; $gitclone srcBATL`
+				if not -d "$model/srcBATL";
+	    `cd GM/BATSRUS; $gitclone srcUserExtra 2>&1`
+				if not -d "$model/srcUserExtra";
+	    print "Cannot clone $model/srcUserExtra...no access...\n"
+		if not -d "$model/srcUserExtra";
+	}
     }
 }
 
