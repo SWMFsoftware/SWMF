@@ -13,8 +13,8 @@ my $SiteDir = `pwd`; chop($SiteDir);
 # weights for each platform to calculate skill scores
 my %WeightMachine = (
     "pleiades"     => "0.0",  # ifort pleiades
-    "nvidia"       => "1.0",  # nvfortran pleiades 2 cores
-    "nvidia_serial"=> "1.0",  # nvfortran pleiades 1 core
+    "nvidia"       => "0.0",  # nvfortran pleiades 2 cores
+    "nvidia_serial"=> "0.0",  # nvfortran pleiades 1 core
     "mstemgcc"     => "0.0",  # mstem-quda+gcc pleiades
     "mstemifort"   => "0.0",  # mstem-quda+ifort pleiades
     "gfortran"     => "1.0",  # gfortran optimized
@@ -37,7 +37,7 @@ my $MinRate  = 0.94;
 
 # command to merge master into stable branch
 my $merge_stable =   
-    'cd SWMF && share/Scripts/gitall "checkout stable && sleep 30; ' .
+    'cd SWMF && share/Scripts/gitall "checkout stable && sleep 30; ' . 
     'git pull --depth=100; git merge master && git push"';
 
 # Describe machine in the Html table
@@ -45,8 +45,8 @@ my %HtmlMachine = (
     "pleiades"     => "ifort<br>pleiades",
     "nvidia"       => "nvfortran<br>parallel pleiades",
     "nvidia_serial"=> "nvfortran<br>serial pleiades",
-    "mstemgcc"     => "MSTEM-QUDA<br>gfortran pleiades",
-    "mstemifort"   => "MSTEM-QUDA<br>ifort pleiades",
+    "mstemgcc"     => "STABLE<br>gfortran pleiades",
+    "mstemifort"   => "STABLE<br>ifort pleiades",
     "gfortran"     => "gfortran<br>optimized",
     "nag_debug"    => "nagfor<br>debug",
     "nag"          => "nagfor<br>optimized",
@@ -226,7 +226,7 @@ foreach $day (@days){
 
     # Start table with first row containing the machine names
     $Table .=	
-	"<h3>$dayname<FONT COLOR=GREEN>_SCORE_</FONT>, MSTEM: _SCORE2_</h3>\n".
+	"<h3>$dayname<FONT COLOR=GREEN>_SCORE_</FONT>, STABLE: _SCORE2_</h3>\n".
 	"<p>\n".
 	"<table border=3>\n".
 	"  <tr>".
@@ -341,7 +341,7 @@ foreach $day (@days){
     $Table =~ s/_SCORE2_/$score2/;
 
     print SCORE "ALL: $score\n";                 # set/update score
-    print SCORE "MSTEM: $score2\n";
+    print SCORE "STABLE: $score2\n";
     close SCORE;
 
     $Table .= "  </tr>\n</table>\n";
