@@ -2802,6 +2802,7 @@ test_eegtd_run:
 	perl -i -pe 's/#END/#MAGNETOGRAM\nfitsfile_01.out\n\n#END/' CME.in;\
 	perl -i -pe 's/#END/#ELIMINATECMEBR\nfitsfile_01.out\n\n#END/' \
 	CME.in;\
+	cp field_2d.out field_orig.out; \
 	./ELIMINATECMEBR.exe |tee eliminatecmebr.log; \
 	perl -i -pe 's/#MAGNETOGRAM/MAGNETOGRAM/' CME.in;\
 	perl -i -pe 's/#ELIMINATECMEBR/ELIMINATECMEBR/' CME.in; \
