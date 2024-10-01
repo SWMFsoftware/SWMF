@@ -226,12 +226,11 @@ F               Semidiurnal NonMigrating
 #APEX
 F               Use apex magnetic coordinate system
 
-#F107
-150.0           f10.7
-150.0           f10.7 averaged over 81 days
+#NGDC_INDICES
+UA/DataIn/f107.txt  Path to f107 file
 
-#HPI
-10.0            hemispheric power
+#NOAAHPI_INDICES
+UA/DataIn/power.test.rcmr_quick    Hemispheric Power file
 
 #MHD_INDICES
 DataIn/imf20021221.dat
