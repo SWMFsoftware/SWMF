@@ -249,9 +249,6 @@ z=0 all idl_ascii		StringPlot
 
 #BEGIN_COMP PC ---------------------------------------------------------------
 
-#PARTICLESTAGGERING
-F			isStaggered
-
 #PARTICLETRACKER
 T			useParticleTracker
 
