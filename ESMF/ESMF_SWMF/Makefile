@@ -31,7 +31,7 @@ EXE:
 
 RUNDIR = ${DIR}/ESMF/ESMF_SWMF/run
 
-rundir: ${RUNDIR}
+rundir:
 	rm -rf ${RUNDIR}
 	cd ../../; ${MAKE} rundir RUNDIR=${RUNDIR}
 	cd ${RUNDIR}; rm -f SWMF.exe EIE SWMFDIR core
