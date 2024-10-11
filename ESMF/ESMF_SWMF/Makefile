@@ -1,5 +1,7 @@
 include ../../Makefile.def
 
+DIFFNUM = ${SCRIPTDIR}/DiffNum.pl -BLESS=${BLESS}
+
 # Nothing should be done parallel in this Makefile
 .NOTPARALLEL:
 
@@ -27,16 +29,14 @@ ESMF_SWMF:
 EXE:
 	cd src; ${MAKE} EXE
 
-RUNDIR = run
-
-${RUNDIR}:
-	mkdir -p ${RUNDIR}
+RUNDIR = ${DIR}/ESMF/ESMF_SWMF/run
 
 rundir: ${RUNDIR}
-	mkdir -p ${RUNDIR}/IE/ionosphere
-	cp ${IEDIR}/input/cond_???_coeffs.dat run/IE/
+	rm -rf ${RUNDIR}
+	cd ../../; ${MAKE} rundir RUNDIR=${RUNDIR}
+	cd ${RUNDIR}; rm -f SWMF.exe EIE SWMFDIR core
 	cp input/ESMF_SWMF.input ${RUNDIR}/
-	cp input/PARAM.in ${RUNDIR}/
+	cp -f input/PARAM.in ${RUNDIR}/
 	cd ${RUNDIR}; ln -sf ${BINDIR}/ESMF_SWMF.exe .
 
 test:
@@ -51,17 +51,23 @@ test:
 
 test_compile:
 	${MAKE} ESMF_SWMF
+	cd ../..; ${MAKE} PIDL
 
 test_rundir:
 	${MAKE} rundir
 
 test_run:
 	cd ${RUNDIR}; rm -f *ESMF_LogFile; ${MPIRUN} ESMF_SWMF.exe | tee runlog
+	cd ${RUNDIR}; ./PostProc.pl -M RESULTS
 
 test_check:
-	cd ${RUNDIR}; perl -ne 'print if /error/i and not /Multi_On_Error/' \
-		PET*.ESMF_LogFile > ../test_esmf.diff
-	cd ${RUNDIR}; perl -ne 'print if /ERROR/' runlog >> ../test_esmf.diff
+	@(perl -ne 'print if /error/i and not /Multi_On_Error/' \
+		${RUNDIR}/PET*.ESMF_LogFile > test_esmf.diff)
+	@(perl -ne 'print if /ERROR/' ${RUNDIR}/RESULTS/runlog >> test_esmf.diff)
+	-@(${DIFFNUM} -b -r=1e-5 -a=2e-8 \
+		${RUNDIR}/RESULTS/GM/log*.log output/GM.log >> test_esmf.diff)
+	-@(${DIFFNUM} -b -r=1e-5 -a=2e-8 \
+		${RUNDIR}/RESULTS/IE/IE*.log output/IE.log >> test_esmf.diff)
 	ls -l test_esmf.diff
 
 clean:
