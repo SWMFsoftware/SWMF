@@ -1789,8 +1789,8 @@ test9_check:
 		output/test9/SC_cme_los_soho_c2_4_t00000010_n0000012.out \
 		> test09_sc_cme_los.diff)
 	-(${DIFFNUM} -b -r=1e-5 -a=1e-27 \
-		${TESTDIR}/RESULTS/run_cme/SC/shk_mhd_10_t00000010_n00000012.out \
-		output/test9/SC_shk_mhd_10_t00000010_n00000012.out \
+		${TESTDIR}/RESULTS/run_cme/SC/shk_var_10_t00000010_n00000012.out \
+		output/test9/SC_shk_var_10_t00000010_n00000012.out \
 		> test09_sc_cme_shk.diff)
 	-(${DIFFNUM} -b -r=1e-5 -a=1e-27 \
 		${TESTDIR}/RESULTS/run_restart/SC/los_soho_c2_4_t00000010_n0000012.out \

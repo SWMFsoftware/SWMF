@@ -323,7 +323,7 @@ los ins idl_ascii		StringPlot
 -1			DnSavePlot
 10.0			DtSavePlot
 soho:c2 soho:c3 sta:cor1 sta:cor2 stb:cor1 stb:cor2		StringsInstrument
-shk MHD idl_ascii		StringPlot
+shk VAR idl_ascii		StringPlot
 -1  			DnSavePlot
 10.			DtSavePlot
 -10.0			DivuDxMin [km/s]
@@ -335,6 +335,8 @@ shk MHD idl_ascii		StringPlot
 -90.			LatMin
 90.			LatMax
 10.			dLat
+{MHD} te ti normx normy normz comprho thetaup thetadn ushk 		NameVars
+{default}		NamePars
 
 los ins tec		StringPlot
 -1			DnSavePlot
