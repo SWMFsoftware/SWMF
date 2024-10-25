@@ -491,15 +491,16 @@ IHBATSRUS: IH/BATSRUS/src/Makefile \
 #
 OH/BATSRUS/src/Makefile:
 	cd OH/BATSRUS; \
-		rm -rf src srcBATL srcUser srcEquation \
+		rm -rf src srcBATL srcUser srcUserExtra srcEquation \
 			srcInterface/OH_wrapper.f90; \
-		mkdir src srcBATL srcUser srcEquation
+		mkdir src srcBATL srcUser srcUserExtra srcEquation 
 	cd GM/BATSRUS/src; cp *.f90 *.h Makefile* ../../../OH/BATSRUS/src
 	cd GM/BATSRUS/srcBATL; cp *.f90 Makefile* ../../../OH/BATSRUS/srcBATL
 	cd GM/BATSRUS/srcInterface/; \
 		cp ModGridDescriptor.f90 \
 		../../../OH/BATSRUS/srcInterface/
 	cp GM/BATSRUS/srcUser/*.f90 OH/BATSRUS/srcUser/
+	cp GM/BATSRUS/srcUserExtra/*.f90 OH/BATSRUS/srcUserExtra/
 	cp GM/BATSRUS/srcEquation/*.f90 OH/BATSRUS/srcEquation/
 	cd GM/BATSRUS; \
 		cp Makefile.def Makefile.conf PARAM.XML Config.pl \
@@ -514,7 +515,7 @@ OH/BATSRUS/src/Makefile:
 
 # rename OH source files to avoid name conflicts
 OH_SRC = src/*.f90 src/*.h srcBATL/*.f90 srcUser/*.f90 srcEquation/*.f90 \
-	srcInterface/*.f90
+	srcInterface/*.f90 srcUserExtra/*.f90 
 
 OHBATSRUS: OH/BATSRUS/src/Makefile \
 		${SCRIPTDIR}/Methods.pl ${SCRIPTDIR}/Rename.pl

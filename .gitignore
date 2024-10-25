@@ -97,6 +97,7 @@ OH/BATSRUS/srcInterface/ModBuffer.f90
 OH/BATSRUS/srcInterface/ModGridDescriptor.f90
 OH/BATSRUS/srcInterface/OH_wrapper.f90
 OH/BATSRUS/srcUser/
+OH/BATSRUS/srcUserExtra/
 
 RB/RBE/
 
