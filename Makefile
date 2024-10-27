@@ -456,11 +456,7 @@ IH/BATSRUS/src/Makefile:
 		cp BATL*.f90 Makefile* ../../../IH/BATSRUS/srcBATL
 	cd GM/BATSRUS/srcInterface/; \
 		cp ModGridDescriptor.f90 ../../../IH/BATSRUS/srcInterface
-	cp GM/BATSRUS/srcUser/*.f90 IH/BATSRUS/srcUser/
-	if [ -d GM/BATSRUS/srcUserExtra ]; then \
-		cp GM/BATSRUS/srcUserExtra/ModUserAwsom*.f90 \
-		   IH/BATSRUS/srcUser/; \
-	fi
+	cp GM/BATSRUS/srcUser*/*.f90 IH/BATSRUS/srcUser/
 	cp GM/BATSRUS/srcEquation/*.f90 IH/BATSRUS/srcEquation/
 	cd GM/BATSRUS; \
 		cp Makefile.def Makefile.conf PARAM.XML Config.pl \
@@ -491,16 +487,15 @@ IHBATSRUS: IH/BATSRUS/src/Makefile \
 #
 OH/BATSRUS/src/Makefile:
 	cd OH/BATSRUS; \
-		rm -rf src srcBATL srcUser srcUserExtra srcEquation \
+		rm -rf src srcBATL srcUser srcEquation \
 			srcInterface/OH_wrapper.f90; \
-		mkdir src srcBATL srcUser srcUserExtra srcEquation 
+		mkdir src srcBATL srcUser srcEquation
 	cd GM/BATSRUS/src; cp *.f90 *.h Makefile* ../../../OH/BATSRUS/src
 	cd GM/BATSRUS/srcBATL; cp *.f90 Makefile* ../../../OH/BATSRUS/srcBATL
 	cd GM/BATSRUS/srcInterface/; \
 		cp ModGridDescriptor.f90 \
 		../../../OH/BATSRUS/srcInterface/
-	cp GM/BATSRUS/srcUser/*.f90 OH/BATSRUS/srcUser/
-	cp GM/BATSRUS/srcUserExtra/*.f90 OH/BATSRUS/srcUserExtra/
+	cp GM/BATSRUS/srcUser*/*.f90 OH/BATSRUS/srcUser/
 	cp GM/BATSRUS/srcEquation/*.f90 OH/BATSRUS/srcEquation/
 	cd GM/BATSRUS; \
 		cp Makefile.def Makefile.conf PARAM.XML Config.pl \
@@ -515,7 +510,7 @@ OH/BATSRUS/src/Makefile:
 
 # rename OH source files to avoid name conflicts
 OH_SRC = src/*.f90 src/*.h srcBATL/*.f90 srcUser/*.f90 srcEquation/*.f90 \
-	srcInterface/*.f90 srcUserExtra/*.f90 
+	srcInterface/*.f90
 
 OHBATSRUS: OH/BATSRUS/src/Makefile \
 		${SCRIPTDIR}/Methods.pl ${SCRIPTDIR}/Rename.pl
@@ -542,11 +537,7 @@ SC/BATSRUS/src/Makefile:
 		mkdir src srcBATL srcUser srcEquation
 	cd GM/BATSRUS/src; cp *.f90 *.h Makefile* ../../../SC/BATSRUS/src
 	cd GM/BATSRUS/srcBATL; cp *.f90 Makefile* ../../../SC/BATSRUS/srcBATL
-	cp GM/BATSRUS/srcUser/*.f90 SC/BATSRUS/srcUser/
-	if [ -d GM/BATSRUS/srcUserExtra ]; then \
-		cp GM/BATSRUS/srcUserExtra/ModUserAwsom*.f90 \
-		   SC/BATSRUS/srcUser/; \
-	fi
+	cp GM/BATSRUS/srcUser*/*.f90 SC/BATSRUS/srcUser/
 	cp GM/BATSRUS/srcEquation/*.f90 SC/BATSRUS/srcEquation/
 	cd GM/BATSRUS; \
 		cp Makefile.def Makefile.conf PARAM.XML Config.pl \
