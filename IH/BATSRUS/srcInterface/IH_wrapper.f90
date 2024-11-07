@@ -755,7 +755,7 @@ contains
     use IH_ModVarIndexes,     ONLY: &
          Rho_, Ux_, Uz_, RhoUx_, RhoUz_, Bx_, Bz_, p_,             &
          WaveFirst_, WaveLast_, Pe_, Ppar_, nFluid, BperU_, Ehot_, &
-         ChargeStateFirst_, ChargeStateLast_, WDiff_, Lperp_
+         ChargeStateFirst_, ChargeStateLast_, WDiff_, Lperp_, nIonFluid
     use CON_coupler,   ONLY:                                       &
          Bfield_, ElectronPressure_, AnisoPressure_, Wave_,        &
          MultiFluid_, MultiSpecie_, CollisionlessHeatFlux_, SaMhd_, &
@@ -764,11 +764,16 @@ contains
          BxCouple_, BzCouple_, PeCouple_, PparCouple_, SaMhdCouple_,&
          WaveFirstCouple_, WaveLastCouple_, EhotCouple_,           &
          ChargeState_, ChargeStateFirstCouple_, ChargeStateLastCouple_
-    use IH_ModMultiFluid, ONLY: IsFullyCoupledFluid
+    use IH_ModMultiFluid, ONLY: IsFullyCoupledFluid, iRho_I, iP_I
     use IH_ModPhysics,    ONLY: No2Si_V, Si2No_V, UnitRho_, UnitB_, UnitX_
-    use IH_ModPhysics,    ONLY: UnitRhoU_, UnitEnergyDens_, UnitP_, UnitU_
+    use IH_ModPhysics,    ONLY: UnitRhoU_, UnitEnergyDens_, UnitP_, UnitU_, &
+         BodyRho_I, BodyP_I
+    use IH_ModMain,       ONLY: UseOuterHelio
+
     integer,intent(in) :: nVarCouple, nR, nLon, nLat
     real,intent(in)    :: BufferIn_VG(nVarCouple,nR,nLon,nLat)
+
+    integer :: iFluid
 
     ! Convert from SI units to normalized units
     character(len=*), parameter:: NameSub = 'IH_save_global_buffer'
@@ -841,6 +846,13 @@ contains
             BufferIn_VG(iVar_V(EhotCouple_),:,1:nLon,1:nLat)&
             *Si2No_V(UnitEnergyDens_)
     endif
+
+    if(UseOuterHelio)then
+       do iFluid = nIonFluid + 1, nFluid
+          BufferState_VG(iRho_I(iFluid),:,1:nLon,1:nLat) = BodyRho_I(iFluid)
+          BufferState_VG(iP_I(iFluid),:,1:nLon,1:nLat)   = BodyP_I(iFluid)
+       end do
+    end if
 
     if( .not. DoCoupleVar_V(MultiFluid_)  .and. nFluid > 1 .or. &
          .not. DoCoupleVar_V(MultiSpecie_) .and. UseMultiSpecies)then
