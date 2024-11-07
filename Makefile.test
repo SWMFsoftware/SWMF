@@ -19,6 +19,7 @@ test_help:
 	@echo "    test8_check BLESS=YES       (bless test8 results = update references)"
 	@echo "    test8 TESTDIR=run_test08    (run test8 in run_test08 directory)"
 	@echo "    test_gpu                    (run GPU related tests only)"
+	@echo "    test_gpu OPENACC=-noacc     (run GPU tests with CPU code)"
 	@echo "    test_share_library          (run share/Library tests)"
 	@echo "    test_util                   (run util/ tests)"
 	@echo "    test_batl                   (run BATL tests if BATL/ is present)"
@@ -69,6 +70,9 @@ test_help:
 
 # Nothing should be done parallel in this Makefile
 .NOTPARALLEL:
+
+# Config.pl flag for compilation with OpenACC. Set to -noacc to disable it.
+OPENACC = -acc
 
 test:
 	@rm -f *.diff
@@ -639,7 +643,7 @@ test_swpc_gpu_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2
 	./Config.pl -o=GM:u=Default,e=Mhd,ng=2,g=8,8,8,IE:g=91,181
 	./Config.pl -o=GM:opt=../../Param/SWPC/PARAM.in_SWPC_gpu_init
-	./Config.pl -acc
+	./Config.pl ${OPENACC}
 	${MAKE} SWMF
 	make PIDL
 
@@ -711,7 +715,7 @@ test_swpc_large_gpu_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2
 	./Config.pl -o=GM:u=Default,e=Mhd,ng=2,g=8,8,8,IE:g=91,181
 	./Config.pl -o=GM:opt=../../Param/SWPC/PARAM.in_SWPC_large_gpu
-	./Config.pl -acc
+	./Config.pl ${OPENACC}
 	${MAKE} SWMF
 	make PIDL
 
