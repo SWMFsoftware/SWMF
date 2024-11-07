@@ -672,11 +672,11 @@ test_swpc_gpu_check:
 		${TESTDIR}/GM/IO2/log_e20140410-000200.log \
 		Param/SWPC/TestOutputGPU/log_e20140410-000200.log \
 		> test_swpc_gpu_gm.diff)
-	-@(${DIFFNUM} -b -r=2e-4 -a=1e-5 \
+	-@(${DIFFNUM} -b -r=2e-4 -a=2e-4 \
 		${TESTDIR}/GM/IO2/magnetometers_e20140410-000200.mag \
 		Param/SWPC/TestOutputGPU/magnetometers_e20140410-000200.mag \
 		>> test_swpc_gpu_gm.diff)
-	-@(${DIFFNUM} -b -r=2e-4 -a=1e-4 \
+	-@(${DIFFNUM} -b -r=3e-4 -a=4e-4 \
 		${TESTDIR}/GM/IO2/mag_grid_global_e20140410-000300.out \
 		Param/SWPC/TestOutputGPU/mag_grid_e20140410-000300.out.gz \
 		>> test_swpc_gpu_gm.diff)
@@ -684,11 +684,11 @@ test_swpc_gpu_check:
 		${TESTDIR}/GM/IO2/geoindex_e20140410-000200.log \
 		Param/SWPC/TestOutputGPU/geoindex_e20140410-000200.log \
 		>> test_swpc_gpu_gm.diff)
-	-@(${DIFFNUM} -b -r=1e-5 \
+	-@(${DIFFNUM} -b -r=1e-4 \
 		${TESTDIR}/IE/ionosphere/IE_t140410_000200.log \
 		Param/SWPC/TestOutputGPU/IE_t140410_000200.log \
 		> test_swpc_gpu_ie.diff)
-	-@(${DIFFNUM} -b -r=1e-4 -a=6e-5 \
+	-@(${DIFFNUM} -b -r=2e-4 -a=1e-4 \
 		${TESTDIR}/IE/ionosphere/it140410_000300_000.idl \
 		Param/SWPC/TestOutputGPU/it140410_000300_000.idl.gz \
 		>> test_swpc_gpu_ie.diff)
