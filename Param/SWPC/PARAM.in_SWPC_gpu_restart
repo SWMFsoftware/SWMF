@@ -1,8 +1,8 @@
 Name Root Last Stride nThread
 #COMPONENTMAP
-GM  0 -3 1		CompMap first nProc-2 PEs
-IE -2 -1 1  		CompMap last 2 PEs
-IM -1 -1 1		CompMap last PE
+GM  0 -1 1		CompMap all PEs
+IE  0  1 1  		CompMap PEs 0 and 1
+IM  2  2 1		CompMap PE 2
 
 #TIMING
 T			UseTiming
