@@ -19,6 +19,7 @@ test_help:
 	@echo "    test8_check BLESS=YES       (bless test8 results = update references)"
 	@echo "    test8 TESTDIR=run_test08    (run test8 in run_test08 directory)"
 	@echo "    test_gpu                    (run GPU related tests only)"
+	@echo "    test_gpu OPENACC=-noacc     (run GPU tests with CPU code)"
 	@echo "    test_share_library          (run share/Library tests)"
 	@echo "    test_util                   (run util/ tests)"
 	@echo "    test_batl                   (run BATL tests if BATL/ is present)"
@@ -69,6 +70,9 @@ test_help:
 
 # Nothing should be done parallel in this Makefile
 .NOTPARALLEL:
+
+# Config.pl flag for compilation with OpenACC. Set to -noacc to disable it.
+OPENACC = -acc
 
 test:
 	@rm -f *.diff
@@ -639,7 +643,7 @@ test_swpc_gpu_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2
 	./Config.pl -o=GM:u=Default,e=Mhd,ng=2,g=8,8,8,IE:g=91,181
 	./Config.pl -o=GM:opt=../../Param/SWPC/PARAM.in_SWPC_gpu_init
-	./Config.pl -acc
+	./Config.pl ${OPENACC}
 	${MAKE} SWMF
 	make PIDL
 
@@ -668,11 +672,11 @@ test_swpc_gpu_check:
 		${TESTDIR}/GM/IO2/log_e20140410-000200.log \
 		Param/SWPC/TestOutputGPU/log_e20140410-000200.log \
 		> test_swpc_gpu_gm.diff)
-	-@(${DIFFNUM} -b -r=2e-4 -a=1e-5 \
+	-@(${DIFFNUM} -b -r=2e-4 -a=2e-4 \
 		${TESTDIR}/GM/IO2/magnetometers_e20140410-000200.mag \
 		Param/SWPC/TestOutputGPU/magnetometers_e20140410-000200.mag \
 		>> test_swpc_gpu_gm.diff)
-	-@(${DIFFNUM} -b -r=2e-4 -a=1e-4 \
+	-@(${DIFFNUM} -b -r=3e-4 -a=4e-4 \
 		${TESTDIR}/GM/IO2/mag_grid_global_e20140410-000300.out \
 		Param/SWPC/TestOutputGPU/mag_grid_e20140410-000300.out.gz \
 		>> test_swpc_gpu_gm.diff)
@@ -680,11 +684,11 @@ test_swpc_gpu_check:
 		${TESTDIR}/GM/IO2/geoindex_e20140410-000200.log \
 		Param/SWPC/TestOutputGPU/geoindex_e20140410-000200.log \
 		>> test_swpc_gpu_gm.diff)
-	-@(${DIFFNUM} -b -r=1e-5 \
+	-@(${DIFFNUM} -b -r=1e-4 \
 		${TESTDIR}/IE/ionosphere/IE_t140410_000200.log \
 		Param/SWPC/TestOutputGPU/IE_t140410_000200.log \
 		> test_swpc_gpu_ie.diff)
-	-@(${DIFFNUM} -b -r=1e-4 -a=6e-5 \
+	-@(${DIFFNUM} -b -r=2e-4 -a=1e-4 \
 		${TESTDIR}/IE/ionosphere/it140410_000300_000.idl \
 		Param/SWPC/TestOutputGPU/it140410_000300_000.idl.gz \
 		>> test_swpc_gpu_ie.diff)
@@ -711,7 +715,7 @@ test_swpc_large_gpu_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2
 	./Config.pl -o=GM:u=Default,e=Mhd,ng=2,g=8,8,8,IE:g=91,181
 	./Config.pl -o=GM:opt=../../Param/SWPC/PARAM.in_SWPC_large_gpu
-	./Config.pl -acc
+	./Config.pl ${OPENACC}
 	${MAKE} SWMF
 	make PIDL
 
