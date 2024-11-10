@@ -145,7 +145,7 @@ single			TypeFileOut
 180			nSizeKpWindow [min]
 1 min			DtOutput      [sec]
 
-#MAGNETOMETERGRID
+MAGNETOMETERGRID
 2			nMagGridFile
 global ascii		StrGridFileOut
 GEO			TypeCoordGrid
