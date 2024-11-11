@@ -201,7 +201,13 @@ single			TypeFileOut
 180			nSizeKpWindow [min]
 1 min			DtOutput      [sec]
 
-MAGNETOMETERGRID
+#MAGPERTURBINTEGRAL
+T                       UseSurfaceIntegral
+F                       UseFastFacIntegral
+MAG                     TypeCoordIndex
+MAG                     TypeCoordFacGrid
+
+#MAGNETOMETERGRID
 1			nMagGridFile
 global ascii		StrGridFileOut
 GEO			TypeCoordGrid
