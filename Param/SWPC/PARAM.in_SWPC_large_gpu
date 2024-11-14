@@ -1,8 +1,8 @@
 Name Root Last Stride nThread
 #COMPONENTMAP
-GM  0 -3 1		CompMap first nProc-2 PEs
-IE -2 -1 1  		CompMap last 2 PEs
-IM -1 -1 1		CompMap last PE
+GM 0 -1 1		CompMap first nProc-2 PEs
+IE 0  1 1  		CompMap last 2 PEs
+IM 2  2 1		CompMap last PE
 
 #TIMING
 T			UseTiming
@@ -185,6 +185,12 @@ single			TypeFileOut
 #GEOMAGINDICES
 180			nSizeKpWindow [min]
 1 min			DtOutput      [sec]
+
+#MAGPERTURBINTEGRAL
+T                       UseSurfaceIntegral
+F                       UseFastFacIntegral
+MAG                     TypeCoordIndex
+MAG                     TypeCoordFacGrid
 
 #MAGNETOMETERGRID
 1			nMagGridFile
@@ -378,12 +384,6 @@ aur idl			StringPlot
 1 min			DtSavePlot
 
 #END_COMP IE -----------------------------------------------------------------
-
-#STOP
--1			MaxIter
-60.0			TimeMax
-
-#RUN ##########################################################################
 
 #ENDTIME
 2014			iYear
