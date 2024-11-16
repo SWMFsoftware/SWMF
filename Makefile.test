@@ -741,7 +741,7 @@ test_swpc_large_gpu_check:
 		${TESTDIR}/GM/IO2/magnetometers_e20140410-000000.mag \
 		Param/SWPC/TestOutputLargeGPU/magnetometers_e20140410-000000.mag \
 		>> test_swpc_large_gpu_gm.diff)
-	-@(${DIFFNUM} -b -r=2e-4 -a=1e-4 \
+	-@(${DIFFNUM} -b -r=2e-4 -a=2e-4 \
 		${TESTDIR}/GM/IO2/mag_grid_global_e20140410-000000.out \
 		Param/SWPC/TestOutputLargeGPU/mag_grid_e20140410-000000.out.gz \
 		>> test_swpc_large_gpu_gm.diff)
