@@ -212,15 +212,6 @@ F			DoUseAurora
 
 #SOLAREUV
 F			DoUseEuvCond
-150			F107Flux
-
-IONOSPHERE
-0			iConductanceModel
-F			UseFullCurrent
-F			UseFakeRegion2
-150.0			F107Flux Flux
-5.0			StarLightPedConductance
-0.25			PolarCapPedConductance
 
 #SAVEPLOT
 2			nPlotFile
