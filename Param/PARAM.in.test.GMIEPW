@@ -199,7 +199,22 @@ F			DoCoupleOnTime
 
 #BEGIN_COMP IE ---------------------------------------------------------------
 
-#IONOSPHERE
+#UNIFORMCONDUCTANCE
+5			SigmaPedConst
+0			SigmaHalConst
+
+#BACKGROUNDCOND
+0.00			StarLightPedCond
+0.00			PolarCapPedCond
+
+#AURORA
+F			DoUseAurora
+
+#SOLAREUV
+F			DoUseEuvCond
+150			F107Flux
+
+IONOSPHERE
 0			iConductanceModel
 F			UseFullCurrent
 F			UseFakeRegion2
