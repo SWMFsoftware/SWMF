@@ -199,13 +199,19 @@ F			DoCoupleOnTime
 
 #BEGIN_COMP IE ---------------------------------------------------------------
 
-#IONOSPHERE
-0			iConductanceModel
-F			UseFullCurrent
-F			UseFakeRegion2
-150.0			F107Flux Flux
-5.0			StarLightPedConductance
-0.25			PolarCapPedConductance
+#UNIFORMCONDUCTANCE
+5			SigmaPedConst
+0			SigmaHalConst
+
+#BACKGROUNDCOND
+0.00			StarLightPedCond
+0.00			PolarCapPedCond
+
+#AURORA
+F			DoUseAurora
+
+#SOLAREUV
+F			DoUseEuvCond
 
 #SAVEPLOT
 2			nPlotFile

@@ -230,23 +230,8 @@ GEO			TypeCoordGrid
 
 #BEGIN_COMP IE ---------------------------------------------------------------
 
-#IONOSPHERE
-5			iConductanceModel
-F			UseFullCurrent
-F			UseFakeRegion2
--1.0			F107Flux
-1.0			StarLightPedConductance
-0.25			PolarCapPedConductance
-
 #BOUNDARY
 10.0			LatBoundary
-
-#AURORALOVAL
-T			UseOval (rest of parameters read if true)
-T			UseOvalShift
-F			UseSubOvalConductance
-T			UseAdvancedOval
-F			DoFitCircle (read if UseAdvancedOval is true)
 
 #SAVEPLOT
 1			nPlotFile
