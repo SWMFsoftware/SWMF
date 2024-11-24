@@ -204,7 +204,7 @@ F			DoCoupleOnTime
 0			SigmaHalConst
 
 #BACKGROUNDCOND
-0.00			StarLightPedCond
+0.00			StarLightCond
 0.00			PolarCapPedCond
 
 #AURORA
