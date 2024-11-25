@@ -208,6 +208,13 @@ F			UseFakeRegion2
 1.0			StarLightPedConductance
 0.25			PolarCapPedConductance
 
+#AURORALOVAL
+T			UseOval (rest of parameters read if true)
+T			UseOvalShift
+F			UseSubOvalConductance
+F			UseAdvancedOval
+T			DoFitCircle (read if UseAdvancedOval is true)
+
 #BOUNDARY
 10.0			LatBoundary
 
