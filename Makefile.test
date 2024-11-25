@@ -505,12 +505,12 @@ test_swpc_pe_compile:
 test_swpc_pe_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
-	cd Param/SWPC/; cp PARAM.in_SWPC_pe_init PARAM.in_SWPC_pe_restart *.in *.dat ../../${TESTDIR}/
-	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in_SWPC_pe_init
-	perl -pi -e 'if(/MaxIter|MaxBlock/){s/700/70/; s/1500/200/; s/5000/350/}; s/#BORIS/BORIS/; s/^\#(COMPONENTMAP.*production)/$$1/i; s/^(COMPONENTMAP.*nightly)/\#$$1/i' ${TESTDIR}/PARAM.in_SWPC_pe_init
-	perl -pi -e 's/^360(\s+nGridLon)/72$$1/; s/^171(\s+nGridLat)/25$$1/;' ${TESTDIR}/PARAM.in_SWPC_pe_init
-	perl -pi -e 's/^221(\s+nGridLon)/23$$1/; s/^131(\s+nGridLat)/13$$1/;' ${TESTDIR}/PARAM.in_SWPC_pe_init
-	cp ${TESTDIR}/PARAM.in_SWPC_pe_init ${TESTDIR}/PARAM.in
+	cd Param/SWPC/; cp PARAM.in_pe_init PARAM.in_pe_restart *.in *.dat ../../${TESTDIR}/
+	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in_pe_init
+	perl -pi -e 'if(/MaxIter|MaxBlock/){s/700/70/; s/1500/200/; s/5000/350/}; s/#BORIS/BORIS/; s/^\#(COMPONENTMAP.*production)/$$1/i; s/^(COMPONENTMAP.*nightly)/\#$$1/i' ${TESTDIR}/PARAM.in_pe_init
+	perl -pi -e 's/^360(\s+nGridLon)/72$$1/; s/^171(\s+nGridLat)/25$$1/;' ${TESTDIR}/PARAM.in_pe_init
+	perl -pi -e 's/^221(\s+nGridLon)/23$$1/; s/^131(\s+nGridLat)/13$$1/;' ${TESTDIR}/PARAM.in_pe_init
+	cp ${TESTDIR}/PARAM.in_pe_init ${TESTDIR}/PARAM.in
 	ln -s ${BINDIR}/INTERPOLATE.exe ${TESTDIR}/
 
 test_swpc_pe_run:
@@ -518,11 +518,11 @@ test_swpc_pe_run:
 	cd ${TESTDIR}; ./Restart.pl -i SWMF_RESTART.20140410_000200
 
 test_swpc_pe_restart:
-	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in_SWPC_pe_restart
-	perl -pi -e 's/#BORIS/BORIS/; s/^\#(COMPONENTMAP.*production)/$$1/i; s/^(COMPONENTMAP.*nightly)/\#$$1/i' ${TESTDIR}/PARAM.in_SWPC_pe_restart
-	perl -pi -e 's/^360(\s+nGridLon)/72$$1/; s/^171(\s+nGridLat)/25$$1/;' ${TESTDIR}/PARAM.in_SWPC_pe_restart
-	perl -pi -e 's/^221(\s+nGridLon)/23$$1/; s/^131(\s+nGridLat)/13$$1/;' ${TESTDIR}/PARAM.in_SWPC_pe_restart
-	cd ${TESTDIR}; cp PARAM.in_SWPC_pe_restart PARAM.in
+	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in_pe_restart
+	perl -pi -e 's/#BORIS/BORIS/; s/^\#(COMPONENTMAP.*production)/$$1/i; s/^(COMPONENTMAP.*nightly)/\#$$1/i' ${TESTDIR}/PARAM.in_pe_restart
+	perl -pi -e 's/^360(\s+nGridLon)/72$$1/; s/^171(\s+nGridLat)/25$$1/;' ${TESTDIR}/PARAM.in_pe_restart
+	perl -pi -e 's/^221(\s+nGridLon)/23$$1/; s/^131(\s+nGridLat)/13$$1/;' ${TESTDIR}/PARAM.in_pe_restart
+	cd ${TESTDIR}; cp PARAM.in_pe_restart PARAM.in
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_restart
 	cd ${TESTDIR}; ./PostProc.pl -noptec
 	cd ${TESTDIR}; ./INTERPOLATE.exe < INTERPOLATE.in
@@ -592,9 +592,9 @@ test_swpc_aepic_compile:
 test_swpc_aepic_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
-	cd Param/SWPC/; cp PARAM.in_SWPC_aepic_init *.in *.dat ../../${TESTDIR}/
-	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in_SWPC_aepic_init
-	cp ${TESTDIR}/PARAM.in_SWPC_aepic_init ${TESTDIR}/PARAM.in
+	cd Param/SWPC/; cp PARAM.in_aepic_init *.in *.dat ../../${TESTDIR}/
+	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in_aepic_init
+	cp ${TESTDIR}/PARAM.in_aepic_init ${TESTDIR}/PARAM.in
 	ln -s ${BINDIR}/INTERPOLATE.exe ${TESTDIR}/
 
 test_swpc_aepic_run:
@@ -787,19 +787,19 @@ test_swpc_multiion_compile:
 test_swpc_multiion_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
-	cd Param/SWPC/; cp PARAM.in_*multiion_v2* *.in *.dat ../../${TESTDIR}/
-	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in_multiion_v2_init
-	perl -pi -e 'if(/MaxIter|MaxBlock/){s/700/70/; s/1500/200/; s/5000/350/}; s/#BORIS/BORIS/' ${TESTDIR}/PARAM.in_multiion_v2_init
-	cp ${TESTDIR}/PARAM.in_multiion_v2_init ${TESTDIR}/PARAM.in
+	cd Param/SWPC/; cp PARAM.in_multiion_* *.in *.dat ../../${TESTDIR}/
+	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in_multiion_init
+	perl -pi -e 'if(/MaxIter|MaxBlock/){s/700/70/; s/1500/200/; s/5000/350/}; s/#BORIS/BORIS/' ${TESTDIR}/PARAM.in_multiion_init
+	cp ${TESTDIR}/PARAM.in_multiion_init ${TESTDIR}/PARAM.in
 
 test_swpc_multiion_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
 	cd ${TESTDIR}; ./Restart.pl -i SWMF_RESTART.20140410_000200
 
 test_swpc_multiion_restart:
-	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in_multiion_v2_restart
-	perl -pi -e 's/#BORIS/BORIS/' ${TESTDIR}/PARAM.in_multiion_v2_restart
-	cd ${TESTDIR}; cp PARAM.in_multiion_v2_restart PARAM.in
+	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in_multiion_restart
+	perl -pi -e 's/#BORIS/BORIS/' ${TESTDIR}/PARAM.in_multiion_restart
+	cd ${TESTDIR}; cp PARAM.in_multiion_restart PARAM.in
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_restart
 	cd ${TESTDIR}; ./PostProc.pl -noptec
 
@@ -858,19 +858,19 @@ test_swpc_multispecies_compile:
 test_swpc_multispecies_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
-	cd Param/SWPC/; cp PARAM.in_*multispecies_v2* *.in *.dat ../../${TESTDIR}/
-	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in_multispecies_v2_init
-	perl -pi -e 'if(/MaxIter|MaxBlock/){s/700/70/; s/1500/200/; s/5000/350/}; s/#BORIS/BORIS/' ${TESTDIR}/PARAM.in_multispecies_v2_init
-	cp ${TESTDIR}/PARAM.in_multispecies_v2_init ${TESTDIR}/PARAM.in
+	cd Param/SWPC/; cp PARAM.in_multispecies_init PARAM.in_multispecies_restart *.in *.dat ../../${TESTDIR}/
+	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in_multispecies_init
+	perl -pi -e 'if(/MaxIter|MaxBlock/){s/700/70/; s/1500/200/; s/5000/350/}; s/#BORIS/BORIS/' ${TESTDIR}/PARAM.in_multispecies_init
+	cp ${TESTDIR}/PARAM.in_multispecies_init ${TESTDIR}/PARAM.in
 
 test_swpc_multispecies_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
 	cd ${TESTDIR}; ./Restart.pl -i SWMF_RESTART.20140410_000200
 
 test_swpc_multispecies_restart:
-	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in_multispecies_v2_restart
-	perl -pi -e 's/#BORIS/BORIS/' ${TESTDIR}/PARAM.in_multispecies_v2_restart
-	cd ${TESTDIR}; cp PARAM.in_multispecies_v2_restart PARAM.in
+	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in_multispecies_restart
+	perl -pi -e 's/#BORIS/BORIS/' ${TESTDIR}/PARAM.in_multispecies_restart
+	cd ${TESTDIR}; cp PARAM.in_multispecies_restart PARAM.in
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_restart
 	cd ${TESTDIR}; ./PostProc.pl -noptec
 
@@ -930,19 +930,19 @@ test_swpc_cimi_compile:
 test_swpc_cimi_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
-	cd Param/SWPC/; cp PARAM.in_*cimi_v2* *.in *.dat ../../${TESTDIR}/
-	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in_cimi_v2_init
-	perl -pi -e 'if(/MaxIter|MaxBlock/){s/700/70/; s/1500/200/; s/5000/350/}; s/#BORIS/BORIS/; s/^\#(COMPONENTMAP.*production)/$$1/i; s/^(COMPONENTMAP.*nightly)/\#$$1/i' ${TESTDIR}/PARAM.in_cimi_v2_init
-	cp ${TESTDIR}/PARAM.in_cimi_v2_init ${TESTDIR}/PARAM.in
+	cd Param/SWPC/; cp PARAM.in_cimi_init PARAM.in_cimi_restart *.in *.dat ../../${TESTDIR}/
+	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in_cimi_init
+	perl -pi -e 'if(/MaxIter|MaxBlock/){s/700/70/; s/1500/200/; s/5000/350/}; s/#BORIS/BORIS/; s/^\#(COMPONENTMAP.*production)/$$1/i; s/^(COMPONENTMAP.*nightly)/\#$$1/i' ${TESTDIR}/PARAM.in_cimi_init
+	cp ${TESTDIR}/PARAM.in_cimi_init ${TESTDIR}/PARAM.in
 
 test_swpc_cimi_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
 	cd ${TESTDIR}; ./Restart.pl -i SWMF_RESTART.20140410_000200
 
 test_swpc_cimi_restart:
-	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in_cimi_v2_restart
-	perl -pi -e 's/#BORIS/BORIS/; s/^\#(COMPONENTMAP.*production)/$$1/i; s/^(COMPONENTMAP.*nightly)/\#$$1/i' ${TESTDIR}/PARAM.in_cimi_v2_restart
-	cd ${TESTDIR}; cp PARAM.in_cimi_v2_restart PARAM.in
+	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in_cimi_restart
+	perl -pi -e 's/#BORIS/BORIS/; s/^\#(COMPONENTMAP.*production)/$$1/i; s/^(COMPONENTMAP.*nightly)/\#$$1/i' ${TESTDIR}/PARAM.in_cimi_restart
+	cd ${TESTDIR}; cp PARAM.in_cimi_restart PARAM.in
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_restart
 	cd ${TESTDIR}; ./PostProc.pl -noptec
 
@@ -1269,96 +1269,6 @@ test_swpc_cimi_pwom_species_check:
 		Param/SWPC/TestOutputCimiPwomSpecies/it140410_000300_000.idl.gz \
 		>> test_swpc_cimi_pwom_species_ie.diff)
 	ls -l test_swpc_cimi_pwom_species_*.diff
-
-### test_swpc_amps_build: Configure SWMF with GM+IE+IM+PT+RB ###
-
-test_swpc_amps_build:
-	rm -rf ${BUILD}
-	Scripts/Configure.pl -d=${BUILD} -on=PT
-	cd ${BUILD}; rm -rf IM/HEIDI IM/CIMI IE/RIM util/HYPRE
-	cd ${BUILD}; ./Config.pl -install \
-	   	     	-compiler=${FORTRAN_COMPILER_NAME},${C_COMPILER_NAME}
-	cd ${BUILD}; make test_swpc_amps
-
-test_swpc_amps:
-	@echo "test_swpc_amps_compile..." > test_swpc_amps_gm.diff
-	@echo "test_swpc_amps_compile..." > test_swpc_amps_ie.diff
-	@echo "test_swpc_amps_compile..." > test_swpc_amps_rb.diff
-	${MAKE} test_swpc_amps_compile
-	@echo "test_swpc_amps_rundir..." >> test_swpc_amps_gm.diff
-	@echo "test_swpc_amps_rundir..." >> test_swpc_amps_ie.diff
-	@echo "test_swpc_amps_rundir..." >> test_swpc_amps_rb.diff
-	${MAKE} test_swpc_amps_rundir
-	@echo "test_swpc_amps_run..." >> test_swpc_amps_gm.diff
-	@echo "test_swpc_amps_run..." >> test_swpc_amps_ie.diff
-	@echo "test_swpc_amps_run..." >> test_swpc_amps_rb.diff
-	${MAKE} test_swpc_amps_run
-	@echo "test_swpc_amps_restart..." >> test_swpc_amps_gm.diff
-	@echo "test_swpc_amps_restart..." >> test_swpc_amps_ie.diff
-	@echo "test_swpc_amps_restart..." >> test_swpc_amps_rb.diff
-	${MAKE} test_swpc_amps_restart
-	@echo "test_swpc_amps_check..." >> test_swpc_amps_gm.diff
-	@echo "test_swpc_amps_check..." >> test_swpc_amps_ie.diff
-	@echo "test_swpc_amps_check..." >> test_swpc_amps_rb.diff
-	${MAKE} test_swpc_amps_check
-
-test_swpc_amps_compile:
-	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2,RB/RBE,PT/AMPS
-	./Config.pl -o=GM:u=Default,e=Mhd,ng=2,g=8,8,8,IE:g=91,181
-	./Config.pl -o=PT:application=test/earth-test-swmf,spice-path=nospice,amps-test=on 
-	${MAKE} SWMF
-	make PIDL
-
-test_swpc_amps_rundir:
-	rm -rf ${TESTDIR}
-	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
-	cd Param/SWPC/; cp PARAM.in_*amps* *.in *.dat ../../${TESTDIR}/
-	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in_amps_init
-	perl -pi -e 'if(/MaxIter/){s/700/70/; s/1500/200/}; s/#BORIS/BORIS/' \
-	     ${TESTDIR}/PARAM.in_amps_init
-	cp ${TESTDIR}/PARAM.in_amps_init ${TESTDIR}/PARAM.in
-
-test_swpc_amps_run:
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}; ./Restart.pl -i SWMF_RESTART.20140410_000200
-
-test_swpc_amps_restart:
-	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in_amps_restart
-	perl -pi -e 's/#BORIS/BORIS/' ${TESTDIR}/PARAM.in_amps_restart
-	cd ${TESTDIR}; cp PARAM.in_amps_restart PARAM.in
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_restart
-	cd ${TESTDIR}; ./PostProc.pl -noptec
-
-test_swpc_amps_check:
-	-@(${DIFFNUM} -b -r=1e-5 -a=1e-8 \
-		${TESTDIR}/GM/IO2/log_e20140410-000200.log \
-		Param/SWPC/TestOutput/log_e20140410-000200.log \
-		> test_swpc__amps_gm.diff)
-	-@(${DIFFNUM} -b -r=2e-4 -a=1e-8 \
-		${TESTDIR}/GM/IO2/magnetometers_e20140410-000200.mag \
-		Param/SWPC/TestOutput/magnetometers_e20140410-000200.mag \
-		>> test_swpc_amps_gm.diff)
-	-@(${DIFFNUM} -b -r=2e-4 -a=1e-8 \
-		${TESTDIR}/GM/IO2/mag_grid_global_e20140410-000300.out \
-		Param/SWPC/TestOutput/mag_grid_e20140410-000300.out \
-		>> test_swpc_amps_gm.diff)
-	-@(${DIFFNUM} -b -r=1e-5 -a=1e-8 \
-		${TESTDIR}/GM/IO2/geoindex_e20140410-000200.log \
-		Param/SWPC/TestOutput/geoindex_e20140410-000200.log \
-		>> test_swpc_amps_gm.diff)
-	-@(${DIFFNUM} -b -r=1e-5 \
-		${TESTDIR}/IE/ionosphere/IE_t140410_000200.log \
-		Param/SWPC/TestOutput/IE_t140410_000200.log \
-		> test_swpc_amps_ie.diff)
-	-@(${DIFFNUM} -b -r=1e-4 -a=1e-4 \
-		${TESTDIR}/IE/ionosphere/it140410_000300_000.idl \
-		Param/SWPC/TestOutput/it140410_000300_000.idl.gz \
-		>> test_swpc_amps_ie.diff)
-	-@(${DIFFNUM} -b -r=1e-3 \
-                ${TESTDIR}/RB/plots/20140410_000300_e.fls \
-		Param/SWPC/TestOutput/RB_20140410_000300_e.fls.gz \
-		> test_swpc_amps_rb.diff)
-	ls -l test_swpc_amps_??.diff
 
 ### test_3: configure SWMF with GM+IE+IM+UA only. ###
 

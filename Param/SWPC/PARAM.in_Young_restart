@@ -9,8 +9,7 @@ RB -1 -1  1		! RB runs on nProc-1 PE
 RESTART.in
 
 #DESCRIPTION
-Param/SWPC/PARAM.in_SWPC_v2_Young_restart: Example file to restart a run for the SWPC Version 2 code with
-the Young boundary condition.
+Param/SWPC/PARAM.in_Young_restart: Young boundary condition
 
 #TIMEACCURATE
 T			IsTimeAccurate
@@ -286,24 +285,6 @@ T 			UseDecay
 
 #RESTART
 T			DoRestart
-
-#IONOSPHERE
-5			TypeConductanceModel
-F			UseFullCurrent
-F			UseFakeRegion2
--1.0			F107Flux
-1.0			StarLightPedConductance
-0.25			PolarCapPedConductance
-
-#BOUNDARY
-10.0			LatBoundary
-
-#AURORALOVAL
-T			UseOval (rest of parameters read if true)
-T			UseOvalShift
-F			UseSubOvalConductance
-T			UseAdvancedOval
-F			DoFitCircle (read if UseAdvancedOval is true)
 
 #SAVEPLOT
 1			nPlotFile

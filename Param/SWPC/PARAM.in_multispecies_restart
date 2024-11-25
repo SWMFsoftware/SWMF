@@ -1,15 +1,16 @@
 #COMPONENTMAP
-IM  0  0  1   ! IM runs on 1 PE
-RB  1  1  1   ! RB runs on 1 PE
-IE  0  1  1   ! IE runs on 2 PE-s
-GM  2 -1  1   ! GM runs on remaining PE-s
-PT  2 -1  1   ! PT runs on remaining PE-s
+IM  0  0  1		CompMap runs on 1 PE
+IE  0  1  1		CompMap runs on up to 2 PE-s
+GM  0 -1  1		CompMap runs on all PE-s
+
+#TEST
+set_couple_var_info		StringTest
 
 #INCLUDE
 RESTART.in
 
 #DESCRIPTION
-Param/SWPC/PARAM.in_amps_restart: Example file to restart a run for the SWPC code selection
+Param/SWPC/PARAM.in_multispecies_restart		StringDescription
 
 #TIMEACCURATE
 T			IsTimeAccurate
@@ -21,10 +22,10 @@ T			IsTimeAccurate
 #SAVERESTART
 T			DoSaveRestart
 -1			DnSaveRestart
-1 min			DtSaveRestart
+10 min			DtSaveRestart
 
 #RESTARTOUTDIR
-SWMF_RESTART.YYYYMMDD_HHMMSS			NameRestartOutDir
+SWMF_RESTART.YYYYMMDD_HHMMSS		NameRestartOutDir
 
 #CHECKKILL
 GM			NameCompCheckKill
@@ -35,16 +36,14 @@ T			DoCheckStop
 1 min			DtCheckStop
 
 CPUTIMEMAX
-47.5 hour			CpuTimeMax
+47.5 hour		CpuTimeMax
 
 #COUPLEORDER
-7			nCouple
+5			nCouple
 IE GM			NameSourceTarget
 IE IM			NameSourceTarget
-IE RB			NameSourceTarget
 GM IE			NameSourceTarget
 GM IM			NameSourceTarget
-GM RB			NameSourceTarget
 IM GM			NameSourceTarget
 
 #COUPLE2
@@ -60,32 +59,14 @@ GM			NameComp2
 10.0			DtCouple
 
 #COUPLE1
-IE			NameComp1
-IM			NameComp2
--1			DnCouple
-10.0			DtCouple
-
-#COUPLE1
-GM			NameComp1
-RB			NameComp2
--1			DnCouple
-10.0			DtCouple
-
-#COUPLE1
-IE			NameComp1
-RB			NameComp2
+IE			NameSource
+IM			NameTarget
 -1			DnCouple
 10.0			DtCouple
 
 #COUPLETIME
 GM			NameComp
 F			DoCoupleOnTime
-
-#COMPONENT
-PT
-F
-
-
 
 #BEGIN_COMP GM ---------------------------------------------------------------
 
@@ -96,6 +77,8 @@ GM/restartIN/restart.H
 #NSTEP
 10			nStep
 
+#MULTIFLUIDIM
+T			DoMultiFluidIMCoupling
 
 #OUTERBOUNDARY
 outflow			TypeBc1
@@ -106,13 +89,15 @@ float			TypeBc5
 float			TypeBc6
 
 #INNERBOUNDARY
-ionosphere			TypeBcInner
+ionosphere		TypeBcBody
 
 ! Set the inner boundary density as Rho0Cpcp + RhoPerCpcp*CPCP[keV]
 #CPCPBOUNDARY
 T			UseCpcpBc  (rest is read if true)
-28.0			Rho0Cpcp   [amu/cc]
+28.0			Rho0Cpcp   [amu/cc]  for H+
 0.1			RhoPerCpcp [amu/cc / keV]
+8.0			Rho0Cpcp   [amu/cc]  for O+
+0.3			RhoPerCpcp [amu/cc / keV]
 
 #SOLARWINDFILE
 T			UseSolarWindFile
@@ -126,7 +111,7 @@ T			DoReadAgain
 SATELLITES.in
 
 #MAGNETOMETER
-magin_GEM.dat			NameMagInputFile
+magin_GEM.dat		NameMagInputFile
 single			TypeFileOut
 -1			DnOutput
 1 min			DtOutput
@@ -150,7 +135,7 @@ GEO			TypeCoordGrid
 
 #CONSERVATIVECRITERIA
 1			nConservCrit
-parabola			TypeConservCrit
+parabola		TypeConservCrit
  5.0			xParabolaConserv
 15.0			yParabolaConserv
 
@@ -187,36 +172,36 @@ End of setting 2
 1e-5			pMinDim [nPa]
 
 #SAVELOGNAME
-F			IsLogNameNstep
-T			IsLogNameEvent
+F			UseLogNameStep
+T			UseLogNameDateTime
 
 #SAVEPLOTNAME
-F			IsPlotNameNstep
-F			IsPlotNameTime
-T			IsPlotNameEvent
+F			UsePlotNameStep
+F			UsePlotNameTime
+T			UsePlotNameDateTime
 
 #PLOTFILENAME
-date			TimeUnitMax
+date			NameMaxTimeUnit
 
 #SAVELOGFILE
 T			DoSaveLogfile
-VAR step date			StringLogfile
+VAR step date		StringLog
 -1			DnSaveLogfile
 5.0			DtSaveLogfile
-dt rho mx my mz p bx by bz pmin pmax dst_sm dstflx
-3.0			StringRFlux
+dt rho mx my mz p bx by bz pmin pmax dst_sm dstflx		NameLogVars
+3.0			StringLogRadii
 
 #SAVEPLOT
-4			nPlotFiles
-y=0 MHD idl			StringPlot
+4			nPlotFile
+y=0 MHD idl		StringPlot
 -1			DnSavePlot
 5 min			DtSavePlot
 -1.0			DxSavePlot
-z=0 MHD idl			StringPlot
+z=0 MHD idl		StringPlot
 -1			DnSavePlot
 5 min			DtSavePlot
 -1.0			DxSavePlot
-shl MHD idl_ascii	StringPlot
+shl MHD idl_ascii		StringPlot
 -1  			DnSavePlot
 1 min			DtSavePlot
 GEO			TypeCoordPlot
@@ -227,7 +212,7 @@ GEO			TypeCoordPlot
 10.			dLon
 0.			LatMin
 0.			LatMax
-lcb nul tec			StringPlot  !last closed field line plots
+lcb nul tec		StringPlot  !last closed field line plots
 -1			DnSavePlot  !Tecplot (ONLY!)
 5 min			DtSavePlot
 5.			Radius
@@ -236,15 +221,15 @@ lcb nul tec			StringPlot  !last closed field line plots
 #SCHEME
 2			nOrder
 Sokolov			TypeFlux
-mc3				TypeLimiter
-1.2			BetaLimiter
+mc3			TypeLimiter
+1.2			LimiterBeta
 
 #BORIS
 T			UseBorisCorrection
 0.01			BorisClightFactor
 
 #TIMESTEPPING
-1			nStage
+2			nStage
 0.85			CflExpl
 
 #END_COMP GM -----------------------------------------------------------------
@@ -253,12 +238,6 @@ T			UseBorisCorrection
 
 #RESTART
 T			DoRestart
-
-! Number density fractions for H+ and O+. Has to add up to 1.0
-#COMPOSITION
-FIXED			 NameCompModel
-0.9			FractionH
-0.1			FractionO
 
 ! Decay for RCM particle densities
 #DECAY
@@ -272,17 +251,6 @@ T 			UseDecay
 #RESTART
 T			DoRestart
 
-#IONOSPHERE
-5			TypeConductanceModel
-F			UseFullCurrent
-F			UseFakeRegion2
--1.0			F107Flux
-1.0			StarLightPedConductance
-0.25			PolarCapPedConductance
-
-#BOUNDARY
-10.0			LatBoundary
-
 #SAVEPLOT
 1			nPlotFile
 aur idl			StringPlot
@@ -291,40 +259,17 @@ aur idl			StringPlot
 
 #END_COMP IE -----------------------------------------------------------------
 
-#BEGIN_COMP RB ---------------------------------------------------------------
-
-#INCLUDE
-RB/restartIN/restart.H
-
-#SAVEPLOT
-1 min			DtSavePlot
-T			UseSeparatePlotFiles
-
-#TIMESTEP
-5.0			Dt
-
-#STARTUPTIME
-0.0			trans
-
-#BMODEL
-MHD			NameModel
-F			UseFixedB
-
-#IEMODEL
-1			iConvect
-
-#PLASMASPHERE
-F			UsePlasmaSphere
-
-#END_COMP RB -----------------------------------------------------------------
+STOP
+-1			MaxIter
+86400.0			TimeMax
 
 #ENDTIME
-2014			year
-04			month
-10			day
-00			hour
-03			minute
-00			second
+2014			iYear
+04			iMonth
+10			iDay
+00			iHour
+03			iMinute
+00			iSecond
 0.0			FracSecond
 
 #END ############################################################
