@@ -1,10 +1,17 @@
-#COMPONENTMAP
-IM  0  0  1		CompMap runs on first PE
-IE  0  1  1		CompMap runs on up to 2 PE-s
-GM  0 -1  1		CompMap runs on all PE-s
+Name Root Last Stride nThread
+COMPONENTMAP		For few cores like nightly test
+GM  0 -1 -1 -1		CompMap runs on all PE-s
+IM  0 24  1		CompMap runs on up to 24 PE-s
+IE -2 -1  1		CompMap runs on last 2 PEs
+
+Name Root Last Stride nThread
+#COMPONENTMAP		For 128+ cores like production run
+GM  0 -26 -1 -1		CompMap runs on 0 to nProc-26 PE-s
+IM -25 -2  1		CompMap runs on nProc-25 to nProc-2
+IE  -1 -1  1		CompMap runs on the last PE
 
 #DESCRIPTION
-Param/SWPC/PARAM.in_multiion_v2_init: Example file to start a run for the SWPC v2 code selection		StringDescription
+Param/SWPC/PARAM.in_cimi_init: use IM/CIMI		StringDescription
 
 #TIMEACCURATE
 F			IsTimeAccurate
@@ -100,23 +107,8 @@ shell0			StringShape
 T			UseBody
 2.5			rBody     (in planet radius)
 3.0			rCurrents (in planet radius)
-28.0			BodyNDim  (/cc) H+
+28.0			BodyNDim  (/cc)
 25000.0			BodyTDim  (K)
-2.8			BodyNDim  (/cc) O+
-25000.0			BodyTDim  (K)
-
-#MULTIFLUIDIM
-T			DoMultiFluidIMCoupling
-
-#COLLISION
--1.0			CollisionCoefDim
-1.0e3			TauCutOffDim [s]
-100.0			uCutOffDim [km/s] read if TauCutOffDim positive
-2			nPowerCutOff read if TauCutOffDim positive
-
-#TIMESTEPPING
-1			nStage
-0.3			CflExpl
 
 #OUTERBOUNDARY
 outflow			TypeBc1
@@ -129,13 +121,14 @@ float			TypeBc6
 #INNERBOUNDARY
 ionosphere		TypeBcBody
 
+#ANISOPRESSUREIM
+T			DoAnisoPressureIMCoupling
+
 ! Set the inner boundary density as Rho0Cpcp + RhoPerCpcp*CPCP[keV]
 #CPCPBOUNDARY
 T			UseCpcpBc  (rest is read if true)
-28.0			Rho0Cpcp   [amu/cc]  for H+
+28.0			Rho0Cpcp   [amu/cc]
 0.1			RhoPerCpcp [amu/cc / keV]
-8.0			Rho0Cpcp   [amu/cc]  for O+
-0.3			RhoPerCpcp [amu/cc / keV]
 
 #SOLARWINDFILE
 T			UseSolarWindFile
@@ -146,7 +139,7 @@ T			DoReadAgain
 
 #SCHEME
 1			nOrder
-Rusanov			TypeFlux
+Sokolov			TypeFlux
 
 
 #CONSERVATIVECRITERIA
@@ -204,7 +197,7 @@ single			TypeFileOut
 
 #GEOMAGINDICES
 180			nSizeKpWindow [min]
-1 min			DtOutput
+1 min			DtOutput      [sec]
 
 #MAGNETOMETERGRID
 1			nMagGridFile
@@ -222,24 +215,6 @@ GEO			TypeCoordGrid
 #END_COMP GM -----------------------------------------------------------------
 
 #BEGIN_COMP IE ---------------------------------------------------------------
-
-#IONOSPHERE
-5			iConductanceModel
-F			UseFullCurrent
-F			UseFakeRegion2
--1.0			F107Flux
-1.0			StarLightPedConductance
-0.25			PolarCapPedConductance
-
-#BOUNDARY
-10.0			LatBoundary
-
-#AURORALOVAL
-T			UseOval (rest of parameters read if true)
-T			UseOvalShift
-F			UseSubOvalConductance
-T			UseAdvancedOval
-F			DoFitCircle (read if UseAdvancedOval is true)
 
 #SAVEPLOT
 1			nPlotFile
@@ -262,13 +237,13 @@ F			DoAmr
 
 #SCHEME
 2			nOrder
-Rusanov			TypeFlux
+Sokolov			TypeFlux
 mc3			TypeLimiter
 1.2			LimiterBeta
 
 #TIMESTEPPING
 2			nStage
-0.3			CflExpl
+0.6			CflExpl
 
 #END_COMP GM -----------------------------------------------------------------
 
@@ -288,7 +263,7 @@ T			IsTimeAccurate
 #SAVERESTART
 T			DoSaveRestart
 -1			DnSaveRestart
-10 min			DtSaveRestart
+1 min			DtSaveRestart
 
 #RESTARTOUTDIR
 SWMF_RESTART.YYYYMMDD_HHMMSS		NameRestartOutDir
@@ -299,10 +274,10 @@ GM			NameCompCheckKill
 #CHECKSTOP
 T			DoCheckStop
 -1			DnCheckStop
-10 min			DtCheckStop
+1 min			DtCheckStop
 
 CPUTIMEMAX
-47.5 hour		CpuTimeMax
+47.5 hour		CpuTimeMax [sec]
 
 #COMPONENT
 IM			NameComp
@@ -348,7 +323,7 @@ F			DoCoupleOnTime
 ! Setting 1
 #IMCOUPLING
 20.0			TauCoupleIm
-T			DoImSatTrace
+F			DoImSatTrace
 T			DoCoupleImPressure
 T			DoCoupleImDensity
 0.01			DensityCoupleFloor
@@ -375,8 +350,7 @@ End of setting 2
 
 ! Pressures below pMinDim are replaced with pMinDim.
 #MINIMUMPRESSURE
-1e-5			pMinDim [nPa] H+
-1e-5			pMinDim [nPa] O+
+1e-5			pMinDim [nPa]
 
 #SAVEPLOT
 4			nPlotFile
@@ -407,20 +381,61 @@ lcb nul tec		StringPlot  !last closed field line plots
 
 #BORIS
 T			UseBorisCorrection
-0.02			BorisClightFactor
+0.01			BorisClightFactor
+
+#REGION
+borisregion		NameRegion
+sphere tapered		StringShape
+-4.0			xPosition
+0.0			yPosition
+0.0			zPosition
+14.0			Radius
+2.0			Taper
+
+BORISREGION
+borisregion		NameBorisRegion
 
 #TIMESTEPPING
 1			nStage
-0.3			CflExpl
+0.85			CflExpl
 
 #END_COMP GM -----------------------------------------------------------------
 
 #BEGIN_COMP IM ---------------------------------------------------------------
 
-! Decay for RCM particle densities
+MINIMUMPRESSURETOGM
+1e-2			MinimumPressureToGM
+
+SAVEPLOT
+1			nCimiPlotType
+2d both			StringPlot
+1 min			DtOutput
+T			UseSeparatePlotFiles
+
+#TYPEBOUNDARY
+ellipse			TypeBoundary
+
+#SETBOUNDARYPARAMS
+2.0			DeltaRmax
+2.0			DeltaMLTmax
+
 #DECAY
-T 			UseDecay
-10 hour			DecayTimescale
+T			UseDecay
+10 hour			DecayTimescale [s]
+
+#COMPOSITION
+FIXED			TypeComposition
+0.7			DensityFraction H+
+0.3			DensityFraction O+
+1.0			DensityFraction e-
+
+#INITIALF2
+F			IsEmptyInitial
+T			IsGmInitial
+F			IsDataInitial
+
+#SAVELOG
+5.0			DtLogOut
 
 #END_COMP IM -----------------------------------------------------------------
 

@@ -18,7 +18,7 @@ RESTART.in
 set_couple_var_info		StringTest
 
 #DESCRIPTION
-Param/SWPC/PARAM.in_SWPC_v2_restart: Example file to restart a run for the SWPC Version 2 code selection		StringDescription
+Param/SWPC/PARAM.in_SWPC_v2_restart: SWPC Version 2		StringDescription
 
 #TIMEACCURATE
 T			IsTimeAccurate
@@ -145,7 +145,7 @@ single			TypeFileOut
 180			nSizeKpWindow [min]
 1 min			DtOutput      [sec]
 
-MAGNETOMETERGRID
+#MAGNETOMETERGRID
 2			nMagGridFile
 global ascii		StrGridFileOut
 GEO			TypeCoordGrid
@@ -306,9 +306,6 @@ T 			UseDecay
 
 #RESTART
 T			DoRestart
-
-#BOUNDARY
-10.0			LatBoundary
 
 #SAVEPLOT
 1			nPlotFile

@@ -4,7 +4,7 @@ IE  0  1  1		CompMap IE runs on up to 2 PE-s
 GM  2 -1  1		CompMap GM runs on rest of PE-s
 
 #DESCRIPTION
-Param/SWPC/PARAM.in_CMEE_init: Example file to start a run for the SWPC code selection using CMEE		StringDescription
+Param/SWPC/PARAM.in_CMEE_init: use CMEE conductance		StringDescription
 
 #TIMEACCURATE
 F			IsTimeAccurate
@@ -193,17 +193,6 @@ T			UseCMEEFitting
 45			LatNoConductanceSI
 7.5			FactorHallCMEE
 5			FactorPedCMEE
-
-#IONOSPHERE
-5			iConductanceModel
-F			UseFullCurrent
-F			UseFakeRegion2
--1.0			F107Flux
-1.0			StarLightPedConductance
-0.25			PolarCapPedConductance
-
-#BOUNDARY
-10.0			LatBoundary
 
 #SAVEPLOT
 1			nPlotFile

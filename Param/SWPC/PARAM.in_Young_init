@@ -1,11 +1,12 @@
+Name Root Last Stride nThread
 #COMPONENTMAP
-IM  0  0  1   ! IM runs on up 1 PE
-IE  0  1  1   ! IE runs on up to 2 PE-s
-GM  0 -1  1   ! GM runs on all PE-s
+GM  0 -3 -1  -1		! GM runs on 0:nProc-3 multithreaded
+IE -2 -1  1  		! IE runs on last 2 PE-s
+IM -2 -2  1		! IM runs on nProc-2 PE
+RB -1 -1  1		! RB runs on nProc-1 PE
 
 #DESCRIPTION
-Param/SWPC/PARAM.in_multispecies_Young_v2_init: Example file to start a run for the SWPC multi-species Version 2 code with
-the Young boundary condition.
+Param/SWPC/PARAM.in_Young_restart: Young boundary condition
 
 #TIMEACCURATE
 F			IsTimeAccurate
@@ -25,6 +26,10 @@ F			UseStrict
 
 #COMPONENT
 IM			NameComp
+F			UseComp
+
+#COMPONENT
+RB			NameComp
 F			UseComp
 
 #COUPLE2
@@ -91,6 +96,7 @@ box
  22.0
  10.0			zMaxBox
 
+
 #GRIDRESOLUTION
 1/8			Resolution
 shell0			NameArea
@@ -101,16 +107,8 @@ shell0			NameArea
 T			UseBody
 2.5			rBody     (in planet radius)
 3.0			rCurrents (in planet radius)
-7.5			BodyNDim  (/cc) H+
-2.8			BodyNDim  (/cc) O+
+7.5			BodyNDim  (/cc)
 25000.0			BodyTDim  (K)
-
-#MULTIFLUIDIM
-T			DoMultiFluidIMCoupling
-
-#TIMESTEPPING
-1			nStage
-0.80			CflExlp
 
 #OUTERBOUNDARY
 outflow			TypeBc1
@@ -123,10 +121,10 @@ float			TypeBc6
 #INNERBOUNDARY
 ionosphere			TypeBcInner
 
-! Set the inner boundary density with the Young formula.
+! Set the inner boundary density with the Youn formula
 #YOUNGBOUNDARY
 T			UseYoungBc
-275.4			F107Young
+90.5			F107Young
 
 #SOLARWINDFILE
 T			UseSolarWindFile
@@ -138,6 +136,13 @@ T			DoReadAgain
 #SCHEME
 1			nOrder
 Sokolov			TypeFlux
+
+
+#CONSERVATIVECRITERIA
+1			nConservCrit
+parabola			TypeConservCrit
+ 5.0			xParabolaConserv
+15.0			yParabolaConserv
 
 #SAVELOGNAME
 F			IsLogNameNstep
@@ -180,6 +185,12 @@ T			IsStrictAmr
 #INCLUDE
 SATELLITES.in
 
+#MAGPERTURBINTEGRAL
+T			UseSurfaceIntegral
+T			UseFastFacIntegral
+MAG			TypeCoordIndex
+MAG			TypeCoordFacGrid
+
 #MAGNETOMETER
 magin_GEM.dat			NameMagInputFile
 single			TypeFileOut
@@ -206,24 +217,6 @@ GEO			TypeCoordGrid
 #END_COMP GM -----------------------------------------------------------------
 
 #BEGIN_COMP IE ---------------------------------------------------------------
-
-#IONOSPHERE
-5			TypeConductanceModel
-F			UseFullCurrent
-F			UseFakeRegion2
--1.0			F107Flux
-1.0			StarLightPedConductance
-0.25			PolarCapPedConductance
-
-#BOUNDARY
-10.0			LatBoundary
-
-#AURORALOVAL
-T			UseOval (rest of parameters read if true)
-T			UseOvalShift
-F			UseSubOvalConductance
-T			UseAdvancedOval
-F			DoFitCircle (read if UseAdvancedOval is true)
 
 #SAVEPLOT
 1			nPlotFile
@@ -272,7 +265,7 @@ T			IsTimeAccurate
 #SAVERESTART
 T			DoSaveRestart
 -1			DnSaveRestart
-10 min			DtSaveRestart
+1 min			DtSaveRestart
 
 #RESTARTOUTDIR
 SWMF_RESTART.YYYYMMDD_HHMMSS            NameRestartOutDir
@@ -283,7 +276,7 @@ GM			NameCompCheckKill
 #CHECKSTOP
 T			DoCheckStop
 -1			DnCheckStop
-10 min			DtCheckStop
+1 min			DtCheckStop
 
 CPUTIMEMAX
 47.5 hour			CpuTimeMax
@@ -292,17 +285,23 @@ CPUTIMEMAX
 IM			NameComp
 T			UseComp
 
+#COMPONENT
+RB			NameComp
+T			UseComp
+
 ! All processors are used now
 #STRICT
 T			UseStrict
 
 ! Allow GM/IM and IE run in parallel. #COMPONENTMAP has to be properly set!
 #COUPLEORDER
-5			nCouple
+7			nCouple
 IE GM			NameSourceTarget
 IE IM			NameSourceTarget
+IE RB			NameSourceTarget
 GM IE			NameSourceTarget
 GM IM			NameSourceTarget
+GM RB			NameSourceTarget
 IM GM			NameSourceTarget
 
 #COUPLE2
@@ -323,18 +322,26 @@ IM			NameComp2
 -1			DnCouple
 10.0			DtCouple
 
+#COUPLE1
+GM			NameComp1
+RB			NameComp2
+-1			DnCouple
+10.0			DtCouple
+
+#COUPLE1
+IE			NameComp1
+RB			NameComp2
+-1			DnCouple
+10.0			DtCouple
+
 #COUPLETIME
 GM			NameComp
 F			DoCoupleOnTime
 
+#UPDATEB0
+5.0			DtUpdateB0
+
 #BEGIN_COMP GM ---------------------------------------------------------------
-
-
-#CONSERVATIVECRITERIA
-1			nConservCrit
-parabola			TypeConservCrit
- 5.0			xParabolaConserv
-15.0			yParabolaConserv
 
 ! Setting 1
 #IMCOUPLING
@@ -399,13 +406,30 @@ lcb nul tec             StringPlot  !last closed field line plots
 T			UseBorisCorrection
 0.01			BorisClightFactor
 
+#REGION
+borisregion             NameArea
+sphere tapered          NameShape
+-4.0			xPosition
+0.0			yPosition
+0.0			zPosition
+14.0			Radius
+2.0			Taper
+
+#BORISREGION
+borisregion			NameBorisRegion
+
 #TIMESTEPPING
-2			nStage
+1			nStage
 0.85			CflExpl
 
 #END_COMP GM -----------------------------------------------------------------
 
 #BEGIN_COMP IM ---------------------------------------------------------------
+
+! Number density fractions for H+ and O+, using the Young formula.
+#COMPOSITION
+YOUNG			NameCompModel
+128.3			F107
 
 ! Decay for RCM particle densities
 #DECAY
@@ -424,9 +448,35 @@ aur idl			StringPlot
 
 #END_COMP IE -----------------------------------------------------------------
 
-STOP
--1			MaxIter
-86400.0			TimeMax
+#BEGIN_COMP RB ---------------------------------------------------------------
+
+#RESTART
+F			IsRestart
+
+#SAVEPLOT
+1 min			DtSavePlot
+T			UseSeparatePlotFiles
+
+#TIMESTEP
+5.0			Dt
+
+#SPECIES
+e			NameSpecies
+
+#STARTUPTIME
+0.0			trans
+
+#BMODEL
+MHD			NameModel
+F			UseFixedB
+
+#IEMODEL
+1			iConvect
+
+#PLASMASPHERE
+F			UsePlasmaSphere
+
+#END_COMP RB -----------------------------------------------------------------
 
 #ENDTIME            
 2014			year

@@ -4,7 +4,7 @@ IE  0  1  1   ! IE runs on 2 PE-s
 GM  2 -1  1   ! GM runs on remaining PE-s
 
 #DESCRIPTION
-Param/SWPC/PARAM.in_order5_init: Example file to start a run for the SWPC code selection
+Param/SWPC/PARAM.in_order5_init: use 5th order scheme		StringDescription
 
 #TIMEACCURATE
 F			IsTimeAccurate

@@ -1,17 +1,12 @@
 Name Root Last Stride nThread
-COMPONENTMAP		For few cores like nightly test
-GM  0 -1 -1 -1		CompMap runs on all PE-s
-IM  0 24  1		CompMap runs on up to 24 PE-s
-IE -2 -1  1		CompMap runs on last 2 PEs
-
-Name Root Last Stride nThread
-#COMPONENTMAP		For 128+ cores like production run
-GM  0 -26 -1 -1		CompMap runs on 0 to nProc-26 PE-s
-IM -25 -2  1		CompMap runs on nProc-25 to nProc-2
-IE  -1 -1  1		CompMap runs on the last PE
+#COMPONENTMAP		For nightly test
+GM  0 -1 -1 -1		CompMap 0:nProc-1 multithreaded
+IE -2 -1  1  		CompMap last 2 PE-s
+IM -2 -2  1		CompMap nProc-2 PE
+PC  0 -1 -1		CompMap
 
 #DESCRIPTION
-Param/SWPC/PARAM.in_cimi_v2_init: Example file to start a run for the SWPC Version 2 with IM/CIMI		StringDescription
+Param/SWPC/PARAM.in_aepic_init: with adaptively embedded PIC		StringDescription
 
 #TIMEACCURATE
 F			IsTimeAccurate
@@ -25,12 +20,12 @@ F			IsTimeAccurate
 00			iSecond
 0.0			FracSecond
 
-! Allow empty processor for IM
-#STRICT
-F			UseStrict
-
 #COMPONENT
 IM			NameComp
+F			UseComp
+
+#COMPONENT
+PC			NameComp
 F			UseComp
 
 #COUPLE2
@@ -42,7 +37,7 @@ IE			NameComp2
 #BEGIN_COMP GM ---------------------------------------------------------------
 
 #GRIDBLOCKALL
-5000			MaxBlock
+350			MaxBlock
 
 #GRID
 1			nRootBlock1
@@ -97,6 +92,7 @@ box			StringShape
  22.0			yMaxBox
  10.0			zMaxBox
 
+
 #GRIDRESOLUTION
 1/8			Resolution
 shell0			StringShape
@@ -120,9 +116,6 @@ float			TypeBc6
 
 #INNERBOUNDARY
 ionosphere		TypeBcBody
-
-#ANISOPRESSUREIM
-T			DoAnisoPressureIMCoupling
 
 ! Set the inner boundary density as Rho0Cpcp + RhoPerCpcp*CPCP[keV]
 #CPCPBOUNDARY
@@ -171,11 +164,11 @@ dt rho mx my mz p bx by bz pmin pmax dst_sm dstflx		NameLogVars
 #SAVEPLOT
 2			nPlotFile
 y=0 MHD idl		StringPlot
-2500			DnSavePlot
+200			DnSavePlot
 -1.			DtSavePlot
 -1.			DxSavePlot
 z=0 MHD idl		StringPlot
-2500			DnSavePlot
+200			DnSavePlot
 -1.			DtSavePlot
 -1.			DxSavePlot
 
@@ -185,54 +178,9 @@ T			DoAmr
 -1.0			DtAmr
 T			IsStrictAmr
 
-! Satellite trajectories
-#INCLUDE
-SATELLITES.in
-
-#MAGNETOMETER
-magin_GEM.dat		NameMagInputFile
-single			TypeFileOut
--1			DnOutput
-1 min			DtOutput
-
-#GEOMAGINDICES
-180			nSizeKpWindow [min]
-1 min			DtOutput      [sec]
-
-#MAGNETOMETERGRID
-1			nMagGridFile
-global ascii		StrGridFileOut
-GEO			TypeCoordGrid
-3			nGridLon
-3			nGridLat
-0.			GridLonMin
-360.			GridLonMax
--80.			GridLatMin
-80.			GridLatMax
--1			DnSaveMagGrid
-1 min			DtSaveMagGrid
-
 #END_COMP GM -----------------------------------------------------------------
 
 #BEGIN_COMP IE ---------------------------------------------------------------
-
-#IONOSPHERE
-5			iConductanceModel
-F			UseFullCurrent
-F			UseFakeRegion2
--1.0			F107Flux
-1.0			StarLightPedConductance
-0.25			PolarCapPedConductance
-
-#BOUNDARY
-10.0			LatBoundary
-
-#AURORALOVAL
-T			UseOval (rest of parameters read if true)
-T			UseOvalShift
-F			UseSubOvalConductance
-T			UseAdvancedOval
-F			DoFitCircle (read if UseAdvancedOval is true)
 
 #SAVEPLOT
 1			nPlotFile
@@ -243,10 +191,15 @@ min idl			StringPlot
 #END_COMP IE -----------------------------------------------------------------
 
 #STOP
-700			MaxIter
+70			MaxIter
 -1.			TimeMax
 
 #RUN ##########################################################################
+
+#SAVERESTART
+T			DoSaveRestart
+100			DnSaveRestart
+-1			DtSaveRestart
 
 #BEGIN_COMP GM ---------------------------------------------------------------
 
@@ -266,7 +219,7 @@ mc3			TypeLimiter
 #END_COMP GM -----------------------------------------------------------------
 
 #STOP
-1500			MaxIter
+200			MaxIter
 -1.			TimeMax
 
 #RUN ##########################################################################
@@ -283,36 +236,21 @@ T			DoSaveRestart
 -1			DnSaveRestart
 1 min			DtSaveRestart
 
-#RESTARTOUTDIR
-SWMF_RESTART.YYYYMMDD_HHMMSS		NameRestartOutDir
-
 #CHECKKILL
 GM			NameCompCheckKill
 
 #CHECKSTOP
 T			DoCheckStop
 -1			DnCheckStop
-1 min			DtCheckStop
-
-CPUTIMEMAX
-47.5 hour		CpuTimeMax [sec]
+60.0			DtCheckStop
 
 #COMPONENT
 IM			NameComp
 T			UseComp
 
-! All processors are used now
-#STRICT
-T			UseStrict
-
-! Allow GM/IM and IE run in parallel. #COMPONENTMAP has to be properly set!
-#COUPLEORDER
-5			nCouple
-IE GM			NameSourceTarget
-IE IM			NameSourceTarget
-GM IE			NameSourceTarget
-GM IM			NameSourceTarget
-IM GM			NameSourceTarget
+#COMPONENT
+PC			NameComp
+T			UseComp
 
 #COUPLE2
 GM			NameComp1
@@ -332,22 +270,30 @@ IM			NameTarget
 -1			DnCouple
 10.0			DtCouple
 
+#COUPLE2
+GM			NameComp1
+PC			NameComp2
+-1			DnCouple
+1.0			DtCouple
+
 #COUPLETIME
 GM			NameComp
 F			DoCoupleOnTime
+
+#UPDATEB0
+0.5			DtUpdateB0
 
 #BEGIN_COMP GM ---------------------------------------------------------------
 
 ! Setting 1
 #IMCOUPLING
 20.0			TauCoupleIm
-F			DoImSatTrace
+T			DoImSatTrace
 T			DoCoupleImPressure
 T			DoCoupleImDensity
 0.01			DensityCoupleFloor
 F			DoFixPolarRegion
-
-End of setting 1
+! end of setting 1
 
 ! Setting 2
 IMCOUPLING
@@ -363,97 +309,118 @@ T			DoFixPolarRegion
 
 IMCOUPLINGSMOOTH
 10.0			dLatSmoothIm [deg]
-
-End of setting 2
+! end of setting 2
 
 ! Pressures below pMinDim are replaced with pMinDim.
 #MINIMUMPRESSURE
 1e-5			pMinDim [nPa]
 
 #SAVEPLOT
-4			nPlotFile
-y=0 MHD idl		StringPlot
+2			nPlotFile
+y=0 VAR idl_ascii		StringPlot
 -1			DnSavePlot
 5 min			DtSavePlot
 -1.0			DxSavePlot
-z=0 MHD idl		StringPlot
+{MHD} b1x b1y b1z dtblk dx jx jy jz pic_crit pic_active		NameVars
+{default}		NamePars
+z=0 VAR idl_ascii		StringPlot
 -1			DnSavePlot
 5 min			DtSavePlot
 -1.0			DxSavePlot
-shl MHD idl_ascii		StringPlot
--1  			DnSavePlot
-1 min			DtSavePlot
-GEO			TypeCoordPlot
-6.6			rMin
-6.6			rMax
-0.			LonMin
-360.			LonMax
-10.			dLon
-0.			LatMin
-0.			LatMax
-lcb nul tec		StringPlot  !last closed field line plots
--1			DnSavePlot  !Tecplot (ONLY!)
-5 min			DtSavePlot
-5.			Radius
-36			nLon
-
-#BORIS
-T			UseBorisCorrection
-0.01			BorisClightFactor
-
-#REGION
-borisregion		NameRegion
-sphere tapered		StringShape
--4.0			xPosition
-0.0			yPosition
-0.0			zPosition
-14.0			Radius
-2.0			Taper
-
-BORISREGION
-borisregion		NameBorisRegion
+{MHD} b1x b1y b1z dtblk dx jx jy jz pic_crit pic_active		NameVars
+{default}		NamePars
 
 #TIMESTEPPING
 1			nStage
 0.85			CflExpl
 
+! HallFactorMax is used to set the PIC scaling factor
+#HALLRESISTIVITY
+F			UseHallResist
+16			HallFactorMax
+0.1			HallCmaxFactor
+
+--------------Pic begin---------------
+#PICUNIT
+1.0			xUnitPicSi [m]
+2000e3			uUnitPicSi [m/s]
+
+#PICBALANCE
+F			DoBalancePicBlock
+F			DoBalanceActivePicBlock
+
+#PICGRID
+1			nPicGrid
+-50.0			xMinPic
+-10.0			xMaxPic
+-20.0			yMinPic
+ 20.0			yMaxPic
+-20.0			zMinPic
+ 20.0			zMaxPic
+0.5			DxPic
+0.5			DyPic
+0.5			DzPic
+
+#REGION
+magnetosphere		NameRegion
+paraboloidx stretched		StringShape
+10.0			xPosition
+ 0.0			yPosition
+ 0.0			zPosition
+-250.0			Height
+31.0			Radius
+31.0			RadiusPerp
+
+#REGION
+near_earth_box		NameRegion
+box tapered		StringShape
+-10.0			xMinBox
+-10.0			yMinBox
+-10.0			zMinBox
+ 0.0			xMaxBox
+ 10.0			yMaxBox
+ 10.0			zMaxBox
+ 1.0			Taper
+
+#PICREGIONMAX
++magnetosphere -near_earth_box		StringPicRegionMax
+
+#PICADAPT
+T			DoAdaptPic
+-1			DnAdaptPic
+1.0			DtAdaptPic
+
+#PICPATCH
+2			PatchSize
+
+#PICCRITERIA
+1			nPicCriteria
+j/bperp			StringPicCriteria
+3.0			MinCriteriaValue
+999.0			MaxCriteriaValue
+1.0			CriteriaB1
+
+#PICPATCHEXTEND
+1			NxExtend
+1			NyExtend
+2			NzExtend
+
+--------------Pic end---------------
+
 #END_COMP GM -----------------------------------------------------------------
 
 #BEGIN_COMP IM ---------------------------------------------------------------
 
-MINIMUMPRESSURETOGM
-1e-2			MinimumPressureToGM
-
-SAVEPLOT
-1			nCimiPlotType
-2d both			StringPlot
-1 min			DtOutput
-T			UseSeparatePlotFiles
-
-#TYPEBOUNDARY
-ellipse			TypeBoundary
-
-#SETBOUNDARYPARAMS
-2.0			DeltaRmax
-2.0			DeltaMLTmax
-
-#DECAY
-T			UseDecay
-10 hour			DecayTimescale [s]
-
+! Number density fractions for H+ and O+. Has to add up to 1.0
 #COMPOSITION
-FIXED			TypeComposition
-0.7			DensityFraction H+
-0.3			DensityFraction O+
-1.0			DensityFraction e-
+FIXED			NameCompModel
+0.8			FractionH
+0.2			FractionO
 
-#INITIALF2
-F			IsEmptyInitial
-T			IsGmInitial
-F			IsDataInitial
-
-#SAVELOG
-5.0			DtLogOut
+! Decay for RCM particle densities
+#DECAY
+T 			UseDecay
+10 hour			DecayTimescale
 
 #END_COMP IM -----------------------------------------------------------------
 
@@ -467,54 +434,55 @@ aur idl			StringPlot
 
 #END_COMP IE -----------------------------------------------------------------
 
-STOP
--1			MaxIter
-86400.0			TimeMax
+#BEGIN_COMP PC ---------------------------------------------------------------
+
+#TIMESTEPPING_FLEKS0
+T			useFixedDt
+0.25			dt
+
+#MAXBLOCKSIZE
+8			nCellX
+8			nCellY
+8			nCellZ
+
+#DISCRETIZATION
+0.6			theta
+0.1			ratioDivC2C
+
+#MONITOR
+1			dnReport
+
+#PARTICLES
+3			nParticleX
+3			nParticleY
+3			nParticleZ
+
+#RESAMPLING
+F			doReSampling
+
+#SAVEPLOT
+2			nPlotFile
+z=0 var ascii planet		StringPlot
+-1			DnSavePlot
+5.0			DtSavePlot
+1/4			DxSavePlot
+{fluid} numS0 numS1		NameVars
+y=0 var ascii planet		StringPlot
+-1			DnSavePlot
+5.0			DtSavePlot
+1/4			DxSavePlot
+{fluid} numS0 numS1		NameVars
+
+#END_COMP PC -----------------------------------------------------------------
+
 
 #ENDTIME
 2014			iYear
 04			iMonth
 10			iDay
 00			iHour
-02			iMinute
-00			iSecond
+00			iMinute
+5			iSecond
 0.0			FracSecond
 
 #END ############################################################
-
-
-! This is here as an example, also to make documentation
-#BEGIN_COMP GM
-
-#SATELLITE
-7			nSatellite
-MHD time date			StringSatellite
--1			DnOutput
-3.			DtOutput
-Satellites/goes11.dat
-MHD time date			StringSatellite
--1			DnOutput
-3.			DtOutput
-Satellites/goes12.dat
-MHD time date			StringSatellite
--1			DnOutput
-3.  			DtOutput
-Satellites/lanl89.dat
-MHD time date			StringSatellite
--1			DnOutput
-3.  			DtOutput
-Satellites/lanl94.dat
-MHD time date			StringSatellite
--1			DnOutput
-3.  			DtOutput
-Satellites/lanl97.dat
-MHD time date			StringSatellite
--1			DnOutput
-3.  			DtOutput
-Satellites/lanl01.dat
-MHD time date			StringSatellite
--1			DnOutput
-3.  			DtOutput
-Satellites/lanl02.dat
-
-#END_COMP GM

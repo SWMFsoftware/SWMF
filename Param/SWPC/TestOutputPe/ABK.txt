@@ -3,4 +3,4 @@
 # GEO lon, lat=    18.820    68.350
 # Station: ABK
 Year Month Day Hour Min Sec B_NorthGeomag B_EastGeomag B_DownGeomag SmLon SmLat
-2014  4 10  0  3  0    29.348    -1.520    54.403   225.270    66.113
+2014  4 10  0  3  0    29.349    -1.520    54.403   225.270    66.113

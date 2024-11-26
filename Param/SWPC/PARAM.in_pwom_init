@@ -12,7 +12,7 @@ IE -2 -1  1  		CompMap last 2 PE-s
 IM -2 -2  1		CompMap nProc-2 PE
 
 #DESCRIPTION
-Param/SWPC/PARAM.in_pwom_init: Example file to start Geospace with PWOM		StringDescription
+Param/SWPC/PARAM.in_pwom_init: Geospace with PWOM		StringDescription
 
 #TIMEACCURATE
 F			IsTimeAccurate
@@ -214,24 +214,6 @@ GEO			TypeCoordGrid
 #END_COMP GM -----------------------------------------------------------------
 
 #BEGIN_COMP IE ---------------------------------------------------------------
-
-#IONOSPHERE
-5			iConductanceModel
-F			UseFullCurrent
-F			UseFakeRegion2
--1.0			F107Flux
-1.0			StarLightPedConductance
-0.25			PolarCapPedConductance
-
-#BOUNDARY
-10.0			LatBoundary
-
-#AURORALOVAL
-T			UseOval (rest of parameters read if true)
-T			UseOvalShift
-F			UseSubOvalConductance
-T			UseAdvancedOval
-F			DoFitCircle (read if UseAdvancedOval is true)
 
 #SAVEPLOT
 1			nPlotFile
