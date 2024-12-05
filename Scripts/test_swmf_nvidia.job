@@ -2,27 +2,33 @@
 # This job script should be executed from bin/test_swmf_nvidia
 #
 # set the number of CPU-s by changing select: nProc = select*mpiprocs
-#PBS -N SWMF_nvidia
+#PBS -N GPU2
 
 #PBS -q v100@pbspl4
-#PBS -l select=1:ncpus=18:ngpus=1:model=sky_gpu
+###PBS -l select=1:ncpus=20:ngpus=4:model=sky_gpu:mem=256GB
+#PBS -l select=1:ncpus=20:ngpus=4:model=cas_gpu:mem=256GB
 
-#PBS -l walltime=6:00:00
+#PBS -l walltime=2:00:00
 
 #PBS -j oe
 #PBS -m e
 #PBS -r n
 
 # Specify group if necessary g26135 
-#PBS -W group_list=s6176
+#PBS -W group_list=s2994
 
 # cd into the run directory
 cd /u/gtoth1/Tmp_nvidia/SWMF
 
 # Load nvidia compilers
-module purge; module use -a /nasa/nvidia/hpc_sdk/modulefiles
-module load nvhpc/20.9
+module purge
+module use -a /nasa/nvidia/hpc_sdk/toss4/modulefiles
+module load nvhpc-nompi/24.3
+module use -a /nasa/modulefiles/testing
+module load mpi-hpe/mpt.2.30
 module list
+# (necessary) set this for direct access to GPU memory with mpt:
+setenv MPI_USE_CUDA true
 
 # Use NVIDIA compilers under mpicc and mpicxx
 setenv MPICC_CC nvc
@@ -31,5 +37,5 @@ setenv MPICXX_CXX nvc++
 # try suppressing some warning messages
 setenv MPI_WARN_ON_FORK 0
 
-# Try running all tests without OpenMP
-make -j test NP=8 OPENMP=-noopenmp >>& test_swmf.log
+# Run GPU tests without OpenMP. test_swpc_gpu runs on up to 3 cores.
+make -j test_gpu GITINFO=NO NP=4 SERIAL='mpiexec -n 1' OPENMP=-noopenmp >>& test_swmf.log
