@@ -40,6 +40,9 @@ IE			NameComp2
 #UPDATE
 fast			TypeUpdate
 
+#PROLONGATION
+2			nOrderProlong
+
 #GRIDBLOCKALL
 5000			MaxBlock
 
