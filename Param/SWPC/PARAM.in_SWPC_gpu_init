@@ -45,10 +45,6 @@ T			DoCheckTimeStep (rest is read if true)
 #UPDATE
 slow			TypeUpdate
 
-! For now only 2nd order prolongation works on GPU
-#PROLONGATION
-2			nOrderProlong
-
 #GRIDBLOCKALL
 5000			MaxBlock
 

@@ -80,10 +80,6 @@ F			DoCoupleOnTime
 #UPDATE
 slow			TypeUpdate
 
-! For now only 2nd order prolongation works on GPU
-#PROLONGATION
-2			nOrderProlong
-
 #INCLUDE
 GM/restartIN/restart.H
 
