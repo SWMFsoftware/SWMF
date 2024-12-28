@@ -672,7 +672,7 @@ test_swpc_gpu_check:
 		${TESTDIR}/GM/IO2/log_e20140410-000200.log \
 		Param/SWPC/TestOutputGPU/log_e20140410-000200.log \
 		> test_swpc_gpu_gm.diff)
-	-@(${DIFFNUM} -b -r=3e-4 -a=2e-4 \
+	-@(${DIFFNUM} -b -r=2e-4 -a=3e-4 \
 		${TESTDIR}/GM/IO2/magnetometers_e20140410-000200.mag \
 		Param/SWPC/TestOutputGPU/magnetometers_e20140410-000200.mag \
 		>> test_swpc_gpu_gm.diff)
