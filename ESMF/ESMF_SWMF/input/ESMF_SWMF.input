@@ -1,18 +1,10 @@
 # This file is read by the ESMF_SWMF code.
 # It contains parameters for
 # the processor layouts for the ESMF and SWMF subcomponents,
-# the 2D uniform grid coupling the ESMF with SWMF,
+# the 2D uniform grid coupling the ESMF/IPE with SWMF/RIM,
 # the coupling frequency and the simulation starting and finishing times.
 #
 # Lines starting with # are comments
-#
-#
-# Layout
-#
-ESMF Root PE:   0
-ESMF Last PE:   0
-SWMF Root PE:   1
-SWMF Last PE:  -1
 #
 # Running
 #
@@ -50,3 +42,37 @@ Finish Second:  10
 Finish Millisec: 0
 #
 Simulation Time: 0.0
+
+#
+# Driver
+#
+DRV_component_list: SWMF IPE RIM
+DRV_attributes::
+  Verbosity = 0
+::
+#
+# Model components
+#
+IPE_model: ipe
+IPE_petlist_bounds: 0 0
+IPE_attributes::
+::
+SWMF_model: swmf
+SWMF_petlist_bounds: 1 -1
+SWMF_attributes::
+::
+RIM_model: rim
+RIM_petlist_bounds: -2 -1
+RIM_attributes::
+::
+#
+# Run sequence
+#
+runSeq::
+@2
+  IPE -> RIM :remapMethod=bilinear:unmappedaction=ignore:zeroregion=select:srcTermProcessing=0:termOrder:srcseq
+  RIM
+  SWMF
+  IPE
+@
+::
