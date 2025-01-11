@@ -3,12 +3,14 @@ module ESMFSWMF_variables
   ! Various entities needed for the ESMF-SWMF coupling
 
   use ESMF
+  use NUOPC
   implicit none
 
   private
   public:: read_esmf_swmf_input, add_fields, write_log, write_error
 
-  type(ESMF_Sync_Flag), public:: SyncFlag = ESMF_SYNC_BLOCKING
+  ! main configuration file
+  character (len=*), public, parameter :: NameParamFile = "ESMF_SWMF.input"
 
   ! named integer indexes for integer time arrays
   integer, public, parameter :: &
@@ -30,13 +32,9 @@ module ESMFSWMF_variables
   integer, public:: iFinishTime_I(Year_:MilliSec_) = & ! Finish date-time
        [2000, 3, 21, 10, 45, 0, 0]                     !   with defaults
   real(ESMF_KIND_R8), public:: TimeSimulation = 0.0
-  integer, public :: iCoupleFreq = 1   ! Coupling frequency in seconds
 
-  ! SWMF runs on processor ranks iProcRootSwmf to iProcLastSwmf
-  ! ESMF runs on processor ranks iProcRootEsmf to iProcLastEsmf
+  ! Root processor and number of processors on global VM
   integer, public :: iProc=0, nProc=1
-  integer, public :: iProcRootSwmf=1, iProcLastSwmf=-1, nProcSwmf
-  integer, public :: iProcRootEsmf=0, iProcLastEsmf=0
 
   ! SWMF component to couple with
   character(len=2), public :: NameSwmfComp = 'IE'
@@ -44,16 +42,7 @@ module ESMFSWMF_variables
   ! The ESMF communicates with SwmfComp within the SWMF.
   ! The processors used by SwmfComp are obtained from the PARAM.in file.
   ! These indexes are relative to the SWMF MPI communicator
-  integer, public:: iProc0SwmfComp=0, iProcLastSwmfComp=0, nProcSwmfComp=1
-
-  ! If DoRunSwmf is true, run the SWMF for real, otherwise just pretend
-  logical, public:: DoRunSwmf = .true.
-
-  ! When SWMF and ESMF are coupled, one can block the whole SWMF
-  ! or only the component the ESMF is communicating with. The latter
-  ! is more efficient but it can result in a dead-lock if the ESMF and
-  ! SWMF overlap.
-  logical, public:: DoBlockAllSwmf=.false.
+  integer, public:: iProc0SwmfComp=0, iProcLastSwmfComp=0
 
   ! Testing
   logical, public, parameter:: DoTest = .true.
@@ -145,113 +134,6 @@ contains
        call ESMF_Finalize
     end if
 
-    ! Get coupling frequency
-    iDefaultTmp = iCoupleFreq
-    call ESMF_ConfigGetAttribute(Config, &
-         iCoupleFreq, label='Coupling Frequency:', rc=iError)
-    if(iError /= ESMF_SUCCESS) then
-       if(iProc == 0)write(*,*) 'ESMF_SWMF did not read ',&
-            'Coupling Frequency: setting default value= ', &
-            iDefaultTmp
-       iCoupleFreq = iDefaultTmp
-    end if
-    if(iCoupleFreq < 1)then
-       if(iProc == 0) write(*,*) 'ESMF_SWMF ERROR: ', &
-            'iCoupleFreq =', iCoupleFreq,' should be positive!'
-       call ESMF_Finalize
-    end if
-
-    ! Read in layout information
-    config = ESMF_ConfigCreate(rc=iError)
-    call ESMF_ConfigLoadFile(Config, NameParamFile, rc=iError)
-    if(iError /= ESMF_SUCCESS) call my_error('ESMF_ConfigLoadFile')
-
-    ! Read root PE for the SWMF (default is 1)
-    call ESMF_ConfigGetAttribute(Config, iProcRootSwmf, &
-         label='SWMF Root PE:', rc=iError)
-    if(iError /= ESMF_SUCCESS) then
-       iProcRootSwmf = min(nProc - 1, 1)
-    elseif(iProcRootSwmf < 0) then
-       iProcRootSwmf = max(0, iProcRootSwmf + nProc)
-    else
-       iProcRootSwmf = min(iProcRootSwmf, nProc - 1)
-    end if
-
-    ! Read last PE for the SWMF (default is nProc - 1)
-    call ESMF_ConfigGetAttribute(Config, iProcLastSwmf, &
-         label='SWMF Last PE:', rc=iError)
-    if(iError /= ESMF_SUCCESS) then
-       iProcLastSwmf = nProc-1
-    elseif(iProcLastSwmf < 0) then
-       iProcLastSwmf = max(iProcRootSwmf, iProcLastSwmf + nProc)
-    else
-       iProcLastSwmf = max(iProcRootSwmf, min(iProcLastSwmf, nProc - 1))
-    end if
-
-    ! Number of PEs used by the SWMF
-    nProcSwmf = iProcLastSwmf - iProcRootSwmf + 1
-
-    ! Read root PE for the ESMF (default is 0)
-    call ESMF_ConfigGetAttribute(Config, iProcRootEsmf, &
-         label='ESMF Root PE:', rc=iError)
-    if(iError /= ESMF_SUCCESS) then
-       iProcRootEsmf = 0
-    elseif(iProcRootEsmf < 0) then
-       iProcRootEsmf = max(0, iProcRootEsmf + nProc)
-    else
-       iProcRootEsmf = min(nProc - 1, iProcRootEsmf)
-    end if
-
-    ! Read last PE for the ESMF (default is iProcRootEsmf)
-    call ESMF_ConfigGetAttribute(Config, iProcLastEsmf, &
-         label='ESMF Last PE:', rc=iError)
-    if(iError /= ESMF_SUCCESS)then
-       iProcLastEsmf = iProcRootEsmf
-    elseif(iProcLastEsmf < 0)then
-       iProcLastEsmf = max(iProcRootEsmf, iProcLastEsmf + nProc)
-    else
-       iProcLastEsmf = max(iProcRootEsmf, min(nProc - 1, iProcLastEsmf))
-    end if
-
-    write(*,*)'iProcRootEsmf, iProcLastEsmf=', iProcRootEsmf, iProcLastEsmf
-    write(*,*)'iProcRootSwmf, iProcLastSwmf=', iProcRootSwmf, iProcLastSwmf
-
-    call ESMF_ConfigGetAttribute(Config, StringTmp, &
-         label='Run the SWMF [y/n]:', rc=iError)
-    if(iError == ESMF_SUCCESS) then
-       DoRunSwmf = StringTmp == 'y' .or. StringTmp == 'Y' .or. &
-            StringTmp == 't' .or. StringTmp == 'T'
-    endif
-    write(*,*)'DoRunSwmf=', DoRunSwmf
-
-    call ESMF_ConfigGetAttribute(Config, StringTmp, &
-         label='Block all SWMF [y/n]:', rc=iError)
-
-    if(iError == ESMF_SUCCESS) then
-       DoBlockAllSwmf = StringTmp == 'y' .or. StringTmp == 'Y' .or. &
-            StringTmp == 't' .or. StringTmp == 'T'
-       write(*,*)'Block all SWMF [y/n]=',StringTmp,'! DoBlock=',DoBlockAllSwmf
-    else
-       ! If there is an overlap between the SWMF and ESMF processors
-       ! it is a good idea to block the whole SWMF during coupling
-       if(iProcRootSwmf <= iProcRootEsmf)then
-          DoBlockAllSwmf = iProcLastSwmf >= iProcRootEsmf
-       else
-          DoBlockAllSwmf = iProcLastEsmf >= iProcRootSwmf
-       end if
-       if(iProc == 0)then
-          if(DoBlockAllSwmf)then
-             write(*,*) 'ESMF_SWMF: ', &
-                  'ESMF and SWMF layouts overlap, ',&
-                  'setting DoBlockAllSwmf=T'
-          else
-             write(*,*) 'ESMF_SWMF: ', &
-                  'ESMF and SWMF layouts are disjoint, ',&
-                  'setting DoBlockAllSwmf=F'
-          end if
-       end if
-    end if
-
     ! Read the SWMF component name that is coupled
     call ESMF_ConfigGetAttribute(Config, NameSwmfComp, &
          label='SWMF Component:', rc=iError)
@@ -264,7 +146,7 @@ contains
     call ESMF_ConfigDestroy(Config, rc=iError)
     if(iError /= ESMF_SUCCESS) RETURN
 
-    call read_swmf_layout(iProc, iError)
+    call read_swmf_layout(iError)
     if(iError /= ESMF_SUCCESS) RETURN
 
     iError = ESMF_SUCCESS
@@ -272,13 +154,12 @@ contains
 
   end subroutine read_esmf_swmf_input
   !============================================================================
-  subroutine read_swmf_layout(iProc, iError)
+  subroutine read_swmf_layout(iError)
 
-    ! Get the root processor for the SWMF component to be coupled with
+    ! Get the processors of the SWMF component to be coupled with
     ! from the PARAM.in file
 
-    integer, intent(in)  :: iProc  ! rank of processor
-    integer, intent(out) :: iError     ! error code
+    integer, intent(out) :: iError ! error code
 
     integer :: iUnit
     character(len=100) :: String
@@ -313,20 +194,6 @@ contains
                   ' from line=',trim(String),' in PARAM.in'
              iError = ESMF_FAILURE; RETURN
           end if
-          if(iProc0SwmfComp < 0) then
-             ! Negative value is relative to the end
-             iProc0SwmfComp = max(0, iProc0SwmfComp + nProcSwmf)
-          else
-             ! Positive value is limited by nProcSwmf
-             iProc0SwmfComp = min(0, nProcSwmf - 1)
-          end if
-          if(iProcLastSwmfComp < 0) then
-             iProcLastSwmfComp = iProcLastSwmfComp + nProcSwmf
-          else
-             iProcLastSwmfComp = min(iProcLastSwmfComp, nProcSwmf - 1)
-          end if
-          ! Number of processors used by SwmfComp
-          nProcSwmfComp = iProcLastSwmfComp - iProc0SwmfComp + 1
           EXIT READLAYOUT
        end if
        if(String == '')then
@@ -337,9 +204,8 @@ contains
     end do READLAYOUT
     close(iUnit)
 
-    if(iProc == 0)write(*,*)'ESMF_SWMF: '//NameSwmfComp// &
-         ' Root, Last, nProc=', &
-         iProc0SwmfComp, iProcLastSwmfComp, nProcSwmfComp
+    if(iProc==0) write(*,*)'ESMF_SWMF: '//NameSwmfComp//' Root, Last=', &
+         iProc0SwmfComp, iProcLastSwmfComp
 
   end subroutine read_swmf_layout
   !============================================================================
@@ -377,27 +243,38 @@ contains
     if(IsFromEsmf)then
        do iVar = 1, nVarEsmf
           NameField = NameFieldEsmf_V(iVar)
-          write(*,*) iProc,' Adding ESMF field=', NameField,' to ',trim(Name)
-          Field = ESMF_FieldCreate(Grid, arrayspec=ArraySpec, &
-               staggerloc=ESMF_STAGGERLOC_CORNER, name=NameField, rc=iError)
-          if(iError /= ESMF_SUCCESS) call my_error('ESMF_FieldCreate ' &
-               //NameField//' for '//trim(Name))
-
-          call ESMF_StateAdd(State, [Field], rc=iError)
-          if(iError /= ESMF_SUCCESS) call my_error( &
-               'ESMF_StateAdd '//NameField//' to '//trim(Name))
+          if (NUOPC_IsConnected(State, fieldName=trim(NameField))) then
+             write(*,*) iProc,' Adding ESMF field=', NameField,' to ',trim(Name)
+             Field = ESMF_FieldCreate(Grid, arrayspec=ArraySpec, &
+                  staggerloc=ESMF_STAGGERLOC_CORNER, name=NameField, rc=iError)
+             if(iError /= ESMF_SUCCESS) call my_error('ESMF_FieldCreate ' &
+                  //NameField//' for '//trim(Name))
+             call NUOPC_Realize(State, field=Field, rc=iError)
+             if(iError /= ESMF_SUCCESS) call my_error( &
+                  'NUOPC_Realize '//NameField//' to '//trim(Name))
+          else
+             call ESMF_StateRemove(State, [ trim(NameField) ], rc=iError)
+             if(iError /= ESMF_SUCCESS) call my_error( &
+                  'ESMF_StateRemove '//NameField)
+          end if
        end do
     else
        do iVar = 1, nVarSwmf
           NameField = NameFieldSwmf_V(iVar)
-          write(*,*)'Adding SWMF field=', NameField,' to ',trim(Name)
-          Field = ESMF_FieldCreate(Grid, typekind=ESMF_TYPEKIND_R8, &
-               staggerloc=ESMF_STAGGERLOC_CORNER, name=NameField, rc=iError)
-          if(iError /= ESMF_SUCCESS) call my_error('ESMF_FieldCreate ' &
-               //trim(NameField)//' for '//trim(Name))
-          call ESMF_StateAdd(State, [Field], rc=iError)
-          if(iError /= ESMF_SUCCESS) call my_error('ESMF_StateAdd ' &
-               //trim(NameField)//' to '//trim(Name))
+          if (NUOPC_IsConnected(State, fieldName=trim(NameField))) then
+             write(*,*)'Adding SWMF field=', NameField,' to ',trim(Name)
+             Field = ESMF_FieldCreate(Grid, typekind=ESMF_TYPEKIND_R8, &
+                  staggerloc=ESMF_STAGGERLOC_CORNER, name=NameField, rc=iError)
+             if(iError /= ESMF_SUCCESS) call my_error('ESMF_FieldCreate ' &
+                  //trim(NameField)//' for '//trim(Name))
+             call NUOPC_Realize(State, field=Field, rc=iError)
+             if(iError /= ESMF_SUCCESS) call my_error( &
+                  'NUOPC_Realize '//NameField//' to '//trim(Name))
+          else
+             call ESMF_StateRemove(State, [ trim(NameField) ], rc=iError)
+             if(iError /= ESMF_SUCCESS) call my_error( &
+                  'ESMF_StateRemove '//NameField)
+          end if
        end do
     endif
     iError = ESMF_SUCCESS

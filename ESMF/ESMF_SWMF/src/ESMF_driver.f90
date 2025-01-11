@@ -15,15 +15,12 @@ program ESMF_driver
   use ESMF_grid_comp, ONLY: ESMF_set_services
 
   ! Various variables
-  use ESMFSWMF_variables, ONLY: iProc, nProc, &
+  use ESMFSWMF_variables, ONLY: NameParamFile, iProc, nProc, &
        Year_, Month_, Day_, Hour_, Minute_, Second_, MilliSec_, &
-       iStartTime_I, iFinishTime_I, TimeSimulation, iCoupleFreq, &
+       iStartTime_I, iFinishTime_I, TimeSimulation, &
        read_esmf_swmf_input, write_log, write_error
 
   implicit none
-
-  ! Local variables
-  character (len=*), parameter :: NameParamFile = "ESMF_SWMF.input"
 
   ! Components
   type(ESMF_GridComp) :: EsmfSwmfComp
@@ -50,7 +47,8 @@ program ESMF_driver
 
   ! Initialize the ESMF Framework
   !----------------------------------------------------------------------------
-  call ESMF_Initialize(defaultCalkind=ESMF_CALKIND_GREGORIAN, rc=iError)
+  call ESMF_Initialize(configFileName=trim(NameParamFile), &
+       defaultCalkind=ESMF_CALKIND_GREGORIAN, rc=iError)
   if (iError /= ESMF_SUCCESS) stop 'ESMF_Initialize FAILED'
 
   call write_log("ESMF-SWMF Driver start")
@@ -59,13 +57,8 @@ program ESMF_driver
   call ESMF_VMGetGlobal(defaultVM, rc=iError)
   if(iError /= ESMF_SUCCESS) call my_error('ESMF_VMGetGlobal failed')
 
-  ! Get the processor number
   call ESMF_VMGet(defaultVM, petcount=nProc, localpet=iProc, rc=iError)
   if(iError /= ESMF_SUCCESS) call my_error('ESMF_VMGet failed')
-
-  ! Read input paramterers
-  call read_esmf_swmf_input(iError)
-  if(iError /= ESMF_SUCCESS) call my_error('call read_esmf_swmf_input failed')
 
   ! Create section
 
@@ -79,12 +72,12 @@ program ESMF_driver
        userRoutine=ESMF_set_services, rc=iError)
   if(iError /= ESMF_SUCCESS) call my_error('ESMF_GridCompSetServices')
 
+  ! Read input paramterers
+  call read_esmf_swmf_input(iError)
+  if(iError /= ESMF_SUCCESS) call my_error('call read_esmf_swmf_input failed')
+
   ! Create and initialize a clock
   ! Based on values from the Config file, create a Clock.
-
-  call ESMF_TimeIntervalSet(TimeStep, s=iCoupleFreq, rc=iError)
-
-  if(iError /= ESMF_SUCCESS) call my_error('ESMF_TimeIntervalSet TimeStep')
 
   call ESMF_TimeSet(StartTime,    &
        yy=iStartTime_I(Year_),    &
@@ -109,9 +102,9 @@ program ESMF_driver
 
   if(iError /= ESMF_SUCCESS) call my_error('ESMF_TimeSet StopTime')
 
+  TimeStep= StopTime-StartTime
   Clock = ESMF_ClockCreate(TimeStep, StartTime, stopTime=StopTime, &
-       name="application Clock", rc=iError)
-
+       runDuration=StopTime-StartTime, name="application Clock", rc=iError)
   if(iError /= ESMF_SUCCESS) call my_error('ESMF_ClockCreate')
 
   if(TimeSimulation /= 0.0)then
@@ -136,7 +129,6 @@ program ESMF_driver
   if (iError /= ESMF_SUCCESS) call my_error('ESMF_GridCompFinalize')
 
   ! Clean up
-
   call ESMF_ClockDestroy(clock, rc=iError)
   if (iError /= ESMF_SUCCESS) call my_error('SMF_ClockDestroy')
 

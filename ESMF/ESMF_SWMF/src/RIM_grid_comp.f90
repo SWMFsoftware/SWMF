@@ -5,9 +5,15 @@ module RIM_grid_comp
 
   ! ESMF Framework module
   use ESMF
+  use NUOPC
+
+  use NUOPC_Model, only: NUOPC_ModelGet
+  use NUOPC_Model, only: modelSS => SetServices
+  use NUOPC_Model, only: model_label_Advance => label_Advance
+  use NUOPC_Model, only: model_label_Finalize => label_Finalize
 
   use ESMFSWMF_variables, ONLY: &
-       nProcSwmfComp, NameFieldEsmf_V, nVarEsmf, &
+       NameFieldEsmf_V, nVarEsmf, &
        add_fields, write_log, write_error, &
        DoTest, FieldTest_V, CoordCoefTest, dHallPerDtTest
 
@@ -32,9 +38,7 @@ module RIM_grid_comp
   ! Coordinate arrays
   real(ESMF_KIND_R8), pointer, save:: Lon_I(:), Lat_I(:)
 
-  integer:: MinLat = 0, MaxLat = 0
-  integer, allocatable:: iPetMap_III(:,:,:)
-  integer:: iPet = 0
+  integer:: MinLon, MaxLon, MinLat, MaxLat
 
 contains
   !============================================================================
@@ -43,16 +47,66 @@ contains
     integer, intent(out):: iError
 
     !--------------------------------------------------------------------------
+    call NUOPC_CompDerive(gComp, modelSS, rc=iError)
+    if(iError /= ESMF_SUCCESS) call my_error('NUOPC_CompDerive')
     call ESMF_GridCompSetEntryPoint(gComp, ESMF_METHOD_INITIALIZE, &
-         userRoutine=my_init, rc=iError)
-    call ESMF_GridCompSetEntryPoint(gComp, ESMF_METHOD_RUN, &
-         userRoutine=my_run, rc=iError)
-    call ESMF_GridCompSetEntryPoint(gComp, ESMF_METHOD_FINALIZE, &
-         userRoutine=my_final, rc=iError)
+         userRoutine=my_init_p0, phase=0, rc=iError)
+    if(iError /= ESMF_SUCCESS) call my_error('ESMF_GridCompSetEntryPoint')
+    call NUOPC_CompSetEntryPoint(gComp, ESMF_METHOD_INITIALIZE, &
+         phaseLabelList=["IPDv01p1"], userRoutine=my_init_advertise, rc=iError)
+    if(iError /= ESMF_SUCCESS) call my_error('NUOPC_CompSetEntryPoint')
+    call NUOPC_CompSetEntryPoint(gComp, ESMF_METHOD_INITIALIZE, &
+         phaseLabelList=["IPDv01p3"], userRoutine=my_init_realize, rc=iError)
+    if(iError /= ESMF_SUCCESS) call my_error('NUOPC_CompSetEntryPoint')
+    call NUOPC_CompSpecialize(gcomp, specLabel=model_label_Advance, &
+          specRoutine=my_run, rc=iError)
+    if(iError /= ESMF_SUCCESS) call my_error('NUOPC_CompSetEntryPoint')
+    call NUOPC_CompSpecialize(gcomp, specLabel=model_label_Finalize, &
+         specRoutine=my_final, rc=iError)
+    if(iError /= ESMF_SUCCESS) call my_error('NUOPC_CompSetEntryPoint')
 
   end subroutine set_services
   !============================================================================
-  subroutine my_init(gComp, ImportState, ExportState, ExternalClock, iError)
+  subroutine my_init_p0(gComp, ImportState, ExportState, ExternalClock, iError)
+
+    type(ESMF_GridComp) :: gComp
+    type(ESMF_State) :: ImportState
+    type(ESMF_State) :: ExportState
+    type(ESMF_Clock) :: ExternalClock
+    integer, intent(out):: iError
+
+    !--------------------------------------------------------------------------
+    call NUOPC_CompFilterPhaseMap(gComp, ESMF_METHOD_INITIALIZE, &
+         acceptStringList=["IPDv01p"], rc=iError)
+    if(iError /= ESMF_SUCCESS) call my_error('NUOPC_CompFilterPhaseMap')
+
+  end subroutine my_init_p0
+  !============================================================================
+  subroutine my_init_advertise(gComp, ImportState, ExportState, ExternalClock, iError)
+
+    type(ESMF_GridComp) :: gComp
+    type(ESMF_State) :: ImportState
+    type(ESMF_State) :: ExportState
+    type(ESMF_Clock) :: ExternalClock
+    integer, intent(out):: iError
+
+    integer :: n
+    !--------------------------------------------------------------------------
+    call write_log("RIM_grid_comp:init_advertise routine called")
+    iError = ESMF_FAILURE
+
+    do n = 1, nVarEsmf
+      call NUOPC_Advertise(ImportState, standardName=trim(NameFieldEsmf_V(n)), &
+           TransferOfferGeomObject='will provide', rc=iError)
+      if(iError /= ESMF_SUCCESS) call my_error('NUOPC_Advertise')
+    end do
+
+    iError = ESMF_SUCCESS
+    call write_log("RIM_grid_comp:init_advertise routine returned")
+
+  end subroutine my_init_advertise
+  !============================================================================
+  subroutine my_init_realize(gComp, ImportState, ExportState, ExternalClock, iError)
 
     type(ESMF_GridComp) :: gComp
     type(ESMF_State) :: ImportState
@@ -62,39 +116,30 @@ contains
 
     type(ESMF_VM)    :: Vm
     type(ESMF_Grid)  :: Grid
-    integer          :: iComm
+    integer          :: PetCount
     type(ESMF_TimeInterval) :: SimTime, RunDuration
 
-    integer:: i
+    integer:: i, j
     !--------------------------------------------------------------------------
-    call write_log("RIM_grid_comp:init routine called")
+    call write_log("RIM_grid_comp:init_realize routine called")
     iError = ESMF_FAILURE
 
     ! Obtain the VM for the IE gridded component
     call ESMF_GridCompGet(gComp, vm=Vm, rc=iError)
     if(iError /= ESMF_SUCCESS) call my_error('ESMF_GridCompGet')
 
-    ! Obtain the MPI communicator for the VM
-    call ESMF_VMGet(Vm, mpiCommunicator=iComm, localPet=iPet, rc=iError)
+    ! Obtain the PET count for the VM
+    call ESMF_VMGet(Vm, petCount=PetCount, rc=iError)
     if(iError /= ESMF_SUCCESS) call my_error('ESMF_VMGet')
 
     ! RIM grid is node based. Internally it is Colat-Lon grid, but we pretend
     ! here that it is a Lat-Lon grid, so ESMF can use it.
     ! Lon from 0 to 360-dPhi (periodic), Lat from -90 to +90
-    if(nProcSwmfComp == 1)then
-       allocate(iPetMap_III(1,1,1))
-       iPetMap_III(1,1,1) = 0
-    else
-       allocate(iPetMap_III(1,2,1))
-       iPetMap_III(1,:,1) = [ 0, 1 ]
-    end if
-
     Grid = ESMF_GridCreateNoPeriDim(maxIndex=[nLon-1, nLat-1], &
-         RegDecomp = [1, nProcSwmfComp], &
-         coordDep1=[1], coordDep2=[2], coordSys=ESMF_COORDSYS_CART, &
+         regDecomp=[1, petCount], coordDep1=[1], coordDep2=[2], &
+         coordSys=ESMF_COORDSYS_CART, indexflag=ESMF_INDEX_GLOBAL, &
          name="RIM grid", rc=iError)
     if(iError /= ESMF_SUCCESS)call my_error('ESMF_GridCreateNoPeriDim')
-    deallocate(iPetMap_III)
 
     call ESMF_GridAddCoord(Grid, staggerloc=ESMF_STAGGERLOC_CORNER, rc=iError)
     if(iError /= ESMF_SUCCESS)call my_error('ESMF_GridAddCoord')
@@ -105,43 +150,46 @@ contains
     if(iError /= ESMF_SUCCESS)call my_error('ESMF_GridGetCoord 1')
     write(*,*)'ESMF_GridComp size(Lon_I)=', size(Lon_I)
 
+    nullify(Lat_I)
     call ESMF_GridGetCoord(Grid, CoordDim=2, &
          staggerLoc=ESMF_STAGGERLOC_CORNER, farrayPtr=Lat_I, rc=iError)
     if(iError /= ESMF_SUCCESS)call my_error('ESMF_GridGetCoord 2')
-
-    MinLat = lbound(Lat_I, DIM=1); MaxLat = ubound(Lat_I, DIM=1)
-    write(*,'(a,2i4)')'RIM grid: MinLat, MaxLat=', MinLat, MaxLat
+    write(*,*)'ESMF_GridComp size(Lat_I)=', size(Lat_I)
 
     ! Uniform longitude grid from -180 to 180 (to match IPE)
-    do i = 1, nLon
+    MinLon = lbound(Lon_I, dim=1)
+    MaxLon = ubound(Lon_I, dim=1)
+    write(*,'(a,2i4)')'RIM grid: Lon_I Min, Max=', MinLon, MaxLon
+    do i = MinLon, MaxLon
        Lon_I(i) = (i-1)*(360.0/(nLon-1)) - 180
     end do
-    write(*,*)'RIM grid: Lon_I(1,2,last)=', Lon_I([1, 1, nLon])
+    write(*,*)'RIM grid: Lon_I(Min,Min+1,Max)=', Lon_I([MinLon,MinLon+1,MaxLon])
     ! Uniform latitude grid
-    do i = MinLat, MaxLat
-       Lat_I(i) = (i-1)*(180./(nLat-1)) - 90
+    MinLat = lbound(Lat_I, dim=1)
+    MaxLat = ubound(Lat_I, dim=1)
+    write(*,'(a,2i4)')'RIM grid: Lat_I Min, Max=', MinLat, MaxLat
+    do j = MinLat, MaxLat
+       Lat_I(j) = (j-1)*(180./(nLat-1)) - 90
     end do
-    write(*,*)'RIM grid: Lat_I(Min,Min+1,Max)=', &
-         Lat_I([MinLat,MinLat+1,MaxLat])
+    write(*,*)'RIM grid: Lat_I(Min,Min+1,Max)=', Lat_I([MinLat,MinLat+1,MaxLat])
 
     ! Add fields to the RIM import state
     call add_fields(Grid, ImportState, IsFromEsmf=.true., iError=iError)
     if(iError /= ESMF_SUCCESS) call my_error('add_fields')
 
     iError = ESMF_SUCCESS
-    call write_log("RIM_grid_comp:init routine returned")
+    call write_log("RIM_grid_comp:init_realize routine returned")
 
-  end subroutine my_init
+  end subroutine my_init_realize
   !============================================================================
-  subroutine my_run(gComp, ImportState, ExportState, Clock, iError)
+  subroutine my_run(gComp, iError)
 
     type(ESMF_GridComp):: gComp
-    type(ESMF_State):: ImportState
-    type(ESMF_State):: ExportState
-    type(ESMF_Clock):: Clock
     integer, intent(out):: iError
 
     ! Access to the data
+    type(ESMF_State):: ImportState
+    type(ESMF_Clock):: Clock
     real(ESMF_KIND_R8), pointer     :: Ptr_II(:,:)
     real(ESMF_KIND_R8), allocatable :: Data_VII(:,:,:)
     integer                         :: iVar
@@ -162,6 +210,11 @@ contains
     call write_log("RIM_grid_comp:run routine called")
     iError = ESMF_FAILURE
 
+    ! Query component
+    call NUOPC_ModelGet(gComp, modelClock=Clock, &
+         importState=ImportState, rc=iError)
+    if(iError /= ESMF_SUCCESS) call my_error('NUOPC_ModelGet')
+
     ! Get the current time from the clock
     call ESMF_ClockGet(Clock, CurrSimTime=SimTime, TimeStep=TimeStep, &
          rc=iError)
@@ -171,7 +224,7 @@ contains
     tCurrent = iSec + 0.001*iMilliSec
 
     ! Obtain pointer to the data obtained from the ESMF component
-    allocate(Data_VII(nVarEsmf,nLon,MinLat:MaxLat), stat=iError)
+    allocate(Data_VII(nVarEsmf,MinLon:MaxLon,MinLat:MaxLat), stat=iError)
     if(iError /= 0) call my_error('allocate(Data_VII)')
 
     ! Copy fields into an array
@@ -189,7 +242,7 @@ contains
     if(DoTest)then
        write(*,*)'SWMF_GridComp shape of Ptr =', shape(Ptr_II)
        ! Do not check the poles
-       do j = MinLat, MaxLat; do i = 1, nLon
+       do j = MinLat, MaxLat; do i = MinLon, MaxLon
           ! Calculate exact solution
           Exact_V = FieldTest_V
           ! add time dependence for Hall field
@@ -210,7 +263,7 @@ contains
                Exact_V(2), Data_VII(2,i,j) - Exact_V(2)
        end do; end do
        write(*,*)'SWMF_GridComp value of Data(MidLon,MidLat)=', &
-            Data_VII(:,nLon/2,(MinLat+MaxLat)/2)
+            Data_VII(:,(MinLon+MaxLon)/2,(MinLat+MaxLat)/2)
     end if
     deallocate(Data_VII)
 
@@ -220,17 +273,16 @@ contains
 
   end subroutine my_run
   !============================================================================
-  subroutine my_final(gComp, ImportState, ExportState, Externalclock, iError)
+  subroutine my_final(gComp, iError)
 
     type(ESMF_GridComp) :: gComp
-    type(ESMF_State) :: ImportState
-    type(ESMF_State) :: ExportState
-    type(ESMF_Clock) :: Externalclock
     integer, intent(out) :: iError
     !--------------------------------------------------------------------------
     call write_log("RIM_finalize routine called")
 
     call write_log("RIM_finalize routine returned")
+
+    iError = ESMF_SUCCESS
 
   end subroutine my_final
   !============================================================================
