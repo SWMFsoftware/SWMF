@@ -1,0 +1,13 @@
+ field_dictionary:
+   version_number: 0.0.0
+   institution: National ESPC, CSC & MCL Working Groups
+   description: Community-based dictionary for shared coupling fields
+   entries:
+     - standard_name: Hall
+       alias: hall_conductance 
+       canonical_units: mho
+       description: IPE export 
+     - standard_name: Ped
+       alias: pedersen_conductance
+       canonical_units: mho 
+       description: IPE export 
