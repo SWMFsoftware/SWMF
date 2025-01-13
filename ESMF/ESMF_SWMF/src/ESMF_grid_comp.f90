@@ -135,7 +135,8 @@ contains
        ! Handle negative values
        if (petListBounds(1) < 0) petListBounds(1) = petCount + petListBounds(1)
        if (petListBounds(2) < 0) petListBounds(2) = petCount + petListBounds(2)
-       petListBounds = min(petCount-1, petListBounds)
+       ! Keep indexes inside bounds
+       petListBounds = max(0, min(petCount-1, petListBounds))
        ! Read in model instance name
        call ESMF_ConfigGetAttribute(config, model, &
             label=trim(prefix)//"_model:", default="none", rc=iError)
