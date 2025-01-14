@@ -52,7 +52,6 @@ my %component = (
     "RBE"           => "RB",
     "MFLAMPA"       => "SP",
     "GITM"          => "UA",
-    "GITM2"         => "UA",
     "MGITM"         => "UA");
 
 my $History;
