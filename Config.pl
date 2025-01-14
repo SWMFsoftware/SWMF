@@ -46,7 +46,6 @@ my %component = (
     "RCM2"          => "IM",
     "FLEKS"         => "PC", 
     "FLEKS_PT"      => "PT", 
-    "DGCPM"         => "PS", 
     "AMPS_PT"       => "PT", 
     "PARMISAN"      => "PT",
     "PWOM"          => "PW", 
