@@ -79,7 +79,7 @@ dt			= 0.2*dtmax   = 1.066
 USERINPUTBEGIN -----------------------------------
 
 #WAVE
-1			NameVar
+Rho			NameVar
 1000.0			Width
 0.1			Amplitude
 32.0			LambdaX
@@ -88,7 +88,7 @@ USERINPUTBEGIN -----------------------------------
 0.0			Phase
 
 #WAVE
-2			NameVar
+Ux			NameVar
 1000.0			Width
 0.005			Amplitude (rho1/rho0)*cF
 32.0			LambdaX
@@ -97,7 +97,7 @@ USERINPUTBEGIN -----------------------------------
 0.0			Phase
 
 #WAVE
-6			NameVar
+By			NameVar
 1000.0			Width
 0.004			Amplitude (rho1/rho0)*b0
 32.0			LambdaX
@@ -106,7 +106,7 @@ USERINPUTBEGIN -----------------------------------
 0.0			Phase
 
 #WAVE
-8			NameVar
+Ppar			NameVar
 10000.0			Width
 4.5e-5			Amplitude (rho1/rho0)*pPar0
 32.0			LambdaX
@@ -115,7 +115,7 @@ USERINPUTBEGIN -----------------------------------
 0.0			Phase
 
 #WAVE
-9			NameVar
+P			NameVar
 10000.0			Width
 7.5e-5			Amplitude (rho1/rho0)*5/3*p0
 32.0			LambdaX

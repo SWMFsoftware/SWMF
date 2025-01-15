@@ -44,17 +44,14 @@ my %component = (
     "CIMI"          => "IM", 
     "HEIDI"         => "IM", 
     "RCM2"          => "IM",
-    "ALTOR"         => "PC",
     "FLEKS"         => "PC", 
     "FLEKS_PT"      => "PT", 
-    "DGCPM"         => "PS", 
     "AMPS_PT"       => "PT", 
     "PARMISAN"      => "PT",
     "PWOM"          => "PW", 
     "RBE"           => "RB",
     "MFLAMPA"       => "SP",
     "GITM"          => "UA",
-    "GITM2"         => "UA",
     "MGITM"         => "UA");
 
 my $History;
