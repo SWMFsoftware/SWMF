@@ -2609,6 +2609,25 @@ test23_check:
 		>> test23_gmpc.diff)	
 	ls -l test23_gmpc.diff
 
+### test24: GM/BATSRUS coupled with UA/MGITM  ###
+
+test24:
+	@echo "test24_compile..." > test24_gm.diff
+	@echo "test24_compile..." > test24_ua.diff
+	${MAKE} test24_compile
+	@echo "test24_rundir..." >> test24_gm.diff
+	@echo "test24_rundir..." >> test24_ua.diff
+	${MAKE} test24_rundir
+
+test24_compile:
+	./Config.pl -v=Empty,GM/BATSRUS,UA/MGITM
+	./Config.pl -o=GM:u=Mars,e=MhdMars,g=8,8,8,UA:Mars,g=8,4,120,4
+	${MAKE} SWMF
+
+test24_rundir:
+	rm -rf ${TESTDIR}
+	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
+	
 ### test_ramscb: GM+IE+IM/RAMSCB ###
 
 test_ramscb:
