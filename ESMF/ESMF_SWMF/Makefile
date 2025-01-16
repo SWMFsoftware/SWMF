@@ -58,7 +58,7 @@ test_rundir:
 	${MAKE} rundir
 
 test_run:
-	cd ${RUNDIR}; rm -f *ESMF_LogFile; ${MPIRUN} ESMF_SWMF.exe | tee runlog
+	cd ${RUNDIR}; rm -f *ESMF_LogFile; ${MPIRUN} ./ESMF_SWMF.exe | tee runlog
 	cd ${RUNDIR}; ./PostProc.pl -M RESULTS
 
 test_check:
