@@ -1,8 +1,8 @@
 Configure SWMF with
 
 ./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
-./Config.pl -o=SC:u=Awsom,e=AwsomChGL,g=6,4,4,ng=2
-./Config.pl -o=IH:u=Awsom,e=AwsomChGL,g=4,4,4,ng=2
+./Config.pl -o=SC:u=Awsom,e=AwsomSA,g=6,4,4,ng=2
+./Config.pl -o=IH:u=Awsom,e=AwsomSA,g=4,4,4,ng=2
 
 Inner boundary is 1.1 Rs
 Default rMinWaveReflection is 0.0
@@ -230,9 +230,9 @@ z=0 VAR idl		StringPlot
 T			DoSaveInitial
 
 #ALIGNBANDU
-T			UseChGL
-1.1			RSourceChGL
-3.5			RMinChGL
+T			UseSaMhd
+1.1			RsourceSaMhd
+3.5			RminSaMhd
 
 #END_COMP SC -----------------------------------------------------------------
 #COMPONENT
@@ -417,9 +417,9 @@ rho ux uy uz ti te bx by bz I01 I02 p sign		NameVars
 g rbody			NamePars
 
 #ALIGNBANDU
-T			UseChGL
-0			RSourceChGL
-0			RMinChGL
+T			UseSaMhd
+0			RsourceSaMhd
+0			RminSaMhd
 
 #END_COMP IH -----------------------------------------------------------------
 
