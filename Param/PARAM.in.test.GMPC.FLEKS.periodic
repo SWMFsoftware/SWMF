@@ -280,9 +280,6 @@ F			doSmoothE
 8			nCellY
 1			nCellZ
 
-#DIVE
-F			doCorrectDivE
-
 #PERIODICITY
 T			isPeriodicX
 T			isPeriodicY
