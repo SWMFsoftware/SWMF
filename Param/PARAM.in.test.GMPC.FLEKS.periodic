@@ -249,11 +249,24 @@ z=0 all idl_ascii		StringPlot
 
 #BEGIN_COMP PC ---------------------------------------------------------------
 
+#REGION
+tpsphere                nameRegion
+sphere          shape
+0.0                     centerX
+0.0                     centerY
+0.0                     centerZ
+1.0                     radius
+
+#TPCELLINTERVAL
+8                  nIntervalX
+2                  nIntervalY
+1                  nIntervalZ
+
 #PARTICLETRACKER
 T			useParticleTracker
 
 #TPREGION
-uniform			region
++tpsphere		region
 
 #SAVELOG
 1			dnSavePic
