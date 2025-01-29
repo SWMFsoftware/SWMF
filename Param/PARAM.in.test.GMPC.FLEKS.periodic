@@ -4,7 +4,7 @@ GM  0 -1  1		CompMap
 PC  0  7  1		CompMap
 
 #DESCRIPTION
-Param/PARAM.in.test.GMPC.FLEKS.periodic: Run GM and PC in time accurate mode		StringDescription
+Param/PARAM.in.test.GMPC.FLEKS.periodic		StringDescription
 
 #PLANET
 NONE			NamePlanet
@@ -250,17 +250,17 @@ z=0 all idl_ascii		StringPlot
 #BEGIN_COMP PC ---------------------------------------------------------------
 
 #REGION
-tpsphere                nameRegion
-sphere          shape
-0.0                     centerX
-0.0                     centerY
-0.0                     centerZ
-1.0                     radius
+tpsphere		regionName
+sphere			shape
+0.0			centerX
+0.0			centerY
+0.0			centerZ
+1.0			radius
 
 #TPCELLINTERVAL
-8                  nIntervalX
-2                  nIntervalY
-1                  nIntervalZ
+8			nIntervalX
+2			nIntervalY
+1			nIntervalZ
 
 #PARTICLETRACKER
 T			useParticleTracker
@@ -279,9 +279,6 @@ F			doSmoothE
 16			nCellX
 8			nCellY
 1			nCellZ
-
-#DIVE
-F			doCorrectDivE
 
 #PERIODICITY
 T			isPeriodicX
