@@ -412,8 +412,13 @@ contains
       if(DoTest)write(*,*)NameSub,' starting, iProc=',i_proc()
 
       if(DoMultiFluidIMCoupling)then
-         NameVar='pe:p:rho:Hpp:Opp:Hprho:Oprho'
-         nVarImGm=7
+         if(NameVersionIm .eq. "RAM_HEIDI") then
+               NameVar = 'Hpp:Hprho:Npp:Opp:Nprho:Oprho'
+               nVarImGm=6
+         else
+               NameVar='pe:p:rho:Hpp:Opp:Hprho:Oprho'
+               nVarImGm=7
+         end if 
       else if(DoAnisoPressureIMCoupling)then
          NameVar='p:rho:ppar:bmin'
          nVarImGm=4
