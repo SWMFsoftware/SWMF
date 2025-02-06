@@ -255,11 +255,12 @@ PIONO:	ENV_CHECK
 #	
 MANUAL: ENV_CHECK
 	@cd doc/Tex; make cleanpdf; make PDF
-	@if([ -d "util/CRASH" ]); then cd util/CRASH/doc/Tex; make PDF; fi
-	@if([ -d "GM/BATSRUS" ]); then cd GM/BATSRUS; make PDF; fi #^CMP IF GM
-	@if([ -d "PW/PWOM"    ]); then cd PW/PWOM;    make PDF; fi #^CMP IF PW
-	@if([ -d "IM/CIMI "   ]); then cd IM/CIMI;    make PDF; fi #^CMP IF IM
-	@if([ -d "PT/AMPS"    ]); then cd PT/AMPS;    make PDF; fi #^CMP IF PT
+	@if([ -d "util/TIMING" ]); then cd util/TIMING/doc; make PDF; fi
+	@if([ -d "util/CRASH"  ]); then cd util/CRASH/doc/Tex; make PDF; fi
+	@if([ -d "GM/BATSRUS"  ]); then cd GM/BATSRUS; make PDF; fi #^CMP IF GM
+	@if([ -d "PW/PWOM"     ]); then cd PW/PWOM;    make PDF; fi #^CMP IF PW
+	@if([ -d "IM/CIMI"     ]); then cd IM/CIMI;    make PDF; fi #^CMP IF IM
+	@if([ -d "PT/AMPS"     ]); then cd PT/AMPS;    make PDF; fi #^CMP IF PT
 
 PDF:	ENV_CHECK
 	@cd doc/Tex; make cleanpdf; make PDF
