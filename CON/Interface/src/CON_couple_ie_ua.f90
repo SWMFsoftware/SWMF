@@ -11,7 +11,6 @@ module CON_couple_ie_ua
 
   use CON_coupler
 
-  use IE_wrapper, ONLY: IE_get_for_ua, IE_put_from_ua
 
   implicit none
 
@@ -31,14 +30,14 @@ module CON_couple_ie_ua
   ! Communicator and logicals to simplify message passing and execution
   ! Initialization status:
   ! integer, save :: iCommIeUa, iProc0Ua
-  logical :: UseMe=.true., IsInitialized = .false.
+  logical :: IsInitialized = .false.
 
   ! Information about number and names of variables to share:
   integer, save :: nVarIeUa, nVarUaIe, nUaMagLon, nUaMagLat
   character(len=3), allocatable :: NameVarIeUa_V(:), NameVarUaIe_V(:)
 
   ! Size of the 2D spherical structured IE grid
-  integer, save :: iSize, jSize, nCells_D(2), nRootBlock_d(3)
+  integer, save :: iSize, jSize
 
 contains
   !============================================================================
@@ -52,9 +51,6 @@ contains
     use CON_transfer_data, ONLY: transfer_integer, transfer_string_array
     use UA_wrapper, ONLY: UA_get_info_for_ie
     use IE_wrapper, ONLY: IE_get_info_for_ua
-
-    ! General error code
-    integer :: iError, i, j
 
     logical :: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'couple_ie_ua_init'
@@ -105,14 +101,9 @@ contains
             NameVarIeUa_V
     end if
 
-    ! NOT SURE IF NEEDED.
-    ! This works for a NODE BASED regular IE grid only
-    ! <so then why does IE initialize with SPS, a grid based thing??? MB>
-    nCells_D = ncell_id(IE_)
-    ! iSize=nCells_D(1); jSize=nCells_D(2)   ! orig. MB
-    iSize = nCells_D(1) + 1; jSize = nCells_D(2) + 1 ! Grid size for 1 hemi.
-
-    ! IE should share nVar and varNames to pass.
+    ! Store grid size
+    iSize = Grid_C(IE_) % nCoord_D(1)
+    jSize = Grid_C(IE_) % nCoord_D(2)
 
   end subroutine couple_ie_ua_init
   !============================================================================
@@ -133,8 +124,8 @@ contains
     ! Buffer for all shared variables on the 2D IE grid
     real, allocatable :: Buffer_IIV(:,:,:)
 
-    ! Variables to assist with coupling
-    integer :: nSize, iBlock, iError
+    ! Index for north and south hemispheres
+    integer :: iBlock
 
     ! Debug variables:
     logical :: DoTest, DoTestMe
@@ -181,7 +172,7 @@ contains
 
     ! Buffer for the variables on the 2D IE grid: lon, lat, block, vars
     ! Always two blocks, one per hemisphere.
-    real, allocatable :: Buffer_IIBV(:,:,:)
+    real, allocatable :: Buffer_IIBV(:,:,:,:)
 
     logical :: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'couple_ua_ie'
