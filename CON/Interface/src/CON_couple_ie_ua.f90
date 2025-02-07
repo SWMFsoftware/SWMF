@@ -42,7 +42,6 @@ module CON_couple_ie_ua
 
 contains
   !============================================================================
-
   subroutine couple_ie_ua_init
 
     ! This subroutine should be called from all PE-s so that
@@ -111,19 +110,20 @@ contains
     ! <so then why does IE initialize with SPS, a grid based thing??? MB>
     nCells_D = ncell_id(IE_)
     ! iSize=nCells_D(1); jSize=nCells_D(2)   ! orig. MB
-    iSize=nCells_D(1)+1; jSize=nCells_D(2)+1 ! Grid size for 1 hemi.
+    iSize = nCells_D(1) + 1; jSize = nCells_D(2) + 1 ! Grid size for 1 hemi.
 
     ! IE should share nVar and varNames to pass.
 
   end subroutine couple_ie_ua_init
   !============================================================================
-
   subroutine couple_ie_ua(tSimulation)
+
     ! Couple between two components:
     !    Ionosphere Electrodynamics (IE)  source
     !    Upper Atmosphere (UA) target
     !
     ! Send electrostatic potential from IE to UA.
+
     use CON_transfer_data, ONLY: transfer_real_array
     use IE_wrapper, ONLY: IE_get_for_ua
     use UA_wrapper, ONLY: UA_put_from_ie
@@ -131,7 +131,7 @@ contains
     real, intent(in) :: tSimulation     ! simulation time at coupling
 
     ! Buffer for all shared variables on the 2D IE grid
-    real, dimension(:,:,:), allocatable :: Buffer_IIV
+    real, allocatable :: Buffer_IIV(:,:,:)
 
     ! Variables to assist with coupling
     integer :: nSize, iBlock, iError
@@ -143,11 +143,10 @@ contains
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
 
     ! Allocate buffers both in IE (source) and UA (target):
-    allocate(Buffer_IIV(iSize,jSize,nVarIeUa), stat=iError)
-    call check_allocate(iError,NameSub//": Buffer_IIV")
+    allocate(Buffer_IIV(iSize,jSize,nVarIeUa))
 
     ! Transfer northern then southern hemisphere:
-    do iblock = 1,2
+    do iBlock = 1, 2
        ! Get all variables from IE:
        if(is_proc(IE_)) call IE_get_for_ua(Buffer_IIV, iSize, jSize, &
             nVarIeUa, NameVarIeUa_V, iBlock, tSimulation)
@@ -165,7 +164,6 @@ contains
 
   end subroutine couple_ie_ua
   !============================================================================
-
   subroutine couple_ua_ie(tSimulation)
 
     use CON_transfer_data, ONLY: transfer_real_array
@@ -183,12 +181,12 @@ contains
 
     ! Buffer for the variables on the 2D IE grid: lon, lat, block, vars
     ! Always two blocks, one per hemisphere.
-    real, dimension(:,:,:,:), allocatable :: Buffer_IIBV ! to fill
+    real, allocatable :: Buffer_IIBV(:,:,:)
 
     logical :: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'couple_ua_ie'
     !--------------------------------------------------------------------------
-    call CON_set_do_test(NameSub,DoTest,DoTestMe)
+    call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
     ! Allocate our transfer array:
     allocate(Buffer_IIBV(nUaMagLon, nUaMagLat, 2, nVarUaIe))
@@ -209,7 +207,6 @@ contains
 
   end subroutine couple_ua_ie
   !============================================================================
-
 end module CON_couple_ie_ua
 !==============================================================================
 
