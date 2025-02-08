@@ -11,7 +11,6 @@ module CON_couple_ie_ua
 
   use CON_coupler
 
-
   implicit none
 
   private ! except
