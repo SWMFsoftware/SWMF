@@ -40,6 +40,7 @@ touch code.diff
 # Create manuals
 cd ~/Sites/SWMF
 Config.pl -install -compiler=gfortran >& ~/Sites/manual.log
+rm -rf UA/GITM/share UA/GITM/util ### clean does not work correctly
 share/Scripts/gitall pull --depth 100
 make MANUAL >>& ~/Sites/manual.log
 
@@ -52,7 +53,7 @@ chmod go+r share/IDL/doc/idl.pdf
 chmod go+r util/CRASH/doc/*
 
 cd ~/Sites/SWMF
-make clean         >>& ~/Sites/manual.log
+make clean >>& ~/Sites/manual.log
 
 # Check if the manual creation worked
 cd ~/Sites
@@ -62,10 +63,10 @@ grep -v logo_small.png manual.log | grep -C10 Error > manual.err
 cd ~/Sites/SWMF
 make FORMATF90 > ~/Sites/fortran.err
 # commit and push formatted code
-gitall "commit -m FormatFortran .; git push"
+gitall "commit -m FormatFortran .; git push" >>& ~/Sites/process_swmf.log
 
 # Check data names
 cd ~/Sites/SWMF/GM/BATSRUS
 ~/Sites/SWMF/share/Scripts/CheckDataName.pl src/*.f90 srcEquation/*.f90 \
-    srcBATL/*.f90 srcInterface/*.f90 srcUser/*.f90 >& ~/Sites/name.err
+    srcBATL/*.f90 srcInterface/*.f90 >& ~/Sites/name.err
 
