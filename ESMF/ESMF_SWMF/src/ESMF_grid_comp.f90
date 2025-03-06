@@ -19,7 +19,11 @@ module ESMF_grid_comp
 
   ! User Component registration routines
   use SWMF_grid_comp, ONLY: swmf_set_services    => set_services
+#ifdef EXTERNAL_IPE
+  use ipecap,         ONLY: ipe_set_services     => SetServices
+#else
   use IPE_grid_comp,  ONLY: ipe_set_services     => set_services
+#endif
   use RIM_grid_comp,  ONLY: rim_set_services     => set_services
 
   implicit none
