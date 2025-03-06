@@ -16,6 +16,7 @@ INCL_EXTRA = ${ESMF_F90COMPILEPATHS}
 EXE = ${BINDIR}/ESMF_SWMF.exe
 
 # object files which need to be compiled into the executable.
+ifeq ($(ipe_ROOT),)
 OBJECTS = \
 	ESMF_driver.o \
 	ESMFSWMF_variables.o \
@@ -23,6 +24,20 @@ OBJECTS = \
 	SWMF_grid_comp.o \
 	IPE_grid_comp.o \
 	RIM_grid_comp.o
+else
+OBJECTS = \
+        ESMF_driver.o \
+        ESMFSWMF_variables.o \
+        ESMF_grid_comp.o \
+        SWMF_grid_comp.o \
+        RIM_grid_comp.o
+INCL_EXTRA += -I$(ipe_ROOT)/include
+IPELIBS = -L$(ipe_ROOT)/lib -lipe -lipm -lshared \
+          -L$(comio_ROOT)/lib -lcomio \
+          -L$(parallel_netcdf_ROOT)/lib -lpnetcdf \
+          -L$(hdf5_ROOT)/lib -lhdf5_fortran
+Cflag2 += -DEXTERNAL_IPE
+endif
 
 # Dependencies:
 DEPEND:
@@ -38,7 +53,7 @@ EXE: DEPEND
 $(EXE): $(OBJECTS)
 	${LINK.f90} -o ${EXE} $(OBJECTS) \
 		${ESMF_F90LINKPATHS} $(ESMF_F90ESMFLINKLIBS) \
-		-L${LIBDIR} -lSWMF ${LflagMpi}
+		-L${LIBDIR} -lSWMF ${LflagMpi} ${IPELIBS}
 
 clean: cleanfiles
 
