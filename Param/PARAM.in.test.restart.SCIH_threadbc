@@ -230,6 +230,11 @@ los LGQ idl		StringPlot
 0.0			MuLimbDarkening
 300			nPix
 
+#SAVEPLOTNAME
+F			UsePlotNameStep
+F			UsePlotNameTime
+T			UsePlotNameDateTime
+
 #LOOKUPTABLE		OffsetAngle
 AiaXrt			NameTable
 load			NameCommand
