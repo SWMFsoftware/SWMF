@@ -1675,17 +1675,17 @@ test9_check:
 		output/test9/SC_log_n000001.log \
 		> test09_sc.diff)
 	-(${DIFFNUM} -b -r=1e-4 -a=1e-27 \
-                ${TESTDIR}/RESULTS/run_start/SC/los_sdo_aia_6_n0000010.out \
+                ${TESTDIR}/RESULTS/run_start/SC/los_sdo_aia_6_n00000010.out \
                 output/test9/SC_los_sdo_aia_6_n0000010.out.gz \
-                > test09_sc_los.diff)
+                >> test09_sc.diff)
 	-(${DIFFNUM} -b -r=1e-4 -a=1e-27 \
-                ${TESTDIR}/RESULTS/run_start/SC/los_sta_euvi_4_n0000010.out \
+                ${TESTDIR}/RESULTS/run_start/SC/los_sta_euvi_4_n00000010.out \
                 output/test9/SC_los_sta_euvi_4_n0000010.out.gz \
-                > test09_sc_los.diff)
+                >> test09_sc.diff)
 	-(${DIFFNUM} -b -r=1e-4 -a=1e-27 \
-                ${TESTDIR}/RESULTS/run_start/SC/los_stb_euvi_5_n0000010.out \
+                ${TESTDIR}/RESULTS/run_start/SC/los_stb_euvi_5_n00000010.out \
                 output/test9/SC_los_stb_euvi_5_n0000010.out.gz \
-                > test09_sc_los.diff)
+                >> test09_sc.diff)
 	-(${DIFFNUM} -b -r=1e-5 \
 		${TESTDIR}/RESULTS/run_start/IH/log_n000001.log \
 		output/test9/IH_log_n000001.log \
@@ -1693,31 +1693,31 @@ test9_check:
 	-(${DIFFNUM} -b -r=2e-5 -a=1e-27 \
 		${TESTDIR}/RESULTS/run_start/IH/trj_earth_n00000010.sat \
 		output/test9/IH_trj_earth_n00000010.sat \
-		> test09_ih_trj_earth.diff)	
+		>> test09_ih.diff)	
 	-(${DIFFNUM} -b -r=1e-5 -a=1e-27 \
 		${TESTDIR}/RESULTS/run_cme/SC/log_n000010.log \
 		output/test9/SC_log_n000010.log \
 		> test09_sc_cme.diff)
 	-(${DIFFNUM} -b -r=1e-5 -a=1e-27 \
-		${TESTDIR}/RESULTS/run_cme/SC/los_soho_c2_4_t00000010_n0000012.out \
+		${TESTDIR}/RESULTS/run_cme/SC/los_soho_c2_4_t00000010_n00000012.out \
 		output/test9/SC_cme_los_soho_c2_4_t00000010_n0000012.out \
-		> test09_sc_cme_los.diff)
+		>> test09_sc_cme.diff)
 	-(${DIFFNUM} -b -r=1e-5 -a=1e-27 \
-		${TESTDIR}/RESULTS/run_cme/SC/shk_var_10_t00000010_n00000012.out \
-		output/test9/SC_shk_var_10_t00000010_n00000012.out \
-		> test09_sc_cme_shk.diff)
+      	 	${TESTDIR}/RESULTS/run_cme/SC/shk_var_10_t00000010_n00000012.out \
+                output/test9/SC_shk_var_10_t00000010_n00000012.out \
+		>> test09_sc_cme.diff)
 	-(${DIFFNUM} -b -r=1e-5 -a=1e-27 \
-		${TESTDIR}/RESULTS/run_restart/SC/los_soho_c2_4_t00000010_n0000012.out \
+		${TESTDIR}/RESULTS/run_restart/SC/los_soho_c2_4_t00000010_n00000012.out \
 		output/test9/SC_restart_los_soho_c2_4_t00000010_n0000012.out \
-		> test09_sc_restart_los.diff)
+		> test09_sc_restart.diff)
 	-(${DIFFNUM} -b -r=2e-5 -a=1e-27 \
 		${TESTDIR}/RESULTS/run_restart/IH/sat_earth_n00000012.sat \
 		output/test9/IH_sat_earth_n00000012.sat \
-		> test09_ih_trj_earth.diff)
+		> test09_ih_restart.diff)
 	-(${DIFFNUM} -b -r=1e-5 \
 		${TESTDIR}/RESULTS/run_restart/IH/log_n000011.log \
 		output/test9/IH_log_n000011.log \
-		> test09_ih.diff)
+		>> test09_ih_restart.diff)
 	-(${DIFFNUM} -b -r=1e-5 \
 		${TESTDIR}/RESULTS/run_ihgm/GM/log_n000000.log \
 		output/test9/GM_log_n000000.log \
