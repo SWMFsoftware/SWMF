@@ -1582,13 +1582,13 @@ test8_check:
 		output/test8/SC_rfr.ref.gz \
 		>> test08_sc_thread.diff)
 	-(${DIFFNUM} -b -r=1e-5 \
+		${TESTDIR}/RESULTS/SC/los_sdo_aia*.out \
+		SC/BATSRUS/data/output/test8/SC_los_sdo_aia.out.gz \
+		>> test08_sc_thread.diff)
+	-(${DIFFNUM} -b -r=1e-5 \
 		${TESTDIR}/RESULTS/IH/log_n000000.log \
 		output/test8/IH_log_n000000.log \
 		> test08_ih.diff)
-	-(${DIFFNUM} -b -r=1e-5 \
-		${TESTDIR}/RESULTS/SC/los_sdo_aia*.out \
-		SC/BATSRUS/data/output/test8/SC_los_sdo_aia.out.gz \
-		> test08_sc_los.diff)
 	ls -l test08_*.diff
 
 ### test9: SC + IH. Test 2nd and 5th order schemes ### 
@@ -2298,13 +2298,13 @@ test19_check:
 		output/test19/SC_log_n000000.log \
 		> test19_sc.diff)
 	-(${DIFFNUM} -b -r=1e-5 \
+		${TESTDIR}/RESULTS/SC/los_sdo_aia*.out \
+		SC/BATSRUS/data/output/test19/SC_los_sdo_aia.out.gz \
+		>> test19_sc.diff)
+	-(${DIFFNUM} -b -r=1e-5 \
 		${TESTDIR}/RESULTS/IH/log_n000000.log \
 		output/test19/IH_log_n000000.log \
 		> test19_ih.diff)
-	-(${DIFFNUM} -b -r=1e-5 \
-		${TESTDIR}/RESULTS/SC/los_sdo_aia*.out \
-		SC/BATSRUS/data/output/test19/SC_los_sdo_aia.out.gz \
-		> test19_sc_los.diff)
 	cat ${TESTDIR}/RESULTS/SP/MH_data_*_*_t00000150_n000010.out \
 	    > ${TESTDIR}/RESULTS/SP/MH_data.outs
 	-(${DIFFNUM} -a=3e-5 -r=3e-6 -b \
