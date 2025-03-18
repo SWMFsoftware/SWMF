@@ -1591,7 +1591,7 @@ test8_check:
 		> test08_ih.diff)
 	ls -l test08_*.diff
 
-### test9: SC + IH. Test 2nd and 5th order schemes ### 
+### test9: SC + IH + GM. Test 2nd and 5th order schemes ### 
 
 test9:
 	@echo "test9_compile..." > test09_sc.diff
@@ -1725,10 +1725,10 @@ test9_check:
 	ls -l test09_*.diff
 
 ### test10: real-time SC + IH test ###
-### Uses two real GONG magnetogram,  however, the actual time difference
+### Uses two real GONG magnetogram, however, the actual time difference
 ### of about 5 hours is artificially reduced to 150 second, with the command
 ### perl -i -pe 's/2261.2270982/2261.2164177/' map_01.out
-### All the other commands  reealistically reprroduce the actual  scheme
+### All the other commands reealistically reproduce the actual scheme
 ### for real-time simulations with the AWSoM-R
 
 test10:
@@ -1869,6 +1869,67 @@ test11_check:
 		     output/test11/GM_log_n000000.log \
 		     > test11_gm.diff)
 	ls -l test11_*.diff
+
+### test12: SC + IH on GPU ###
+
+test12:
+	@echo "test12_compile..." > test12_sc_gpu.diff
+	${MAKE} test12_compile
+	@echo "test12_rundir..." >> test12_sc_gpu.diff
+	${MAKE} test12_rundir
+	@echo "test12_run..." >> test12_sc_gpu.diff
+	${MAKE} test12_run
+	#${MAKE} test12_cme
+	#${MAKE} test12_restart
+	@echo "test12_check..." >> test12_sc_gpu.diff
+	${MAKE} test12_check
+
+test12_compile:
+	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
+	./Config.pl -o=SC:u=Awsom,e=Awsom,ng=2,g=6,8,8
+	./Config.pl -o=IH:u=Awsom,e=Awsom,ng=2,g=8,8,8
+	${MAKE} SWMF
+	make PIDL
+	
+test12_rundir:
+	rm -rf ${TESTDIR}
+	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
+	cp Param/PARAM.in.test.start.SCIH_gpu ${TESTDIR}/PARAM.in
+	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
+
+test12_run:
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl -m RESULTS/run_start
+	cd ${TESTDIR}; ./Restart.pl -i RESULTS/run_start/RESTART
+
+test12_cme:
+	cd ${TESTDIR}; mv PARAM.in PARAM.in_start; rm -f PARAM.in_orig_
+	cd ${TESTDIR}; cp Param/PARAM.in.test.cme.SCIH_gpu PARAM.in
+	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl RESULTS/run_cme
+	cd ${TESTDIR}; cp -r RESULTS/run_start/RESTART/IH \
+	   RESULTS/run_cme/RESTART/
+	cd ${TESTDIR}; ./Restart.pl -i RESULTS/run_cme/RESTART
+
+test12_restart:
+	cd ${TESTDIR}; mv PARAM.in PARAM.in_cme; rm -f PARAM.in_orig_
+	cd ${TESTDIR}; cp Param/PARAM.in.test.restart.SCIH_gpu PARAM.in
+	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl -m RESULTS/run_restart
+
+test12_check:
+	-(${DIFFNUM} -b -r=1e-5 -a=1e-27 \
+		${TESTDIR}/RESULTS/run_start/SC/log_n000001.log \
+		output/test12/SC_log_n000001.log \
+		> test12_sc_gpu.diff)
+	-(${DIFFNUM} -b -r=1e-5 \
+		${TESTDIR}/RESULTS/run_start/IH/log_n000001.log \
+		output/test12/IH_log_n000001.log \
+		> test12_ih_gpu.diff)
+	ls -l test12_*_gpu.diff
+
 
 ### test13: Europa's exosphere model with GM and PT ###
 
@@ -2667,15 +2728,15 @@ test_ramscb_run:
 test_ramscb_check:
 	-@(${DIFFNUM} -b -r=1e-3 -a=1e-8 \
 		${TESTDIR}/RESULTS/GM/log_n000001.log \
-		${IMDIR}/output/test9/GM_log_n000001.log \
+		${IMDIR}/output/test_ramscb/GM_log_n000001.log \
 		> test_ramscb_gm.diff)
 	-@(${DIFFNUM} -b -r=1e-3 -a=1e-8 \
 		${TESTDIR}/RESULTS/IM/ram/log_n000001.log \
-		${IMDIR}/output/test9/IM_log_n000001.log \
+		${IMDIR}/output/test_ramscb/IM_log_n000001.log \
 		> test_ramscb_im.diff)
 	-@(${DIFFNUM} -b -r=1e-6 \
 		${TESTDIR}/RESULTS/IE/IE*.log \
-		${IMDIR}/output/test9/IE.log \
+		${IMDIR}/output/test_ramscb/IE.log \
 		> test_ramscb_ie.diff)
 	ls -l test_ramscb*.diff
 
