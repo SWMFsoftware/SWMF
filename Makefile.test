@@ -2629,46 +2629,87 @@ test22_oh_pt_check:
 		>> test22_oh_pt.diff)		
 	ls -l test22_oh_pt.diff
 
-### test23: GM/BATSRUS+PC/FLEKS. 2D Fast Wave test with AMR-PC.
+### test23: GM/BATSRUS+PC/FLEKS. 2D/3D Fast Wave test with AMR-PC.
 ###			BATSRUS only provides the initial condition.
 ###         FLEKS runs with periodic boundary conditions. 
 
 test23:
-	@echo "test23_compile..." > test23_gmpc.diff
-	$(MAKE) test23_compile
-	@echo "test23_rundir..." > test23_gmpc.diff
-	$(MAKE) test23_rundir
-	@echo "test23_run..." > test23_gmpc.diff
-	$(MAKE) test23_run
-	@echo "test23_check..." > test23_gmpc.diff
-	$(MAKE) test23_check
+	$(MAKE) test23_2d
+	$(MAKE) test23_3d
 
-test23_compile:
+test23_2d:
+	@echo "test23_2d_compile..." > test23_2d_gmpc.diff
+	$(MAKE) test23_2d_compile
+	@echo "test23_2d_rundir..." > test23_2d_gmpc.diff
+	$(MAKE) test23_2d_rundir
+	@echo "test23_2d_run..." > test23_2d_gmpc.diff
+	$(MAKE) test23_2d_run
+	@echo "test23_2d_check..." > test23_2d_gmpc.diff
+	$(MAKE) test23_2d_check
+
+test23_2d_compile:
 	./Config.pl -v=Empty,PC/FLEKS,GM/BATSRUS -amrex2d
 	./Config.pl -o=GM:u=Default,e=MhdAnisoP,ng=2,g=8,8,1 -o=PC:lev=9
 	$(MAKE) SWMF
 	$(MAKE) PIDL
 	
-test23_rundir:
+test23_2d_rundir:
 	rm -rf ${TESTDIR}
 	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/PARAM.in.test.GMPC.FLEKS.AMR.FASTWAVE.2D  ${TESTDIR}/PARAM.in
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
 
-test23_run:
+test23_2d_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl RESULTS/
+	cd ${TESTDIR}; ./PostProc.pl RESULTS/2D
 
-test23_check:
+test23_2d_check:
 	-@(${DIFFNUM} -b -a=1e-9 -r=1e-5 \
-	   ${TESTDIR}/RESULTS/PC/z=0*84.out \
-	   output/test23/z=0.ref.gz \
-		> test23_gmpc.diff)
+	   ${TESTDIR}/RESULTS/2D/PC/z=0*84.out \
+	   output/test23/2D/z=0.ref.gz \
+		> test23_2d_gmpc.diff)
 	-@(${DIFFNUM} -b -a=1e-11 -r=1e-11 \
-	   ${TESTDIR}/RESULTS/PC/log_pic_n00000000.log \
-	   output/test23/PC.log \
-		>> test23_gmpc.diff)	
-	ls -l test23_gmpc.diff
+	   ${TESTDIR}/RESULTS/2D/PC/log_pic_n00000000.log \
+	   output/test23/2D/PC.log \
+		>> test23_2d_gmpc.diff)	
+	ls -l test23_2d_gmpc.diff
+
+test23_3d:
+	@echo "test23_3d_compile..." > test23_3d_gmpc.diff
+	$(MAKE) test23_3d_compile
+	@echo "test23_3d_rundir..." > test23_3d_gmpc.diff
+	$(MAKE) test23_3d_rundir
+	@echo "test23_3d_run..." > test23_3d_gmpc.diff
+	$(MAKE) test23_3d_run
+	@echo "test23_3d_check..." > test23_3d_gmpc.diff
+	$(MAKE) test23_3d_check
+
+test23_3d_compile:
+	./Config.pl -v=Empty,PC/FLEKS,GM/BATSRUS -amrex3d
+	./Config.pl -o=GM:u=Default,e=MhdAnisoP,ng=2,g=8,8,8 -o=PC:lev=9
+	$(MAKE) SWMF
+	$(MAKE) PIDL
+	
+test23_3d_rundir:
+	rm -rf ${TESTDIR}
+	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR}
+	cp Param/PARAM.in.test.GMPC.FLEKS.AMR.FASTWAVE.3D  ${TESTDIR}/PARAM.in
+	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
+
+test23_3d_run:
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl RESULTS/3D
+
+test23_3d_check:
+	-@(${DIFFNUM} -b -a=1e-9 -r=1e-5 \
+	   ${TESTDIR}/RESULTS/3D/PC/z=0*21.out \
+	   output/test23/3D/z=0.ref.gz \
+		> test23_3d_gmpc.diff)
+	-@(${DIFFNUM} -b -a=1e-11 -r=1e-11 \
+	   ${TESTDIR}/RESULTS/3D/PC/log_pic_n00000000.log \
+	   output/test23/3D/PC.log \
+		>> test23_3d_gmpc.diff)	
+	ls -l test23_3d_gmpc.diff
 
 ### test24: GM/BATSRUS coupled with UA/MGITM  ###
 
