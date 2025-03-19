@@ -66,6 +66,7 @@ test_help:
 	@(if [ -d PT/FLEKS   ]; then echo "    test21                      (run OH-PT/FLEKS test: OuterHelio)"; fi)
 	@(if [ -d PT/FLEKS   ]; then echo "    test22                      (run OH-PT/FLEKS test: OuterHelio)"; fi)
 	@(if [ -d PC/FLEKS   ]; then echo "    test23                      (run GM-PC/FLEKS test: Periodic 2D/3D FastWave with AMR PIC)"; fi)
+	@(if [ -d PC/FLEKS   ]; then echo "    test25                      (run PC/FLEKS test: Periodic 3D Light wave with AMR PIC)"; fi)
 	@echo "    test_check                  (collect test results into test_swmf.res)"
 
 # Nothing should be done parallel in this Makefile
