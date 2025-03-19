@@ -125,10 +125,6 @@ P			NameVar
 
 USERINPUTEND -------------------------------------
 
-SHOCKPOSITION
-0.0			ShockPosition
-4/3			ShockSlope
-
 #GRID
 8			nRootBlock1
 4			nRootBlock2
@@ -150,24 +146,12 @@ SHOCKPOSITION
  32			xMaxPic
 -32.0			yMinPic
  32.0			yMaxPic
- 1.0/1.0		DxPic
- 1.0/1.0		DyPic
+ 1.0		DxPic
+ 1.0		DyPic
 
 #PICPATCH
-8			PatchSize
+4			PatchSize
 
-1.25/3			DxPic
-1.25/3			DyPic
-5			xMinPic
-25.1			xMaxPic
--20.0			yMinPic
- 20.0			yMaxPic
-1.25/3			DxPic
-1.25/3			DyPic
-
-PICADAPT
-T			UseAdaptivePic
-F			DoAdaptPic
 
 #OUTERBOUNDARY
 periodic		TypeBc1
@@ -224,10 +208,6 @@ T			isPeriodicX
 T			isPeriodicY
 T			isPeriodicZ
 
-EFIELDSOLVER
-1e-13			EFieldTol
-200			EFieldIter
-
 #DISCRETIZATION
 0.51			theta
 0.1			ratioDivC2C
@@ -260,8 +240,8 @@ box			shape
 16.0			xMaxBox
 -16.0			yMinBox
 16.0			yMaxBox
-0.0			zMinBox
-0.0			zMaxBox
+0.0       zMinBox
+0.0       zMaxBox
 
 #REFINEREGION
 0			refineLev
@@ -272,9 +252,6 @@ box			shape
 
 #RESAMPLING
 F			doReSampling
-
-#RANDOMPARTICLESLOCATION
-T			isParticleLocationRandom
 
 #CONSTANTPPV
 T			isPPVconstant

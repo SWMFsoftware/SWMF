@@ -4,7 +4,7 @@ GM  0 -1  1		CompMap
 PC  0 -1  1		CompMap
 
 #DESCRIPTION
-Param/PARAM.in.test.GMPC.FLEKS.AMR.FASTWAVE.2D.: FastWave in periodic PIC with adaptive mesh refinement		StringDescription
+Param/PARAM.in.test.GMPC.FLEKS.AMR.FASTWAVE.3D.: FastWave in periodic PIC with adaptive mesh refinement		StringDescription
 
 #PLANET
 NONE			NamePlanet
@@ -135,9 +135,6 @@ USERINPUTEND -------------------------------------
  160			yMax
 -160			zMin
  160			zMax
- 0.5
- 0.5
- 0.5
 
 #PICUNIT
 1			xUnitPicSi [m]
@@ -149,31 +146,22 @@ USERINPUTEND -------------------------------------
  32			xMaxPic
 -32.0			yMinPic
  32.0			yMaxPic
- -2.0
- 2.0
- 1.0/1.0		DxPic
- 1.0/1.0		DyPic
- 1.0/1.0
+ -2.0			zMinPic
+ 2.0			zMaxPic
+ 1.0	  	DxPic
+ 1.0	  	DyPic
+ 1.0	  	DzPic
 
 #PICPATCH
 4			PatchSize
-1.25/3			DxPic
-1.25/3			DyPic
-5			xMinPic
-25.1			xMaxPic
--20.0			yMinPic
- 20.0			yMaxPic
-1.25/3			DxPic
-1.25/3			DyPic
-
 
 #OUTERBOUNDARY
 periodic		TypeBc1
 periodic		TypeBc2
 periodic		TypeBc3
 periodic		TypeBc4
-periodic    TypeBc5
-periodic    TypeBc6
+periodic		TypeBc5
+periodic		TypeBc6
 
 #TEST
 init_hall_resist		StringTest
@@ -224,11 +212,12 @@ T			isPeriodicX
 T			isPeriodicY
 T			isPeriodicZ
 
-
 #DISCRETIZATION
 0.51			theta
 0.1			ratioDivC2C
 
+#MONITOR
+1			dnReport
 
 #DIVE
 F			doCorrectDivE
@@ -238,7 +227,7 @@ F			doCorrectDivE
 
 #PARTICLES
 10			nParticleX per cell in X Region 1
-10		nParticleY per cell in Y Region 1
+10			nParticleY per cell in Y Region 1
 10			nParticleZ per cell in Z Region 1
 
 
