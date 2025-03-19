@@ -2729,6 +2729,47 @@ test24_compile:
 test24_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
+
+
+### test25: PC/FLEKS. 3D Light wave test with AMR-PC.
+###         FLEKS runs with periodic boundary conditions. 
+
+test25:
+	@echo "test25_compile..." > test25_gmpc.diff
+	$(MAKE) test25_compile
+	@echo "test25_rundir..." > test25_gmpc.diff
+	$(MAKE) test25_rundir
+	@echo "test25_run..." > test25_gmpc.diff
+	$(MAKE) test25_run
+	@echo "test25_check..." > test25_gmpc.diff
+	$(MAKE) test25_check
+
+test25_compile:
+	./Config.pl -v=Empty,PC/FLEKS,GM/BATSRUS -amrex3d
+	./Config.pl -o=GM:u=Default,e=MhdAnisoP,ng=2,g=8,8,8 -o=PC:lev=9
+	$(MAKE) SWMF
+	$(MAKE) PIDL
+	
+test25_rundir:
+	rm -rf ${TESTDIR}
+	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR}
+	cp Param/PARAM.in.test.FLEKS.AMR.LightWave.3D  ${TESTDIR}/PARAM.in
+	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
+
+test25_run:
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl RESULTS/
+
+test25_check:
+	-@(${DIFFNUM} -b -a=1e-9 -r=1e-5 \
+	   ${TESTDIR}/RESULTS/PC/z=0*250.out \
+	   output/test25/z=0.ref.gz \
+		> test25_gmpc.diff)
+	-@(${DIFFNUM} -b -a=1e-11 -r=1e-11 \
+	   ${TESTDIR}/RESULTS/PC/log_pic_n00000000.log \
+	   output/test25/PC.log \
+		>> test25_gmpc.diff)	
+	ls -l test25_gmpc.diff
 	
 ### test_ramscb: GM+IE+IM/RAMSCB ###
 
