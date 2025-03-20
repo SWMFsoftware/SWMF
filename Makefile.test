@@ -1889,6 +1889,9 @@ test12_compile:
 	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
 	./Config.pl -o=SC:u=Awsom,e=Awsom,ng=2,g=6,8,8
 	./Config.pl -o=IH:u=Awsom,e=Awsom,ng=2,g=8,8,8
+	./Config.pl ${OPENACC}
+	./Config.pl -o=SC:opt=${DIR}/Param/PARAM.in.test.start.SCIH_gpu
+	./Config.pl -o=IH:opt=${DIR}/Param/PARAM.in.test.start.SCIH_gpu
 	${MAKE} SWMF
 	make PIDL
 	
