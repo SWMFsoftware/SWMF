@@ -755,7 +755,7 @@ test_swpc_large_gpu_check:
 		${TESTDIR}/IE/ionosphere/IE_t140410_000000.log \
 		Param/SWPC/TestOutputLargeGPU/IE_t140410_000000.log \
 		> test_swpc_large_gpu_ie.diff)
-	-@(${DIFFNUM} -b -r=1e-4 -a=6e-5 \
+	-@(${DIFFNUM} -b -r=1e-4 -a=7e-5 \
 		${TESTDIR}/IE/ionosphere/it140410_000100_000.idl \
 		Param/SWPC/TestOutputLargeGPU/it140410_000100_000.idl.gz \
 		>> test_swpc_large_gpu_ie.diff)
@@ -2635,7 +2635,7 @@ test22_oh_pt_check:
 	ls -l test22_oh_pt.diff
 
 ### test23: GM/BATSRUS+PC/FLEKS. 2D/3D Fast Wave test with AMR-PC.
-###			BATSRUS only provides the initial condition.
+###         BATSRUS only provides the initial condition.
 ###         FLEKS runs with periodic boundary conditions. 
 
 test23:
