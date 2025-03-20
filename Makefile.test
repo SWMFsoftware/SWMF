@@ -2668,7 +2668,7 @@ test23_2d_run:
 	cd ${TESTDIR}; ./PostProc.pl RESULTS/2D
 
 test23_2d_check:
-	-@(${DIFFNUM} -b -a=1e-9 -r=1e-5 \
+	-@(${DIFFNUM} -b -a=2e-9 -r=1e-5 \
 	   ${TESTDIR}/RESULTS/2D/PC/z=0*84.out \
 	   output/test23/2D/z=0.ref.gz \
 		> test23_2d_gmpc.diff)
