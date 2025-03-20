@@ -4,7 +4,7 @@ GM  0 -1  1		CompMap
 PC  0 -1  1		CompMap
 
 #DESCRIPTION
-Param/PARAM.in.test.GMPC.FLEKS.AMR.FASTWAVE.2D.: FastWave in periodic PIC with adaptive mesh refinement		StringDescription
+Param/PARAM.in.test.GMPC.FLEKS.AMR.FASTWAVE.2D: FastWave in periodic PIC with adaptive mesh refinement		StringDescription
 
 #PLANET
 NONE			NamePlanet
@@ -146,12 +146,11 @@ USERINPUTEND -------------------------------------
  32			xMaxPic
 -32.0			yMinPic
  32.0			yMaxPic
- 1.0		DxPic
- 1.0		DyPic
+ 1.0			DxPic
+ 1.0			DyPic
 
 #PICPATCH
 4			PatchSize
-
 
 #OUTERBOUNDARY
 periodic		TypeBc1

@@ -4,7 +4,7 @@ GM  0 -1  1		CompMap
 PC  0 -1  1		CompMap
 
 #DESCRIPTION
-Param/PARAM.in.test.GMPC.FLEKS.AMR.FASTWAVE.3D.: FastWave in periodic PIC with adaptive mesh refinement		StringDescription
+Param/PARAM.in.test.GMPC.FLEKS.AMR.FASTWAVE.3D: FastWave in periodic PIC with adaptive mesh refinement		StringDescription
 
 #PLANET
 NONE			NamePlanet
@@ -148,9 +148,9 @@ USERINPUTEND -------------------------------------
  32.0			yMaxPic
  -2.0			zMinPic
  2.0			zMaxPic
- 1.0	  	DxPic
- 1.0	  	DyPic
- 1.0	  	DzPic
+ 1.0			DxPic
+ 1.0			DyPic
+ 1.0			DzPic
 
 #PICPATCH
 4			PatchSize
@@ -230,14 +230,12 @@ F			doCorrectDivE
 10			nParticleY per cell in Y Region 1
 10			nParticleZ per cell in Z Region 1
 
-
 #SAVEPLOT
 1			nPlotFile
 z=0 fluid ascii si		StringPlot
 -1			DnSavePlot
 10			DtSavePlot
 -1			DxSavePlot
-
 
 #REGION
 region1			regionName
