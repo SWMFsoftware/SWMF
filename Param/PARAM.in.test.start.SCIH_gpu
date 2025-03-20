@@ -571,7 +571,7 @@ VAR			StringLog
 rho mx my mz p pmin urmin urmax		NameLogVars
 
 #SAVEPLOT
-4			nPlotFile
+3			nPlotFile
 x=0 VAR idl_ascii		StringPlot
 10			DnSavePlot
 -1.			DtSavePlot
@@ -590,6 +590,7 @@ z=0 VAR idl_ascii		StringPlot
 -1.0			DxSavePlot
 {MHD} b1x b1y b1z te ti dx		NameVars
 {default}		NamePars
+
 shl VAR idl		StringPlot
 10			DnSavePlot
 -1.			DtSavePlot
