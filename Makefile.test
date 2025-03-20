@@ -124,8 +124,8 @@ test_swmf:
 	-@(if [ -d PT/FLEKS   ]; then ${MAKE} test20 TESTDIR=run_test20; fi)
 	-@(if [ -d PT/FLEKS   ]; then ${MAKE} test21 TESTDIR=run_test21; fi)
 	-@(if [ -d PT/FLEKS   ]; then ${MAKE} test22 TESTDIR=run_test22; fi)
-	-@(if [ -d PT/FLEKS   ]; then ${MAKE} test23 TESTDIR=run_test23; fi)
-	-@(if [ -d PT/FLEKS   ]; then ${MAKE} test25 TESTDIR=run_test25; fi)
+	-@(if [ -d PC/FLEKS   ]; then ${MAKE} test23 TESTDIR=run_test23; fi)
+	-@(if [ -d PC/FLEKS   ]; then ${MAKE} test25 TESTDIR=run_test25; fi)
 	./Config.pl -noamrex
 
 # Setting BLESS=YES or Y will copy the solution into the reference solution
