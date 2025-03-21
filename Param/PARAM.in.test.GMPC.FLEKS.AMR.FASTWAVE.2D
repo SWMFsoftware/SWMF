@@ -239,8 +239,8 @@ box			shape
 16.0			xMaxBox
 -16.0			yMinBox
 16.0			yMaxBox
-0.0       zMinBox
-0.0       zMaxBox
+0.0			zMinBox
+0.0			zMaxBox
 
 #REFINEREGION
 0			refineLev
