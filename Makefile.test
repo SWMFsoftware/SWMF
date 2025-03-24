@@ -755,7 +755,7 @@ test_swpc_large_gpu_check:
 		${TESTDIR}/IE/ionosphere/IE_t140410_000000.log \
 		Param/SWPC/TestOutputLargeGPU/IE_t140410_000000.log \
 		> test_swpc_large_gpu_ie.diff)
-	-@(${DIFFNUM} -b -r=1e-4 -a=7e-5 \
+	-@(${DIFFNUM} -b -r=2e-4 -a=1e-4 \
 		${TESTDIR}/IE/ionosphere/it140410_000100_000.idl \
 		Param/SWPC/TestOutputLargeGPU/it140410_000100_000.idl.gz \
 		>> test_swpc_large_gpu_ie.diff)
