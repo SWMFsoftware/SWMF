@@ -103,7 +103,7 @@ F			DoRun
 #TRACESHOCK
 F			DoTraceShock
 
-#DIFFUSION
+#DIFFUSIONPARA
 F			UseDiffusion
 
 #ORIGIN
