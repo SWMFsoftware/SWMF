@@ -43,30 +43,33 @@ test_help:
 	@(if [ -d PW/PWOM    ]; then echo "    test_swpc_pwom              (run GM-IE-RCM2-PWOM SWPC test)"; fi)
 	@(if [ -d PW/PWOM    ]; then echo "    test_swpc_pwom_species      (run multispecies GM-IE-RCM2-PWOM SWPC test)"; fi)
 	@(if [ -d PW/PWOM    ]; then echo "    test_swpc_cimi_pwom_species (run multispecies GM-IE-CIMI-PWOM SWPC test)"; fi)
-	@(if [ -d PC/FLEKS   ]; then echo "    test_swpc_aepic             (run MHD-AEPIC GM-IE-RCM2-PC SWPC test)"; fi)	
+	@(if [ -d PC/FLEKS   ]; then echo "    test_swpc_aepic             (run MHD-AEPIC GM-IE-RCM2-PC SWPC test)"; fi)
 	@(if [ -d PW/PWOM    ]; then echo "    test1                       (run GM-IE-PWOM test)"; fi)
 	@(if [ -d UA/GITM    ]; then echo "    test3                       (run GM-IE-IM-UA test)"; fi)
 	@(if [ -d IM/HEIDI   ]; then echo "    test4                       (run GM-IE-HEIDI test)"; fi)
 	@(if [ -d GM/BATSRUS ]; then echo "    test5                       (run EE-SC test)"; fi)
 	@(if [ -d GM/BATSRUS ]; then echo "    test6                       (run SC-IH coupling test: stream-aligned)"; fi)
 	@(if [ -d GM/BATSRUS ]; then echo "    test7                       (run IH-OH test)"; fi)
-	@(if [ -d GM/BATSRUS ]; then echo "    test8                       (run SC-IH coupling test with AWSoM-R)"; fi)
-	@(if [ -d GM/BATSRUS ]; then echo "    test9                       (run SC-IH coupling test with AWSoM)"; fi)
-	@(if [ -d GM/BATSRUS ]; then echo "    test10                      (run SC-IH like in a real-time)"; fi)
+	@(if [ -d GM/BATSRUS ]; then echo "    test8                       (run SC-IH AWSoM-R test)"; fi)
+	@(if [ -d GM/BATSRUS ]; then echo "    test9                       (run SC-IH AWSoM test)"; fi)
+	@(if [ -d GM/BATSRUS ]; then echo "    test9_gpu                   (run SC-IH AWSoM test on GPU)"; fi)
+	@(if [ -d GM/BATSRUS ]; then echo "    test10                      (run SC-IH real-time test)"; fi)
 	@(if [ -d GM/BATSRUS ]; then echo "    test11                      (run SC-GM coupling test)"; fi)
 	@(if [ -d PT/AMPS    ]; then echo "    test13                      (run GM-PT/AMPS test: Europa)"; fi)
-	@(if [ -d PT/PARMISAN ]; then echo "    test14                      (run SC-IH-PT/PARMISAN test)"; fi)
+	@(if [ -d PT/PARMISAN ];then echo "    test14                      (run SC-IH-PT/PARMISAN test)"; fi)
 	@(if [ -d SP/MFLAMPA ]; then echo "    test15                      (run SC-IH-SP/MFLAMPA test)"; fi)
 	@(if [ -d SP/MFLAMPA ]; then echo "    test15_build                (configure SC-IH-SP/MFLAMPA, run test15)"; fi)
-	@(if [ -d PC/FLEKS   ]; then echo "    test16                      (run GM-PC/FLEKS test: periodic FLEKS)"; fi)
+	@(if [ -d PC/FLEKS   ]; then echo "    test16_2d                   (run GM-PC/FLEKS test in 2D)"; fi)
+	@(if [ -d PC/FLEKS   ]; then echo "    test16_3d                   (run GM-PC/FLEKS test in 3D)"; fi)
 	@(if [ -d PC/FLEKS   ]; then echo "    test17                      (run GM-PC/FLEKS test: 2D Alfven wave)"; fi)
 	@(if [ -d PC/FLEKS   ]; then echo "    test18                      (run GM-PC/FLEKS test: 3D reconnection)"; fi)
-	@(if [ -d SP/MFLAMPA ]; then echo "    test19			   (run SC-IH-OH-SP/MFLAMPA test)"; fi)
+	@(if [ -d SP/MFLAMPA ]; then echo "    test19                      (run SC-IH-OH-SP/MFLAMPA test)"; fi)
 	@(if [ -d PT/FLEKS   ]; then echo "    test20                      (run OH-PT/FLEKS test: shocktube)"; fi)
 	@(if [ -d PT/FLEKS   ]; then echo "    test21                      (run OH-PT/FLEKS test: OuterHelio)"; fi)
 	@(if [ -d PT/FLEKS   ]; then echo "    test22                      (run OH-PT/FLEKS test: OuterHelio)"; fi)
-	@(if [ -d PC/FLEKS   ]; then echo "    test23                      (run GM-PC/FLEKS test: Periodic 2D/3D FastWave with AMR PIC)"; fi)
-	@(if [ -d PC/FLEKS   ]; then echo "    test25                      (run PC/FLEKS test: Periodic 3D Light wave with AMR PIC)"; fi)
+	@(if [ -d PC/FLEKS   ]; then echo "    test23_2d                   (run GM-PC/FLEKS test: 2D fast wave with AMR PIC)"; fi)
+	@(if [ -d PC/FLEKS   ]; then echo "    test23_3d                   (run GM-PC/FLEKS test: 3D fast wave with AMR PIC)"; fi)
+	@(if [ -d PC/FLEKS   ]; then echo "    test25                      (run PC/FLEKS test: 3D light wave with AMR PIC)"; fi)
 	@echo "    test_check                  (collect test results into test_swmf.res)"
 
 # Nothing should be done parallel in this Makefile
@@ -88,6 +91,7 @@ test_gpu:
 	@rm -f *.diff
 	-@(${MAKE} test_swpc_gpu TESTDIR=run_test_swpc_gpu)
 	-@(${MAKE} test_swpc_large_gpu TESTDIR=run_test_swpc_large_gpu)
+	-@(${MAKE} test9_gpu TESTDIR=run_test9_gpu)
 	-@(cd GM/BATSRUS; ${MAKE} test_gpu)
 	-@(${MAKE} test_check)
 
@@ -117,14 +121,16 @@ test_swmf:
 	-@(if [ -d PT/AMPSXXX ]; then ${MAKE} test13 TESTDIR=run_test13; fi)
 	-@(if [ -d SP/MFLAMPA ]; then ${MAKE} test15 TESTDIR=run_test15; fi)
 	-@(if [ -d SP/MFLAMPA ]; then ${MAKE} test19 TESTDIR=run_test19; fi)
-	-@(if [ -d PC/FLEKS   ]; then ${MAKE} test16 TESTDIR=run_test16; fi)
+	-@(if [ -d PC/FLEKS   ]; then ${MAKE} test16_2d TESTDIR=run_test16_2d; fi)
+	-@(if [ -d PC/FLEKS   ]; then ${MAKE} test16_3d TESTDIR=run_test16_3d; fi)
 	-@(if [ -d PC/FLEKS   ]; then ${MAKE} test17 TESTDIR=run_test17; fi)
 	-@(if [ -d PC/FLEKS   ]; then ${MAKE} test18 TESTDIR=run_test18; fi)
 	-@(if [ -d PC/FLEKS   ]; then ${MAKE} test_swpc_aepic TESTDIR=run_test_swpc_aepic; fi)
 	-@(if [ -d PT/FLEKS   ]; then ${MAKE} test20 TESTDIR=run_test20; fi)
 	-@(if [ -d PT/FLEKS   ]; then ${MAKE} test21 TESTDIR=run_test21; fi)
 	-@(if [ -d PT/FLEKS   ]; then ${MAKE} test22 TESTDIR=run_test22; fi)
-	-@(if [ -d PC/FLEKS   ]; then ${MAKE} test23 TESTDIR=run_test23; fi)
+	-@(if [ -d PC/FLEKS   ]; then ${MAKE} test23_2d TESTDIR=run_test23_2d; fi)
+	-@(if [ -d PC/FLEKS   ]; then ${MAKE} test23_3d TESTDIR=run_test23_3d; fi)
 	-@(if [ -d PC/FLEKS   ]; then ${MAKE} test25 TESTDIR=run_test25; fi)
 	./Config.pl -noamrex
 
@@ -1872,21 +1878,21 @@ test11_check:
 		     > test11_gm.diff)
 	ls -l test11_*.diff
 
-### test12: SC + IH on GPU ###
+### test9_gpu: SC/AWSOM + IH/AWSOM on GPU ###
 
-test12:
-	@echo "test12_compile..." > test12_sc_gpu.diff
-	${MAKE} test12_compile
-	@echo "test12_rundir..." >> test12_sc_gpu.diff
-	${MAKE} test12_rundir
-	@echo "test12_run..." >> test12_sc_gpu.diff
-	${MAKE} test12_run
-	#${MAKE} test12_cme
-	#${MAKE} test12_restart
-	@echo "test12_check..." >> test12_sc_gpu.diff
-	${MAKE} test12_check
+test9_gpu:
+	@echo "test9_gpu_compile..." > test09_sc_gpu.diff
+	${MAKE} test9_gpu_compile
+	@echo "test9_gpu_rundir..." >> test09_sc_gpu.diff
+	${MAKE} test9_gpu_rundir
+	@echo "test9_gpu_run..." >> test09_sc_gpu.diff
+	${MAKE} test9_gpu_run
+	#${MAKE} test9_gpu_cme
+	#${MAKE} test9_gpu_restart
+	@echo "test9_gpu_check..." >> test09_sc_gpu.diff
+	${MAKE} test9_gpu_check
 
-test12_compile:
+test9_gpu_compile:
 	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
 	./Config.pl -o=SC:u=Awsom,e=Awsom,ng=2,g=6,8,8
 	./Config.pl -o=IH:u=Awsom,e=Awsom,ng=2,g=8,8,8
@@ -1896,18 +1902,18 @@ test12_compile:
 	${MAKE} SWMF
 	make PIDL
 	
-test12_rundir:
+test9_gpu_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/PARAM.in.test.start.SCIH_gpu ${TESTDIR}/PARAM.in
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
 
-test12_run:
+test9_gpu_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl -m RESULTS/run_start
 	cd ${TESTDIR}; ./Restart.pl -i RESULTS/run_start/RESTART
 
-test12_cme:
+test9_gpu_cme:
 	cd ${TESTDIR}; mv PARAM.in PARAM.in_start; rm -f PARAM.in_orig_
 	cd ${TESTDIR}; cp Param/PARAM.in.test.cme.SCIH_gpu PARAM.in
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
@@ -1917,24 +1923,23 @@ test12_cme:
 	   RESULTS/run_cme/RESTART/
 	cd ${TESTDIR}; ./Restart.pl -i RESULTS/run_cme/RESTART
 
-test12_restart:
+test9_gpu_restart:
 	cd ${TESTDIR}; mv PARAM.in PARAM.in_cme; rm -f PARAM.in_orig_
 	cd ${TESTDIR}; cp Param/PARAM.in.test.restart.SCIH_gpu PARAM.in
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl -m RESULTS/run_restart
 
-test12_check:
+test9_gpu_check:
 	-(${DIFFNUM} -b -r=1e-5 -a=1e-27 \
 		${TESTDIR}/RESULTS/run_start/SC/log_n000001.log \
-		output/test12/SC_log_n000001.log \
-		> test12_sc_gpu.diff)
+		output/test9_gpu/SC_log_n000001.log \
+		> test09_sc_gpu.diff)
 	-(${DIFFNUM} -b -r=1e-5 \
 		${TESTDIR}/RESULTS/run_start/IH/log_n000001.log \
-		output/test12/IH_log_n000001.log \
-		> test12_ih_gpu.diff)
-	ls -l test12_*_gpu.diff
-
+		output/test9_gpu/IH_log_n000001.log \
+		> test09_ih_gpu.diff)
+	ls -l test09_*_gpu.diff
 
 ### test13: Europa's exosphere model with GM and PT ###
 
@@ -2116,12 +2121,7 @@ test_sp_check:
 	ls -l test_sp.diff
 
 
-### test16: 2D/3D GM/BATSRUS+PC/FLEKS. BATSRUS only provides the initial condition.
-###         FLEKS runs with periodic boundary conditions. 
-
-test16:
-	$(MAKE) test16_3d
-	$(MAKE) test16_2d
+### test16_3d: GM/BATSRUS+PC/FLEKS. BATSRUS only provides initial conditions.
 
 test16_3d:
 	@echo "test16_3d_compile..." > test16_3d_gmpc.diff
@@ -2164,6 +2164,7 @@ test16_3d_check:
 		>> test16_3d_gmpc.diff)		
 	ls -l test16_3d_gmpc.diff
 
+### test16_2d: GM/BATSRUS+PC/FLEKS. BATSRUS only provides initial conditions.
 
 test16_2d:
 	@echo "test16_2d_compile..." > test16_2d_gmpc.diff
@@ -2634,13 +2635,7 @@ test22_oh_pt_check:
 		>> test22_oh_pt.diff)		
 	ls -l test22_oh_pt.diff
 
-### test23: GM/BATSRUS+PC/FLEKS. 2D/3D Fast Wave test with AMR-PC.
-###         BATSRUS only provides the initial condition.
-###         FLEKS runs with periodic boundary conditions. 
-
-test23:
-	$(MAKE) test23_2d
-	$(MAKE) test23_3d
+### 2D fast wave test with AMR-PIC. BATSRUS only provides initial conditions.
 
 test23_2d:
 	@echo "test23_2d_compile..." > test23_2d_gmpc.diff
@@ -2678,6 +2673,8 @@ test23_2d_check:
 	   output/test23/2D/PC.log \
 		>> test23_2d_gmpc.diff)	
 	ls -l test23_2d_gmpc.diff
+
+### 3D fast wave test with AMR-PIC. BATSRUS only provides initial conditions.
 
 test23_3d:
 	@echo "test23_3d_compile..." > test23_3d_gmpc.diff
