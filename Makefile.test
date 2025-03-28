@@ -91,7 +91,7 @@ test_gpu:
 	@rm -f *.diff
 	-@(${MAKE} test_swpc_gpu TESTDIR=run_test_swpc_gpu)
 	-@(${MAKE} test_swpc_large_gpu TESTDIR=run_test_swpc_large_gpu)
-	-@(${MAKE} test9_gpu TESTDIR=run_test9_gpu)
+	-@(${MAKE} test9_gpu TESTDIR=run_test09_gpu)
 	-@(cd GM/BATSRUS; ${MAKE} test_gpu)
 	-@(${MAKE} test_check)
 
@@ -117,8 +117,9 @@ test_swmf:
 	-@(if [ -d GM/BATSRUS ]; then ${MAKE} test7 TESTDIR=run_test07; fi)
 	-@(if [ -d GM/BATSRUS ]; then ${MAKE} test8 TESTDIR=run_test08; fi)
 	-@(if [ -d GM/BATSRUS ]; then ${MAKE} test9 TESTDIR=run_test09; fi)
+	-@(if [ -d GM/BATSRUS ]; then ${MAKE} test9_gpu TESTDIR=run_test09_gpu; fi)
 	-@(if [ -d GM/BATSRUS ]; then ${MAKE} test11 TESTDIR=run_test11; fi)
-	-@(if [ -d PT/AMPSXXX ]; then ${MAKE} test13 TESTDIR=run_test13; fi)
+	-@(if [ -d PT/AMPS ];    then ${MAKE} test13 TESTDIR=run_test13; fi)
 	-@(if [ -d SP/MFLAMPA ]; then ${MAKE} test15 TESTDIR=run_test15; fi)
 	-@(if [ -d SP/MFLAMPA ]; then ${MAKE} test19 TESTDIR=run_test19; fi)
 	-@(if [ -d PC/FLEKS   ]; then ${MAKE} test16_2d TESTDIR=run_test16_2d; fi)
@@ -1881,15 +1882,15 @@ test11_check:
 ### test9_gpu: SC/AWSOM + IH/AWSOM on GPU ###
 
 test9_gpu:
-	@echo "test9_gpu_compile..." > test09_sc_gpu.diff
+	@echo "test9_gpu_compile..." > test09_gpu_sc.diff
 	${MAKE} test9_gpu_compile
-	@echo "test9_gpu_rundir..." >> test09_sc_gpu.diff
+	@echo "test9_gpu_rundir..." >> test09_gpu_sc.diff
 	${MAKE} test9_gpu_rundir
-	@echo "test9_gpu_run..." >> test09_sc_gpu.diff
+	@echo "test9_gpu_run..." >> test09_gpu_sc.diff
 	${MAKE} test9_gpu_run
 	#${MAKE} test9_gpu_cme
 	#${MAKE} test9_gpu_restart
-	@echo "test9_gpu_check..." >> test09_sc_gpu.diff
+	@echo "test9_gpu_check..." >> test09_gpu_sc.diff
 	${MAKE} test9_gpu_check
 
 test9_gpu_compile:
@@ -1934,12 +1935,12 @@ test9_gpu_check:
 	-(${DIFFNUM} -b -r=1e-5 -a=1e-27 \
 		${TESTDIR}/RESULTS/run_start/SC/log_n000001.log \
 		output/test9_gpu/SC_log_n000001.log \
-		> test09_sc_gpu.diff)
+		> test09_gpu_sc.diff)
 	-(${DIFFNUM} -b -r=1e-5 \
 		${TESTDIR}/RESULTS/run_start/IH/log_n000001.log \
 		output/test9_gpu/IH_log_n000001.log \
-		> test09_ih_gpu.diff)
-	ls -l test09_*_gpu.diff
+		> test09_gpu_ih.diff)
+	ls -l test09_gpu_*.diff
 
 ### test13: Europa's exosphere model with GM and PT ###
 
