@@ -38,6 +38,17 @@ F			DoCoupleOnTime
 #NORMALIZATION
 NONE			TypeNormalization
 
+#UNIFORMSTATE
+1.0			StateVar
+0.0			StateVar
+0.0			StateVar
+0.0			StateVar
+0.0			StateVar
+0.04			StateVar
+0.0			StateVar
+4.5e-4			StateVar
+4.5e-4			StateVar
+
 #GRID
 1			nRootBlock1
 1			nRootBlock2
