@@ -52,7 +52,7 @@ test_help:
 	@(if [ -d GM/BATSRUS ]; then echo "    test7                       (run IH-OH test)"; fi)
 	@(if [ -d GM/BATSRUS ]; then echo "    test8                       (run SC-IH AWSoM-R test)"; fi)
 	@(if [ -d GM/BATSRUS ]; then echo "    test9                       (run SC-IH AWSoM test)"; fi)
-	@(if [ -d GM/BATSRUS ]; then echo "    test9_gpu                   (run SC-IH AWSoM test on GPU)"; fi)
+	@(if [ -d GM/BATSRUS ]; then echo "    test9gpu                    (run SC-IH AWSoM test on GPU)"; fi)
 	@(if [ -d GM/BATSRUS ]; then echo "    test10                      (run SC-IH real-time test)"; fi)
 	@(if [ -d GM/BATSRUS ]; then echo "    test11                      (run SC-GM coupling test)"; fi)
 	@(if [ -d PT/AMPS    ]; then echo "    test13                      (run GM-PT/AMPS test: Europa)"; fi)
@@ -91,7 +91,7 @@ test_gpu:
 	@rm -f *.diff
 	-@(${MAKE} test_swpc_gpu TESTDIR=run_test_swpc_gpu)
 	-@(${MAKE} test_swpc_large_gpu TESTDIR=run_test_swpc_large_gpu)
-	-@(${MAKE} test9_gpu TESTDIR=run_test09_gpu)
+	-@(${MAKE} test9gpu TESTDIR=run_test09gpu)
 	-@(cd GM/BATSRUS; ${MAKE} test_gpu)
 	-@(${MAKE} test_check)
 
@@ -116,7 +116,7 @@ test_swmf:
 	-@(if [ -d GM/BATSRUS ]; then ${MAKE} test7 TESTDIR=run_test07; fi)
 	-@(if [ -d GM/BATSRUS ]; then ${MAKE} test8 TESTDIR=run_test08; fi)
 	-@(if [ -d GM/BATSRUS ]; then ${MAKE} test9 TESTDIR=run_test09; fi)
-	-@(if [ -d GM/BATSRUS ]; then ${MAKE} test9_gpu TESTDIR=run_test09_gpu; fi)
+	-@(if [ -d GM/BATSRUS ]; then ${MAKE} test9gpu TESTDIR=run_test09gpu; fi)
 	-@(if [ -d GM/BATSRUS ]; then ${MAKE} test11 TESTDIR=run_test11; fi)
 	-@(if [ -d PT/AMPS ];    then ${MAKE} test13 TESTDIR=run_test13; fi)
 	-@(if [ -d SP/MFLAMPA ]; then ${MAKE} test15 TESTDIR=run_test15; fi)
@@ -1878,21 +1878,21 @@ test11_check:
 		     > test11_gm.diff)
 	ls -l test11_*.diff
 
-### test9_gpu: SC/AWSOM + IH/AWSOM on GPU ###
+### test9gpu: SC/AWSOM + IH/AWSOM on GPU ###
 
-test9_gpu:
-	@echo "test9_gpu_compile..." > test09_gpu_sc.diff
-	${MAKE} test9_gpu_compile
-	@echo "test9_gpu_rundir..." >> test09_gpu_sc.diff
-	${MAKE} test9_gpu_rundir
-	@echo "test9_gpu_run..." >> test09_gpu_sc.diff
-	${MAKE} test9_gpu_run
-	#${MAKE} test9_gpu_cme
-	#${MAKE} test9_gpu_restart
-	@echo "test9_gpu_check..." >> test09_gpu_sc.diff
-	${MAKE} test9_gpu_check
+test9gpu:
+	@echo "test9gpu_compile..." > test09gpu_sc.diff
+	${MAKE} test9gpu_compile
+	@echo "test9gpu_rundir..." >> test09gpu_sc.diff
+	${MAKE} test9gpu_rundir
+	@echo "test9gpu_run..." >> test09gpu_sc.diff
+	${MAKE} test9gpu_run
+	${MAKE} test9gpu_cme
+	#${MAKE} test9gpu_restart
+	@echo "test9gpu_check..." >> test09gpu_sc.diff
+	${MAKE} test9gpu_check
 
-test9_gpu_compile:
+test9gpu_compile:
 	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
 	./Config.pl -o=SC:u=Awsom,e=Awsom,ng=2,g=6,8,8
 	./Config.pl -o=IH:u=Awsom,e=Awsom,ng=2,g=8,8,8
@@ -1902,44 +1902,49 @@ test9_gpu_compile:
 	${MAKE} SWMF
 	make PIDL
 	
-test9_gpu_rundir:
+test9gpu_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/PARAM.in.test.start.SCIH_gpu ${TESTDIR}/PARAM.in
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
 
-test9_gpu_run:
+test9gpu_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl -m RESULTS/run_start
 	cd ${TESTDIR}; ./Restart.pl -i RESULTS/run_start/RESTART
 
-test9_gpu_cme:
+test9gpu_cme:
 	cd ${TESTDIR}; mv PARAM.in PARAM.in_start; rm -f PARAM.in_orig_
 	cd ${TESTDIR}; cp Param/PARAM.in.test.cme.SCIH_gpu PARAM.in
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
+	./Config.pl -o=SC:opt=${DIR}/${TESTDIR}/PARAM.in
+	${MAKE} SWMF
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl RESULTS/run_cme
-	cd ${TESTDIR}; cp -r RESULTS/run_start/RESTART/IH \
-	   RESULTS/run_cme/RESTART/
+	cd ${TESTDIR}; cp -r RESULTS/run_start/RESTART/IH RESULTS/run_cme/RESTART/
 	cd ${TESTDIR}; ./Restart.pl -i RESULTS/run_cme/RESTART
 
-test9_gpu_restart:
+test9gpu_restart:
 	cd ${TESTDIR}; mv PARAM.in PARAM.in_cme; rm -f PARAM.in_orig_
 	cd ${TESTDIR}; cp Param/PARAM.in.test.restart.SCIH_gpu PARAM.in
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl -m RESULTS/run_restart
 
-test9_gpu_check:
+test9gpu_check:
 	-(${DIFFNUM} -b -r=1e-5 -a=1e-27 \
 		${TESTDIR}/RESULTS/run_start/SC/log_n000001.log \
-		output/test9_gpu/SC_log_n000001.log \
-		> test09_gpu_sc.diff)
+		output/test9gpu/SC_log_n000001.log \
+		> test09gpu_sc.diff)
 	-(${DIFFNUM} -b -r=1e-5 \
 		${TESTDIR}/RESULTS/run_start/IH/log_n000001.log \
-		output/test9_gpu/IH_log_n000001.log \
-		> test09_gpu_ih.diff)
-	ls -l test09_gpu_*.diff
+		output/test9gpu/IH_log_n000001.log \
+		> test09gpu_ih.diff)
+	-(${DIFFNUM} -b -r=1e-5 -a=1e-27 \
+		${TESTDIR}/RESULTS/run_cme/SC/log_n000010.log \
+		output/test9gpu/SC_log_n000010.log \
+		> test09gpu_sc_cme.diff)
+	ls -l test09gpu_*.diff
 
 ### test13: Europa's exosphere model with GM and PT ###
 
