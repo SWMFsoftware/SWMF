@@ -272,7 +272,7 @@ soho:c2 soho:c3 sta:cor1 sta:cor2 stb:cor1 stb:cor2		StringsInstrument
 {MHD} b1x b1y b1z te ti		NameVars
 {default}		NamePars
 
-#SATELLITE
+SATELLITE
 3			nSatellite
 MHD			StringSatellite
 -1			DnOutput
@@ -287,25 +287,25 @@ MHD			StringSatellite
 -1.0			DtOutput [sec]
 SC/TRAJECTORY/stb.dat		NameTrajectoryFile
 
-#LOOKUPTABLE
+LOOKUPTABLE
 AiaXrt			NameTable
 load			NameCommand
 SC/Param/los_tbl.dat		NameFile
 ascii			TypeFile
 
-#LOOKUPTABLE
+LOOKUPTABLE
 euv			NameTable
 load			NameCommand
 SC/Param/los_Eit_cor.dat		NameFile
 ascii			TypeFile
 
-#LOOKUPTABLE
+LOOKUPTABLE
 EuviA			NameTable
 load			NameCommand
 SC/Param/los_EuviA.dat		NameFile
 ascii			TypeFile
 
-#LOOKUPTABLE
+LOOKUPTABLE
 EuviB			NameTable
 load			NameCommand
 SC/Param/los_EuviB.dat		NameFile
