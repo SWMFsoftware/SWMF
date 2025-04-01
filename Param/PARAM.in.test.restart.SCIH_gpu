@@ -45,12 +45,6 @@ T			DoSaveRestart
 -1			DnSaveRestart
 10.0			DtSaveRestart
 
-ROTATEHGR		^
--1.			dLongitudeHgr^
-
-ROTATEHGI		^
--1.			dLongitudeHgi^
-
 #TEST
 init_axes		StringTest
 
@@ -303,7 +297,7 @@ slow			TypeUpdate
 #INCLUDE
 IH/restartIN/restart.H
 
-COORDSYSTEM
+#COORDSYSTEM
 HGI			TypeCoordSystem
 
 #PLASMA

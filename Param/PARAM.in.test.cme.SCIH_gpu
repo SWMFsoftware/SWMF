@@ -44,12 +44,6 @@ T			DoSaveRestart
 -1			DnSaveRestart
 10.0			DtSaveRestart
 
-ROTATEHGR		^
--1.			dLongitudeHgr^
-
-ROTATEHGI		^
--1.			dLongitudeHgi^
-
 #TEST
 init_axes		StringTest
 
@@ -347,13 +341,16 @@ T			UseComp
 
 #BEGIN_COMP IH ---------------------------------------------------------------
 
+#UPDATE
+slow			TypeUpdate
+
 #GRIDBLOCKALL
 3500			MaxBlock
 
 #INCLUDE
 IH/restartIN/restart.H
 
-COORDSYSTEM
+#COORDSYSTEM
 HGI			TypeCoordSystem
 
 #BODY
@@ -366,17 +363,6 @@ T			UseBody
 1.0			FluidMass [amu]
 1.0			IonCharge [e]
 1.0			ElectronTemperatureRatio
-
-GRID
-1			nRootBlock1
-1			nRootBlock2
-1			nRootBlock3
--250.0			xMin
- 250.0			xMax
--250.0			yMin
- 250.0			yMax
--250.0			zMin
- 250.0			zMax
 
 #AMRREGION
 OuterShell		NameRegion
