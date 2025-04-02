@@ -56,9 +56,6 @@ BILU1			TypePrecond
 INCLUDE
 SC/restartIN/restart.H
 
-#RESTARTOUTFILE
-one			StringRestartOutFile
-
 #COORDSYSTEM
 HGR			TypeCoordSystem
 
@@ -414,9 +411,6 @@ slow			TypeUpdate
 
 INCLUDE
 IH/restartIN/restart.H
-
-#RESTARTOUTFILE
-one			StringRestartOutFile
 
 #COORDSYSTEM
 HGC			TypeCoordSystem

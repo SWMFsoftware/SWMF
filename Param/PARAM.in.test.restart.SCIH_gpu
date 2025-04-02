@@ -28,18 +28,6 @@ RESTART.in
 SC 0 -1 1		CompMap
 IH 0 -1 1		CompMap
 
-#TIMEACCURATE
-T			IsTimeAccurate
-
-STARTTIME		^
-2014			iYear
-09			iMonth
-10			iDay
-14			iHour
-00			iMinute
-00			iSecond
-0.0			FracSecond
-
 #SAVERESTART
 T			DoSaveRestart
 -1			DnSaveRestart
@@ -62,12 +50,6 @@ BILU1			TypePrecond
 
 #INCLUDE
 SC/restartIN/restart.H
-
-#RESTARTOUTFILE
-one			StringRestartOutFile
-
-#COORDSYSTEM
-HGR			TypeCoordSystem
 
 #PLASMA
 1.0			FluidMass [amu]
@@ -138,10 +120,6 @@ T			DoExtendTransitionRegion
 T			UseCoarseAxis
 2			nCoarseLayer
 
-#TIMESTEPPING
-2			nStage
-0.8			CflExpl
-
 #SCHEME
 2			nOrder (1 or 2)
 Linde			TypeFlux (Roe, Rusanov, Linde, Sokolov
@@ -167,9 +145,6 @@ T			UseSpeedMin
 250			SpeedMinDim
 10 h			TauSpeedMinDim
 
-RESCHANGE
-T			UseAccurateReschange
-
 #OUTERBOUNDARY
 user			TypeBc1   user for spherical and user_outerbcs
 float			TypeBc2   rMax
@@ -189,10 +164,6 @@ rho mx my mz p pmin urmin urmax		NameLogVars
 
 #PARTLOCALTIMESTEP
 1.1			rLocalTimeStep
-
-add the perturb switch for CME
-USERSWITCH		sc_cme^
-+init +ic +perturb		StringSwitch
 
 #USERSWITCH		sc_restart^
 +init +ic -perturb		StringSwitch
@@ -305,61 +276,6 @@ HGI			TypeCoordSystem
 1.0			IonCharge [e]
 1.0			ElectronTemperatureRatio
 
-GRID
-1			nRootBlock1
-1			nRootBlock2
-1			nRootBlock3
--250.0			xMin
- 250.0			xMax
--250.0			yMin
- 250.0			yMax
--250.0			zMin
- 250.0			zMax
-
-#AMRREGION
-OuterShell		NameRegion
-shell0			StringShape
-18.0			RadiusInner
-21.0			Radius
-
-#AMRREGION
-cmecone			NameRegion
-conex0			StringShape
--215.			Height
-20			Radius
-
-#AMRREGION
-earthcone		NameRegion
-conex0			StringShape
--215.			Height
-80			Radius
-
-#AMRCRITERIARESOLUTION
-5			nRefineCrit
-dx			StringRefine
-8.			RefineTo
-4.			CoarsenFrom
-dx +Outershell		StringRefine
-0.5			RefineTo
-0.25			CoarsenFrom
-dx +cmecone		StringRefine
-0.35			RefineTo
-0.175			CoarsenFrom
-dx +earthcone		StringRefine
-0.7			RefineTo
-0.35			CoarsenFrom
-currentsheet		StringRefine
-0.5			CoarsenLimit
-0.5			RefineLimit
-1.0			MaxResolution
-
-GRIDRESOLUTION
-0.5			Resolution
-initial			StringShape
-
-#SAVEINITIAL
-F			DoSaveInitial
-
 #INNERBOUNDARY
 buffergrid		TypeBcBody
 
@@ -370,9 +286,6 @@ float			TypeBc3
 float			TypeBc4
 float			TypeBc5
 float			TypeBc6
-
-#RESCHANGE
-T			UseAccurateReschange
 
 #USERSWITCH
 +init			StringSwitch
@@ -400,16 +313,6 @@ It might be important to prevent code crashing due to CMEs with strong shocks.
 #MINIMUMPRESSURE
 1E-14			pMinDim
 1E-14			PeMinDim
-
-#TIMESTEPPING
-2			nStage
-0.8			CflExpl
-
-DIVB
-T			UseDivbSource
-T			UseDivbDiffusion
-F			UseProjection
-F			UseConstrainB
 
 #SAVELOGFILE
 T			DoSaveLogfile
