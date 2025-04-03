@@ -32,10 +32,11 @@ T			DoSaveRestart
 5			DnSaveRestart
 -1.0			DtSaveRestart
 
-#ROTATEHGR		^
+! To make test more challenging, use true HGR, HGC and HGI coordinates
+ROTATEHGR		^
 -1.			dLongitudeHgr^
 
-#ROTATEHGI		^
+ROTATEHGI		^
 -1.			dLongitudeHgi^
 
 #TEST
