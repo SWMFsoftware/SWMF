@@ -16,7 +16,6 @@ T			IsTimeAccurate
 #INCLUDE
 SC/restartIN/restart.H
 
-
 #PLASMA
 1.0			FluidMass [amu]
 1.0			IonCharge [e]
@@ -355,11 +354,28 @@ z=0 VAR idl		StringPlot
 -1.			DtSavePlot
 -1.0			DxSavePlot
 rho ux uy uz ti te bx by bz I01 I02 p		NameVars
-g rbody			NamePars
+x_earth y_earth			NamePars
 buf MHD idl		StringPlot
 -1			DnSavePlot
 50.0			DtSavePlot
 
+#SATELLITE
+3			nSatellite
+MHD			StringSatellite
+-1			DnOutput
+1.0			DtOutput [sec]
+IH/TRAJECTORY/earth.dat		NameTrajectoryFile
+MHD			StringSatellite
+-1			DnOutput
+1.0			DtOutput [sec]
+IH/TRAJECTORY/sta.dat		NameTrajectoryFile
+MHD			StringSatellite
+-1			DnOutput
+1.0			DtOutput [sec]
+IH/TRAJECTORY/stb.dat		NameTrajectoryFile
+
+#TEST
+set_name_file
 #END_COMP IH -----------------------------------------------------------------
 
 #COUPLE1
@@ -403,7 +419,7 @@ z=0 VAR idl		StringPlot
 -1.			DtSavePlot
 -1.0			DxSavePlot
 rho ux uy uz ti te bx by bz I01 I02 p sign
-g rbody
+x_earth y_earth
 
 #END_COMP IH ------------------------------------------------------------------
 
