@@ -2777,7 +2777,7 @@ test25_run:
 
 test25_check:
 	-@(${DIFFNUM} -b -a=1e-9 -r=1e-5 \
-	   ${TESTDIR}/RESULTS/PC/z=0*250.out \
+	   ${TESTDIR}/RESULTS/PC/z=0*010_n*.out \
 	   output/test25/z=0.ref.gz \
 		> test25_gmpc.diff)
 	-@(${DIFFNUM} -b -a=1e-11 -r=1e-11 \

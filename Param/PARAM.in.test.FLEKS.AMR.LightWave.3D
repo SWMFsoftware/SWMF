@@ -110,17 +110,14 @@ T			isPeriodicZ
 #DIVE
 F			doCorrectDivE
 
-#PARTICLES
-1			nParticleX per cell in X Region 1
-1			nParticleY per cell in Y Region 1
-1			nParticleZ per cell in Z Region 1
 
 #SAVEPLOT
 1			nPlotFile
-z=0 fluid ascii si		StringPlot
+z=0 var ascii si		StringPlot
 -1			DnSavePlot
 10			DtSavePlot
 -1			DxSavePlot
+Ex Ey Ez Bx By Bz		NameVars
 
 #REGION
 region1			regionName
@@ -157,7 +154,7 @@ F			UseComp
 
 #STOP
 -1			MaxIter
-100.0			TimeMax
+10.0			TimeMax
 
 
 
