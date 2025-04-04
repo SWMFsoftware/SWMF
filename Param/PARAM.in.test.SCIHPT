@@ -266,16 +266,6 @@ turbulentcascade		TypeCoronalHeating
 0.0			rMinWaveReflection
 F			UseReynoldsDecomposition
 
-#RESISTIVITY
-T			UseResistivity
-user			TypeResistivity
-0.0			Eta0Si     ! not used
-
-#RESISTIVITYOPTIONS
-F			UseResistiveFlux
-F			UseJouleHeating
-T			UseHeatExchange
-
 #HEATFLUXCOLLISIONLESS
 T			UseHeatFluxCollisionless
 1.05			CollisionlessAlpha
