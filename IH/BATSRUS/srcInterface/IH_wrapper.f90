@@ -278,7 +278,7 @@ contains
     use CON_coupler,    ONLY: iVarSource_V
     use ModInterpolate, ONLY: interpolate_vector, interpolate_scalar
     use IH_ModCellGradient, ONLY: calc_divergence
-    use IH_BATL_pass_cell, ONLY: message_pass_cell 
+    use IH_BATL_pass_cell, ONLY: message_pass_cell
     use ModUtilities, ONLY:split_string
 
     logical,          intent(in):: IsNew   ! true for new point array
@@ -326,7 +326,7 @@ contains
        write(*,*)NameSub,': UseDivU=', UseDivU,' UseDivUDx=', UseDivUDx
     end if
 
-    ! calculate divu if needed 
+    ! calculate divu if needed
     if (UseDivU .or. UseDivUDx) then
        allocate( &
             u_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK), &
@@ -932,6 +932,7 @@ contains
          DoLperp_, DoWDiff_, LperpCouple_, WDiffCouple_
     use ModCoordTransform, ONLY: rlonlat_to_xyz
     use ModInterpolate,    ONLY: trilinear
+    use IH_ModUpdateStateFast, ONLY: sync_cpu_gpu
     use IH_BATL_lib,       ONLY: iProc, &
          find_grid_block, xyz_to_coord, CoordMin_DB, CellSize_DB
 
@@ -1011,6 +1012,9 @@ contains
 
     dSph_D     = (SphMax_D - SphMin_D)/real(nCell_D)
     dSph_D(1) = (SphMax_D(1) - SphMin_D(1))/(nCell_D(1) - 1)
+
+    ! Get updated State and B0 onto the CPU for the coupler
+    call sync_cpu_gpu('update on CPU', NameSub, State_VGB, B0_DGB)
 
     ! Loop over buffer grid points
     do iLat = 1, nLat ; do iLon = 1, nLon ; do iR = 1, nR
