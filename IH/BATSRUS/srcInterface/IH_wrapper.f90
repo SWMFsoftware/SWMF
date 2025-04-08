@@ -13,6 +13,7 @@ module IH_wrapper
        BATS_init_session, BATS_setup, BATS_advance, BATS_save_files, &
        BATS_finalize
   use IH_ModBatsrusUtility, ONLY: stop_mpi, error_report
+  use IH_ModUpdateStateFast, ONLY: sync_cpu_gpu
 
   implicit none
   SAVE
@@ -270,7 +271,7 @@ contains
     use IH_ModPhysics, ONLY: Si2No_V, UnitX_, UnitU_, No2Si_V, iUnitCons_V
     use IH_ModAdvance, ONLY: State_VGB, Rho_, RhoUx_, RhoUz_, Bx_, Bz_
     use IH_ModVarIndexes, ONLY: nVar
-    use IH_ModB0,      ONLY: UseB0, get_b0
+    use IH_ModB0,      ONLY: UseB0, get_b0, B0_DGB
     use IH_BATL_lib,   ONLY: nDim, MaxDim, MinIJK_D, MaxIJK_D, iProc, &
          nBlock, MaxBlock, Unused_B, find_grid_block, &
          nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nG, Xyz_DNB
@@ -312,6 +313,9 @@ contains
     character(len=*), parameter:: NameSub = 'IH_get_point_data'
     !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
+
+    ! Get updated State and B0 onto the CPU for the coupler
+    call sync_cpu_gpu('update on CPU', NameSub, State_VGB, B0_DGB)
 
     DoSendAll = .false.
     if(present(DoSendAllVar)) DoSendAll = DoSendAllVar
@@ -732,36 +736,35 @@ contains
 
   end subroutine IH_set_buffer_grid_get_info
   !============================================================================
-  subroutine IH_save_global_buffer(nVarCouple, nR, nLon, nLat, BufferIn_VG)
+  subroutine IH_save_global_buffer(nVarCouple, nR, nLon, nLat, BufferIn_VC)
 
-    use IH_ModBuffer,      ONLY: BufferState_VG, fill_in_buffer_grid_gc
+    use IH_ModBuffer, ONLY: BufferState_VG, fill_in_buffer_grid_gc
     use IH_ModMessagePass, ONLY: exchange_messages
     ! spherical buffer coupling
-    use CON_coupler,       ONLY: &
-         iVar_V, DoCoupleVar_V
-    use IH_ModAdvance,        ONLY: nVar, &
+    use CON_coupler, ONLY: iVar_V, DoCoupleVar_V
+    use IH_ModAdvance, ONLY: nVar, &
          UseElectronPressure, UseAnisoPressure, UseMultiSpecies
-    use IH_ModSaMhd,           ONLY: UseSaMhd
-    use IH_ModVarIndexes,     ONLY: &
+    use IH_ModSaMhd, ONLY: UseSaMhd
+    use IH_ModVarIndexes, ONLY: &
          Rho_, Ux_, Uz_, RhoUx_, RhoUz_, Bx_, Bz_, p_,             &
          WaveFirst_, WaveLast_, Pe_, Ppar_, nFluid, BperU_, Ehot_, &
          ChargeStateFirst_, ChargeStateLast_, WDiff_, Lperp_, nIonFluid
-    use CON_coupler,   ONLY:                                       &
-         Bfield_, ElectronPressure_, AnisoPressure_, Wave_,        &
+    use CON_coupler,   ONLY: &
+         Bfield_, ElectronPressure_, AnisoPressure_, Wave_, &
          MultiFluid_, MultiSpecie_, CollisionlessHeatFlux_, SaMhd_, &
-         DoLperp_, DoWDiff_, LperpCouple_, WDiffCouple_,       &
-         RhoCouple_, RhoUxCouple_, RhoUzCouple_, PCouple_,         &
-         BxCouple_, BzCouple_, PeCouple_, PparCouple_, SaMhdCouple_,&
-         WaveFirstCouple_, WaveLastCouple_, EhotCouple_,           &
+         DoLperp_, DoWDiff_, LperpCouple_, WDiffCouple_, &
+         RhoCouple_, RhoUxCouple_, RhoUzCouple_, PCouple_, &
+         BxCouple_, BzCouple_, PeCouple_, PparCouple_, SaMhdCouple_, &
+         WaveFirstCouple_, WaveLastCouple_, EhotCouple_, &
          ChargeState_, ChargeStateFirstCouple_, ChargeStateLastCouple_
     use IH_ModMultiFluid, ONLY: IsFullyCoupledFluid, iRho_I, iP_I
-    use IH_ModPhysics,    ONLY: No2Si_V, Si2No_V, UnitRho_, UnitB_, UnitX_
-    use IH_ModPhysics,    ONLY: UnitRhoU_, UnitEnergyDens_, UnitP_, UnitU_, &
+    use IH_ModPhysics, ONLY: No2Si_V, Si2No_V, UnitRho_, UnitB_, UnitX_
+    use IH_ModPhysics, ONLY: UnitRhoU_, UnitEnergyDens_, UnitP_, UnitU_, &
          BodyRho_I, BodyP_I
-    use IH_ModMain,       ONLY: UseOuterHelio
+    use IH_ModMain, ONLY: UseOuterHelio
 
-    integer,intent(in) :: nVarCouple, nR, nLon, nLat
-    real,intent(in)    :: BufferIn_VG(nVarCouple,nR,nLon,nLat)
+    integer, intent(in) :: nVarCouple, nR, nLon, nLat
+    real, intent(in)    :: BufferIn_VC(nVarCouple,nR,nLon,nLat)
 
     integer :: iFluid
 
@@ -769,71 +772,72 @@ contains
     character(len=*), parameter:: NameSub = 'IH_save_global_buffer'
     !--------------------------------------------------------------------------
     BufferState_VG(Rho_,:,1:nLon,1:nLat) = &
-         BufferIn_VG(iVar_V(RhoCouple_),:,1:nLon,1:nLat)&
+         BufferIn_VC(iVar_V(RhoCouple_),:,:,:) &
          *Si2No_V(UnitRho_)
     ! Transform to primitive variables
     BufferState_VG(RhoUx_:RhoUz_,:,1:nLon,1:nLat) = &
-         BufferIn_VG(iVar_V(RhoUxCouple_):iVar_V(RhoUzCouple_),:,&
-         1:nLon,1:nLat)*Si2No_V(UnitRhoU_)
-    if(DoCoupleVar_V(Bfield_))             &
-         BufferState_VG(Bx_:Bz_,:,1:nLon,1:nLat) =  &
-         BufferIn_VG(iVar_V(BxCouple_):iVar_V(BzCouple_),:,1:nLon,1:nLat)  &
+         BufferIn_VC(iVar_V(RhoUxCouple_):iVar_V(RhoUzCouple_),:,:,:) &
+         *Si2No_V(UnitRhoU_)
+    if(DoCoupleVar_V(Bfield_)) &
+         BufferState_VG(Bx_:Bz_,:,1:nLon,1:nLat) = &
+         BufferIn_VC(iVar_V(BxCouple_):iVar_V(BzCouple_),:,:,:) &
          *Si2No_V(UnitB_)
 
-    if(DoCoupleVar_V(Wave_))&
-         BufferState_VG(WaveFirst_:WaveLast_,:,1:nLon,1:nLat) = BufferIn_VG(&
-         iVar_V(WaveFirstCouple_):iVar_V(WaveLastCouple_),:,1:nLon,1:nLat)&
+    if(DoCoupleVar_V(Wave_)) &
+         BufferState_VG(WaveFirst_:WaveLast_,:,1:nLon,1:nLat) = BufferIn_VC( &
+         iVar_V(WaveFirstCouple_):iVar_V(WaveLastCouple_),:,:,:) &
          *Si2No_V(UnitEnergyDens_)
 
-    if(DoCoupleVar_V(ChargeState_))&
+    if(DoCoupleVar_V(ChargeState_)) &
          BufferState_VG(ChargeStateFirst_:ChargeStateLast_,:,1:nLon,1:nLat) = &
-         BufferIn_VG(&
-         iVar_V(ChargeStateFirstCouple_):iVar_V(ChargeStateLastCouple_),:,&
-         1:nLon,1:nLat)*Si2No_V(UnitRho_)
+         BufferIn_VC(iVar_V(ChargeStateFirstCouple_) &
+         :iVar_V(ChargeStateLastCouple_),:,:,:)&
+         *Si2No_V(UnitRho_)
     if(DoCoupleVar_V(SaMhd_))then
        BufferState_VG(BperU_,:,1:nLon,1:nLat) = &
-            BufferIn_VG(iVar_V(SaMhdCouple_),:,1:nLon,1:nLat)*&
+            BufferIn_VC(iVar_V(SaMhdCouple_),:,:,:)* &
             Si2No_V(UnitB_)/Si2No_V(UnitU_)
-    elseif(UseSaMhd.and.BperU_>1)then
+    elseif(UseSaMhd .and. BperU_ > 1)then
        BufferState_VG(BperU_,:,1:nLon,1:nLat) = 0.0
     end if
     if(DoCoupleVar_V(DoLperp_))then
        BufferState_VG(Lperp_,:,1:nLon,1:nLat) = &
-            BufferIn_VG(iVar_V(LperpCouple_),:,1:nLon,1:nLat)*&
+            BufferIn_VC(iVar_V(LperpCouple_),:,:,:)*&
             Si2No_V(UnitX_)*sqrt(Si2No_V(UnitB_))
     end if
     if(DoCoupleVar_V(DoWDiff_))then
        BufferState_VG(WDiff_,:,1:nLon,1:nLat) = &
-            BufferIn_VG(iVar_V(WDiffCouple_),:,1:nLon,1:nLat)*&
+            BufferIn_VC(iVar_V(WDiffCouple_),:,:,:)*&
             Si2No_V(UnitEnergyDens_)
     elseif(WDiff_>1)then
        BufferState_VG(WDiff_,:,1:nLon,1:nLat) = 0.0
     end if
 
-    BufferState_VG(p_,:,1:nLon,1:nLat)  = &
-         BufferIn_VG(iVar_V(PCouple_),:,1:nLon,1:nLat)&
+    BufferState_VG(p_,:,1:nLon,1:nLat) = &
+         BufferIn_VC(iVar_V(PCouple_),:,:,:)&
          *Si2No_V(UnitP_)
     if(DoCoupleVar_V(ElectronPressure_))then
        BufferState_VG(Pe_,:,1:nLon,1:nLat) = &
-            BufferIn_VG(iVar_V(PeCouple_),:,1:nLon,1:nLat)*Si2No_V(UnitP_)
+            BufferIn_VC(iVar_V(PeCouple_),:,:,:)*Si2No_V(UnitP_)
     else if(UseElectronPressure)then
+       ! Split pressure equally between ions and electrons
        BufferState_VG(Pe_,:,1:nLon,1:nLat) = &
-            0.5*BufferState_VG(p_, :,1:nLon,1:nLat)
+            0.5*BufferState_VG(p_,:,1:nLon,1:nLat)
        BufferState_VG(p_ ,:,1:nLon,1:nLat) = &
             BufferState_VG(Pe_,:,1:nLon,1:nLat)
     end if
 
     if(DoCoupleVar_V(AnisoPressure_))then
        BufferState_VG(Ppar_,:,1:nLon,1:nLat) = &
-            BufferIn_VG(iVar_V(PparCouple_),:,1:nLon,1:nLat)*Si2No_V(UnitP_)
+            BufferIn_VC(iVar_V(PparCouple_),:,:,:)*Si2No_V(UnitP_)
     else if(UseAnisoPressure)then
        BufferState_VG(Ppar_,:,1:nLon,1:nLat) = &
-            BufferIn_VG(iVar_V(PCouple_),:,1:nLon,1:nLat)*Si2No_V(UnitP_)
+            BufferIn_VC(iVar_V(PCouple_),:,:,:)*Si2No_V(UnitP_)
     end if
 
     if(DoCoupleVar_V(CollisionlessHeatFlux_))then
        BufferState_VG(Ehot_,:,1:nLon,1:nLat) = &
-            BufferIn_VG(iVar_V(EhotCouple_),:,1:nLon,1:nLat)&
+            BufferIn_VC(iVar_V(EhotCouple_),:,:,:)&
             *Si2No_V(UnitEnergyDens_)
     endif
 
@@ -844,7 +848,7 @@ contains
        end do
     end if
 
-    if( .not. DoCoupleVar_V(MultiFluid_)  .and. nFluid > 1 .or. &
+    if( .not. DoCoupleVar_V(MultiFluid_) .and. nFluid > 1 .or. &
          .not. DoCoupleVar_V(MultiSpecie_) .and. UseMultiSpecies)then
        ! Values for neutrals / ions should be prescribed in set_BCs.f90
        IsFullyCoupledFluid = .false.
@@ -853,8 +857,7 @@ contains
     end if
     ! Make sure that ghost cells get filled after
     call fill_in_buffer_grid_gc
-    ! Fill in the cells, covered by the bufer grid, including ghost cells.
-    ! Fill in the ghostcells, calculate energy
+    ! Fill in the cells, covered by the buffer grid, including ghost cells
     call exchange_messages(UseBufferIn = .true.)
 
   end subroutine IH_save_global_buffer
@@ -932,7 +935,6 @@ contains
          DoLperp_, DoWDiff_, LperpCouple_, WDiffCouple_
     use ModCoordTransform, ONLY: rlonlat_to_xyz
     use ModInterpolate,    ONLY: trilinear
-    use IH_ModUpdateStateFast, ONLY: sync_cpu_gpu
     use IH_BATL_lib,       ONLY: iProc, &
          find_grid_block, xyz_to_coord, CoordMin_DB, CellSize_DB
 
