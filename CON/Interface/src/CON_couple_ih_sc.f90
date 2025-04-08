@@ -16,27 +16,14 @@ module CON_couple_ih_sc
   use CON_coupler
   use CON_transfer_data, ONLY: transfer_real_array, transfer_integer
 
-  use SC_wrapper, ONLY:                  &
-       SC_get_for_global_buffer,         &
-       SC_put_from_mh,                   &
-       SC_is_coupled_block,              &
-       TimeMhToSC, SourceToSC_DD,        & ! For 2-way coupling
-       TypeCoordIh=>TypeCoordSource,     & ! For 2-way coupling
-       SC_synchronize_refinement,        &
-       SC_interface_point_coords,        &
-       SC_Grid, SC_LocalGrid
-
-  use IH_wrapper, ONLY:                  &
-       IH_match_ibc,                     &
-       IH_set_buffer_grid_get_info,      &
-       IH_save_global_buffer,            &
-       IH_get_for_mh,                    &
-       IH_synchronize_refinement,        &
-       IH_Grid
+  use SC_wrapper, ONLY: SC_get_for_global_buffer
+  use IH_wrapper, ONLY: &
+       IH_match_ibc, IH_set_buffer_grid_get_info, IH_save_global_buffer
 
   implicit none
+
   private ! except
-  !
+
   public:: couple_ih_sc_init
   public:: couple_ih_sc
   public:: couple_sc_ih
@@ -46,7 +33,7 @@ module CON_couple_ih_sc
   ! 7/04/04                                 - version for ih-sc
   ! 7/20/04                                 - version for sc-buffer
 
-  logical       :: IsInitialized=.false., DoMatchIBC = .true.
+  logical:: IsInitialized=.false., DoSetInitialCondition=.true.
 
   ! Size and limits of the 3D spherical buffer grid
   integer, save :: iSize, jSize, kSize
@@ -55,7 +42,6 @@ module CON_couple_ih_sc
   character(len=*), parameter :: NameMod='couple_ih_sc'
 contains
   !============================================================================
-
   subroutine couple_ih_sc_init
 
     ! Couple SC and IH components via a buffer grid
@@ -101,7 +87,6 @@ contains
 
   end subroutine couple_ih_sc_init
   !============================================================================
-
   subroutine couple_sc_ih(TimeCoupling)
 
     real, intent(in) :: TimeCoupling     ! simulation time at coupling
@@ -120,7 +105,7 @@ contains
     character(len=*), parameter:: NameSub = 'couple_sc_ih'
     !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
-    if(DoTest.and.is_proc0(IH_))&
+    if(DoTest .and. is_proc0(IH_)) &
          write(*,'(a,es12.5)')NameSub//': starting, Time=', TimeCoupling
     ! Transfer buffer grid from SC to IH to be used for inner boundary
     allocate(Buffer_VIII(nVarCouple,iSize,jSize,kSize))
@@ -135,17 +120,16 @@ contains
          nVarCouple, iSize, jSize, kSize, Buffer_VIII)
     deallocate(Buffer_VIII)
 
-    ! Apply initial boundary condition in IH
-    if(DoMatchIBC) then
-       DoMatchIBC = .false.
-       if(is_proc(IH_)) call IH_match_IBC
+    ! Apply initial condition in IH based on the buffer grid
+    if(DoSetInitialCondition) then
+       DoSetInitialCondition = .false.
+       if(is_proc(IH_)) call IH_match_ibc
     end if
-    if(DoTest.and.is_proc0(IH_))&
+    if(DoTest .and. is_proc0(IH_))&
          write(*,'(a,es12.5)')NameSub//': finished, Time=', TimeCoupling
 
   end subroutine couple_sc_ih
   !============================================================================
-
   subroutine couple_ih_sc(tSimulation)
 
     real, intent(in) :: tSimulation
@@ -159,11 +143,10 @@ contains
     character(len=*), parameter:: NameSub = 'couple_ih_sc'
     !--------------------------------------------------------------------------
     call CON_stop(NameSub// &
-         ' is not yet implemented. Correct #COUPLERTYPE command.')
+         ' is not yet implemented. Correct PARAM.in')
 
   end subroutine couple_ih_sc
   !============================================================================
-
 end module CON_couple_ih_sc
 !==============================================================================
 
