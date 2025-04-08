@@ -9,7 +9,7 @@ module IH_wrapper
 
   use CON_coupler, ONLY: &
        CON_set_do_test, CON_stop, IH_, GridType, LocalGridType
-  use IH_ModBatsrusMethods,    ONLY: &
+  use IH_ModBatsrusMethods, ONLY: &
        BATS_init_session, BATS_setup, BATS_advance, BATS_save_files, &
        BATS_finalize
   use IH_ModBatsrusUtility, ONLY: stop_mpi, error_report
@@ -219,7 +219,7 @@ contains
   subroutine IH_get_grid_info(nDimOut, iGridOut, iDecompOut)
 
     use IH_BATL_lib, ONLY: nDim
-    use IH_ModMain,  ONLY: iNewGrid, iNewDecomposition
+    use IH_ModMain, ONLY: iNewGrid, iNewDecomposition
 
     integer, intent(out):: nDimOut    ! grid dimensionality
     integer, intent(out):: iGridOut   ! grid index (increases with AMR)
@@ -238,7 +238,7 @@ contains
   !============================================================================
   subroutine IH_find_points(nDimIn, nPoint, Xyz_DI, iProc_I)
 
-    use IH_BATL_lib,   ONLY: MaxDim, find_grid_block
+    use IH_BATL_lib, ONLY: MaxDim, find_grid_block
     use IH_ModPhysics, ONLY: Si2No_V, UnitX_
 
     integer, intent(in) :: nDimIn                ! dimension of positions
@@ -271,16 +271,16 @@ contains
     use IH_ModPhysics, ONLY: Si2No_V, UnitX_, UnitU_, No2Si_V, iUnitCons_V
     use IH_ModAdvance, ONLY: State_VGB, Rho_, RhoUx_, RhoUz_, Bx_, Bz_
     use IH_ModVarIndexes, ONLY: nVar
-    use IH_ModB0,      ONLY: UseB0, get_b0, B0_DGB
-    use IH_BATL_lib,   ONLY: nDim, MaxDim, MinIJK_D, MaxIJK_D, iProc, &
+    use IH_ModB0, ONLY: UseB0, get_b0, B0_DGB
+    use IH_BATL_lib, ONLY: nDim, MaxDim, MinIJK_D, MaxIJK_D, iProc, &
          nBlock, MaxBlock, Unused_B, find_grid_block, &
          nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nG, Xyz_DNB
     use IH_ModIO, ONLY: iUnitOut
-    use CON_coupler,    ONLY: iVarSource_V
+    use CON_coupler, ONLY: iVarSource_V
     use ModInterpolate, ONLY: interpolate_vector, interpolate_scalar
     use IH_ModCellGradient, ONLY: calc_divergence
     use IH_BATL_pass_cell, ONLY: message_pass_cell
-    use ModUtilities, ONLY:split_string
+    use ModUtilities, ONLY: split_string
 
     logical,          intent(in):: IsNew   ! true for new point array
     integer, allocatable, intent(inout):: iBlockCell_DI(:,:) ! interp. index
@@ -447,7 +447,7 @@ contains
     use CON_coupler
     use IH_ModMain, ONLY: TypeCoordSystem, nVar, NameVarCouple, nG
     use IH_ModPhysics, ONLY:No2Si_V, UnitX_
-    use IH_ModGeometry,   ONLY: RadiusMin, RadiusMax
+    use IH_ModGeometry, ONLY: RadiusMin, RadiusMax
     use IH_BATL_geometry, ONLY: TypeGeometry, IsGenRadius, LogRGen_I
     use IH_BATL_lib, ONLY: CoordMin_D, CoordMax_D, Particle_I
     use IH_ModParticleFieldLine, ONLY: iKindReg, UseParticles
@@ -567,12 +567,12 @@ contains
     use CON_coupler
     use ModCoordTransform, ONLY: &
          atan2_check, xyz_to_sph, xyz_to_rlonlat
-    real,             intent(in ) :: XyzIn_D(3)
-    real,             intent(out) :: CoordOut_D(3)
+    real, intent(in ) :: XyzIn_D(3)
+    real, intent(out) :: CoordOut_D(3)
 
-    real               :: x, y
-    integer, parameter :: x_=1, y_=2, z_=3, r_=1
-    integer            :: Phi_
+    real:: x, y
+    integer, parameter:: x_=1, y_=2, z_=3, r_=1
+    integer:: Phi_
     character(len=20)  :: TypeGeometry
     character(len=*), parameter:: NameSub = 'IH_xyz_to_coord'
     !--------------------------------------------------------------------------
@@ -612,7 +612,7 @@ contains
       real          :: dCoord
       real, pointer :: LogRgen_I(:)
       !------------------------------------------------------------------------
-      LogRgen_I=>Grid_C(IH_)%Coord1_I
+      LogRgen_I => Grid_C(IH_)%Coord1_I
       nRgen    = Grid_C(IH_)%nCoord_D(1)
       call find_cell(0, nRgen-1, alog(r), &
            i, dCoord, LogRgen_I, DoExtrapolate=.true.)
@@ -865,8 +865,8 @@ contains
   subroutine IH_match_ibc
 
     use IH_ModMessagePass, ONLY: exchange_messages
-    use IH_ModIO,          ONLY: IsRestartCoupler
-    use IH_ModBuffer,      ONLY: match_ibc
+    use IH_ModIO, ONLY: IsRestartCoupler
+    use IH_ModBuffer, ONLY: match_ibc
     use IH_ModAdvance, ONLY: State_VGB
 
     character(len=*), parameter :: StringTest ='IH_fill_buffer_only'
@@ -934,9 +934,9 @@ contains
          DoCoupleVar_V, nVarCouple, SaMhd_, SaMhdCouple_ ,&
          DoLperp_, DoWDiff_, LperpCouple_, WDiffCouple_
     use ModCoordTransform, ONLY: rlonlat_to_xyz
-    use ModInterpolate,    ONLY: trilinear
-    use IH_BATL_lib,       ONLY: iProc, &
-         find_grid_block, xyz_to_coord, CoordMin_DB, CellSize_DB
+    use ModInterpolate, ONLY: trilinear
+    use IH_BATL_lib, ONLY: &
+         iProc, find_grid_block, xyz_to_coord, CoordMin_DB, CellSize_DB
 
     ! Buffer size and limits
     integer,intent(in) :: nR, nLon, nLat
@@ -1319,9 +1319,9 @@ contains
 
     ! transform and put the data got from MH
 
-    use CON_axes,      ONLY: transform_velocity
-    use CON_router,    ONLY: IndexPtrType, WeightPtrType
-    use CON_coupler,   ONLY: iVar_V, DoCoupleVar_V, &
+    use CON_axes, ONLY: transform_velocity
+    use CON_router, ONLY: IndexPtrType, WeightPtrType
+    use CON_coupler, ONLY: iVar_V, DoCoupleVar_V, &
          RhoCouple_, RhoUxCouple_, RhoUzCouple_, &
          PCouple_, BxCouple_, BzCouple_, PeCouple_, EhotCouple_,   &
          PparCouple_, WaveFirstCouple_, WaveLastCouple_, Momentum_,&
@@ -1329,13 +1329,13 @@ contains
          CollisionlessHeatFlux_, ChargeStateFirstCouple_, &
          ChargeStateLastCouple_, ChargeState_, SaMhd_, SaMhdCouple_,&
          DoLperp_, DoWDiff_, WDiffCouple_, LperpCouple_
-    use IH_ModAdvance,    ONLY: State_VGB, UseElectronPressure, &
+    use IH_ModAdvance, ONLY: State_VGB, UseElectronPressure, &
          UseAnisoPressure
-    use IH_ModB0,         ONLY: B0_DGB
-    use IH_ModPhysics,    ONLY: Si2No_V, UnitRho_, UnitP_, UnitRhoU_, UnitB_, &
+    use IH_ModB0, ONLY: B0_DGB
+    use IH_ModPhysics, ONLY: Si2No_V, UnitRho_, UnitP_, UnitRhoU_, UnitB_, &
          UnitEnergyDens_, UnitX_, No2Si_V, UnitU_
-    use IH_ModMain,       ONLY: UseB0, TypeCoordSystem
-    use IH_ModSaMhd,       ONLY: UseSaMhd, get_samhd_state
+    use IH_ModMain, ONLY: UseB0, TypeCoordSystem
+    use IH_ModSaMhd, ONLY: UseSaMhd, get_samhd_state
     use IH_ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, Bx_, Bz_, P_, &
          WaveFirst_, WaveLast_, Pe_, Ppar_, Ehot_, ChargeStateFirst_, &
          ChargeStateLast_, nVar, BperU_, Ux_, Uz_, Lperp_, WDiff_
@@ -1450,9 +1450,9 @@ contains
        nPartial,iGetStart,Get,W,State_V,nVar,TimeCoupling)
 
     use IH_ModAdvance, ONLY: State_VGB, Rho_, RhoUx_, RhoUz_, Bx_, Bz_,P_
-    use IH_ModB0,      ONLY: B0_DGB
+    use IH_ModB0, ONLY: B0_DGB
     use IH_ModPhysics, ONLY: No2Si_V, UnitRho_, UnitP_, UnitRhoU_, UnitB_
-    use IH_ModMain,    ONLY: UseRotatingFrame,UseB0
+    use IH_ModMain, ONLY: UseRotatingFrame,UseB0
     use CON_router
 
     integer,intent(in)::nPartial,iGetStart,nVar
@@ -1534,8 +1534,8 @@ contains
     subroutine add_density_omega_cross_r
 
       ! Add Omega x R term. For IH Omega_D = (0,0,OmegaBody)
-      use IH_BATL_lib,    ONLY: Xyz_DGB, x_, y_
-      use IH_ModPhysics,  ONLY: OmegaBody
+      use IH_BATL_lib, ONLY: Xyz_DGB, x_, y_
+      use IH_ModPhysics, ONLY: OmegaBody
       !------------------------------------------------------------------------
       Momentum_D(x_) = Momentum_D(x_) &
            - Density*OmegaBody*Xyz_DGB(y_,i,j,k,iBlock)
@@ -1574,7 +1574,7 @@ contains
   subroutine IH_put_from_pt( &
        NameVar, nVarData, nPoint, Data_VI, iPoint_I, Pos_DI)
 
-    use IH_BATL_lib,    ONLY: &
+    use IH_BATL_lib, ONLY: &
          nDim, nBlock, MaxBlock, Unused_B, nI, nJ, nK, Xyz_DGB, &
          iTest, jTest, kTest, iBlockTest
     use IH_ModPhysics, ONLY: &
@@ -1673,8 +1673,8 @@ contains
 
     ! Calculate the global time step for PC
 
-    use IH_ModMain,            ONLY: Dt
-    use IH_ModPhysics,         ONLY: No2Si_V, UnitT_
+    use IH_ModMain, ONLY: Dt
+    use IH_ModPhysics, ONLY: No2Si_V, UnitT_
     use IH_ModTimeStepControl, ONLY: set_global_timestep
 
     real, intent(out) ::  DtSi
@@ -1694,8 +1694,8 @@ contains
     use IH_ModPhysics, ONLY: Si2No_V, UnitX_, No2Si_V, iUnitCons_V
     use IH_ModAdvance, ONLY: State_VGB, Bx_, Bz_
     use IH_ModVarIndexes, ONLY: nVar
-    use IH_ModB0,      ONLY: UseB0, get_b0
-    use IH_BATL_lib,   ONLY: iProc, nDim, MaxDim, MinIJK_D, MaxIJK_D, &
+    use IH_ModB0, ONLY: UseB0, get_b0
+    use IH_BATL_lib, ONLY: iProc, nDim, MaxDim, MinIJK_D, MaxIJK_D, &
          find_grid_block
     use IH_ModIO, ONLY: iUnitOut
     use ModInterpolate, ONLY: interpolate_vector
@@ -1790,20 +1790,20 @@ contains
     !    The indexing array iPoint_I is needed to maintain the same order as
     !    the original position array Pos_DI was given in 2)
 
-    use IH_BATL_lib,     ONLY: Xyz_DGB, nBlock, Unused_B, &
+    use IH_BATL_lib, ONLY: Xyz_DGB, nBlock, Unused_B, &
          IsRLonLat, nI, nJ, nK, CoordMin_DB, CellSize_DB
-    use IH_ModGeometry,  ONLY: r_GB
-    use IH_ModPhysics,   ONLY: No2Si_V, UnitX_, Si2No_V, iUnitCons_V
-    use IH_ModMain,      ONLY: UseB0
-    use IH_ModB0,        ONLY: B0_DGB
-    use IH_ModAdvance,   ONLY: State_VGB, Bx_, Bz_
+    use IH_ModGeometry, ONLY: r_GB
+    use IH_ModPhysics, ONLY: No2Si_V, UnitX_, Si2No_V, iUnitCons_V
+    use IH_ModMain, ONLY: UseB0
+    use IH_ModB0, ONLY: B0_DGB
+    use IH_ModAdvance, ONLY: State_VGB, Bx_, Bz_
     use IH_ModMultiFluid, ONLY: nIonFluid
-    use CON_coupler,     ONLY: Grid_C, EE_, iVarTarget_V
-    use ModNumConst,     ONLY: cPi, cTwoPi
+    use CON_coupler, ONLY: Grid_C, EE_, iVarTarget_V
+    use ModNumConst, ONLY: cPi, cTwoPi
 
     character(len=*), intent(inout):: NameVar ! List of variables
-    integer,          intent(inout):: nVarData! Number of variables in Data_VI
-    integer,          intent(inout):: nPoint  ! Number of points in Pos_DI
+    integer, intent(inout):: nVarData ! Number of variables in Data_VI
+    integer, intent(inout):: nPoint   ! Number of points in Pos_DI
     real, intent(inout), allocatable, optional :: Pos_DI(:,:)  ! Positions
 
     real,    intent(in), optional:: Data_VI(:,:)    ! Recv data array
@@ -1880,13 +1880,13 @@ contains
 
     ! This routine is actually for EE-SC coupling
 
-    use IH_BATL_lib,    ONLY: nDim
+    use IH_BATL_lib, ONLY: nDim
 
     character(len=*), intent(inout):: NameVar ! List of variables
-    integer,          intent(inout):: nVarData! Number of variables in Data_VI
-    integer,          intent(inout):: nPoint  ! Number of points in Pos_DI
+    integer, intent(inout):: nVarData! Number of variables in Data_VI
+    integer, intent(inout):: nPoint  ! Number of points in Pos_DI
 
-    real,    intent(in), optional:: Data_VI(:,:)    ! Recv data array
+    real, intent(in), optional:: Data_VI(:,:)    ! Recv data array
     integer, intent(in), optional:: iPoint_I(nPoint)! Order of data
     real, intent(out), allocatable, optional:: Pos_DI(:,:) ! Position vectors
 
