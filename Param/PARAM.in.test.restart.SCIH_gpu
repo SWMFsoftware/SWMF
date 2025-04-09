@@ -350,15 +350,15 @@ z=0 VAR idl		StringPlot
 
 SATELLITE
 3			nSatellite
-MHD hgi			StringSatellite
+MHD HGI			StringSatellite
 -1  			DnOutput
 2.			DtOutput
 IH/TRAJECTORY/earth.dat		NameTrajectoryFile
-MHD hgi			StringSatellite
+MHD HGI			StringSatellite
 -1  			DnOutput
 2.			DtOutput
 IH/TRAJECTORY/sta.dat		NameTrajectoryFile
-MHD hgi			StringSatellite
+MHD HGI			StringSatellite
 -1  			DnOutput
 2.			DtOutput
 IH/TRAJECTORY/stb.dat		NameTrajectoryFile
@@ -485,7 +485,7 @@ z=0 VAR idl		StringPlot
 shl VAR idl		StringPlot
 -1			DnSavePlot
 5.0			DtSavePlot
-hgi			TypeCoordPlot
+SYS			TypeCoordPlot
 212.0			rMin
 212.0			rMax
 0.			LonMin
