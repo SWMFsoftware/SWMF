@@ -11,7 +11,7 @@ Param/PARAM.in.test.SCIH_threadbc: create steady state solar corona with Threade
 F			IsTimeAccurate
 
 #STARTTIME
-2008			iYear
+2018			iYear
 11			iMonth
 20			iDay
 6			iHour
