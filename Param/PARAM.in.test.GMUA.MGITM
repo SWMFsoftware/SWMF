@@ -104,38 +104,35 @@ T			UseBody
 1.0294464		rBody
 1.0			rCurrents
 1.0e6			BodyNDim Hp
-1.0e6			BodyNDim O2P
-1.0e6			BodyNDim Ip
+1.0e6			BodyNDim O2p
+1.0e6			BodyNDim Op
 1.0e6			BodyNDim CO2p
-300			BodyTDim
+300.0			BodyTDim
 
 #TIMESTEPPING
 2			nStage
-0.4			CflExpl
+0.8			CflExpl
 
 #SCHEME
 2			nOrder
 Linde			TypeFlux
 minmod			TypeLimiter
 
-#USERSWITCH
-+source +ic +b0 +init		StringSwitch
-
-#INNERBOUNDARY
-user			TypeBcBody
-
 #NONCONSERVATIVE
 F			UseNonConservative
 
 #SAVELOGFILE
-F			DoSaveLogfile  check
+T			DoSaveLogfile
 VAR step time		StringLog
 500			DnSaveLogfile
 -1.			DtSaveLogfile
-dt rho p rhopnt ppnt bxpnt Hpflxm Hpflxp Opflxm Opflxp O2pflxm O2pflxp CO2pflxm CO2pflxp
-6.0 2.0 1.117786
+dt rho p rhopnt ppnt bxpnt Hpflx Hpflx Opflx O2pflx CO2pflx		NameLogVars
+6.0 2.0 1.117786		StringLogRadii
 
-#OUTERBOUNDARY
+#INNERBOUNDARY
+user			TypeBcBody
+
+#BOXBOUNDARY
 outflow			TypeBc1
 inflow			TypeBc2
 fixed			TypeBc3
@@ -157,6 +154,9 @@ fixed			TypeBc6
 SOLARWINDFILE
 T			UseSolarWindFile
 sw_drivers_2015_03_08_09.dat
+
+#USERSWITCH
++init +ic +b0 +source		StringSwitch
 
 #USERINPUTBEGIN -----------------------------------
 
@@ -185,7 +185,7 @@ T			UseMso	!if true, read rotation axis in MSO
 0.90487			RotAxisMsoZ
 
 NOGW_150308_UT19_MHDINPUTS_2.dat 		filename
-#UseMarsAtm
+UseMarsAtm
 T			UseMarsAtm
 NOGW_150308_UT19_MHDINPUTS.dat		TGCMFilename
 81                     	NAlt
@@ -222,27 +222,31 @@ T			DoReplaceDensity
 5.0			SpeciesPercentCheck
 
 #SAVEPLOT
-4			nPlotFile
-x=0 FUL tec		StringPlot
+3			nPlotFile
+x=0 MHD idl		StringPlot
 1000			DnSavePlot
 -1.0			DtSavePlot
-y=0 FUL tec		StringPlot
+-1.0			DxSavePlot
+y=0 MHD idl		StringPlot
 1000			DnSavePlot
 -1.0			DtSavePlot
-z=0 FUL tec		StringPlot
+-1.0			DxSavePlot
+z=0 MHD idl		StringPlot
 1000			DnSavePlot
 -1.0			DtSavePlot
-3d FUL tec		StringPlot
+-1.0			DxSavePlot
+
+3d MHD tec		StringPlot
 1000			DnSavePlot
 -1.0			DtSavePlot
 
 SATELLITE
 2			nSatellite
-FULL step date		stringsatellite
+MHD step date		stringsatellite
 -1			DnOutput
 10.0			Dtoutput
 MAVEN_trac/MAVEN_2015_03_08m0.dat		Nametrajectoryfile
-FUL step date  stringsatellite
+MHD step date  stringsatellite
 -1			DnOutput
 10.0			Dtoutput
 MAVEN_trac/sat_2015_03_08_09_kp.dat		Nametrajectoryfile
@@ -254,7 +258,7 @@ UA			NameComp
 F			UseComp
 
 #STOP
-10000			MaxIter
+50			MaxIter
 -1.0			TimeMax
 
 #END
@@ -288,20 +292,23 @@ T
 0.05
 
 #SAVEPLOT
-4                       nPlotFiles
-x=0 FUL tec             StringPlot
+3                       nPlotFiles
+x=0 MHD idl             StringPlot
 -1                      DnSavePlot
 600.0                   DtSavePlot
-y=0 FUL tec             StringPlot
+-1.0			DxSavePlot
+y=0 MHD idl             StringPlot
 -1                      DnSavePlot
 600.0                   DxSavePlot
-z=0 FUL tec             StringPlot
+-1.0			DxSavePlot
+z=0 MHD idl             StringPlot
 -1                      DnSavePlot
 3600.0                  DtSavePlot
-3d FUL tec             StringPlot
+-1.0			DxSavePlot
+
+3d MHD tec             	StringPlot
 -1                      DnSavePlot
 1800.0                  DtSavePlot
-
 
 #END_COMP GM ---------------------------------------------------------------
 
