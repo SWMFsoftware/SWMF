@@ -55,6 +55,7 @@ test_help:
 	@(if [ -d GM/BATSRUS ]; then echo "    test9gpu                    (run SC-IH AWSoM test on GPU)"; fi)
 	@(if [ -d GM/BATSRUS ]; then echo "    test10                      (run SC-IH real-time test)"; fi)
 	@(if [ -d GM/BATSRUS ]; then echo "    test11                      (run SC-GM coupling test)"; fi)
+	@(if [ -d UA/MGITM   ]; then echo "    test12                      (run GM-UA/MGITM test)"; fi)
 	@(if [ -d PT/AMPS    ]; then echo "    test13                      (run GM-PT/AMPS test: Europa)"; fi)
 	@(if [ -d PT/PARMISAN ];then echo "    test14                      (run SC-IH-PT/PARMISAN test)"; fi)
 	@(if [ -d SP/MFLAMPA ]; then echo "    test15                      (run SC-IH-SP/MFLAMPA test)"; fi)
@@ -1954,6 +1955,38 @@ test9gpu_check:
 		> test09gpu_ih_restart.diff)
 	ls -l test09gpu_*.diff
 
+### test12: GM/BATSRUS coupled with UA/MGITM  ###
+
+test12:
+	@echo "test12_compile..." > test12_gm.diff
+	@echo "test12_compile..." > test12_ua.diff
+	${MAKE} test12_compile
+	@echo "test12_rundir..." >> test12_gm.diff
+	@echo "test12_rundir..." >> test12_ua.diff
+	${MAKE} test12_rundir
+
+test12_compile:
+	./Config.pl -noacc -v=Empty,GM/BATSRUS,UA/MGITM
+	./Config.pl -o=GM:u=Mars,e=MhdMars,g=8,8,8,UA:Mars,g=8,4,120,4
+	${MAKE} SWMF
+
+test12_rundir:
+	rm -rf ${TESTDIR}
+	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
+	cp Param/PARAM.in.test.GMUA.MGITM ${TESTDIR}/PARAM.in
+	cd ${TESTDIR}; cp GM/Param/MARS/marsmgsp.txt .
+
+test12_run:
+	cd ${TESTDIR}; ${MPIRUN} SWMF.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl -m RESULTS
+
+test12_check:
+	-(${DIFFNUM} -b \
+		${TESTDIR}/RESULTS/GM/log*.log
+		output/test12/log.log \
+		> test12_gm.diff)
+		ls -l test11*.diff
+
 ### test13: Europa's exosphere model with GM and PT ###
 
 test13:
@@ -2725,26 +2758,6 @@ test23_3d_check:
 	   output/test23/3D/PC.log \
 		>> test23_3d_gmpc.diff)	
 	ls -l test23_3d_gmpc.diff
-
-### test24: GM/BATSRUS coupled with UA/MGITM  ###
-
-test24:
-	@echo "test24_compile..." > test24_gm.diff
-	@echo "test24_compile..." > test24_ua.diff
-	${MAKE} test24_compile
-	@echo "test24_rundir..." >> test24_gm.diff
-	@echo "test24_rundir..." >> test24_ua.diff
-	${MAKE} test24_rundir
-
-test24_compile:
-	./Config.pl -noacc -v=Empty,GM/BATSRUS,UA/MGITM
-	./Config.pl -o=GM:u=Mars,e=MhdMars,g=8,8,8,UA:Mars,g=8,4,120,4
-	${MAKE} SWMF
-
-test24_rundir:
-	rm -rf ${TESTDIR}
-	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
-
 
 ### test25: PC/FLEKS. 3D Light wave test with AMR-PC.
 ###         FLEKS runs with periodic boundary conditions. 
