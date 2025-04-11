@@ -1980,14 +1980,13 @@ test12_rundir:
 
 test12_run:
 	cd ${TESTDIR}; ${MPIRUN} SWMF.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl -m RESULTS
+	cd ${TESTDIR}; ./PostProc.pl -m -replace RESULTS
 
 test12_check:
 	-(${DIFFNUM} -b \
-		${TESTDIR}/RESULTS/GM/log*.log
-		output/test12/log.log \
+		${TESTDIR}/RESULTS/GM/log*.log output/test12/log.log \
 		> test12_gm.diff)
-		ls -l test11*.diff
+	ls -l test12*.diff
 
 ### test13: Europa's exosphere model with GM and PT ###
 
