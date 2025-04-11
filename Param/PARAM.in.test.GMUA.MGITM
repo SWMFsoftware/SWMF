@@ -1,0 +1,318 @@
+Begin session: 1
+
+#DESCRIPTION
+Param/PARAM.in.test.GMUA.MGITM		StringDescription
+
+#COMPONENTMAP
+GM 0 -1 1		CompMap
+
+UA 0 -1 1		CompMap
+
+#TIMEACCURATE
+F			IsTimeAccurate
+
+#STARTTIME
+2015			iYear
+03			iMonth
+08			iDay
+10			iHour
+00			iMinute
+0			iSecond
+0.0			FracSecond
+
+#SAVERESTART
+T			DoSaveRestart
+10000			DnSaveRestart
+100.0			DtSaveRestart
+
+INCLUDE
+RESTART.in
+
+#PLANET
+Mars			NamePlanet
+
+#DIPOLE
+0.0			DipoleStrength
+
+#ROTATION
+T			UseRotation
+24.66584		RotationPeriod
+
+#UPDATEB0
+10.0			DtUpdateB0
+
+#BEGIN_COMP GM ---------------------------------------------------------------
+
+#GRIDBLOCKALL
+10000			MaxBlock
+
+INCLUDE
+GM/restartIN/restart.H
+
+#NORMALIZATION
+SOLARWIND		TypeNormalization
+
+#GRAVITY
+T			UseGravity
+0			iDirGravity
+
+IMPLICIT
+T			UsePointImplicit
+F			UsePartImplicit
+F			UseFullImplicit
+1.0			cflImpl
+
+#GRIDGEOMETRY
+spherical_genr		TypeGeometry
+GM/Param/MARS/grid_stretch.dat		NameGridFile
+
+#GRID
+13			nRootBlock1
+10 			nRootBlock2
+5			nRootBlock3
+-24.			xMin
+  8.			xMax
+-16.			yMin
+ 16.			yMax
+-16.			zMin
+ 16.			zMax
+
+#LIMITRADIUS
+1.0294464		rMin
+28.82			rMax
+
+#GRIDLEVEL
+1			nLevel
+initial			StringShape
+
+#GRIDLEVEL
+1			nLevel
+all			StringShape
+
+#GRIDLEVEL
+2			nLevel
+sphere0			StringShape
+1.3			Radius = 1.5*rBody
+
+#TESTXYZ
+1.2			xTest
+0.1			yTest
+0.1			zTest
+
+#BODY
+T			UseBody
+1.0294464		rBody
+1.0			rCurrents
+1.0e6			BodyNDim Hp
+1.0e6			BodyNDim O2P
+1.0e6			BodyNDim Ip
+1.0e6			BodyNDim CO2p
+300			BodyTDim
+
+#TIMESTEPPING
+2			nStage
+0.4			CflExpl
+
+#SCHEME
+2			nOrder
+Linde			TypeFlux
+minmod			TypeLimiter
+
+#USERSWITCH
++source +ic +b0 +init		StringSwitch
+
+#INNERBOUNDARY
+user			TypeBcBody
+
+#NONCONSERVATIVE
+F			UseNonConservative
+
+#SAVELOGFILE
+F			DoSaveLogfile  check
+VAR step time		StringLog
+500			DnSaveLogfile
+-1.			DtSaveLogfile
+dt rho p rhopnt ppnt bxpnt Hpflxm Hpflxp Opflxm Opflxp O2pflxm O2pflxp CO2pflxm CO2pflxp
+6.0 2.0 1.117786
+
+#OUTERBOUNDARY
+outflow			TypeBc1
+inflow			TypeBc2
+fixed			TypeBc3
+fixed			TypeBc4
+fixed			TypeBc5
+fixed			TypeBc6
+
+! 3nT parker's spiral
+#SOLARWIND
+1.9			SwNDim  [n/cc]
+3.4E5			SwTDim  [K]
+-510.4			SwUxDim [km/s]
+19.6			SwUyDim [km/s]
+-5.0			SwUzDim [km/s]
+-2.1			SwBxDim [nT]
+3.1			SwByDim [nT]
+-1.0			SwBzDim [nT]
+
+SOLARWINDFILE
+T			UseSolarWindFile
+sw_drivers_2015_03_08_09.dat
+
+#USERINPUTBEGIN -----------------------------------
+
+#UseHotO
+T			UseHotO
+
+#UseTempCont
+F			UseTempCont
+
+#UseMarsB0
+T			UseMarsB0
+60			NNm
+126.62			Rot     ! at 03/07/20 UT
+-20.559			Thetilt
+
+111.09
+-17.4966     !at Nov, 1, 2014 for MAVEN
+
+-59.4
+-13.0        !at May 2005, 16, 00:01 UT
+
+UseMso
+T			UseMso	!if true, read rotation axis in MSO
+-0.35131		RotAxisMsoX
+0.24038			RotAxisMsoY
+0.90487			RotAxisMsoZ
+
+NOGW_150308_UT19_MHDINPUTS_2.dat 		filename
+#UseMarsAtm
+T			UseMarsAtm
+NOGW_150308_UT19_MHDINPUTS.dat		TGCMFilename
+81                     	NAlt
+
+36                      NLat
+72                      NLong
+0.0                     subsolarlat
+0.0                     subsolarlong
+2.5                     longstart
+-87.5                  latstart
+98.75                 atlstart
+2.5                     dalt
+5.0                     dlat
+5.0                     dlong
+8                       nline
+
+#SOLARCON
+solarmin		TypeSolarCond
+
+check SMDist
+1.43050
+
+#REACTIONS
+T			UseImpactIon
+T			UseChargeEx
+
+#USECHAPMAN
+T			UseChapman
+
+#USERINPUTEND -------------------------------------
+
+#MULTISPECIES
+T			DoReplaceDensity
+5.0			SpeciesPercentCheck
+
+#SAVEPLOT
+4			nPlotFile
+x=0 FUL tec		StringPlot
+1000			DnSavePlot
+-1.0			DtSavePlot
+y=0 FUL tec		StringPlot
+1000			DnSavePlot
+-1.0			DtSavePlot
+z=0 FUL tec		StringPlot
+1000			DnSavePlot
+-1.0			DtSavePlot
+3d FUL tec		StringPlot
+1000			DnSavePlot
+-1.0			DtSavePlot
+
+SATELLITE
+2			nSatellite
+FULL step date		stringsatellite
+-1			DnOutput
+10.0			Dtoutput
+MAVEN_trac/MAVEN_2015_03_08m0.dat		Nametrajectoryfile
+FUL step date  stringsatellite
+-1			DnOutput
+10.0			Dtoutput
+MAVEN_trac/sat_2015_03_08_09_kp.dat		Nametrajectoryfile
+
+#END_COMP GM -----------------------------------------------------------------
+
+COMPONENT
+UA			NameComp
+F			UseComp
+
+#STOP
+10000			MaxIter
+-1.0			TimeMax
+
+#END
+
+#RUN
+
+#TIMEACCURATE
+T                       DoTimeAccurate
+
+#BEGIN_COMP GM ---------------------------------------------------------------
+
+FIXAXIS  check
+T
+T
+5.0
+1.5
+
+
+POINTIMPLICIT
+T                       UsePointImplicit
+1.0                     BetaPointImplicit
+F                       IsAsymmetric
+T                       DoNormalizeCell
+
+#TIMESTEPPING
+2			nStage
+0.95			CflExpl
+
+FIXEDTIMESTEP
+T
+0.05
+
+#SAVEPLOT
+4                       nPlotFiles
+x=0 FUL tec             StringPlot
+-1                      DnSavePlot
+600.0                   DtSavePlot
+y=0 FUL tec             StringPlot
+-1                      DnSavePlot
+600.0                   DxSavePlot
+z=0 FUL tec             StringPlot
+-1                      DnSavePlot
+3600.0                  DtSavePlot
+3d FUL tec             StringPlot
+-1                      DnSavePlot
+1800.0                  DtSavePlot
+
+
+#END_COMP GM ---------------------------------------------------------------
+
+COUPLE1
+UA                      NameSource
+GM                      NameTarget
+1                       DnCouple
+-1.0                    DtCouple
+
+#STOP
+1000000	               MaxIter
+3600.0                    TimeMax
+
+#END
