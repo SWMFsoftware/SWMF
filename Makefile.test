@@ -1978,8 +1978,9 @@ test12_rundir:
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/PARAM.in.test.GMUA.MGITM ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; cp GM/Param/MARS/marsmgsp.txt .
-	gunzip -c GM/BATSRUS/data/MARS/NOGW_150308_UT19_MHDINPUTS.dat.gz \
-		> ${TESTDIR}/NOGW_150308_UT19_MHDINPUTS.dat
+
+#gunzip -c GM/BATSRUS/data/MARS/NOGW_150308_UT19_MHDINPUTS.dat.gz \
+#		> ${TESTDIR}/NOGW_150308_UT19_MHDINPUTS.dat
 
 test12_run:
 	cd ${TESTDIR}; ${MPIRUN} SWMF.exe > runlog

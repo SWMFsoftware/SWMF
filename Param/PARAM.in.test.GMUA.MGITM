@@ -258,7 +258,7 @@ UA			NameComp
 F			UseComp
 
 #STOP
-50			MaxIter
+10			MaxIter
 -1.0			TimeMax
 
 #END
