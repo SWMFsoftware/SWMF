@@ -1960,11 +1960,13 @@ test9gpu_check:
 
 test12:
 	@echo "test12_compile..." > test12_gm.diff
-	@echo "test12_compile..." > test12_ua.diff
 	${MAKE} test12_compile
 	@echo "test12_rundir..." >> test12_gm.diff
-	@echo "test12_rundir..." >> test12_ua.diff
 	${MAKE} test12_rundir
+	@echo "test12_run..." >> test12_gm.diff
+	${MAKE} test12_run
+	@echo "test12_check..." >> test12_gm.diff
+	${MAKE} test12_check
 
 test12_compile:
 	./Config.pl -noacc -v=Empty,GM/BATSRUS,UA/MGITM
