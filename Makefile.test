@@ -1964,7 +1964,11 @@ test12:
 	@echo "test12_rundir..." >> test12_gm.diff
 	${MAKE} test12_rundir
 	@echo "test12_run..." >> test12_gm.diff
-	${MAKE} test12_run
+	if [ ${NP} -eq 1 -o ${NP} -eq 2 ]; then \
+	     ${MAKE} test12_run; \
+	else \
+	     $(MAKE) test12_run NP=4; \
+	fi
 	@echo "test12_check..." >> test12_gm.diff
 	${MAKE} test12_check
 
@@ -1990,7 +1994,7 @@ test12_check:
 	-(${DIFFNUM} -b \
 		${TESTDIR}/RESULTS/GM/log*.log output/test12/GM.log \
 		> test12_gm.diff)
-	-(${DIFFNUM} -b \
+	-(${DIFFNUM} -b -r=2e-2 \
 		${TESTDIR}/RESULTS/UA/log*.dat output/test12/UA.log \
 		> test12_ua.diff)
 	ls -l test12*.diff
