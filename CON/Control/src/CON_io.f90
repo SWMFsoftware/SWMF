@@ -669,28 +669,6 @@ contains
        end do
     end if
 
-    !^CMP IF IE BEGIN
-    !^CMP IF UA BEGIN
-    ! Check if UA is used but IE is not
-    if(use_comp(UA_) .and. .not. use_comp(IE_)) then
-       write(*,*) NameSub//' SWMF_ERROR: '//&
-            'UA is used without IE. This combination is not allowed!'
-       call world_clean
-       iErrorSwmf = 31
-       RETURN
-    end if
-    ! Check if UA and IE are coupled
-    if(use_comp(UA_) .and. .not. Couple_CC(IE_,UA_) % DoThis) then
-       write(*,*) NameSub//' SWMF_ERROR: '//&
-            'UA is used without IE-->UA coupling! Not allowed!'
-       call world_clean
-       iErrorSwmf = 32
-       RETURN
-    end if
-
-    !^CMP END UA
-    !^CMP END IE
-
     ! Switch off couplings for unused/switched off components
     do iComp1 = 1, MaxComp
        if(use_comp(iComp1)) CYCLE
