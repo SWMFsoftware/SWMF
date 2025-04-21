@@ -229,7 +229,7 @@ los LGQ idl		StringPlot
 0.0			MuLimbDarkening
 300			nPix
 
-#RESIZEINS
+#INSTRUMENT
 sdo:aia			StringInstrument
 0			OffsetAngle
 1.25			rSizeImage
