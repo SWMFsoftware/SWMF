@@ -268,7 +268,7 @@ contains
     ! If DoSendAllVar is true, send all variables in State_VGB
     ! Otherwise send the variables defined by iVarSource_V
 
-    use IH_ModPhysics, ONLY: Si2No_V, UnitX_, UnitU_, No2Si_V, iUnitCons_V
+    use IH_ModPhysics, ONLY: Si2No_V, UnitX_, UnitU_, No2Si_V, iUnitCons_V,UnitT_,No2Io_V 
     use IH_ModAdvance, ONLY: State_VGB, Rho_, RhoUx_, RhoUz_, Bx_, Bz_
     use IH_ModVarIndexes, ONLY: nVar
     use IH_ModB0, ONLY: UseB0, get_b0, B0_DGB
@@ -423,9 +423,9 @@ contains
           ! Fill buffer with interpolated values converted to SI units
           Data_VI(1:nVar,iPoint) = State_V*No2Si_V(iUnitCons_V)
           ! DivU is right after the nVar variables
-          if(UseDivU) Data_VI(nVar+1,iPoint) = DivU*No2Si_V(UnitU_)
+          if(UseDivU) Data_VI(nVar+1,iPoint) = DivU/No2Io_V(UnitT_) 
           ! DivUDx is the last one in the buffer
-          if(UseDivUdX) Data_VI(nVarIn,iPoint) = DivUdX*No2Si_V(UnitU_)
+          if(UseDivUdX) Data_VI(nVarIn,iPoint) = DivUdX/No2Io_V(UnitT_) 
        else
           do iVarBuffer = 1, nVarIn
              iVar = iVarSource_V(iVarBuffer)
