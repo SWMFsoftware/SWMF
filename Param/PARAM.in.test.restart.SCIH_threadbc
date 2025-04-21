@@ -229,6 +229,16 @@ los LGQ idl		StringPlot
 0.0			MuLimbDarkening
 300			nPix
 
+#RESIZEINS
+sdo:aia			StringInstrument
+0			OffsetAngle
+1.25			rSizeImage
+0			xOffset
+0			yOffset
+0			rOccult
+0			MuLimbDarkening
+512                     nPix
+
 #SAVEPLOTNAME
 F			UsePlotNameStep
 F			UsePlotNameTime
