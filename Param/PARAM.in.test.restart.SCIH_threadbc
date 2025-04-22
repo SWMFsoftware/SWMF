@@ -237,7 +237,7 @@ sdo:aia			StringInstrument
 0			yOffset
 0			rOccult
 0			MuLimbDarkening
-512                     nPix
+512			nPix
 
 #SAVEPLOTNAME
 F			UsePlotNameStep
