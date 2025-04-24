@@ -145,7 +145,7 @@ contains
 
     if(DoTest)write(*,*)NameSub,' starting, iProc, iProc0Gm, iProc0Ie=', &
          i_proc() ,i_proc0(GM_),i_proc0(IE_)
-    
+
     ! Allocate buffers for the variables both in GM and IE
     allocate(Buffer_IIV(iSize, jSize, nVarGmIe))
 
