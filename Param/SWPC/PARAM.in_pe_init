@@ -231,6 +231,10 @@ GEO			TypeCoordGrid
 
 #BEGIN_COMP IE ---------------------------------------------------------------
 
+#AURORA
+T                       DoUseAurora
+MAGNIT                  NameAurMod
+
 #SAVEPLOT
 1			nPlotFile
 min idl			StringPlot

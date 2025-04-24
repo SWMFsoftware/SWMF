@@ -298,6 +298,10 @@ T 			UseDecay
 #RESTART
 T			DoRestart
 
+#AURORA
+T                       DoUseAurora
+MAGNIT                  NameAurMod
+
 #SAVEPLOT
 1			nPlotFile
 aur idl			StringPlot
