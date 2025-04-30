@@ -335,7 +335,7 @@ shell0			StringShape
 #AMRREGION
 conemars		NameRegion
 conex0 sat:mars		StringShape
-350    			Height
+350			Height
 128			Radius
 
 #SATELLITE
