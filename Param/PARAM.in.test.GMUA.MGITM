@@ -48,9 +48,6 @@ T			UseRotation
 INCLUDE
 GM/restartIN/restart.H
 
-#NORMALIZATION
-SOLARWIND		TypeNormalization
-
 #GRAVITY
 T			UseGravity
 0			iDirGravity
