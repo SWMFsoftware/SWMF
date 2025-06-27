@@ -156,13 +156,10 @@ sw_drivers_2015_03_08_09.dat
 
 #USERINPUTBEGIN -----------------------------------
 
-#UseHotO
+#HOTOXYGEN
 T			UseHotO
 
-#UseTempCont
-F			UseTempCont
-
-#UseMarsB0
+#MARSB0
 T			UseMarsB0
 60			NNm
 126.62			Rot     ! at 03/07/20 UT
@@ -175,7 +172,7 @@ marsmgsp.txt		NameFileB0
 -59.4
 -13.0        !at May 2005, 16, 00:01 UT
 
-UseMso
+MSO
 T			UseMso	!if true, read rotation axis in MSO
 -0.35131		RotAxisMsoX
 0.24038			RotAxisMsoY
@@ -199,7 +196,7 @@ NOGW_150308_UT19_MHDINPUTS.dat		TGCMFilename
 5.0                     dlong
 8                       nline
 
-#SOLARCON
+#SOLARCONDITION
 solarmin		TypeSolarCond
 
 check SMDist
@@ -209,7 +206,7 @@ check SMDist
 T			UseImpactIon
 T			UseChargeEx
 
-#USECHAPMAN
+#CHAPMAN
 T			UseChapman
 
 #USERINPUTEND -------------------------------------
