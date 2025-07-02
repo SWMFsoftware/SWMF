@@ -111,6 +111,9 @@ ascii			TypeFile
 2			nStage
 0.8			CflExpl
 
+#ENFORCECFL
+T			DoEnforceCfl
+
 #MINIMUMPRESSURE
 1.0E-9			pMinDim
 1.0e-9			PeMinDim
@@ -131,7 +134,7 @@ T			UseLogPLimiter
 F			UseRhoRatioLimiter
 
 #NONCONSERVATIVE
-T			UseNonConservative
+F			UseNonConservative
 
 #MESSAGEPASS
 all			TypeMessagePass
@@ -325,11 +328,24 @@ mc3			TypeLimiter
 1.2			LimiterBeta
 
 #NONCONSERVATIVE
-T			UseNonConservative
+F			UseNonConservative
 
 #TIMESTEPPING
 2			nStage
 0.8			CflExpl
+
+#ENFORCECFL
+T			DoEnforceCfl
+
+#RESISTIVITY
+T               UseResistivity (rest of parameters read only if set to true)
+user            TypeResistivity
+0.0             Eta0Si
+
+#RESISTIVITYOPTIONS
+F                       UseResistiveFlux
+F                       UseJouleHeating
+T                       UseHeatExchange
 
 #DIVB
 T			UseDivbSource

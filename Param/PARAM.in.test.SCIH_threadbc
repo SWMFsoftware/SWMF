@@ -186,7 +186,7 @@ T			UseLogPLimiter
 F			UseRhoRatioLimiter
 
 #NONCONSERVATIVE
-T			UseNonConservative
+F			UseNonConservative
 
 #MESSAGEPASS
 all			TypeMessagePass
@@ -293,6 +293,9 @@ IH			NameTarget
 
 #AMR
 -1			DnRefine
+
+#ENFORCECFL
+T			DoEnforceCfl
 
 #END_COMP SC -----------------------------------------------------------------
 
@@ -403,7 +406,7 @@ mc3			TypeLimiter
 1.2			LimiterBeta
 
 #NONCONSERVATIVE
-T			UseNonConservative
+F			UseNonConservative
 
 #TIMESTEPPING
 2			nStage
@@ -414,6 +417,19 @@ T			UseDivbSource
 T			UseDivbDiffusion
 F			UseProjection
 F			UseConstrainB
+
+#ENFORCECFL
+T			DoEnforceCfl
+
+#RESISTIVITY
+T               UseResistivity (rest of parameters read only if set to true)
+user            TypeResistivity
+0.0             Eta0Si
+
+#RESISTIVITYOPTIONS
+F                       UseResistiveFlux
+F                       UseJouleHeating
+T                       UseHeatExchange
 
 #SAVELOGFILE
 T			DoSaveLogfile
