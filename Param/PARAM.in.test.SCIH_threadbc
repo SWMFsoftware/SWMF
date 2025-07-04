@@ -422,14 +422,14 @@ F			UseConstrainB
 T			DoEnforceCfl
 
 #RESISTIVITY
-T               UseResistivity (rest of parameters read only if set to true)
-user            TypeResistivity
-0.0             Eta0Si
+T			UseResistivity (rest of parameters read only if set to true)
+user			TypeResistivity
+0.0			Eta0Si
 
 #RESISTIVITYOPTIONS
-F                       UseResistiveFlux
-F                       UseJouleHeating
-T                       UseHeatExchange
+F			UseResistiveFlux
+F			UseJouleHeating
+T			UseHeatExchange
 
 #SAVELOGFILE
 T			DoSaveLogfile
