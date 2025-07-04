@@ -111,7 +111,7 @@ ascii			TypeFile
 2			nStage
 0.8			CflExpl
 
-#ENFORCECFL
+ENFORCECFL
 T			DoEnforceCfl
 
 #MINIMUMPRESSURE
@@ -334,18 +334,8 @@ F			UseNonConservative
 2			nStage
 0.8			CflExpl
 
-#ENFORCECFL
+ENFORCECFL
 T			DoEnforceCfl
-
-RESISTIVITY
-T			UseResistivity (rest of parameters read only if set to true)
-user			TypeResistivity
-0.0			Eta0Si
-
-RESISTIVITYOPTIONS
-F			UseResistiveFlux
-F			UseJouleHeating
-T			UseHeatExchange
 
 #DIVB
 T			UseDivbSource

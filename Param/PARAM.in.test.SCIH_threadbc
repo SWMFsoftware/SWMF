@@ -294,7 +294,7 @@ IH			NameTarget
 #AMR
 -1			DnRefine
 
-#ENFORCECFL
+ENFORCECFL
 T			DoEnforceCfl
 
 #END_COMP SC -----------------------------------------------------------------
@@ -418,18 +418,8 @@ T			UseDivbDiffusion
 F			UseProjection
 F			UseConstrainB
 
-#ENFORCECFL
+ENFORCECFL
 T			DoEnforceCfl
-
-RESISTIVITY
-T			UseResistivity (rest of parameters read only if set to true)
-user			TypeResistivity
-0.0			Eta0Si
-
-RESISTIVITYOPTIONS
-F			UseResistiveFlux
-F			UseJouleHeating
-T			UseHeatExchange
 
 #SAVELOGFILE
 T			DoSaveLogfile
