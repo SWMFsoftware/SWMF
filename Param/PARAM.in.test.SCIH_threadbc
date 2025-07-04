@@ -421,12 +421,12 @@ F			UseConstrainB
 #ENFORCECFL
 T			DoEnforceCfl
 
-#RESISTIVITY
+RESISTIVITY
 T			UseResistivity (rest of parameters read only if set to true)
 user			TypeResistivity
 0.0			Eta0Si
 
-#RESISTIVITYOPTIONS
+RESISTIVITYOPTIONS
 F			UseResistiveFlux
 F			UseJouleHeating
 T			UseHeatExchange
