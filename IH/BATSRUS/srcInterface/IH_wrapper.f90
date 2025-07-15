@@ -268,7 +268,7 @@ contains
     ! If DoSendAllVar is true, send all variables in State_VGB
     ! Otherwise send the variables defined by iVarSource_V
 
-    use IH_ModPhysics, ONLY: Si2No_V, UnitX_, UnitU_, No2Si_V, iUnitCons_V,UnitT_,No2Io_V 
+    use IH_ModPhysics, ONLY: Si2No_V, UnitX_, UnitU_, No2Si_V, iUnitCons_V,UnitT_,No2Io_V
     use IH_ModAdvance, ONLY: State_VGB, Rho_, RhoUx_, RhoUz_, Bx_, Bz_
     use IH_ModVarIndexes, ONLY: nVar
     use IH_ModB0, ONLY: UseB0, get_b0, B0_DGB
@@ -423,9 +423,9 @@ contains
           ! Fill buffer with interpolated values converted to SI units
           Data_VI(1:nVar,iPoint) = State_V*No2Si_V(iUnitCons_V)
           ! DivU is right after the nVar variables
-          if(UseDivU) Data_VI(nVar+1,iPoint) = DivU/No2Io_V(UnitT_) 
+          if(UseDivU) Data_VI(nVar+1,iPoint) = DivU/No2Io_V(UnitT_)
           ! DivUDx is the last one in the buffer
-          if(UseDivUdX) Data_VI(nVarIn,iPoint) = DivUdX/No2Io_V(UnitT_) 
+          if(UseDivUdX) Data_VI(nVarIn,iPoint) = DivUdX/No2Io_V(UnitT_)
        else
           do iVarBuffer = 1, nVarIn
              iVar = iVarSource_V(iVarBuffer)
@@ -449,7 +449,8 @@ contains
     use IH_ModPhysics, ONLY:No2Si_V, UnitX_
     use IH_ModGeometry, ONLY: RadiusMin, RadiusMax
     use IH_BATL_geometry, ONLY: TypeGeometry, IsGenRadius, LogRGen_I
-    use IH_BATL_lib, ONLY: CoordMin_D, CoordMax_D, Particle_I
+    use IH_BATL_lib, ONLY: CoordMin_D, CoordMax_D, Particle_I,  &
+         rRound0, rRound1
     use IH_ModParticleFieldLine, ONLY: iKindReg, UseParticles
 
     logical:: DoTest,DoTestMe
@@ -491,7 +492,8 @@ contains
             UnitX     = No2Si_V(UnitX_), &
             nVar      = nVar,            &
             NameVar   = NameVarCouple,   &
-            TypeGeometry = 'cartesian')
+            TypeGeometry = TypeGeometry, &
+            Coord2_I  = [rRound0, rRound1])
     else
        call set_coord_system(&
             GridID_   = IH_,             &
@@ -570,7 +572,7 @@ contains
     real, intent(in ) :: XyzIn_D(3)
     real, intent(out) :: CoordOut_D(3)
 
-    real:: x, y
+    real:: x, y, Coord2_I(2)
     integer, parameter:: x_=1, y_=2, z_=3, r_=1
     integer:: Phi_
     character(len=20)  :: TypeGeometry
@@ -590,6 +592,10 @@ contains
        call xyz_to_sph(XyzIn_D, CoordOut_D)
     elseif(TypeGeometry(1:3)  == 'rlo')then
        call xyz_to_rlonlat(XyzIn_D, CoordOut_D)
+    elseif(TypeGeometry(1:9) == 'roundcube')then
+       Coord2_I = Grid_C(IH_)%Coord2_I
+       call xyz_to_roundcube_coord(&
+           XyzIn_D, Coord2_I(1), Coord2_I(2), CoordOut_D)
     else
        call CON_stop(NameSub// &
             ' not yet implemented for TypeGeometry='//TypeGeometry)
@@ -619,6 +625,58 @@ contains
       r = (i + dCoord)/(nRgen - 1)
 
     end subroutine radius_to_gen
+    !==========================================================================
+    subroutine xyz_to_roundcube_coord(&
+         XyzIn_D, rRound0, rRound1, CoordOut_D)
+
+      real, intent(in ) :: XyzIn_D(3), rRound0, rRound1
+      real, intent(out) :: CoordOut_D(3)
+      real, parameter   :: SqrtNDim = sqrt(3.0)
+      real:: r2, Dist1, Dist2, Coef1, Coef2
+      !------------------------------------------------------------------------
+      r2 = sum(XyzIn_D**2)
+      if (r2 > 0.0) then
+         ! L1 and L2 distance
+         Dist1 = maxval(abs(XyzIn_D))
+         Dist2 = sqrt(r2)
+         if (rRound1 > rRound0 ) then
+            ! The rounded grid is outside of the non-distorted part
+            if (Dist1 > rRound0) then
+               ! Outside the undistorted region
+               ! Assume Coord = w * Xyz and Replace Xyz in coord_to_xyz
+               ! We have a quadratic equation of w.
+               ! w^2 - Coef1*w
+               ! - 4*Dist1/(rRound1-rRound0)*(SqrtNDim*Dist1/Dist2 - 1) = 0
+
+               Coef1 = -1 &
+                    + rRound0/(rRound1-rRound0)*(dist1*SqrtNDim/Dist2 - 1)
+               Coef2 = Coef1**2 &
+                    + 4*Dist1/(rRound1-rRound0)*(SqrtNDim*Dist1/Dist2 - 1)
+               CoordOut_D = XyzIn_D/(-Coef1 + sqrt(Coef2))*2
+            else
+               ! No distortion
+               CoordOut_D = XyzIn_D
+            end if
+
+         else
+            ! The rounded (distorted) grid is inside of the non-distorted part
+            if (Dist2 < rRound1) then
+               ! Solving w^2-w+Coef1 = 0
+               Coef1 = Dist1/rRound1*(1 - Dist1/Dist2)
+               CoordOut_D = XyzIn_D / (1+sqrt(1-4*Coef1))*2
+            else
+               ! Solving w^2+Coef1*w+Coef2 = 0
+               Coef1 = -1 + (1 - Dist1/Dist2)/(rRound0-rRound1)*rRound0
+               Coef2 = -(1 - Dist1/Dist2)/(rRound0 - rRound1)*Dist1
+               Coef2 = (-Coef1 + sqrt(Coef1**2 - 4*Coef2))*0.5
+               CoordOut_D = XyzIn_D / Coef2
+            end if
+         end if
+
+      else
+         CoordOut_D = 0.0
+      end if
+    end subroutine xyz_to_roundcube_coord
     !==========================================================================
   end subroutine IH_xyz_to_coord
   !============================================================================
