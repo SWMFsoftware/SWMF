@@ -687,7 +687,7 @@ contains
     real, intent(in) :: CoordIn_D(3)
     real, intent(out):: XyzOut_D( 3)
 
-    real               :: Coord_D(3), r, Phi
+    real               :: Coord_D(3), r, Phi, Coord2_I(2)
     integer, parameter :: x_=1, r_=1
     integer            :: Phi_
     character(len=20)  :: TypeGeometry
@@ -716,6 +716,10 @@ contains
        call sph_to_xyz(Coord_D, XyzOut_D)
     elseif(TypeGeometry(1:3)  == 'rlo')then
        call rlonlat_to_xyz(Coord_D, XyzOut_D)
+    elseif(TypeGeometry(1:9) == 'roundcube')then
+       Coord2_I = Grid_C(IH_)%Coord2_I
+       call roundcube_coord_to_xyz(&
+            Coord_D, Coord2_I(1), Coord2_I(2), XyzOut_D)
     else
        call CON_stop(NameSub// &
             ' not yet implemented for TypeGeometry='//TypeGeometry)
@@ -739,6 +743,57 @@ contains
 
     end subroutine gen_to_radius
     !==========================================================================
+    subroutine roundcube_coord_to_xyz(&
+         CoordIn_D, rRound0, rRound1, XyzOut_D)
+
+      real, intent(in) :: CoordIn_D(3), rRound0, rRound1
+      real, intent(out):: XyzOut_D( 3)
+      real:: r2, Dist1, Dist2, Weight
+      real, parameter   :: SqrtNDim = sqrt(3.0)
+      !------------------------------------------------------------------------
+      r2 = sum(CoordIn_D**2)
+      ! L1 and L2 distances from origin
+      ! L1 distance is constant on the surface of a cube
+      ! L2 distance is constant on the surface of a sphere
+      Dist1 = maxval(abs(CoordIn_D))
+      Dist2 = sqrt(r2)
+
+      if (r2 > 0.0) then
+         if (rRound0 < rRound1) then
+            ! Non-distorted grid inside, round grid outside
+            Weight = (Dist1 - rRound0)/(rRound1 - rRound0)
+         elseif (Dist1 < rRound1) then
+            ! the rounded grid is inside and the point is inside rRound1
+            ! The distortion is 0 at the origin and maximum at Dist1=rRound1.
+            Weight = Dist1/rRound1
+         else
+            ! the rounded grid is inside and the point is outside rRound1
+            Weight = (rRound0 - Dist1)/(rRound0 - rRound1)
+         endif
+         ! Limit weight to be in the [0,1] interval
+         Weight = min(1., max(0.0, Weight))
+
+         if (rRound0 < rRound1) then
+            ! Expand coordinate outward
+            ! For a fully rounded grid we expand the generalized coordinate
+            ! by Dist1*SqrtNDim/Dist2, so along the main diagonals there is
+            ! no stretch and along the axes the expansion is SqrtNDim.
+            ! For the partially rounded grid the expansion factor is reduced.
+            ! The minimum expansion factor is 1 in the non-distorted region.
+            XyzOut_D = (1 + Weight*(Dist1*SqrtNDim/Dist2 - 1)) * CoordIn_D
+         else
+            ! Contract coordinate inward
+            ! In this case the grid is contracted along
+            ! the main diagonals by a factor up to sqrt(nDim)
+            ! and there is no contraction along the axes
+            XyzOut_D = (1 + Weight*(Dist1/Dist2 - 1)) * CoordIn_D
+         end if
+
+      else
+         XyzOut_D = 0.0
+      end if
+    end subroutine roundcube_coord_to_xyz
+    !=========================================================================
   end subroutine IH_coord_to_xyz
   !============================================================================
   subroutine IH_synchronize_refinement(iProc0,iCommUnion)
