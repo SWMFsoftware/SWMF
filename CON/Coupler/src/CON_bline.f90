@@ -613,6 +613,7 @@ contains
     !--------------------------------------------------------------------------
     iLine    = Put%iCB_II(4,iPutStart)
     iVertex  = Put%iCB_II(1,iPutStart) + iOffset_B(iLine)
+    if(iVertex > nVertexMax)RETURN
     R = norm2(XyzBl_D)
     if(R < rMinBl .or. R >= rMaxBl)then
        ! Sort out particles left the SP domain
