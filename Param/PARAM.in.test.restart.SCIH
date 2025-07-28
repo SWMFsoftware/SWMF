@@ -486,12 +486,6 @@ F			UseNonConservative^
 2			nStage
 0.8			CflExpl
 
-#DIVB
-T			UseDivbSource
-T			UseDivbDiffusion
-F			UseProjection
-F			UseConstrainB
-
 #SAVELOGFILE
 T			DoSaveLogfile
 VAR			StringLog
