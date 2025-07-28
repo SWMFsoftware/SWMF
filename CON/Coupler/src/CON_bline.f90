@@ -612,6 +612,7 @@ contains
     character(len=*), parameter:: NameSub = 'BL_put_line'
     !--------------------------------------------------------------------------
     iLine    = Put%iCB_II(4,iPutStart)
+    if(.not.Used_B(iLine))RETURN
     iVertex  = Put%iCB_II(1,iPutStart) + iOffset_B(iLine)
     if(iVertex > nVertexMax)RETURN
     R = norm2(XyzBl_D)
