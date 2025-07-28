@@ -286,6 +286,11 @@ MHD			StringSatellite
 -1.0			DtOutput [sec]
 SC/TRAJECTORY/stb.dat		NameTrajectoryFile
 
+
+#ELECTRONENTROPY
+F			UseElectronEntropy
+F			UseElectronEnergy
+
 #END_COMP SC -----------------------------------------------------------------
 
 #BEGIN_COMP IH ---------------------------------------------------------------
@@ -389,6 +394,11 @@ MHD			StringSatellite
 -1			DnOutput
 1.0			DtOutput [sec]
 IH/TRAJECTORY/stb.dat		NameTrajectoryFile
+
+
+#ELECTRONENTROPY
+F			UseElectronEntropy
+F			UseElectronEnergy
 
 #TEST
 set_name_file		StringTest

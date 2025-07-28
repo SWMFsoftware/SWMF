@@ -258,6 +258,10 @@ MHD			StringSatellite
 -1.0			DtOutput [sec]
 SC/TRAJECTORY/stb.dat		NameTrajectoryFile
 
+#ELECTRONENTROPY
+F			UseElectronEntropy
+F			UseElectronEnergy
+
 #END_COMP SC -----------------------------------------------------------------
 
 #COMPONENT
@@ -454,6 +458,11 @@ g rbody			NamePars
 buf MHD idl		StringPlot
 -1			DnSavePlot
 50.0			DtSavePlot
+
+
+#ELECTRONENTROPY
+F			UseElectronEntropy
+F			UseElectronEnergy
 
 #END_COMP IH -----------------------------------------------------------------
 
