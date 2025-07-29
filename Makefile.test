@@ -1568,7 +1568,6 @@ test8_compile:
 	./Config.pl -default -v=Empty,SC/BATSRUS,IH/BATSRUS
 	./Config.pl -o=SC:u=Awsom,e=Awsom,ng=2,g=4,4,4
 	./Config.pl -o=IH:u=Awsom,e=Awsom,ng=2,g=4,4,4
-	cd SC/BATSRUS; make oldtr
 	${MAKE} SWMF
 	make PIDL
 
@@ -2400,7 +2399,6 @@ test19_compile:
 	./Config.pl -o=IH:u=Awsom,e=AwsomWdiff,ng=2,g=4,4,4
 	./Config.pl -o=OH:u=Awsom,e=Awsom,ng=2,g=4,4,4
 	./Config.pl -o=SP:g=2000
-	cd SC/BATSRUS; make oldtr
 	${MAKE} SWMF
 	make PIDL
 
