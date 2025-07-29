@@ -185,9 +185,6 @@ T			UseLogRhoLimiter
 T			UseLogPLimiter
 F			UseRhoRatioLimiter
 
-#NONCONSERVATIVE
-F			UseNonConservative
-
 #MESSAGEPASS
 all			TypeMessagePass
 
@@ -408,9 +405,6 @@ T			UseReynoldsDecomposition
 Sokolov			TypeFlux
 mc3			TypeLimiter
 1.2			LimiterBeta
-
-#NONCONSERVATIVE
-F			UseNonConservative
 
 #TIMESTEPPING
 2			nStage

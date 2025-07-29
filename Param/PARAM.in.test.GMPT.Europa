@@ -112,11 +112,8 @@ one			StringRestartOutFile
 #NONCONSERVATIVE
 T			UseNonConservative
 
-#CONSERVATIVECRITERIA
-0			nConservCrit
-
 #USERSWITCH
-+init +ic +source		StringSwitch
++ic +source		StringSwitch
 
 #SAVEPLOT
 3			nPlotFile

@@ -92,11 +92,6 @@ mc			TypeLimiter
 1.E-4			RhoMinDim for fluid SW
 1.E-9			RhoMinDim for fluid PUI
 
-
-! Applies to the ions only if DoConserveNeutrals is false in #MULTIFLUID
-#NONCONSERVATIVE
-F			UseNonConservative
-
 #SAVERESTART
 T			DoSaveRestart
 1000			DnSaveRestart

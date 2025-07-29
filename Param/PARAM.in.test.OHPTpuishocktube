@@ -59,12 +59,6 @@ Rusanov			TypeFlux
 T			UseDtFixed
 1 year  		DtFixedDim
 
-#NONCONSERVATIVE
-F			UseNonConservative
-
-#CONSERVATIVECRITERIA
-0			nConservCrit
-
 #SAVELOGFILE
 T			DoSaveLogfile
 RAW			StringLog
