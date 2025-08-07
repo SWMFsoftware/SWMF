@@ -308,7 +308,7 @@ F			DoFixPolarRegion
 1e-5			pMinDim [nPa]
 
 #SAVEPLOT
-3			nPlotFile
+2			nPlotFile
 y=0 MHD idl		StringPlot
 -1			DnSavePlot
 5 min			DtSavePlot
@@ -317,6 +317,7 @@ z=0 MHD idl		StringPlot
 -1			DnSavePlot
 5 min			DtSavePlot
 -1.0			DxSavePlot
+
 shl MHD idl_ascii		StringPlot
 -1			DnSavePlot
 1 min			DtSavePlot
