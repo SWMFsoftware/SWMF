@@ -158,7 +158,7 @@ SWMFREF.tex: ${SWMFREF} BATSRUS_SCRIPTS
 SWMFXML:
 	@rm -f SWMFXML.tex
 	@touch SWMFXML.tex
-	@perl -e 'for $$i (glob("../../PARAM.XML ../../[A-Z][A-Z]/*/PARAM.XML")){`${SCRIPTDIR}/XmlToTex.pl $$i >> SWMFXML.tex` unless $$i =~ /BATSRUS/ and $$i !~ /GM\/BATSRUS/}'
+	@perl -e 'for $$i (glob("../../PARAM.XML ../../[A-Z][A-Z]/*/PARAM.XML")){`${SCRIPTDIR}/XmlToTex.pl $$i >> SWMFXML.tex` unless $$i =~ /PT\/FLEKS/ or $$i =~ /BATSRUS/ and $$i !~ /GM\/BATSRUS/}'
 	@echo "${SCRIPTDIR}/XmlToTex.pl */PARAM.XML > SWMFXML.tex"
 
 SWMF.pdf: \
