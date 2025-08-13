@@ -2240,7 +2240,7 @@ test16_2d:
 	$(MAKE) test16_2d_check
 
 test16_2d_compile:
-	./Config.pl -default -amrex2d -v=Empty,PC/FLEKS,GM/BATSRUS
+	./Config.pl -default -amrex2d -v=Empty,PC/FLEKS,GM/BATSRUS -pt=PBEG
 	./Config.pl -o=GM:u=Default,e=MultiIonPe,ng=2,g=8,8,1 -o=PC:lev=9
 	$(MAKE) SWMF
 	$(MAKE) PIDL
@@ -2248,7 +2248,7 @@ test16_2d_compile:
 test16_2d_rundir:
 	rm -rf ${TESTDIR}
 	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR}
-	cp Param/PARAM.in.test.GMPC.FLEKS.periodic  ${TESTDIR}/PARAM.in
+	cp Param/PARAM.in.test.GMPC.FLEKS.2D.periodic  ${TESTDIR}/PARAM.in
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test16_2d_run:

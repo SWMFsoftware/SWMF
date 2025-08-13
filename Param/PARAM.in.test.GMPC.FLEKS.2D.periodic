@@ -1,0 +1,323 @@
+ID Root Last Stride
+#COMPONENTMAP
+GM  0 -1  1		CompMap
+PC  0  7  1		CompMap
+
+#DESCRIPTION
+Param/PARAM.in.test.GMPC.FLEKS.periodic		StringDescription
+
+#PLANET
+NONE			NamePlanet
+
+#TIMEACCURATE
+T			IsTimeAccurate
+
+#PROGRESS
+1			DnProgressShort
+1			DnProgressLong
+
+
+#COUPLE2
+GM			NameComp1
+PC			NameComp2
+-1			DnCouple
+0.5			DtCouple
+
+#COUPLETIME
+GM			NameComp
+F			DoCoupleOnTime
+
+#BEGIN_COMP GM ---------------------------------------------------------------
+
+#IOUNITS
+NONE			TypeIoUnit
+
+#NORMALIZATION
+NONE			TypeNormalization
+
+#PLASMA
+1.0			FluidMass 1 [amu]
+4.0			FluidMass 2 [amu]
+1.0			IonCharge 1 [e]
+1.0			IonCharge 2 [e]
+1.0			ElectronTemperatureRatio
+
+#NONCONSERVATIVE
+T			UseNonConservative
+
+#UNIFORMSTATE
+0.5			StateVar Rho
+0.03			StateVar Ux1
+0.04			StateVar Uy1
+0.0			StateVar Uz1
+0.2			StateVar Bx
+0.0			StateVar By
+0.0			StateVar Bz
+5.12E-4			StateVar Pe
+2.56e-4			StateVar p1
+0.5			StateVar Rho2
+0.03			StateVar Ux2
+0.04			StateVar Uy2
+0.0			StateVar Uz2
+2.56e-4			StateVar p2
+
+Whistler wave is cirularly polarized
+for both ion fluids.
+
+#WAVE
+Uy			NameVar
+10000.0			Width
+-0.0090663280		Amplitude  -0.01 for Alfven
+32.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+-90.0			Phase
+
+#WAVE
+Uz			NameVar
+1000.0			Width
++0.0090663280		Amplitude  +0.01 for Alfven
+32.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+180.0			Phase
+
+#WAVE
+OpUy			NameVar
+10000.0			Width
+-0.0090663280		Amplitude  -0.01 for Alfven
+32.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+-90.0			Phase
+
+#WAVE
+OpUz			NameVar
+1000.0			Width
++0.0090663280		Amplitude  +0.01 for Alfven
+32.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+180.0			Phase
+
+#WAVE
+By			NameVar
+1000.0			Width
+0.01			Amplitude
+32.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+-90.0			Phase
+
+#WAVE
+Bz			NameVar
+1000.0			Width
+-0.01			Amplitude
+32.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+180.0			Phase
+
+Put perturbations into pressures, but keep
+total Pe+Pi1+Pi2 constant
+
+#WAVE
+Pe			NameVar
+1000.0			Width
+1e-4			Amplitude
+32.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+180.0			Phase
+
+#WAVE
+p			NameVar
+1000.0			Width
+0.5e-4			Amplitude
+32.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+0.0			Phase
+
+#WAVE
+OpP			NameVar
+1000.0			Width
+0.5e-4			Amplitude
+32.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+0.0			Phase
+
+#GRID
+32			nRootBlock1
+24			nRootBlock2
+1			nRootBlock3
+-64			xMin
+ 64  			xMax
+-48			yMin
+ 48			yMax
+-0.5			zMin
+ 0.5			zMax
+
+#CHECKGRIDSIZE
+  8			nI
+  8			nJ
+  1			nK
+800			MinBlockAll
+
+#FIXEDTIMESTEP
+T			UseDtFixed
+0.5			DtFixedDim
+
+#PICUNIT
+ 1.0			xUnitPicSi
+ 1.0			uUnitPicSi
+
+#PICGRID
+1			nPicGrid
+-32			xMinPic
+ 32			xMaxPic
+-20			yMinPic
+ 20			yMaxPic
+0.5			DxPic
+0.5			DyPic
+
+#PICADAPT
+F			DoAdaptPic
+
+#PICPATCH
+2			PatchSize
+
+#OUTERBOUNDARY
+periodic		TypeBc1
+periodic		TypeBc2
+periodic		TypeBc3
+periodic		TypeBc4
+
+#HALLRESISTIVITY
+T			UseHallResist
+1.0			HallFactorMax
+0.0			HallCmaxFactor
+
+#TEST
+init_hall_resist		StringTest
+
+#B0SOURCE
+F			UseB0Source
+
+#ELECTRONENTROPY
+F			UseElectronEntropy
+F			UseElectronEnergy
+
+#SCHEME
+2			nOrder
+Rusanov			TypeFlux
+mc			TypeLimiter
+1.5			LimiterBeta
+
+RK
+3			nStage
+0.8			CflExpl
+
+#TIMESTEPPING
+2			nStage
+0.8			CflExpl
+
+#IMPLICIT
+F			UsePointImplicit
+F			UsePartImplicit
+T			UseFullImplicit
+100.0			CflImpl
+
+#SAVELOGFILE
+T			DoSaveLogfile
+raw			StringLog
+1			DnSaveLogfile
+-1.			DtSaveLogfile
+
+#SAVEINITIAL
+T			DoSaveInitial
+
+#SAVEPLOT
+1			nPlotFile
+z=0 all idl_ascii		StringPlot
+1			DnSavePlot
+-0.05			DtSavePlot
+0.			DxSavePlot
+
+#END_COMP GM -----------------------------------------------------------------
+
+#BEGIN_COMP PC ---------------------------------------------------------------
+
+#REGION
+tpsphere		regionName
+sphere			shape
+0.0			centerX
+0.0			centerY
+1.0			radius
+
+#TPCELLINTERVAL
+8			nIntervalX
+2			nIntervalY
+1			nIntervalZ
+
+#PARTICLETRACKER
+T			useParticleTracker
+
+#TPREGION
++tpsphere		region
+
+#SAVELOG
+1			dnSavePic
+1			dnSavePT
+
+#SMOOTHE
+F			doSmoothE
+
+#MAXBLOCKSIZE
+16			nCellX
+8			nCellY
+1			nCellZ
+
+#PERIODICITY
+T			isPeriodicX
+T			isPeriodicY
+T			isPeriodicZ
+
+#DISCRETIZATION
+0.5			theta
+0.0			ratioDivC2C
+
+#EFIELDSOLVER
+1e-13			EFieldTol
+200			EFieldIter
+
+#PARTICLES
+10			nParticleX per cell in X
+10			nParticleY per cell in Y
+1			nParticleZ per cell in Z
+
+#SAVEPLOT
+1			nPlotFile
+z=0 fluid ascii si		StringPlot
+4			DnSavePlot
+-1			DtSavePlot
+0			DxSavePlot
+
+
+#END_COMP PC -----------------------------------------------------------------
+
+#STOP
+0			MaxIter
+0			TimeMax
+
+#RUN ##########################################################################
+
+#COMPONENT
+GM			NameComp
+F			UseComp
+
+#STOP
+-1			MaxIter
+2.0			TimeMax
+
