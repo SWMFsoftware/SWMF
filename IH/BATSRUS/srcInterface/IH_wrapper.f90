@@ -268,7 +268,8 @@ contains
     ! If DoSendAllVar is true, send all variables in State_VGB
     ! Otherwise send the variables defined by iVarSource_V
 
-    use IH_ModPhysics, ONLY: Si2No_V, UnitX_, UnitU_, No2Si_V, iUnitCons_V,UnitT_,No2Io_V
+    use IH_ModPhysics, ONLY: &
+         Si2No_V, UnitX_, UnitU_, No2Si_V, iUnitCons_V,UnitT_,No2Io_V
     use IH_ModAdvance, ONLY: State_VGB, Rho_, RhoUx_, RhoUz_, Bx_, Bz_
     use IH_ModVarIndexes, ONLY: nVar
     use IH_ModB0, ONLY: UseB0, get_b0, B0_DGB
@@ -547,9 +548,9 @@ contains
           nParticle = Particle_I(iKindReg)%nParticleMax
           call get_root_decomposition_dd(MH_LineDecomposition, &
                [n_proc(IH_)],        &  ! One "block" per processor
-               [0.50],               &  ! "Coordinate" is a global point number
-                                ! factors are converted separately to prevent integer overflow
-               [real(n_proc(IH_))*real(nParticle) + 0.50], &
+               [0.5],                &  ! "Coordinate" is a global point number
+               ! factors are converted separately to prevent integer overflow
+               [n_proc(IH_)*real(nParticle) + 0.5], &
                [nParticle])             ! nParticle cells per "block" (proc)
        end if
        call bcast_decomposition_dd(MH_LineDecomposition)
