@@ -4,11 +4,11 @@
 !^CMP FILE EE
 !^CMP FILE SC
 
-!
 ! Couple EE and SC components both ways.
-! EE overwrites SC in the whole EE domain. Extra SC variables are solved for in SC.
+! EE overwrites SC in the whole EE domain. Extra SC variables are solved
+! for in SC.
 ! SC provides boundary conditions for EE where possible.
-!
+
 module CON_couple_ee_sc
 
   use CON_coupler
@@ -35,7 +35,6 @@ module CON_couple_ee_sc
 
 contains
   !============================================================================
-
   subroutine couple_ee_sc_init
 
     logical :: DoTest, DoTestMe
@@ -70,7 +69,6 @@ contains
 
   end subroutine couple_ee_sc_init
   !============================================================================
-
   subroutine couple_ee_sc(tSimulation)
 
     real, intent(in) :: tSimulation
@@ -80,7 +78,6 @@ contains
     ! Name of this interface
     character(len=*), parameter:: NameSub = 'couple_ee_sc'
     !--------------------------------------------------------------------------
-
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
     if(DoTest)write(*,*)NameSub,' starting iProc=', i_proc()
@@ -111,6 +108,5 @@ contains
 
   end subroutine couple_sc_ee
   !============================================================================
-
 end module CON_couple_ee_sc
 !==============================================================================
