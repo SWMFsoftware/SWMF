@@ -336,17 +336,7 @@ shk VAR idl_ascii		StringPlot
 90.			LatMax
 10.			dLat
 {MHD} te ti normx normy normz comprho thetaup thetadn ushk 		NameVars
-{default}		NamePars
-
-los ins tec		StringPlot
--1			DnSavePlot
-10.0			DtSavePlot
-soho:c2 soho:c3 sta:cor1 sta:cor2 stb:cor1 stb:cor2		StringsInstrument
-3d VAR tcp		StringPlot
--1			DnSavePlot
-10.			DtSavePlot
-{MHD} b1x b1y b1z te ti		NameVars
-{default}		NamePars
+x_earth y_earth z_earth		NamePars
 
 #SATELLITE
 3			nSatellite
@@ -557,12 +547,6 @@ F			UseNonConservative^
 2			nStage
 0.8			CflExpl
 
-#DIVB
-T			UseDivbSource
-T			UseDivbDiffusion
-F			UseProjection
-F			UseConstrainB
-
 #SAVELOGFILE
 T			DoSaveLogfile
 VAR			StringLog
@@ -599,15 +583,15 @@ z=0 VAR idl		StringPlot
 
 #SATELLITE
 3			nSatellite
-MHD hgi			StringSatellite
+MHD HGI			StringSatellite
 -1  			DnOutput
 2.			DtOutput
 IH/TRAJECTORY/earth.dat	NameTrajectoryFile
-MHD hgi			StringSatellite
+MHD HGI			StringSatellite
 -1  			DnOutput
 2.			DtOutput
 IH/TRAJECTORY/sta.dat	NameTrajectoryFile
-MHD hgi			StringSatellite
+MHD HGI			StringSatellite
 -1  			DnOutput
 2.			DtOutput
 IH/TRAJECTORY/stb.dat	NameTrajectoryFile
@@ -733,7 +717,7 @@ z=0 VAR idl             StringPlot
 shl VAR idl             StringPlot
 -1                      DnSavePlot
 5.0                   DtSavePlot
-hgi                     TypeCoordPlot
+SYS                     TypeCoordPlot
 212.0                   rMin
 212.0                   rMax
 0.                      LonMin

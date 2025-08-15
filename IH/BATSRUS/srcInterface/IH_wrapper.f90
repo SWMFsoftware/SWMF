@@ -5,12 +5,15 @@
 module IH_wrapper
 
   ! Wrapper for IH_BATSRUS Inner Heliosphere (IH) component
+  ! This file gets copied into Solar Corona and Outer Heliosphere.
+
   use CON_coupler, ONLY: &
        CON_set_do_test, CON_stop, IH_, GridType, LocalGridType
-  use IH_ModBatsrusMethods,    ONLY: &
+  use IH_ModBatsrusMethods, ONLY: &
        BATS_init_session, BATS_setup, BATS_advance, BATS_save_files, &
        BATS_finalize
   use IH_ModBatsrusUtility, ONLY: stop_mpi, error_report
+  use IH_ModUpdateStateFast, ONLY: sync_cpu_gpu
 
   implicit none
   SAVE
@@ -34,6 +37,7 @@ module IH_wrapper
   public:: IH_is_coupled_block
   public:: IH_interface_point_coords
   public:: IH_n_particle
+
   ! Public variables to be set/reset by a coupler. Needed to transform
   ! vector state variables obtained via the coupler.
   Character(len=3),    public :: TypeCoordSource    ! Coords of coupled model
@@ -108,44 +112,40 @@ contains
     use CON_physics, ONLY: get_time
     use ModTimeConvert, ONLY: time_real_to_int
 
-    ! Arguments
     type(CompInfoType), intent(inout):: CompInfo   ! Information for this comp.
-    character (len=*), intent(in)    :: TypeAction ! What to do
+    character(len=*), intent(in)     :: TypeAction ! What to do
 
-    logical :: DoTest,DoTestMe
+    logical :: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'IH_set_param'
     !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
 
-    if(DoTest)write(*,*)NameSub,' called with TypeAction,iProc=',&
+    if(DoTest)write(*,*)NameSub,' called with TypeAction,iProc=', &
          TypeAction,iProc
 
     select case(TypeAction)
     case('VERSION')
-       call put(CompInfo,&
-            Use        =.true.,                        &
+       call put(CompInfo, Use=.true., &
             NameVersion='IH_BATSRUS (Univ. of Michigan)')
     case('MPI')
-       call get(CompInfo, iComm=iComm, iProc=iProc, nProc=nProc,&
+       call get(CompInfo, iComm=iComm, iProc=iProc, nProc=nProc, &
             Name=NameThisComp)
 
-       NamePlotDir(1:2)      = NameThisComp
-       NameRestartInDir(1:2) = NameThisComp
-       NameRestartOutDir(1:2)= NameThisComp
+       NamePlotDir(1:2)       = NameThisComp
+       NameRestartInDir(1:2)  = NameThisComp
+       NameRestartOutDir(1:2) = NameThisComp
     case('READ','CHECK')
-       call get_time( &
-            DoTimeAccurateOut = IsTimeAccurate, &
-            tSimulationOut=tSimulation, &
-            tStartOut         = StartTime)
-       call time_real_to_int(StartTime,iStartTime_I)
+       call get_time(DoTimeAccurateOut=IsTimeAccurate, &
+            tSimulationOut=tSimulation, tStartOut=StartTime)
+       call time_real_to_int(StartTime, iStartTime_I)
 
        call set_parameters(TypeAction)
     case('STDOUT')
        iUnitOut=STDOUT_
-       if(iProc==0)then
+       if(iProc == 0)then
           StringPrefix = NameThisComp//':'
        else
-          write(StringPrefix,'(a,i4.4,a)')NameThisComp,iProc,':'
+          write(StringPrefix,'(a,i4.4,a)')NameThisComp, iProc, ':'
        end if
     case('FILEOUT')
        call get(CompInfo,iUnitOut=iUnitOut)
@@ -162,7 +162,7 @@ contains
 
     use IH_ModMain, ONLY: IsTimeLoop
 
-    real,     intent(in) :: TimeSimulation   ! seconds from start time
+    real, intent(in):: TimeSimulation   ! seconds from start time
 
     integer :: iError
     character(len=*), parameter:: NameSub = 'IH_finalize'
@@ -178,7 +178,7 @@ contains
   !============================================================================
   subroutine IH_save_restart(TimeSimulation)
 
-    real,     intent(in) :: TimeSimulation   ! seconds from start time
+    real, intent(in):: TimeSimulation   ! seconds from start time
 
     character(len=*), parameter:: NameSub = 'IH_save_restart'
     !--------------------------------------------------------------------------
@@ -186,7 +186,7 @@ contains
 
   end subroutine IH_save_restart
   !============================================================================
-  subroutine IH_run(TimeSimulation,TimeSimulationLimit)
+  subroutine IH_run(TimeSimulation, TimeSimulationLimit)
 
     use IH_BATL_lib, ONLY: iProc
     use IH_ModMain, ONLY: tSimulation
@@ -219,7 +219,7 @@ contains
   subroutine IH_get_grid_info(nDimOut, iGridOut, iDecompOut)
 
     use IH_BATL_lib, ONLY: nDim
-    use IH_ModMain,  ONLY: iNewGrid, iNewDecomposition
+    use IH_ModMain, ONLY: iNewGrid, iNewDecomposition
 
     integer, intent(out):: nDimOut    ! grid dimensionality
     integer, intent(out):: iGridOut   ! grid index (increases with AMR)
@@ -238,7 +238,7 @@ contains
   !============================================================================
   subroutine IH_find_points(nDimIn, nPoint, Xyz_DI, iProc_I)
 
-    use IH_BATL_lib,   ONLY: MaxDim, find_grid_block
+    use IH_BATL_lib, ONLY: MaxDim, find_grid_block
     use IH_ModPhysics, ONLY: Si2No_V, UnitX_
 
     integer, intent(in) :: nDimIn                ! dimension of positions
@@ -261,28 +261,27 @@ contains
 
   end subroutine IH_find_points
   !============================================================================
-  subroutine IH_get_point_data( &
-       iBlockCell_DI, Dist_DI, IsNew, &
-       NameVar, nVarIn, nDimIn, nPoint, Xyz_DI, Data_VI, &
-       DoSendAllVar)
+  subroutine IH_get_point_data(iBlockCell_DI, Dist_DI, IsNew, &
+       NameVar, nVarIn, nDimIn, nPoint, Xyz_DI, Data_VI, DoSendAllVar)
 
     ! Generic routine for providing point data to another component
     ! If DoSendAllVar is true, send all variables in State_VGB
     ! Otherwise send the variables defined by iVarSource_V
 
-    use IH_ModPhysics, ONLY: Si2No_V, UnitX_, UnitU_, No2Si_V, iUnitCons_V
+    use IH_ModPhysics, ONLY: &
+         Si2No_V, UnitX_, UnitU_, No2Si_V, iUnitCons_V,UnitT_,No2Io_V
     use IH_ModAdvance, ONLY: State_VGB, Rho_, RhoUx_, RhoUz_, Bx_, Bz_
     use IH_ModVarIndexes, ONLY: nVar
-    use IH_ModB0,      ONLY: UseB0, get_b0
-    use IH_BATL_lib,   ONLY: nDim, MaxDim, MinIJK_D, MaxIJK_D, iProc, &
+    use IH_ModB0, ONLY: UseB0, get_b0, B0_DGB
+    use IH_BATL_lib, ONLY: nDim, MaxDim, MinIJK_D, MaxIJK_D, iProc, &
          nBlock, MaxBlock, Unused_B, find_grid_block, &
          nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nG, Xyz_DNB
     use IH_ModIO, ONLY: iUnitOut
-    use CON_coupler,    ONLY: iVarSource_V
+    use CON_coupler, ONLY: iVarSource_V
     use ModInterpolate, ONLY: interpolate_vector, interpolate_scalar
     use IH_ModCellGradient, ONLY: calc_divergence
-    use IH_BATL_pass_cell, ONLY: message_pass_cell 
-    use ModUtilities, ONLY:split_string
+    use IH_BATL_pass_cell, ONLY: message_pass_cell
+    use ModUtilities, ONLY: split_string
 
     logical,          intent(in):: IsNew   ! true for new point array
     integer, allocatable, intent(inout):: iBlockCell_DI(:,:) ! interp. index
@@ -316,11 +315,14 @@ contains
     !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
+    ! Get updated State and B0 onto the CPU for the coupler
+    call sync_cpu_gpu('update on CPU', NameSub, State_VGB, B0_DGB)
+
     DoSendAll = .false.
     if(present(DoSendAllVar)) DoSendAll = DoSendAllVar
     UseDivU   = index(NameVar//' ',' divu ') > 0
     UseDivUDx = index(NameVar,' divudx ') > 0
-    
+
     if(DoTestMe)then
        write(*,*)NameSub,': DoSendAll, nVar, nVarIn, NameVar=', &
             DoSendAll, nVar, nVarIn, trim(NameVar)
@@ -329,7 +331,7 @@ contains
        write(*,*)NameSub,': UseDivU=', UseDivU,' UseDivUDx=', UseDivUDx
     end if
 
-    ! calculate divu if needed 
+    ! calculate divu if needed
     if (UseDivU .or. UseDivUDx) then
        allocate( &
             u_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK), &
@@ -422,9 +424,9 @@ contains
           ! Fill buffer with interpolated values converted to SI units
           Data_VI(1:nVar,iPoint) = State_V*No2Si_V(iUnitCons_V)
           ! DivU is right after the nVar variables
-          if(UseDivU) Data_VI(nVar+1,iPoint) = DivU*No2Si_V(UnitU_)
+          if(UseDivU) Data_VI(nVar+1,iPoint) = DivU/No2Io_V(UnitT_)
           ! DivUDx is the last one in the buffer
-          if(UseDivUdX) Data_VI(nVarIn,iPoint) = DivUdX*No2Si_V(UnitU_)
+          if(UseDivUdX) Data_VI(nVarIn,iPoint) = DivUdX/No2Io_V(UnitT_)
        else
           do iVarBuffer = 1, nVarIn
              iVar = iVarSource_V(iVarBuffer)
@@ -446,11 +448,12 @@ contains
     use CON_coupler
     use IH_ModMain, ONLY: TypeCoordSystem, nVar, NameVarCouple, nG
     use IH_ModPhysics, ONLY:No2Si_V, UnitX_
-    use IH_ModGeometry,   ONLY: RadiusMin, RadiusMax
+    use IH_ModGeometry, ONLY: RadiusMin, RadiusMax
     use IH_BATL_geometry, ONLY: TypeGeometry, IsGenRadius, LogRGen_I
-    use IH_BATL_lib, ONLY: CoordMin_D, CoordMax_D, Particle_I
-    use IH_ModParticleFieldLine, ONLY: iKindReg, &
-         UseParticles
+    use IH_BATL_lib, ONLY: CoordMin_D, CoordMax_D, Particle_I,  &
+         rRound0, rRound1
+    use IH_ModParticleFieldLine, ONLY: iKindReg, UseParticles
+
     logical:: DoTest,DoTestMe
     logical:: UseParticleLine = .false.
     integer:: nParticle = 0, iError = 0
@@ -490,7 +493,8 @@ contains
             UnitX     = No2Si_V(UnitX_), &
             nVar      = nVar,            &
             NameVar   = NameVarCouple,   &
-            TypeGeometry = 'cartesian')
+            TypeGeometry = TypeGeometry, &
+            Coord2_I  = [rRound0, rRound1])
     else
        call set_coord_system(&
             GridID_   = IH_,             &
@@ -505,11 +509,8 @@ contains
     if(is_Proc(IH_))then
        ! Initialize the local grid
 
-       call init_decomposition(&
-            Domain=MH_Domain,&
-            CompID_=IH_,&
-            nDim=3,&
-            IsTreeDD = .true.)
+       call init_decomposition(Domain=MH_Domain,&
+            CompID_=IH_, nDim=3, IsTreeDD=.true.)
 
        ! Get the octree root array
        call MH_get_root_decomposition(MH_Domain)
@@ -519,7 +520,8 @@ contains
 
        MH_Domain%IsLocal=.true.
     end if
-    call CON_set_do_test('test_grids',DoTest,DoTestMe)
+
+    call CON_set_do_test('test_grids', DoTest, DoTestMe)
     ! Repeat the initialization at the global grid level:
     ! Octree root array:
     if(is_proc0(IH_))call MH_get_root_decomposition(IH_)
@@ -528,9 +530,7 @@ contains
     call bcast_decomposition(IH_)
 
     ! Synchronize global and local grids:
-    call synchronize_refinement(&
-         GridID_=IH_,&
-         LocalDomain=MH_Domain)
+    call synchronize_refinement(GridID_=IH_, LocalDomain=MH_Domain)
     if(is_proc0(IH_))IH_nG = nG
     call MPI_bcast(IH_nG, 1, MPI_INTEGER, i_proc0(IH_), i_comm(), iError)
     call set_standard_grid_descriptor(IH_,  & ! CompID_
@@ -538,7 +538,7 @@ contains
          CellCentered_,                     & ! Grid type
          IH_Grid)
     if(is_proc(IH_))call set_local_gd(iProc = i_proc(),   &
-           Grid = IH_Grid, LocalGrid = IH_LocalGrid)
+         Grid = IH_Grid, LocalGrid = IH_LocalGrid)
     if(is_proc0(IH_))UseParticleLine = UseParticles
     call MPI_bcast(UseParticleLine, 1, MPI_LOGICAL,&
          i_proc0(IH_), i_comm(), iError)
@@ -548,9 +548,9 @@ contains
           nParticle = Particle_I(iKindReg)%nParticleMax
           call get_root_decomposition_dd(MH_LineDecomposition, &
                [n_proc(IH_)],        &  ! One "block" per processor
-               [0.50],               &  ! "Coordinate" is a global point number
+               [0.5],                &  ! "Coordinate" is a global point number
                ! factors are converted separately to prevent integer overflow
-               [real(n_proc(IH_))*real(nParticle) + 0.50], &
+               [n_proc(IH_)*real(nParticle) + 0.5], &
                [nParticle])             ! nParticle cells per "block" (proc)
        end if
        call bcast_decomposition_dd(MH_LineDecomposition)
@@ -559,8 +559,8 @@ contains
        ! Set local GD on the Particle_I structure
        call set_standard_grid_descriptor(MH_LineDecomposition, &
             Grid=IH_LineGrid)
-       if(is_proc(IH_))call set_local_gd(iProc = i_proc(),     &
-           Grid = IH_LineGrid, LocalGrid = IH_LocalLineGrid)
+       if(is_proc(IH_))call set_local_gd(iProc=i_proc(),     &
+            Grid=IH_LineGrid, LocalGrid=IH_LocalLineGrid)
     end if
 
   end subroutine IH_set_grid
@@ -570,12 +570,12 @@ contains
     use CON_coupler
     use ModCoordTransform, ONLY: &
          atan2_check, xyz_to_sph, xyz_to_rlonlat
-    real,             intent(in ) :: XyzIn_D(3)
-    real,             intent(out) :: CoordOut_D(3)
+    real, intent(in ) :: XyzIn_D(3)
+    real, intent(out) :: CoordOut_D(3)
 
-    real               :: x, y
-    integer, parameter :: x_=1, y_=2, z_=3, r_=1
-    integer            :: Phi_
+    real:: x, y, Coord2_I(2)
+    integer, parameter:: x_=1, y_=2, z_=3, r_=1
+    integer:: Phi_
     character(len=20)  :: TypeGeometry
     character(len=*), parameter:: NameSub = 'IH_xyz_to_coord'
     !--------------------------------------------------------------------------
@@ -593,6 +593,10 @@ contains
        call xyz_to_sph(XyzIn_D, CoordOut_D)
     elseif(TypeGeometry(1:3)  == 'rlo')then
        call xyz_to_rlonlat(XyzIn_D, CoordOut_D)
+    elseif(TypeGeometry(1:9) == 'roundcube')then
+       Coord2_I = Grid_C(IH_)%Coord2_I
+       call xyz_to_roundcube_coord(&
+           XyzIn_D, Coord2_I(1), Coord2_I(2), CoordOut_D)
     else
        call CON_stop(NameSub// &
             ' not yet implemented for TypeGeometry='//TypeGeometry)
@@ -615,13 +619,65 @@ contains
       real          :: dCoord
       real, pointer :: LogRgen_I(:)
       !------------------------------------------------------------------------
-      LogRgen_I=>Grid_C(IH_)%Coord1_I
+      LogRgen_I => Grid_C(IH_)%Coord1_I
       nRgen    = Grid_C(IH_)%nCoord_D(1)
       call find_cell(0, nRgen-1, alog(r), &
            i, dCoord, LogRgen_I, DoExtrapolate=.true.)
       r = (i + dCoord)/(nRgen - 1)
 
     end subroutine radius_to_gen
+    !==========================================================================
+    subroutine xyz_to_roundcube_coord(&
+         XyzIn_D, rRound0, rRound1, CoordOut_D)
+
+      real, intent(in ) :: XyzIn_D(3), rRound0, rRound1
+      real, intent(out) :: CoordOut_D(3)
+      real, parameter   :: SqrtNDim = sqrt(3.0)
+      real:: r2, Dist1, Dist2, Coef1, Coef2
+      !------------------------------------------------------------------------
+      r2 = sum(XyzIn_D**2)
+      if (r2 > 0.0) then
+         ! L1 and L2 distance
+         Dist1 = maxval(abs(XyzIn_D))
+         Dist2 = sqrt(r2)
+         if (rRound1 > rRound0 ) then
+            ! The rounded grid is outside of the non-distorted part
+            if (Dist1 > rRound0) then
+               ! Outside the undistorted region
+               ! Assume Coord = w * Xyz and Replace Xyz in coord_to_xyz
+               ! We have a quadratic equation of w.
+               ! w^2 - Coef1*w
+               ! - 4*Dist1/(rRound1-rRound0)*(SqrtNDim*Dist1/Dist2 - 1) = 0
+
+               Coef1 = -1 &
+                    + rRound0/(rRound1-rRound0)*(dist1*SqrtNDim/Dist2 - 1)
+               Coef2 = Coef1**2 &
+                    + 4*Dist1/(rRound1-rRound0)*(SqrtNDim*Dist1/Dist2 - 1)
+               CoordOut_D = XyzIn_D/(-Coef1 + sqrt(Coef2))*2
+            else
+               ! No distortion
+               CoordOut_D = XyzIn_D
+            end if
+
+         else
+            ! The rounded (distorted) grid is inside of the non-distorted part
+            if (Dist2 < rRound1) then
+               ! Solving w^2-w+Coef1 = 0
+               Coef1 = Dist1/rRound1*(1 - Dist1/Dist2)
+               CoordOut_D = XyzIn_D / (1+sqrt(1-4*Coef1))*2
+            else
+               ! Solving w^2+Coef1*w+Coef2 = 0
+               Coef1 = -1 + (1 - Dist1/Dist2)/(rRound0-rRound1)*rRound0
+               Coef2 = -(1 - Dist1/Dist2)/(rRound0 - rRound1)*Dist1
+               Coef2 = (-Coef1 + sqrt(Coef1**2 - 4*Coef2))*0.5
+               CoordOut_D = XyzIn_D / Coef2
+            end if
+         end if
+
+      else
+         CoordOut_D = 0.0
+      end if
+    end subroutine xyz_to_roundcube_coord
     !==========================================================================
   end subroutine IH_xyz_to_coord
   !============================================================================
@@ -632,7 +688,7 @@ contains
     real, intent(in) :: CoordIn_D(3)
     real, intent(out):: XyzOut_D( 3)
 
-    real               :: Coord_D(3), r, Phi
+    real               :: Coord_D(3), r, Phi, Coord2_I(2)
     integer, parameter :: x_=1, r_=1
     integer            :: Phi_
     character(len=20)  :: TypeGeometry
@@ -661,6 +717,10 @@ contains
        call sph_to_xyz(Coord_D, XyzOut_D)
     elseif(TypeGeometry(1:3)  == 'rlo')then
        call rlonlat_to_xyz(Coord_D, XyzOut_D)
+    elseif(TypeGeometry(1:9) == 'roundcube')then
+       Coord2_I = Grid_C(IH_)%Coord2_I
+       call roundcube_coord_to_xyz(&
+            Coord_D, Coord2_I(1), Coord2_I(2), XyzOut_D)
     else
        call CON_stop(NameSub// &
             ' not yet implemented for TypeGeometry='//TypeGeometry)
@@ -676,14 +736,65 @@ contains
       integer       :: nRgen
       real, pointer :: LogRgen_I(:)
       !------------------------------------------------------------------------
-      LogRgen_I=>Grid_C(IH_)%Coord1_I
-      nRgen    = Grid_C(IH_)%nCoord_D(1)
+      LogRgen_I => Grid_C(IH_)%Coord1_I
+      nRgen = Grid_C(IH_)%nCoord_D(1)
 
       ! interpolate the LogRgen_I array for the general coordinate
       r = exp(linear(LogRgen_I, 0, nRgen-1, r*(nRgen-1), DoExtrapolate=.true.))
 
     end subroutine gen_to_radius
     !==========================================================================
+    subroutine roundcube_coord_to_xyz(&
+         CoordIn_D, rRound0, rRound1, XyzOut_D)
+
+      real, intent(in) :: CoordIn_D(3), rRound0, rRound1
+      real, intent(out):: XyzOut_D( 3)
+      real:: r2, Dist1, Dist2, Weight
+      real, parameter   :: SqrtNDim = sqrt(3.0)
+      !------------------------------------------------------------------------
+      r2 = sum(CoordIn_D**2)
+      ! L1 and L2 distances from origin
+      ! L1 distance is constant on the surface of a cube
+      ! L2 distance is constant on the surface of a sphere
+      Dist1 = maxval(abs(CoordIn_D))
+      Dist2 = sqrt(r2)
+
+      if (r2 > 0.0) then
+         if (rRound0 < rRound1) then
+            ! Non-distorted grid inside, round grid outside
+            Weight = (Dist1 - rRound0)/(rRound1 - rRound0)
+         elseif (Dist1 < rRound1) then
+            ! the rounded grid is inside and the point is inside rRound1
+            ! The distortion is 0 at the origin and maximum at Dist1=rRound1.
+            Weight = Dist1/rRound1
+         else
+            ! the rounded grid is inside and the point is outside rRound1
+            Weight = (rRound0 - Dist1)/(rRound0 - rRound1)
+         endif
+         ! Limit weight to be in the [0,1] interval
+         Weight = min(1., max(0.0, Weight))
+
+         if (rRound0 < rRound1) then
+            ! Expand coordinate outward
+            ! For a fully rounded grid we expand the generalized coordinate
+            ! by Dist1*SqrtNDim/Dist2, so along the main diagonals there is
+            ! no stretch and along the axes the expansion is SqrtNDim.
+            ! For the partially rounded grid the expansion factor is reduced.
+            ! The minimum expansion factor is 1 in the non-distorted region.
+            XyzOut_D = (1 + Weight*(Dist1*SqrtNDim/Dist2 - 1)) * CoordIn_D
+         else
+            ! Contract coordinate inward
+            ! In this case the grid is contracted along
+            ! the main diagonals by a factor up to sqrt(nDim)
+            ! and there is no contraction along the axes
+            XyzOut_D = (1 + Weight*(Dist1/Dist2 - 1)) * CoordIn_D
+         end if
+
+      else
+         XyzOut_D = 0.0
+      end if
+    end subroutine roundcube_coord_to_xyz
+    !=========================================================================
   end subroutine IH_coord_to_xyz
   !============================================================================
   subroutine IH_synchronize_refinement(iProc0,iCommUnion)
@@ -699,11 +810,8 @@ contains
     if(is_proc(IH_)) &
          call MH_update_local_decomposition(MH_Domain)
 
-    call synchronize_refinement(&
-         GridID_=IH_,&
-         LocalDomain=MH_Domain,&
-         iProcUnion=iProc0,&
-         iCommUnion=iCommUnion)
+    call synchronize_refinement(GridID_=IH_, &
+         LocalDomain=MH_Domain, iProcUnion=iProc0, iCommUnion=iCommUnion)
 
   end subroutine IH_synchronize_refinement
   !============================================================================
@@ -729,49 +837,48 @@ contains
     BufferMinMax_DI(:,1) = BufferMin_D
     BufferMinMax_DI(:,2) = BufferMax_D
 
-    nR     = nRBuff
-    nLon   = nLonBuff
-    nLat   = nLatBuff
+    nR   = nRBuff
+    nLon = nLonBuff
+    nLat = nLatBuff
 
     if(DoTest) then
        write(*,*) NameSub,': with nR, nLon, nLat = ',nR, nLon, nLat
-       write(*,*) 'BufferMin_D: ',BufferMin_D
-       write(*,*) 'BufferMax_D: ',BufferMax_D
+       write(*,*) 'BufferMin_D: ', BufferMin_D
+       write(*,*) 'BufferMax_D: ', BufferMax_D
     end if
     TypeCoordSource = Grid_C(iCompSourceCouple) % TypeCoord
 
   end subroutine IH_set_buffer_grid_get_info
   !============================================================================
-  subroutine IH_save_global_buffer(nVarCouple, nR, nLon, nLat, BufferIn_VG)
+  subroutine IH_save_global_buffer(nVarCouple, nR, nLon, nLat, BufferIn_VC)
 
-    use IH_ModBuffer,      ONLY: BufferState_VG, fill_in_buffer_grid_gc
+    use IH_ModBuffer, ONLY: BufferState_VG, fill_in_buffer_grid_gc
     use IH_ModMessagePass, ONLY: exchange_messages
     ! spherical buffer coupling
-    use CON_coupler,       ONLY: &
-         iVar_V, DoCoupleVar_V
-    use IH_ModAdvance,        ONLY: nVar, &
+    use CON_coupler, ONLY: iVar_V, DoCoupleVar_V
+    use IH_ModAdvance, ONLY: nVar, &
          UseElectronPressure, UseAnisoPressure, UseMultiSpecies
-    use IH_ModSaMhd,           ONLY: UseSaMhd
-    use IH_ModVarIndexes,     ONLY: &
+    use IH_ModSaMhd, ONLY: UseSaMhd
+    use IH_ModVarIndexes, ONLY: &
          Rho_, Ux_, Uz_, RhoUx_, RhoUz_, Bx_, Bz_, p_,             &
          WaveFirst_, WaveLast_, Pe_, Ppar_, nFluid, BperU_, Ehot_, &
          ChargeStateFirst_, ChargeStateLast_, WDiff_, Lperp_, nIonFluid
-    use CON_coupler,   ONLY:                                       &
-         Bfield_, ElectronPressure_, AnisoPressure_, Wave_,        &
+    use CON_coupler,   ONLY: &
+         Bfield_, ElectronPressure_, AnisoPressure_, Wave_, &
          MultiFluid_, MultiSpecie_, CollisionlessHeatFlux_, SaMhd_, &
-         DoLperp_, DoWDiff_, LperpCouple_, WDiffCouple_,       &
-         RhoCouple_, RhoUxCouple_, RhoUzCouple_, PCouple_,         &
-         BxCouple_, BzCouple_, PeCouple_, PparCouple_, SaMhdCouple_,&
-         WaveFirstCouple_, WaveLastCouple_, EhotCouple_,           &
+         DoLperp_, DoWDiff_, LperpCouple_, WDiffCouple_, &
+         RhoCouple_, RhoUxCouple_, RhoUzCouple_, PCouple_, &
+         BxCouple_, BzCouple_, PeCouple_, PparCouple_, SaMhdCouple_, &
+         WaveFirstCouple_, WaveLastCouple_, EhotCouple_, &
          ChargeState_, ChargeStateFirstCouple_, ChargeStateLastCouple_
     use IH_ModMultiFluid, ONLY: IsFullyCoupledFluid, iRho_I, iP_I
-    use IH_ModPhysics,    ONLY: No2Si_V, Si2No_V, UnitRho_, UnitB_, UnitX_
-    use IH_ModPhysics,    ONLY: UnitRhoU_, UnitEnergyDens_, UnitP_, UnitU_, &
+    use IH_ModPhysics, ONLY: No2Si_V, Si2No_V, UnitRho_, UnitB_, UnitX_
+    use IH_ModPhysics, ONLY: UnitRhoU_, UnitEnergyDens_, UnitP_, UnitU_, &
          BodyRho_I, BodyP_I
-    use IH_ModMain,       ONLY: UseOuterHelio
+    use IH_ModMain, ONLY: UseOuterHelio
 
-    integer,intent(in) :: nVarCouple, nR, nLon, nLat
-    real,intent(in)    :: BufferIn_VG(nVarCouple,nR,nLon,nLat)
+    integer, intent(in) :: nVarCouple, nR, nLon, nLat
+    real, intent(in)    :: BufferIn_VC(nVarCouple,nR,nLon,nLat)
 
     integer :: iFluid
 
@@ -779,71 +886,72 @@ contains
     character(len=*), parameter:: NameSub = 'IH_save_global_buffer'
     !--------------------------------------------------------------------------
     BufferState_VG(Rho_,:,1:nLon,1:nLat) = &
-         BufferIn_VG(iVar_V(RhoCouple_),:,1:nLon,1:nLat)&
+         BufferIn_VC(iVar_V(RhoCouple_),:,:,:) &
          *Si2No_V(UnitRho_)
     ! Transform to primitive variables
     BufferState_VG(RhoUx_:RhoUz_,:,1:nLon,1:nLat) = &
-         BufferIn_VG(iVar_V(RhoUxCouple_):iVar_V(RhoUzCouple_),:,&
-         1:nLon,1:nLat)*Si2No_V(UnitRhoU_)
-    if(DoCoupleVar_V(Bfield_))             &
-         BufferState_VG(Bx_:Bz_,:,1:nLon,1:nLat) =  &
-         BufferIn_VG(iVar_V(BxCouple_):iVar_V(BzCouple_),:,1:nLon,1:nLat)  &
+         BufferIn_VC(iVar_V(RhoUxCouple_):iVar_V(RhoUzCouple_),:,:,:) &
+         *Si2No_V(UnitRhoU_)
+    if(DoCoupleVar_V(Bfield_)) &
+         BufferState_VG(Bx_:Bz_,:,1:nLon,1:nLat) = &
+         BufferIn_VC(iVar_V(BxCouple_):iVar_V(BzCouple_),:,:,:) &
          *Si2No_V(UnitB_)
 
-    if(DoCoupleVar_V(Wave_))&
-         BufferState_VG(WaveFirst_:WaveLast_,:,1:nLon,1:nLat) = BufferIn_VG(&
-         iVar_V(WaveFirstCouple_):iVar_V(WaveLastCouple_),:,1:nLon,1:nLat)&
+    if(DoCoupleVar_V(Wave_)) &
+         BufferState_VG(WaveFirst_:WaveLast_,:,1:nLon,1:nLat) = BufferIn_VC( &
+         iVar_V(WaveFirstCouple_):iVar_V(WaveLastCouple_),:,:,:) &
          *Si2No_V(UnitEnergyDens_)
 
-    if(DoCoupleVar_V(ChargeState_))&
+    if(DoCoupleVar_V(ChargeState_)) &
          BufferState_VG(ChargeStateFirst_:ChargeStateLast_,:,1:nLon,1:nLat) = &
-         BufferIn_VG(&
-         iVar_V(ChargeStateFirstCouple_):iVar_V(ChargeStateLastCouple_),:,&
-         1:nLon,1:nLat)*Si2No_V(UnitRho_)
+         BufferIn_VC(iVar_V(ChargeStateFirstCouple_) &
+         :iVar_V(ChargeStateLastCouple_),:,:,:)&
+         *Si2No_V(UnitRho_)
     if(DoCoupleVar_V(SaMhd_))then
        BufferState_VG(BperU_,:,1:nLon,1:nLat) = &
-            BufferIn_VG(iVar_V(SaMhdCouple_),:,1:nLon,1:nLat)*&
+            BufferIn_VC(iVar_V(SaMhdCouple_),:,:,:)* &
             Si2No_V(UnitB_)/Si2No_V(UnitU_)
-    elseif(UseSaMhd.and.BperU_>1)then
+    elseif(UseSaMhd .and. BperU_ > 1)then
        BufferState_VG(BperU_,:,1:nLon,1:nLat) = 0.0
     end if
     if(DoCoupleVar_V(DoLperp_))then
        BufferState_VG(Lperp_,:,1:nLon,1:nLat) = &
-            BufferIn_VG(iVar_V(LperpCouple_),:,1:nLon,1:nLat)*&
+            BufferIn_VC(iVar_V(LperpCouple_),:,:,:)*&
             Si2No_V(UnitX_)*sqrt(Si2No_V(UnitB_))
     end if
     if(DoCoupleVar_V(DoWDiff_))then
        BufferState_VG(WDiff_,:,1:nLon,1:nLat) = &
-            BufferIn_VG(iVar_V(WDiffCouple_),:,1:nLon,1:nLat)*&
+            BufferIn_VC(iVar_V(WDiffCouple_),:,:,:)*&
             Si2No_V(UnitEnergyDens_)
     elseif(WDiff_>1)then
-        BufferState_VG(WDiff_,:,1:nLon,1:nLat) = 0.0
+       BufferState_VG(WDiff_,:,1:nLon,1:nLat) = 0.0
     end if
 
-    BufferState_VG(p_,:,1:nLon,1:nLat)  = &
-         BufferIn_VG(iVar_V(PCouple_),:,1:nLon,1:nLat)&
+    BufferState_VG(p_,:,1:nLon,1:nLat) = &
+         BufferIn_VC(iVar_V(PCouple_),:,:,:)&
          *Si2No_V(UnitP_)
     if(DoCoupleVar_V(ElectronPressure_))then
        BufferState_VG(Pe_,:,1:nLon,1:nLat) = &
-            BufferIn_VG(iVar_V(PeCouple_),:,1:nLon,1:nLat)*Si2No_V(UnitP_)
+            BufferIn_VC(iVar_V(PeCouple_),:,:,:)*Si2No_V(UnitP_)
     else if(UseElectronPressure)then
+       ! Split pressure equally between ions and electrons
        BufferState_VG(Pe_,:,1:nLon,1:nLat) = &
-            0.5*BufferState_VG(p_, :,1:nLon,1:nLat)
+            0.5*BufferState_VG(p_,:,1:nLon,1:nLat)
        BufferState_VG(p_ ,:,1:nLon,1:nLat) = &
             BufferState_VG(Pe_,:,1:nLon,1:nLat)
     end if
 
     if(DoCoupleVar_V(AnisoPressure_))then
        BufferState_VG(Ppar_,:,1:nLon,1:nLat) = &
-            BufferIn_VG(iVar_V(PparCouple_),:,1:nLon,1:nLat)*Si2No_V(UnitP_)
+            BufferIn_VC(iVar_V(PparCouple_),:,:,:)*Si2No_V(UnitP_)
     else if(UseAnisoPressure)then
        BufferState_VG(Ppar_,:,1:nLon,1:nLat) = &
-       BufferIn_VG(iVar_V(PCouple_),:,1:nLon,1:nLat)*Si2No_V(UnitP_)
+            BufferIn_VC(iVar_V(PCouple_),:,:,:)*Si2No_V(UnitP_)
     end if
 
     if(DoCoupleVar_V(CollisionlessHeatFlux_))then
        BufferState_VG(Ehot_,:,1:nLon,1:nLat) = &
-            BufferIn_VG(iVar_V(EhotCouple_),:,1:nLon,1:nLat)&
+            BufferIn_VC(iVar_V(EhotCouple_),:,:,:)&
             *Si2No_V(UnitEnergyDens_)
     endif
 
@@ -854,7 +962,7 @@ contains
        end do
     end if
 
-    if( .not. DoCoupleVar_V(MultiFluid_)  .and. nFluid > 1 .or. &
+    if( .not. DoCoupleVar_V(MultiFluid_) .and. nFluid > 1 .or. &
          .not. DoCoupleVar_V(MultiSpecie_) .and. UseMultiSpecies)then
        ! Values for neutrals / ions should be prescribed in set_BCs.f90
        IsFullyCoupledFluid = .false.
@@ -863,8 +971,7 @@ contains
     end if
     ! Make sure that ghost cells get filled after
     call fill_in_buffer_grid_gc
-    ! Fill in the cells, covered by the bufer grid, including ghost cells.
-    ! Fill in the ghostcells, calculate energy
+    ! Fill in the cells, covered by the buffer grid, including ghost cells
     call exchange_messages(UseBufferIn = .true.)
 
   end subroutine IH_save_global_buffer
@@ -872,29 +979,28 @@ contains
   subroutine IH_match_ibc
 
     use IH_ModMessagePass, ONLY: exchange_messages
-    use IH_ModIO,          ONLY: IsRestartCoupler
-    use IH_ModBuffer,      ONLY: match_ibc
+    use IH_ModIO, ONLY: IsRestartCoupler
+    use IH_ModBuffer, ONLY: match_ibc
+    use IH_ModAdvance, ONLY: State_VGB
 
     character(len=*), parameter :: StringTest ='IH_fill_buffer_only'
-    logical  :: DoTest,DoTestMe
+    logical:: DoTest, DoTestMe
+
+    character(len=*), parameter:: NameSub = 'IH_match_ibc'
     !--------------------------------------------------------------------------
     if(IsRestartCoupler) RETURN
     call CON_set_do_test(StringTest, DoTest, DoTestMe)
 
     ! Fill in the physical cells, which are outside the buffer grid
-    ! When testing, do not fill cells outside the buffer
-    if(.not. DoTest)call match_ibc
+    if(.not. DoTest) call match_ibc
 
-    ! Fill in the cells, covered by the bufer grid, including ghost cells.
-    ! Fill in the ghostcells, calculate energy
-    call exchange_messages(UseBufferIn = .true.)
+    ! Fill in the cells, covered by the buffer grid, including ghost cells
+    call exchange_messages(UseBufferIn=.true.)
 
   end subroutine IH_match_ibc
   !============================================================================
-  subroutine IH_get_for_global_buffer(&
+  subroutine IH_get_for_global_buffer( &
        nR, nLon, nLat, BufferMinMax_DI, Buffer_VG)
-
-    ! DESCRIPTION
 
     ! This subroutines fills a buffer grid by interpolating from a source
     ! IH_BATSRUS grid using second-order trilinear interpolation.
@@ -927,11 +1033,11 @@ contains
     use IH_ModB0, ONLY: B0_DGB
     use IH_ModPhysics, ONLY: UnitX_,&
          No2Si_V, UnitRho_, UnitP_, UnitRhoU_, UnitB_, UnitEnergyDens_, UnitU_
-    use IH_ModVarIndexes,     ONLY: &
+    use IH_ModVarIndexes, ONLY: &
          Rho_, RhoUx_, RhoUz_, Bx_, Bz_, P_, Pe_, &
          Ppar_, WaveFirst_, WaveLast_, Ehot_, nVar, &
          ChargeStateFirst_, ChargeStateLast_, BperU_, WDiff_, Lperp_
-    use CON_coupler,       ONLY: &
+    use CON_coupler, ONLY: &
          RhoCouple_, RhoUxCouple_,&
          RhoUzCouple_, PCouple_, BxCouple_, BzCouple_,  &
          PeCouple_, PparCouple_, WaveFirstCouple_,  &
@@ -942,21 +1048,18 @@ contains
          DoCoupleVar_V, nVarCouple, SaMhd_, SaMhdCouple_ ,&
          DoLperp_, DoWDiff_, LperpCouple_, WDiffCouple_
     use ModCoordTransform, ONLY: rlonlat_to_xyz
-    use ModInterpolate,    ONLY: trilinear
-    use IH_BATL_lib,       ONLY: iProc, &
-         find_grid_block, xyz_to_coord, CoordMin_DB, CellSize_DB
+    use ModInterpolate, ONLY: trilinear
+    use IH_BATL_lib, ONLY: &
+         iProc, find_grid_block, xyz_to_coord, CoordMin_DB, CellSize_DB
 
     ! Buffer size and limits
     integer,intent(in) :: nR, nLon, nLat
     real, intent(in)   :: BufferMinMax_DI(3,2)
 
-    ! OUTPUT ARGUMENTS
     ! State variables to be fiiled in all buffer grid points
-    real,dimension(nVarCouple, nR, nLon, nLat), intent(out):: &
-         Buffer_VG
+    real, intent(out):: Buffer_VG(nVarCouple,nR,nLon,nLat)
 
     ! variables for defining the buffer grid
-
     integer :: nCell_D(3)
     real    :: SphMin_D(3), SphMax_D(3), dSph_D(3), Sph_D(3)
 
@@ -1025,6 +1128,9 @@ contains
 
     dSph_D     = (SphMax_D - SphMin_D)/real(nCell_D)
     dSph_D(1) = (SphMax_D(1) - SphMin_D(1))/(nCell_D(1) - 1)
+
+    ! Get updated State and B0 onto the CPU for the coupler
+    call sync_cpu_gpu('update on CPU', NameSub, State_VGB, B0_DGB)
 
     ! Loop over buffer grid points
     do iLat = 1, nLat ; do iLon = 1, nLon ; do iR = 1, nR
@@ -1111,7 +1217,7 @@ contains
   !============================================================================
   logical function IH_is_coupled_block(iBlock)
 
-    use IH_ModMain,     ONLY: iTypeCellBc_I
+    use IH_ModMain, ONLY: iTypeCellBc_I
     use IH_ModParallel, ONLY: Unset_, DiLevel_EB
     use IH_ModGeometry, ONLY: IsBoundary_B
     use IH_ModCellBoundary, ONLY: CoupledBC_
@@ -1125,7 +1231,7 @@ contains
     end if
     ! If block is near external boundary at which the BC type is 'Coupled'
     IH_is_coupled_block = any(DiLevel_EB(1:6, iBlock) == Unset_ &
-          .and. iTypeCellBc_I(1:6) == CoupledBC_)
+         .and. iTypeCellBc_I(1:6) == CoupledBC_)
 
   end function IH_is_coupled_block
   !============================================================================
@@ -1134,20 +1240,22 @@ contains
 
     ! XYZ for the points beyond the boundary at which the BC 'coupled' is set
 
-    use IH_ModMain,     ONLY: iTypeCellBc_I
+    use IH_ModMain, ONLY: iTypeCellBc_I
     use IH_ModParallel, ONLY: Unset_, DiLevel_EB
-    use IH_BATL_lib,    ONLY: nIJK_D, coord_to_xyz
+    use IH_BATL_lib, ONLY: nIJK_D, coord_to_xyz
     use IH_ModCellBoundary, ONLY: CoupledBC_
-    integer,intent(in)   :: nDim
-    real,   intent(inout):: Xyz_D(nDim)
-    integer,intent(in)   :: nIndex
-    integer,intent(inout):: iIndex_I(nIndex)
-    logical,intent(out)  :: IsInterfacePoint
+
+    integer, intent(in)   :: nDim
+    real,    intent(inout):: Xyz_D(nDim)
+    integer, intent(in)   :: nIndex
+    integer, intent(inout):: iIndex_I(nIndex)
+    logical, intent(out)  :: IsInterfacePoint
 
     logical :: IsRightCoupledBoundary_D(nDim)
     logical :: IsLeftCoupledBoundary_D(nDim)
     real    :: Coord_D(nDim)
     integer :: iBlock, iCell_D(nDim)
+
     character(len=*), parameter:: NameSub = 'IH_interface_point_coords'
     !--------------------------------------------------------------------------
     iCell_D = iIndex_I(1:nDim); iBlock    = iIndex_I(4)
@@ -1172,15 +1280,16 @@ contains
 
     ! Put state variables to buffer for coupling toolkit,
     ! to send to other component via the coupling toolkit
+
     use IH_ModAdvance, ONLY: State_VGB, UseElectronPressure, nVar
-    use IH_ModB0,      ONLY: B0_DGB
+    use IH_ModB0, ONLY: B0_DGB
     use IH_ModPhysics, ONLY: No2Si_V, UnitRho_, UnitP_, UnitRhoU_, UnitB_,&
          UnitU_, UnitX_
     use IH_ModPhysics, ONLY: UnitEnergyDens_
     use IH_ModAdvance, ONLY: Rho_, RhoUx_, RhoUz_, Bx_, Bz_, P_, WaveFirst_, &
          WaveLast_, Pe_, Ppar_, Ehot_, ChargeStateFirst_, ChargeStateLast_, &
          BperU_, Lperp_, WDiff_
-    use IH_ModMain,    ONLY: UseB0
+    use IH_ModMain, ONLY: UseB0
 
     use CON_router, ONLY: IndexPtrType, WeightPtrType
     use CON_coupler, ONLY: iVar_V, DoCoupleVar_V, &
@@ -1192,10 +1301,10 @@ contains
          ChargeStateLastCouple_, ChargeState_, SaMhd_, SaMhdCouple_,&
          DoLperp_, DoWDiff_, LperpCouple_, WDiffCouple_
 
-    integer,            intent(in)  :: nPartial, iGetStart, nVarIn
-    type(IndexPtrType), intent(in)  :: Get
-    type(WeightPtrType),intent(in)  :: W
-    real,               intent(out) :: Buff_V(nVarIn)
+    integer,             intent(in) :: nPartial, iGetStart, nVarIn
+    type(IndexPtrType),  intent(in) :: Get
+    type(WeightPtrType), intent(in) :: W
+    real,                intent(out):: Buff_V(nVarIn)
 
     integer   :: iGet, i, j, k, iBlock
     real      :: Weight, State_V(nVar)
@@ -1222,6 +1331,7 @@ contains
             B0_DGB(:,i,j,k,iBlock)*Weight
     end do
     Buff_V = 0.0
+
     ! Put variables into a buffer, convert to SI units
     Buff_V(iVar_V(RhoCouple_)) = State_V(Rho_)*No2Si_V(UnitRho_)
     if(DoCoupleVar_V(Momentum_)) Buff_V(iVar_V(RhoUxCouple_):                &
@@ -1256,8 +1366,7 @@ contains
 
   end subroutine IH_get_for_mh
   !============================================================================
-  subroutine IH_extract_line(Xyz_DI, iTraceMode, &
-       iIndex_II, RSoftBoundary)
+  subroutine IH_extract_line(Xyz_DI, iTraceMode, iIndex_II, RSoftBoundary)
 
     use IH_ModParticleFieldLine, &
          ONLY: extract_particle_line, RSoftBoundaryBats=>RSoftBoundary
@@ -1268,9 +1377,9 @@ contains
     ! set the soft boundary
     character(len=*), parameter:: NameSub = 'IH_extract_line'
     !--------------------------------------------------------------------------
-         RSoftBoundaryBats = RSoftBoundary
+    RSoftBoundaryBats = RSoftBoundary
     ! extract field lines starting at input points
-    call extract_particle_line(Xyz_DI, iTraceMode, iIndex_II,&
+    call extract_particle_line(Xyz_DI, iTraceMode, iIndex_II, &
          UseInputInGenCoord=.true.)
 
   end subroutine IH_extract_line
@@ -1283,11 +1392,11 @@ contains
     real,    intent(in):: Xyz_DI(:,:)
     integer, intent(in):: iIndex_II(:,:)
     !--------------------------------------------------------------------------
-    call put_particles(&
-         iKindParticle      = iKindReg ,&
-         StateIn_VI         = Xyz_DI   ,&
-         iIndexIn_II        = iIndex_II,&
-         UseInputInGenCoord = .true.   ,&
+    call put_particles( &
+         iKindParticle      = iKindReg , &
+         StateIn_VI         = Xyz_DI   , &
+         iIndexIn_II        = iIndex_II, &
+         UseInputInGenCoord = .true.   , &
          DoReplace          = .true.     )
 
   end subroutine IH_put_particles
@@ -1319,14 +1428,14 @@ contains
 
   end subroutine IH_get_particle_coords
   !============================================================================
-  subroutine IH_put_from_mh(nPartial, iPutStart, Put, Weight, DoAdd,&
-       Buff_V, nVarIn)
+  subroutine IH_put_from_mh( &
+       nPartial, iPutStart, Put, Weight, DoAdd, Buff_V, nVarIn)
 
     ! transform and put the data got from MH
 
-    use CON_axes,      ONLY: transform_velocity
-    use CON_router,    ONLY: IndexPtrType, WeightPtrType
-    use CON_coupler,   ONLY: iVar_V, DoCoupleVar_V, &
+    use CON_axes, ONLY: transform_velocity
+    use CON_router, ONLY: IndexPtrType, WeightPtrType
+    use CON_coupler, ONLY: iVar_V, DoCoupleVar_V, &
          RhoCouple_, RhoUxCouple_, RhoUzCouple_, &
          PCouple_, BxCouple_, BzCouple_, PeCouple_, EhotCouple_,   &
          PparCouple_, WaveFirstCouple_, WaveLastCouple_, Momentum_,&
@@ -1334,13 +1443,13 @@ contains
          CollisionlessHeatFlux_, ChargeStateFirstCouple_, &
          ChargeStateLastCouple_, ChargeState_, SaMhd_, SaMhdCouple_,&
          DoLperp_, DoWDiff_, WDiffCouple_, LperpCouple_
-    use IH_ModAdvance,    ONLY: State_VGB, UseElectronPressure, &
+    use IH_ModAdvance, ONLY: State_VGB, UseElectronPressure, &
          UseAnisoPressure
-    use IH_ModB0,         ONLY: B0_DGB
-    use IH_ModPhysics,    ONLY: Si2No_V, UnitRho_, UnitP_, UnitRhoU_, UnitB_, &
+    use IH_ModB0, ONLY: B0_DGB
+    use IH_ModPhysics, ONLY: Si2No_V, UnitRho_, UnitP_, UnitRhoU_, UnitB_, &
          UnitEnergyDens_, UnitX_, No2Si_V, UnitU_
-    use IH_ModMain,       ONLY: UseB0, TypeCoordSystem
-    use IH_ModSaMhd,       ONLY: UseSaMhd, get_samhd_state
+    use IH_ModMain, ONLY: UseB0, TypeCoordSystem
+    use IH_ModSaMhd, ONLY: UseSaMhd, get_samhd_state
     use IH_ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, Bx_, Bz_, P_, &
          WaveFirst_, WaveLast_, Pe_, Ppar_, Ehot_, ChargeStateFirst_, &
          ChargeStateLast_, nVar, BperU_, Ux_, Uz_, Lperp_, WDiff_
@@ -1363,8 +1472,8 @@ contains
     !                                           Handle anisotropic pressure.
     !
 
-    real                :: State_V(nVar), Xyz_D(3)
-    integer             :: i, j, k, iBlock, iRho
+    real:: State_V(nVar), Xyz_D(3)
+    integer:: i, j, k, iBlock, iRho
 
     character(len=*), parameter:: NameSub = 'IH_put_from_mh'
     !--------------------------------------------------------------------------
@@ -1372,7 +1481,7 @@ contains
     j      = Put%iCB_II(2,iPutStart)
     k      = Put%iCB_II(3,iPutStart)
     iBlock = Put%iCB_II(4,iPutStart)
-     ! Location:
+    ! Location:
     Xyz_D  = Xyz_DGB(:,i,j,k,iBlock)
     iRho   = iVar_V(RhoCouple_)    ! Reusable
     ! Copy from buffer in a proper order
@@ -1380,7 +1489,7 @@ contains
     State_V = 0.0 ; State_V(Rho_) = Buff_V(iRho)*Si2No_V(UnitRho_)
     ! perform vector transformation from the source model to the IH one
     if(DoCoupleVar_V(BField_))State_V(Bx_:Bz_) =  matmul(SourceToIH_DD,     &
-        Buff_V( iVar_V(BxCouple_):iVar_V(BzCouple_)))*Si2No_V(UnitB_)
+         Buff_V( iVar_V(BxCouple_):iVar_V(BzCouple_)))*Si2No_V(UnitB_)
     if(DoCoupleVar_V(Momentum_))State_V(rhoUx_:rhoUz_) = transform_velocity(&
          TimeMhToIH, Buff_V(iVar_V(RhoUxCouple_):iVar_V(RhoUzCouple_))/     &
          Buff_V(iRho), Xyz_D*No2Si_V(UnitX_),                               &
@@ -1421,10 +1530,8 @@ contains
     if(DoCoupleVar_V(DoLperp_))State_V(Lperp_) = Buff_V(iVar_V(LperpCouple_))*&
          Si2No_V(UnitX_)*sqrt(Si2No_V(UnitB_))
     if(DoCoupleVar_V(DoWDiff_))State_V(WDiff_) = &
-         Buff_V(iVar_V(WDiffCouple_))*&
-            Si2No_V(UnitEnergydens_)
+         Buff_V(iVar_V(WDiffCouple_))*Si2No_V(UnitEnergydens_)
 
-    !
     ! ASSIGN the local state vector
     if(DoAdd)then
        State_VGB(:,i,j,k,iBlock) = State_VGB(:,i,j,k,iBlock) + State_V
@@ -1453,37 +1560,31 @@ contains
 
   end subroutine IH_check_ready_for_sp
   !============================================================================
-  subroutine IH_get_for_gm(&
+  subroutine IH_get_for_gm( &
        nPartial,iGetStart,Get,W,State_V,nVar,TimeCoupling)
 
     use IH_ModAdvance, ONLY: State_VGB, Rho_, RhoUx_, RhoUz_, Bx_, Bz_,P_
-    use IH_ModB0,      ONLY: B0_DGB
+    use IH_ModB0, ONLY: B0_DGB
     use IH_ModPhysics, ONLY: No2Si_V, UnitRho_, UnitP_, UnitRhoU_, UnitB_
-    use IH_ModMain,    ONLY: UseRotatingFrame,UseB0
+    use IH_ModMain, ONLY: UseRotatingFrame,UseB0
     use CON_router
 
     integer,intent(in)::nPartial,iGetStart,nVar
-    type(IndexPtrType),intent(in)::Get
-    type(WeightPtrType),intent(in)::W
-    real,dimension(nVar),intent(out)::State_V
-    real,intent(in)::TimeCoupling
+    type(IndexPtrType), intent(in):: Get
+    type(WeightPtrType), intent(in):: W
+    real, intent(out):: State_V(nVar)
+    real, intent(in):: TimeCoupling
 
     integer::iGet, i, j, k, iBlock
     real :: Weight, Momentum_D(3),Density
 
     ! The meaning of state intdex in buffer and in model can be
     ! different. Below are the conventions for buffer:
-    integer,parameter::&
-         BuffRho_  =1,&
-         BuffRhoUx_=2,&
-         BuffRhoUz_=4,&
-         BuffBx_   =5,&
-         BuffBz_   =7,&
-         BuffP_    =8
+    integer, parameter:: &
+         BuffRho_=1, BuffRhoUx_=2, BuffRhoUz_=4, BuffBx_=5, BuffBz_=7, BuffP_=8
 
     character(len=*), parameter:: NameSub = 'IH_get_for_gm'
     !--------------------------------------------------------------------------
-
     i      = Get%iCB_II(1,iGetStart)
     j      = Get%iCB_II(2,iGetStart)
     k      = Get%iCB_II(3,iGetStart)
@@ -1536,19 +1637,19 @@ contains
     end do
 
     ! Convert to SI units
-    State_V(BuffRho_)             = State_V(BuffRho_)       *No2Si_V(UnitRho_)
-    State_V(BuffRhoUx_:BuffRhoUz_)= &
-         State_V(BuffRhoUx_:BuffRhoUz_)                     *No2Si_V(UnitRhoU_)
-    State_V(BuffBx_:BuffBz_)      = State_V(BuffBx_:BuffBz_)*No2Si_V(UnitB_)
-    State_V(BuffP_)               = State_V(BuffP_)         *No2Si_V(UnitP_)
+    State_V(BuffRho_) = State_V(BuffRho_)*No2Si_V(UnitRho_)
+    State_V(BuffRhoUx_:BuffRhoUz_)= State_V(BuffRhoUx_:BuffRhoUz_) &
+         *No2Si_V(UnitRhoU_)
+    State_V(BuffBx_:BuffBz_)= State_V(BuffBx_:BuffBz_)*No2Si_V(UnitB_)
+    State_V(BuffP_) = State_V(BuffP_)*No2Si_V(UnitP_)
 
   contains
     !==========================================================================
     subroutine add_density_omega_cross_r
 
       ! Add Omega x R term. For IH Omega_D = (0,0,OmegaBody)
-      use IH_BATL_lib,    ONLY: Xyz_DGB, x_, y_
-      use IH_ModPhysics,  ONLY: OmegaBody
+      use IH_BATL_lib, ONLY: Xyz_DGB, x_, y_
+      use IH_ModPhysics, ONLY: OmegaBody
       !------------------------------------------------------------------------
       Momentum_D(x_) = Momentum_D(x_) &
            - Density*OmegaBody*Xyz_DGB(y_,i,j,k,iBlock)
@@ -1559,8 +1660,8 @@ contains
     !==========================================================================
   end subroutine IH_get_for_gm
   !============================================================================
-  subroutine IH_get_for_pt(IsNew, NameVar, nVarIn, nDimIn, nPoint, Xyz_DI, &
-       Data_VI)
+  subroutine IH_get_for_pt( &
+       IsNew, NameVar, nVarIn, nDimIn, nPoint, Xyz_DI, Data_VI)
 
     ! Interpolate Data_VI from IH at the list of positions Xyz_DI
     ! required by PT
@@ -1587,7 +1688,7 @@ contains
   subroutine IH_put_from_pt( &
        NameVar, nVarData, nPoint, Data_VI, iPoint_I, Pos_DI)
 
-    use IH_BATL_lib,    ONLY: &
+    use IH_BATL_lib, ONLY: &
          nDim, nBlock, MaxBlock, Unused_B, nI, nJ, nK, Xyz_DGB, &
          iTest, jTest, kTest, iBlockTest
     use IH_ModPhysics, ONLY: &
@@ -1686,8 +1787,8 @@ contains
 
     ! Calculate the global time step for PC
 
-    use IH_ModMain,            ONLY: Dt
-    use IH_ModPhysics,         ONLY: No2Si_V, UnitT_
+    use IH_ModMain, ONLY: Dt
+    use IH_ModPhysics, ONLY: No2Si_V, UnitT_
     use IH_ModTimeStepControl, ONLY: set_global_timestep
 
     real, intent(out) ::  DtSi
@@ -1698,8 +1799,8 @@ contains
 
   end subroutine IH_get_for_pt_dt
   !============================================================================
-  subroutine IH_get_for_sc(IsNew, NameVar, nVarIn, nDimIn, nPoint, Xyz_DI, &
-       Data_VI)
+  subroutine IH_get_for_sc( &
+       IsNew, NameVar, nVarIn, nDimIn, nPoint, Xyz_DI, Data_VI)
 
     ! Interpolate Data_VI from EE at the list of positions Xyz_DI
     ! required by SC
@@ -1707,8 +1808,8 @@ contains
     use IH_ModPhysics, ONLY: Si2No_V, UnitX_, No2Si_V, iUnitCons_V
     use IH_ModAdvance, ONLY: State_VGB, Bx_, Bz_
     use IH_ModVarIndexes, ONLY: nVar
-    use IH_ModB0,      ONLY: UseB0, get_b0
-    use IH_BATL_lib,   ONLY: iProc, nDim, MaxDim, MinIJK_D, MaxIJK_D, &
+    use IH_ModB0, ONLY: UseB0, get_b0
+    use IH_BATL_lib, ONLY: iProc, nDim, MaxDim, MinIJK_D, MaxIJK_D, &
          find_grid_block
     use IH_ModIO, ONLY: iUnitOut
     use ModInterpolate, ONLY: interpolate_vector
@@ -1788,8 +1889,8 @@ contains
 
   end subroutine IH_get_for_sc
   !============================================================================
-  subroutine IH_get_ee_region(NameVar, nVarData, nPoint, Pos_DI, Data_VI, &
-       iPoint_I)
+  subroutine IH_get_ee_region( &
+       NameVar, nVarData, nPoint, Pos_DI, Data_VI, iPoint_I)
 
     ! This routine is actually for EE-SC coupling
 
@@ -1803,20 +1904,20 @@ contains
     !    The indexing array iPoint_I is needed to maintain the same order as
     !    the original position array Pos_DI was given in 2)
 
-    use IH_BATL_lib,     ONLY: Xyz_DGB, nBlock, Unused_B, &
+    use IH_BATL_lib, ONLY: Xyz_DGB, nBlock, Unused_B, &
          IsRLonLat, nI, nJ, nK, CoordMin_DB, CellSize_DB
-    use IH_ModGeometry,  ONLY: r_GB
-    use IH_ModPhysics,   ONLY: No2Si_V, UnitX_, Si2No_V, iUnitCons_V
-    use IH_ModMain,      ONLY: UseB0
-    use IH_ModB0,        ONLY: B0_DGB
-    use IH_ModAdvance,   ONLY: State_VGB, Bx_, Bz_
+    use IH_ModGeometry, ONLY: r_GB
+    use IH_ModPhysics, ONLY: No2Si_V, UnitX_, Si2No_V, iUnitCons_V
+    use IH_ModMain, ONLY: UseB0
+    use IH_ModB0, ONLY: B0_DGB
+    use IH_ModAdvance, ONLY: State_VGB, Bx_, Bz_
     use IH_ModMultiFluid, ONLY: nIonFluid
-    use CON_coupler,     ONLY: Grid_C, EE_, iVarTarget_V
-    use ModNumConst,     ONLY: cPi, cTwoPi
+    use CON_coupler, ONLY: Grid_C, EE_, iVarTarget_V
+    use ModNumConst, ONLY: cPi, cTwoPi
 
     character(len=*), intent(inout):: NameVar ! List of variables
-    integer,          intent(inout):: nVarData! Number of variables in Data_VI
-    integer,          intent(inout):: nPoint  ! Number of points in Pos_DI
+    integer, intent(inout):: nVarData ! Number of variables in Data_VI
+    integer, intent(inout):: nPoint   ! Number of points in Pos_DI
     real, intent(inout), allocatable, optional :: Pos_DI(:,:)  ! Positions
 
     real,    intent(in), optional:: Data_VI(:,:)    ! Recv data array
@@ -1893,13 +1994,13 @@ contains
 
     ! This routine is actually for EE-SC coupling
 
-    use IH_BATL_lib,    ONLY: nDim
+    use IH_BATL_lib, ONLY: nDim
 
     character(len=*), intent(inout):: NameVar ! List of variables
-    integer,          intent(inout):: nVarData! Number of variables in Data_VI
-    integer,          intent(inout):: nPoint  ! Number of points in Pos_DI
+    integer, intent(inout):: nVarData! Number of variables in Data_VI
+    integer, intent(inout):: nPoint  ! Number of points in Pos_DI
 
-    real,    intent(in), optional:: Data_VI(:,:)    ! Recv data array
+    real, intent(in), optional:: Data_VI(:,:)    ! Recv data array
     integer, intent(in), optional:: iPoint_I(nPoint)! Order of data
     real, intent(out), allocatable, optional:: Pos_DI(:,:) ! Position vectors
 
@@ -1925,8 +2026,8 @@ contains
 
   end subroutine IH_put_from_ee
   !============================================================================
-  subroutine IH_get_for_ee(IsNew, NameVar, nVarIn, nDimIn, nPoint, Xyz_DI, &
-       Data_VI)
+  subroutine IH_get_for_ee( &
+       IsNew, NameVar, nVarIn, nDimIn, nPoint, Xyz_DI, Data_VI)
 
     ! This routine is actually for SC-EE coupling
 
@@ -1955,6 +2056,7 @@ contains
 
     use IH_ModParticleFieldLine, ONLY: iKindReg
     use IH_BATL_lib, ONLY: Particle_I
+
     integer, intent(in) :: iBlockLocal
     !--------------------------------------------------------------------------
     IH_n_particle = Particle_I(iKindReg)%nParticle

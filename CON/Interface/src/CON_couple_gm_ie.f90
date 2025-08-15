@@ -34,8 +34,9 @@ module CON_couple_gm_ie
   ! Size of the 2D spherical structured IE grid
   integer, save :: iSize, jSize
 
-  ! Number of variables passed from IE to GM
-  integer:: nVarIeGm = 1
+  ! Number of variables passed to/from IE to/from GM
+  integer, save :: nVarIeGm = 1, nVarGmIe = 6
+
   character(len=20), allocatable :: NameVarIeGm_I(:)
 
 contains
@@ -56,18 +57,19 @@ contains
     ! This information is sent at the beginning of every session
     ! because the variables needed by GM can change.
 
-    ! Get number of variables to be passed from GM to IE
-    if(is_proc(GM_)) call GM_get_info_for_ie(nVarIeGm)
+    ! Get number of variables to be passed to/from IE from/to GM
+    if(is_proc(GM_)) call GM_get_info_for_ie(nVarIeGm, nVarGmIe=nVarGmIe)
 
     ! Pass to all IE nodes.
     call transfer_integer(GM_, IE_, nVarIeGm, UseSourceRootOnly=.false.)
+    call transfer_integer(GM_, IE_, nVarGmIe, UseSourceRootOnly=.false.)
 
     ! Allocate the array holding the variable names.
     if(allocated(NameVarIeGm_I)) deallocate(NameVarIeGm_I)
     allocate(NameVarIeGm_I(nVarIeGm))
 
     ! Get variables names to be passed
-    if(is_proc(GM_)) call GM_get_info_for_ie(nVarIeGm, NameVarIeGm_I)
+    if(is_proc(GM_)) call GM_get_info_for_ie(nVarIeGm, NameVar_I=NameVarIeGm_I)
 
     ! Send info to all IE nodes
     call transfer_string_array(GM_, IE_, nVarIeGm, NameVarIeGm_I, &
@@ -132,9 +134,6 @@ contains
     ! Send field aligned currents from GM to IE.
     ! Also send some ray tracing information.
 
-    ! Number of variables to pass
-    integer, parameter :: nVar=6
-
     ! Buffer for the field aligned current on the 2D IE grid
     real, dimension(:,:,:), allocatable :: Buffer_IIV
 
@@ -148,16 +147,16 @@ contains
          i_proc() ,i_proc0(GM_),i_proc0(IE_)
 
     ! Allocate buffers for the variables both in GM and IE
-    allocate(Buffer_IIV(iSize, jSize, nVar))
+    allocate(Buffer_IIV(iSize, jSize, nVarGmIe))
 
     ! Calculate field aligned currents on GM
-    if(is_proc(GM_)) call GM_get_for_ie(Buffer_IIV, iSize, jSize, nVar)
+    if(is_proc(GM_)) call GM_get_for_ie(Buffer_IIV, iSize, jSize, nVarGmIe)
 
     ! The result is on the root processor of GM only
-    call transfer_real_array(GM_, IE_, iSize*jSize*nVar, Buffer_IIV)
+    call transfer_real_array(GM_, IE_, iSize*jSize*nVarGmIe, Buffer_IIV)
 
     ! Put variables into IE
-    if(is_proc(IE_)) call IE_put_from_gm(Buffer_IIV, iSize, jSize, nVar)
+    if(is_proc(IE_)) call IE_put_from_gm(Buffer_IIV, iSize, jSize, nVarGmIe)
 
     ! Deallocate buffer to save memory
     deallocate(Buffer_IIV)

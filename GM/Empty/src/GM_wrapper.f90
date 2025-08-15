@@ -330,9 +330,10 @@ contains
   end subroutine GM_get_for_ie
   !============================================================================
 
-  subroutine GM_get_info_for_ie(nVar, NameVar_I)
+  subroutine GM_get_info_for_ie(nVarIeGm, nVarGmIe, NameVar_I)
 
-    integer, intent(out) :: nVar
+    integer, intent(out) :: nVarIeGM
+    integer, intent(out), optional :: nVarGmIe
     character(len=*), intent(out), optional:: NameVar_I(:)
 
     character(len=*), parameter:: NameSub = 'GM_get_info_for_ie'

@@ -1,0 +1,486 @@
+Begin session: 1
+
+#DESCRIPTION
+Param/PARAM.in.test.GMUA.MGITM		StringDescription
+
+#COMPONENTMAP
+GM 0 -1 1		CompMap
+UA 0 -1 1		CompMap
+
+#TIMEACCURATE
+F			IsTimeAccurate
+
+#STARTTIME
+2015			iYear
+03			iMonth
+08			iDay
+10			iHour
+00			iMinute
+0			iSecond
+0.0			FracSecond
+
+#SAVERESTART
+T			DoSaveRestart
+10000			DnSaveRestart
+100.0			DtSaveRestart
+
+INCLUDE
+RESTART.in
+
+#PLANET
+Mars			NamePlanet
+
+#DIPOLE
+0.0			DipoleStrength
+
+#ROTATION
+T			UseRotation
+24.66584		RotationPeriod
+
+#UPDATEB0
+10.0			DtUpdateB0
+
+#BEGIN_COMP GM ---------------------------------------------------------------
+
+#GRIDBLOCKALL
+10000			MaxBlock
+
+INCLUDE
+GM/restartIN/restart.H
+
+#GRAVITY
+T			UseGravity
+0			iDirGravity
+
+IMPLICIT
+T			UsePointImplicit
+F			UsePartImplicit
+F			UseFullImplicit
+1.0			cflImpl
+
+#GRIDGEOMETRY
+spherical_genr		TypeGeometry
+GM/Param/MARS/grid_stretch.dat		NameGridFile
+
+#GRID
+13			nRootBlock1
+10 			nRootBlock2
+5			nRootBlock3
+-24.			xMin
+  8.			xMax
+-16.			yMin
+ 16.			yMax
+-16.			zMin
+ 16.			zMax
+
+#LIMITRADIUS
+1.0294464		rMin
+28.82			rMax
+
+#GRIDLEVEL
+1			nLevel
+initial			StringShape
+
+#GRIDLEVEL
+1			nLevel
+all			StringShape
+
+#GRIDLEVEL
+2			nLevel
+sphere0			StringShape
+1.3			Radius = 1.5*rBody
+
+#TESTXYZ
+1.2			xTest
+0.1			yTest
+0.1			zTest
+
+#BODY
+T			UseBody
+1.0294464		rBody
+1.0			rCurrents
+1.0e6			BodyNDim Hp
+1.0e6			BodyNDim O2p
+1.0e6			BodyNDim Op
+1.0e6			BodyNDim CO2p
+300.0			BodyTDim
+
+#TIMESTEPPING
+2			nStage
+0.8			CflExpl
+
+#SCHEME
+2			nOrder
+Linde			TypeFlux
+minmod			TypeLimiter
+
+#SAVELOGFILE
+T			DoSaveLogfile
+VAR step time		StringLog
+500			DnSaveLogfile
+-1.			DtSaveLogfile
+dt rho p rhopnt ppnt bxpnt Hpflx Hpflx Opflx O2pflx CO2pflx		NameLogVars
+6.0 2.0 1.117786		StringLogRadii
+
+#INNERBOUNDARY
+user			TypeBcBody
+
+#BOXBOUNDARY
+outflow			TypeBc1
+inflow			TypeBc2
+fixed			TypeBc3
+fixed			TypeBc4
+fixed			TypeBc5
+fixed			TypeBc6
+
+! 3nT parker's spiral
+#SOLARWIND
+1.9			SwNDim  [n/cc]
+3.4E5			SwTDim  [K]
+-510.4			SwUxDim [km/s]
+19.6			SwUyDim [km/s]
+-5.0			SwUzDim [km/s]
+-2.1			SwBxDim [nT]
+3.1			SwByDim [nT]
+-1.0			SwBzDim [nT]
+
+SOLARWINDFILE
+T			UseSolarWindFile
+sw_drivers_2015_03_08_09.dat
+
+#USERSWITCH
++init +ic +b0 +source		StringSwitch
+
+#USERINPUTBEGIN -----------------------------------
+
+#HOTOXYGEN
+T			UseHotO
+
+#MARSB0
+T			UseMarsB0
+60			NNm
+126.62			Rot     ! at 03/07/20 UT
+-20.559			Thetilt
+marsmgsp.txt		NameFileB0
+
+111.09
+-17.4966     !at Nov, 1, 2014 for MAVEN
+
+-59.4
+-13.0        !at May 2005, 16, 00:01 UT
+
+MSO
+T			UseMso	!if true, read rotation axis in MSO
+-0.35131		RotAxisMsoX
+0.24038			RotAxisMsoY
+0.90487			RotAxisMsoZ
+
+NOGW_150308_UT19_MHDINPUTS_2.dat 		filename
+UseMarsAtm
+T			UseMarsAtm
+NOGW_150308_UT19_MHDINPUTS.dat		TGCMFilename
+81                     	NAlt
+
+36                      NLat
+72                      NLong
+0.0                     subsolarlat
+0.0                     subsolarlong
+2.5                     longstart
+-87.5                  latstart
+98.75                 atlstart
+2.5                     dalt
+5.0                     dlat
+5.0                     dlong
+8                       nline
+
+#SOLARCONDITION
+solarmin		TypeSolarCond
+
+check SMDist
+1.43050
+
+#REACTIONS
+T			UseImpactIon
+T			UseChargeEx
+
+#CHAPMAN
+T			UseChapman
+
+#USERINPUTEND -------------------------------------
+
+#MULTISPECIES
+T			DoReplaceDensity
+5.0			SpeciesPercentCheck
+
+#SAVEPLOT
+3			nPlotFile
+x=0 MHD idl		StringPlot
+1000			DnSavePlot
+-1.0			DtSavePlot
+-1.0			DxSavePlot
+y=0 MHD idl		StringPlot
+1000			DnSavePlot
+-1.0			DtSavePlot
+-1.0			DxSavePlot
+z=0 MHD idl		StringPlot
+1000			DnSavePlot
+-1.0			DtSavePlot
+-1.0			DxSavePlot
+
+3d MHD tec		StringPlot
+1000			DnSavePlot
+-1.0			DtSavePlot
+
+SATELLITE
+2			nSatellite
+MHD step date		stringsatellite
+-1			DnOutput
+10.0			Dtoutput
+MAVEN_trac/MAVEN_2015_03_08m0.dat		Nametrajectoryfile
+MHD step date  stringsatellite
+-1			DnOutput
+10.0			Dtoutput
+MAVEN_trac/sat_2015_03_08_09_kp.dat		Nametrajectoryfile
+
+#END_COMP GM -----------------------------------------------------------------
+
+#BEGIN_COMP UA ---------------------------------------------------------------
+
+#DEBUG
+0		debug level
+0		cpu to watch
+10.0		dt between normal code output to stdout
+F		usebarriers - forces the code to stop and wait more often
+
+RESTART
+T
+
+#GRID
+2	        lons
+2	        lats
+-90		minimum latitude to model
+90		maximum latitude to model
+0.0		longitude to model (ignored in everything but 1D)
+0.0
+
+#ALTITUDE
+0.0		minimum altitude to use
+300.0		maximum altitude to use (ignored unless the following is F)
+F		use stretched grid
+
+#EDDYDIFFUSION
+minmax		EddyDiffusionMethod (constant, minmax, or yoshida)
+1500	    	kEddyMax
+500    		kEddyMin (Ignored for all methods except minmax)
+
+#THERMALDIFFUSION
+2.22e-4		Thermal conductivity (code use kappa = number * T**0.75)
+
+#SAVEPLOTS
+7200.0		dt for writing restart files
+1		how many output files do you want
+3DALL		output style
+3600		dt for output
+
+#CFL
+0.7		percentage of maximum allowable time-step to take
+
+#LIMITER
+mc		only limiter available
+2.0
+
+#LOGFILE
+1.0		dt for output to a log file
+
+#STATISTICALMODELSONLY
+F		if you want to run with msis and iri only (i.e. not GITM)
+1800.0		time step to take if you run with msis and iri
+
+#ELECTRODYNAMICS
+60.0		how often to update potential
+60.0		how often to update aurora and euv
+
+#KP
+1.0
+
+#CRUSTAL
+F         UseCrustalFields
+
+#USELILLIS
+F        use empirical ionization
+0.42     Solar wind pressure (should be between 0.39 and 1.36)
+
+#MHDFIELD
+F    
+
+#APEX
+F		Use apex magnetic coordinate system
+
+#AMIEFILES
+none      northern hemisphere amie file
+none      southern hemisphere amie file
+
+#DAMPING
+T      Turn on vertical velocity damping term in vertical_solver
+
+#DUST
+0.5
+0.003
+
+#INITIAL
+T               initialize thermosphere using MSIS
+F               initialize ionosphere using IRI
+100.0           if msis is false, then this is the temperature at the base
+250.0           if msis is false, then this is the temperature at the top
+140.0           if msis is false, then this altitude of the temperature change
+20.0            if msis is false, then this width of the temperature change
+1.17e18         CO2
+4.03e15         CO
+2.31e15         O
+3.26e16         N2
+2.00e20         O2
+2.40e21         Ar
+3.20e17         He
+
+#GRAVITYWAVE
+T
+
+#F107
+125		f10.7
+125		f10.7 averaged over 81 days
+
+#EUV_DATA
+T
+T
+UA/DataIn/fismdaily.dat
+
+#THERMO
+T		 UseSolarHeating
+F		 UseJouleHeating
+F		 UseAuroralHeating
+F		 UseNOCooling
+T		 UseOCooling
+T		 UseConduction
+F		 UseTurbulentConduction
+F		 UseUpdatedTurbulentConduction
+1.0	 EddyScalingFactor
+
+#WAVEDRAG
+F           UseStressHeating
+
+#VERTICALSOURCES
+T           UseEddyInSolver
+T           UseFrictionInSolver
+25.0
+
+#EDDYVELOCITY
+F           UseBoquehoAndBlelly
+F           UseEddyCorrection
+
+#TIDES
+F
+F
+F
+F
+
+#GSWMCOMP
+F
+F
+F
+F
+
+#FORCING
+T		UsePressureGradient
+F		UseIonDrag
+T		UseNeutralDrag
+T		UseViscosity
+T		UseCoriolis
+T		UseGravity
+
+#IONFORCING
+F   UseExB                 (logical)
+F   UseIonPressureGradient (logical)
+F   UseIonGravity          (logical)
+F   UseNeutralDrag         (logical)
+F   UseDynamo              (logical)
+
+#CHEMISTRY
+T		UseIonChemistry
+F		UseIonAdvection
+T		UseNeutralChemistry
+
+#STRETCH
+65.0		! location of minimum grid spacing
+0.0		! Amount of stretch 0 (none) to 1 (lots)
+1.0		! More control of stretch ( > 1 stretch less < 1 stretch more)
+
+#END_COMP UA ------------------------------------------------------------------
+
+#STOP
+10			MaxIter
+-1.0			TimeMax
+
+
+
+#END
+
+#RUN ##########################################################################
+
+#TIMEACCURATE
+T                       DoTimeAccurate
+
+#BEGIN_COMP GM ---------------------------------------------------------------
+
+FIXAXIS  check
+T
+T
+5.0
+1.5
+
+
+POINTIMPLICIT
+T                       UsePointImplicit
+1.0                     BetaPointImplicit
+F                       IsAsymmetric
+T                       DoNormalizeCell
+
+#TIMESTEPPING
+2			nStage
+0.95			CflExpl
+
+FIXEDTIMESTEP
+T
+0.05
+
+#SAVEPLOT
+3                       nPlotFiles
+x=0 MHD idl             StringPlot
+-1                      DnSavePlot
+600.0                   DtSavePlot
+-1.0			DxSavePlot
+y=0 MHD idl             StringPlot
+-1                      DnSavePlot
+600.0                   DxSavePlot
+-1.0			DxSavePlot
+z=0 MHD idl             StringPlot
+-1                      DnSavePlot
+3600.0                  DtSavePlot
+-1.0			DxSavePlot
+
+3d MHD tec             	StringPlot
+-1                      DnSavePlot
+1800.0                  DtSavePlot
+
+#END_COMP GM ---------------------------------------------------------------
+
+COUPLE1
+UA                      NameSource
+GM                      NameTarget
+1                       DnCouple
+-1.0                    DtCouple
+
+#STOP
+1000000	               MaxIter
+3600.0                    TimeMax
+
+#END

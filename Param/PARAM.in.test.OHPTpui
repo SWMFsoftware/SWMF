@@ -158,9 +158,6 @@ Linde			TypeFlux
 #NONCONSERVATIVE
 T			UseNonConservative
 
-#CONSERVATIVECRITERIA
-0			nConservCrit
-
 #SAVERESTART
 T			DoSaveRestart
 1000			DnSaveRestart

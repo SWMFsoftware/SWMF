@@ -32,7 +32,6 @@ module CON_couple_ee_gm
 
 contains
   !============================================================================
-
   subroutine couple_ee_gm_init
 
     ! This subroutine should be called from all PE-s
@@ -42,7 +41,6 @@ contains
 
   end subroutine couple_ee_gm_init
   !============================================================================
-
   subroutine couple_ee_gm(tSimulation)
 
     real, intent(in) :: tSimulation
@@ -60,6 +58,5 @@ contains
 
   end subroutine couple_gm_ee
   !============================================================================
-
 end module CON_couple_ee_gm
 !==============================================================================

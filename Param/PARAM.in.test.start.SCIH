@@ -559,12 +559,6 @@ F			UseNonConservative^
 2			nStage
 0.8			CflExpl
 
-#DIVB
-T			UseDivbSource
-T			UseDivbDiffusion
-F			UseProjection
-F			UseConstrainB
-
 #SAVELOGFILE
 T			DoSaveLogfile
 VAR			StringLog
@@ -595,7 +589,7 @@ z=0 VAR idl_ascii		StringPlot
 shl VAR idl		StringPlot
 10			DnSavePlot
 -1.			DtSavePlot
-HGC			TypeCoordPlot
+SYS			TypeCoordPlot
 212.0			rMin
 217.0			rMax
 1.			dR    ! only read if rMin /= rMax

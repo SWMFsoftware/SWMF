@@ -90,11 +90,6 @@ mc			TypeLimiter
 #MINIMUMDENSITY
 1.E-4			RhoMinDim for fluid SW
 
-
-! Applies to the ions only if DoConserveNeutrals is false in #MULTIFLUID
-#NONCONSERVATIVE
-F			UseNonConservative
-
 #SAVERESTART
 T			DoSaveRestart
 1000			DnSaveRestart

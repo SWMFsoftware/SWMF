@@ -58,7 +58,8 @@ my $History;
 my @models;
 my $Sleep = $ENV{GITHUBSLEEP};
 
-my $AddAmrex;
+my $Amrex;
+my $Fleks;
 my $InstallOrClone;
 foreach (@Arguments){
     if( /^-(install|clone)/){
@@ -78,11 +79,11 @@ foreach (@Arguments){
     }
     if( /^-history$/ or /^-date=/){$History = 1; next;}
     if( /^-sleep=(\d+)/){$Sleep = $1; next;}
-    $AddAmrex = 1 if /^-v=.*FLEKS/;
-    $AddAmrex = 0 if /^-amrex/;
+    $Fleks = 1 if /^-v=.*FLEKS/;
+    $Amrex = 1 if /^-amrex/;
 }
 # Add -amrex if FLEKS is switched on
-push(@Arguments, '-amrex') if $AddAmrex;
+push(@Arguments, '-amrex') if $Fleks and not $Amrex;
 
 $gitclone .= " -history" if $History;
 

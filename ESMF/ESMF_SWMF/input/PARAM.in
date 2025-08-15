@@ -6,13 +6,13 @@ IE -2 -1  1  		CompMap last 2 PEs
 #DESCRIPTION
 ESMF/ESMF_SWMF/input/PARAM.in based on Param/SWPC/PARAM.in_SWPC_v2
 
-#ECHO
+ECHO
 F			DoEcho
 
-#VERBOSE
+VERBOSE
 0			lVerbose
 
-#TIMING
+TIMING
 F			DoTiming
 
 #COUPLE2
@@ -170,7 +170,7 @@ z=0 MHD idl		StringPlot
 -1.			DtSavePlot
 -1.			DxSavePlot
 
-#DOAMR
+DOAMR
 T			DoAmr
 100			DnAmr
 -1.0			DtAmr

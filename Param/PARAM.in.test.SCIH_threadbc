@@ -11,7 +11,7 @@ Param/PARAM.in.test.SCIH_threadbc: create steady state solar corona with Threade
 F			IsTimeAccurate
 
 #STARTTIME
-2008			iYear
+2018			iYear
 11			iMonth
 20			iDay
 6			iHour
@@ -185,9 +185,6 @@ T			UseLogRhoLimiter
 T			UseLogPLimiter
 F			UseRhoRatioLimiter
 
-#NONCONSERVATIVE
-T			UseNonConservative
-
 #MESSAGEPASS
 all			TypeMessagePass
 
@@ -258,6 +255,10 @@ MHD			StringSatellite
 -1.0			DtOutput [sec]
 SC/TRAJECTORY/stb.dat		NameTrajectoryFile
 
+#ELECTRONENTROPY
+F			UseElectronEntropy
+F			UseElectronEnergy
+
 #END_COMP SC -----------------------------------------------------------------
 
 #COMPONENT
@@ -293,6 +294,9 @@ IH			NameTarget
 
 #AMR
 -1			DnRefine
+
+ENFORCECFL
+T			DoEnforceCfl
 
 #END_COMP SC -----------------------------------------------------------------
 
@@ -332,8 +336,21 @@ shell0			StringShape
 18.0			RadiusInner
 21.0			Radius
 
+#AMRREGION
+conemars		NameRegion
+conex0 sat:mars		StringShape
+350			Height
+128			Radius
+
+#SATELLITE
+1			nSatellite
+MHD			StringSatellite
+-1			DnOutput
+-1.0			DtOutput [sec]
+IH/TRAJECTORY/mars.dat		NameTrajectoryFile
+
 #AMRCRITERIALEVEL
-3			nRefineCrit
+4			nRefineCrit
 Level			StringRefine
 4			RefineTo
 4			CoarsenFrom
@@ -344,6 +361,9 @@ currentsheet		StringRefine
 0.5			CoarsenLimit
 0.5			RefineLimit
 5			MaxLevel
+Level +conemars		StringRefine
+5			RefineTo
+5			CoarsenFrom
 
 #GRIDLEVEL
 5			nLevel
@@ -386,9 +406,6 @@ Sokolov			TypeFlux
 mc3			TypeLimiter
 1.2			LimiterBeta
 
-#NONCONSERVATIVE
-T			UseNonConservative
-
 #TIMESTEPPING
 2			nStage
 0.8			CflExpl
@@ -398,6 +415,9 @@ T			UseDivbSource
 T			UseDivbDiffusion
 F			UseProjection
 F			UseConstrainB
+
+ENFORCECFL
+T			DoEnforceCfl
 
 #SAVELOGFILE
 T			DoSaveLogfile
@@ -432,6 +452,11 @@ g rbody			NamePars
 buf MHD idl		StringPlot
 -1			DnSavePlot
 50.0			DtSavePlot
+
+
+#ELECTRONENTROPY
+F			UseElectronEntropy
+F			UseElectronEnergy
 
 #END_COMP IH -----------------------------------------------------------------
 

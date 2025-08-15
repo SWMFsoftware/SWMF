@@ -1,0 +1,304 @@
+For a three-temperature solar wind simulation, configure SWMF with
+
+./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
+./Config.pl -o=SC:u=Awsom,e=AwsomAnisoPi,g=6,8,8,nG=3
+./Config.pl -o=IH:u=Awsom,e=AwsomAnisoPi,g=8,8,8,nG=3
+./Config.pl -acc
+
+Default rMinWaveReflection is 0.0
+Default UseReynoldsDecomposition is F
+
+For changing the distance of the source surface, rMax in FDIPS.in
+needs to change if using FDIPS and rSourceSurface in this file
+needs to change if using harmonics.
+
+IMPORTANT:
+Use the user CHROMOBC command to increase the inner boundary number
+density so that the run does not fail for solar maximum
+
+Begin session: 1
+
+#DESCRIPTION
+Param/PARAM.in.test.cme.SCIH_gpu: restart from background run and initiate CME		StringDescription
+
+#INCLUDE
+RESTART.in
+
+#COMPONENTMAP
+SC 0 -1 1		CompMap
+IH 0 -1 1		CompMap
+
+#TIMEACCURATE
+T			IsTimeAccurate
+
+STARTTIME		^
+2014			iYear
+09			iMonth
+10			iDay
+14			iHour
+00			iMinute
+00			iSecond
+0.0			FracSecond
+
+#SAVERESTART
+T			DoSaveRestart
+-1			DnSaveRestart
+10.0			DtSaveRestart
+
+#TEST
+init_axes		StringTest
+
+#BEGIN_COMP SC ---------------------------------------------------------------
+
+#UPDATE
+slow			TypeUpdate
+
+#SEMIPRECONDITIONER
+T			DoPrecond
+BILU1			TypePrecond
+
+#GRIDBLOCKALL
+2500			MaxBlock
+
+#INCLUDE
+SC/restartIN/restart.H
+
+#PLASMA
+1.0			FluidMass [amu]
+1.0			IonCharge [e]
+1.0			ElectronTemperatureRatio
+
+LOOKUPTABLE		FDIPS^
+B0			NameTable
+load			NameCommand
+harmonics_bxyz.out		NameFile
+real4			TypeFile
+
+#HARMONICSFILE
+SC/Param/CR2077_GNG.dat		NameHarmonicsFile
+
+HARMONICSFILE		^
+SC/harmonics_adapt.dat		NameHarmonicsFile
+
+HARMONICSGRID		^
+1.0			rMagnetogram
+25			rSourceSurface^
+T			IsLogRadius^
+180			MaxOrder
+400			nR
+180			nLon
+90			nLat
+
+FACTORB0		^
+1.0			FactorB0 BrFactor^
+
+#POYNTINGFLUX
+1.0e6			PoyntingFluxPerBSi^ [J/m^2/s/T]
+
+#CORONALHEATING
+turbulentcascade		TypeCoronalHeating
+1.5e5			LperpTimesSqrtBSi^
+0.0			rMinWaveReflection^
+F			UseReynoldsDecomposition^
+
+#HEATPARTITIONING
+stochasticheating		TypeHeatPartitioning
+0.21			StochasticExponent^
+0.18			StochasticAmplitude^
+
+#RADIATIVECOOLING
+T			UseRadCooling
+
+#LOOKUPTABLE
+radcool			NameTable
+load			NameCommand
+SC/Param/RadCoolCorona_8.0.dat		NameFile
+ascii			TypeFile
+
+#USERINPUTBEGIN -----------------------------------
+
+#CHROMOBC
+2e17			NchromoSi	nChromoSi_AWSoM^
+5e4			TchromoSi
+
+#USERINPUTEND -------------------------------------
+
+#TRANSITIONREGION
+T			DoExtendTransitionRegion
+2.2e5			TeTransitionRegionSi
+1.0e1			DeltaTeModSi
+
+#COARSEAXIS
+T			UseCoarseAxis
+2			nCoarseLayer
+
+#SCHEME
+2			nOrder (1 or 2)
+Linde			TypeFlux (Roe, Rusanov, Linde, Sokolov
+mc3			TypeLimiter
+1.2			LimiterBeta
+
+#LIMITER
+T			UseLogRhoLimiter
+T			UseLogPLimiter
+F			UseRhoRatioLimiter
+
+#MINIMUMTEMPERATURE
+5e4			TminDim  [K] for fluid 1
+5e4			TeMinDim [K]
+
+#MINIMUMPRESSURE
+1E-9			pMinDim for fluid 1
+1E-9			PeMinDim
+
+MINIMUMRADIALSPEED
+T			UseSpeedMin
+10			rSpeedMin
+250			SpeedMinDim
+10 h			TauSpeedMinDim
+
+#OUTERBOUNDARY
+user			TypeBc1   user for spherical and user_outerbcs
+float			TypeBc2   rMax
+periodic		TypeBc3   LonMin
+periodic		TypeBc4   LonMax
+periodic		TypeBc5   LatMin
+periodic		TypeBc6   LatMax
+
+#SAVELOGFILE
+T			DoSaveLogfile
+VAR			StringLog
+-1			DnSaveLogfile
+2.			DtSaveLogfile
+rho mx my mz p pmin urmin urmax		NameLogVars
+
+------------ CME related parameters -------------------------------------------
+
+#PARTLOCALTIMESTEP
+1.1			rLocalTimeStep
+
+add the perturb switch for CME
+#USERSWITCH		sc_cme^
++init +ic +perturb		StringSwitch
+
+flux-rope parameters
+#CME
+T			UseCme^
+T			DoAddFluxRope
+-1.0			tDecayCme
+87.50			LongitudeCme^
+14.50			LatitudeCme^
+250.68			OrientationCme^
+GL			TypeCme
+5.0			BStrength^
+1			iHelicity^
+0.8			Radius^
+0.60			Stretch^
+1.0			ApexHeight^
+
+-------------------------------------------------------------------------------
+#SAVETECPLOT
+T			DoSaveOneTecFile
+
+save frequently for first few hours
+#SAVEPLOT
+3			nPlotFile
+x=0 VAR idl		StringPlot
+-1			DnSavePlot
+10.0			DtSavePlot
+-1.0			DxSavePlot
+{MHD} b1x b1y b1z te ti dphi qrad qheat qebyq qparbyq qperpbyq		NameVars
+{default}		NamePars
+y=0 VAR idl		StringPlot
+-1			DnSavePlot
+10.			DtSavePlot
+-1.0			DxSavePlot
+{MHD} b1x b1y b1z te ti dphi qrad qheat qebyq qparbyq qperpbyq		NameVars
+{default}		NamePars
+z=0 VAR idl		StringPlot
+-1			DnSavePlot
+10.			DtSavePlot
+-1.0			DxSavePlot
+{MHD} b1x b1y b1z te ti dphi qrad qheat qebyq qparbyq qperpbyq		NameVars
+{default}		NamePars
+
+los ins idl_ascii		StringPlot
+-1			DnSavePlot
+10.0			DtSavePlot
+soho:c2 soho:c3 sta:cor1 sta:cor2 stb:cor1 stb:cor2		StringsInstrument
+shk VAR idl_ascii		StringPlot
+-1  			DnSavePlot
+10.			DtSavePlot
+-10.0			DivuDxMin [km/s]
+2.0			rMin
+25.0			rMax
+0.			LonMin
+360.			LonMax
+10.			dLon
+-90.			LatMin
+90.			LatMax
+10.			dLat
+{MHD} te ti normx normy normz comprho thetaup thetadn ushk 		NameVars
+{default}		NamePars
+
+los ins tec		StringPlot
+-1			DnSavePlot
+10.0			DtSavePlot
+soho:c2 soho:c3 sta:cor1 sta:cor2 stb:cor1 stb:cor2		StringsInstrument
+3d VAR tcp		StringPlot
+-1			DnSavePlot
+10.			DtSavePlot
+{MHD} b1x b1y b1z te ti		NameVars
+{default}		NamePars
+
+SATELLITE
+3			nSatellite
+MHD			StringSatellite
+-1			DnOutput
+-1.0			DtOutput [sec]
+SC/TRAJECTORY/earth.dat		NameTrajectoryFile
+MHD			StringSatellite
+-1			DnOutput
+-1.0			DtOutput [sec]
+SC/TRAJECTORY/sta.dat		NameTrajectoryFile
+MHD			StringSatellite
+-1			DnOutput
+-1.0			DtOutput [sec]
+SC/TRAJECTORY/stb.dat		NameTrajectoryFile
+
+LOOKUPTABLE
+AiaXrt			NameTable
+load			NameCommand
+SC/Param/los_tbl.dat		NameFile
+ascii			TypeFile
+
+LOOKUPTABLE
+euv			NameTable
+load			NameCommand
+SC/Param/los_Eit_cor.dat		NameFile
+ascii			TypeFile
+
+LOOKUPTABLE
+EuviA			NameTable
+load			NameCommand
+SC/Param/los_EuviA.dat		NameFile
+ascii			TypeFile
+
+LOOKUPTABLE
+EuviB			NameTable
+load			NameCommand
+SC/Param/los_EuviB.dat		NameFile
+ascii			TypeFile
+
+#SAVEINITIAL
+T			DoSaveInitial
+
+#END_COMP SC -----------------------------------------------------------------
+
+#COMPONENT
+IH			NameComp
+F			UseComp
+
+#STOP
+-1			MaxIter
+10.0			TimeMax^

@@ -193,8 +193,8 @@ single			TypeFileOut
 1			nMagGridFile
 global ascii		StrGridFileOut
 GEO			TypeCoordGrid
-144			nGridLon
-171			nGridLat
+120			nGridLon 3 deg resolution
+86			nGridLat 2 deg resolution
 0.			GridLonMin
 360.			GridLonMax
 -85.			GridLatMin

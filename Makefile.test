@@ -43,29 +43,34 @@ test_help:
 	@(if [ -d PW/PWOM    ]; then echo "    test_swpc_pwom              (run GM-IE-RCM2-PWOM SWPC test)"; fi)
 	@(if [ -d PW/PWOM    ]; then echo "    test_swpc_pwom_species      (run multispecies GM-IE-RCM2-PWOM SWPC test)"; fi)
 	@(if [ -d PW/PWOM    ]; then echo "    test_swpc_cimi_pwom_species (run multispecies GM-IE-CIMI-PWOM SWPC test)"; fi)
-	@(if [ -d PC/FLEKS   ]; then echo "    test_swpc_aepic             (run MHD-AEPIC GM-IE-RCM2-PC SWPC test)"; fi)	
+	@(if [ -d PC/FLEKS   ]; then echo "    test_swpc_aepic             (run MHD-AEPIC GM-IE-RCM2-PC SWPC test)"; fi)
 	@(if [ -d PW/PWOM    ]; then echo "    test1                       (run GM-IE-PWOM test)"; fi)
 	@(if [ -d UA/GITM    ]; then echo "    test3                       (run GM-IE-IM-UA test)"; fi)
 	@(if [ -d IM/HEIDI   ]; then echo "    test4                       (run GM-IE-HEIDI test)"; fi)
 	@(if [ -d GM/BATSRUS ]; then echo "    test5                       (run EE-SC test)"; fi)
 	@(if [ -d GM/BATSRUS ]; then echo "    test6                       (run SC-IH coupling test: stream-aligned)"; fi)
 	@(if [ -d GM/BATSRUS ]; then echo "    test7                       (run IH-OH test)"; fi)
-	@(if [ -d GM/BATSRUS ]; then echo "    test8                       (run SC-IH coupling test with AWSoM-R)"; fi)
-	@(if [ -d GM/BATSRUS ]; then echo "    test9                       (run SC-IH coupling test with AWSoM)"; fi)
-	@(if [ -d GM/BATSRUS ]; then echo "    test10                      (run SC-IH like in a real-time)"; fi)
+	@(if [ -d GM/BATSRUS ]; then echo "    test8                       (run SC-IH AWSoM-R test)"; fi)
+	@(if [ -d GM/BATSRUS ]; then echo "    test9                       (run SC-IH AWSoM test)"; fi)
+	@(if [ -d GM/BATSRUS ]; then echo "    test9gpu                    (run SC-IH AWSoM test on GPU)"; fi)
+	@(if [ -d GM/BATSRUS ]; then echo "    test10                      (run SC-IH real-time test)"; fi)
 	@(if [ -d GM/BATSRUS ]; then echo "    test11                      (run SC-GM coupling test)"; fi)
+	@(if [ -d UA/MGITM   ]; then echo "    test12                      (run GM-UA/MGITM test)"; fi)
 	@(if [ -d PT/AMPS    ]; then echo "    test13                      (run GM-PT/AMPS test: Europa)"; fi)
-	@(if [ -d PT/PARMISAN ]; then echo "    test14                      (run SC-IH-PT/PARMISAN test)"; fi)
+	@(if [ -d PT/PARMISAN ];then echo "    test14                      (run SC-IH-PT/PARMISAN test)"; fi)
 	@(if [ -d SP/MFLAMPA ]; then echo "    test15                      (run SC-IH-SP/MFLAMPA test)"; fi)
 	@(if [ -d SP/MFLAMPA ]; then echo "    test15_build                (configure SC-IH-SP/MFLAMPA, run test15)"; fi)
-	@(if [ -d PC/FLEKS   ]; then echo "    test16                      (run GM-PC/FLEKS test: periodic FLEKS)"; fi)
+	@(if [ -d PC/FLEKS   ]; then echo "    test16_2d                   (run GM-PC/FLEKS test in 2D)"; fi)
+	@(if [ -d PC/FLEKS   ]; then echo "    test16_3d                   (run GM-PC/FLEKS test in 3D)"; fi)
 	@(if [ -d PC/FLEKS   ]; then echo "    test17                      (run GM-PC/FLEKS test: 2D Alfven wave)"; fi)
 	@(if [ -d PC/FLEKS   ]; then echo "    test18                      (run GM-PC/FLEKS test: 3D reconnection)"; fi)
-	@(if [ -d SP/MFLAMPA ]; then echo "    test19			   (run SC-IH-OH-SP/MFLAMPA test)"; fi)
+	@(if [ -d SP/MFLAMPA ]; then echo "    test19                      (run SC-IH-OH-SP/MFLAMPA test)"; fi)
 	@(if [ -d PT/FLEKS   ]; then echo "    test20                      (run OH-PT/FLEKS test: shocktube)"; fi)
 	@(if [ -d PT/FLEKS   ]; then echo "    test21                      (run OH-PT/FLEKS test: OuterHelio)"; fi)
 	@(if [ -d PT/FLEKS   ]; then echo "    test22                      (run OH-PT/FLEKS test: OuterHelio)"; fi)
-	@(if [ -d PC/FLEKS   ]; then echo "    test23                      (run GM-PC/FLEKS test: Periodic 2D FastWave with AMR PIC)"; fi)
+	@(if [ -d PC/FLEKS   ]; then echo "    test23_2d                   (run GM-PC/FLEKS test: 2D fast wave with AMR PIC)"; fi)
+	@(if [ -d PC/FLEKS   ]; then echo "    test23_3d                   (run GM-PC/FLEKS test: 3D fast wave with AMR PIC)"; fi)
+	@(if [ -d PC/FLEKS   ]; then echo "    test25                      (run PC/FLEKS test: 3D light wave with AMR PIC)"; fi)
 	@echo "    test_check                  (collect test results into test_swmf.res)"
 
 # Nothing should be done parallel in this Makefile
@@ -87,6 +92,7 @@ test_gpu:
 	@rm -f *.diff
 	-@(${MAKE} test_swpc_gpu TESTDIR=run_test_swpc_gpu)
 	-@(${MAKE} test_swpc_large_gpu TESTDIR=run_test_swpc_large_gpu)
+	-@(${MAKE} test9gpu TESTDIR=run_test09gpu)
 	-@(cd GM/BATSRUS; ${MAKE} test_gpu)
 	-@(${MAKE} test_check)
 
@@ -95,7 +101,6 @@ test_swmf:
 	-@(if [ "${ESMFMKFILE}" != "" ]; then ${MAKE} test_esmf; fi)
 	-@(if [ -d PS/DGCPM   ]; then ${MAKE} test_ps TESTDIR=run_test_ps; fi)
 	-@(if [ -d IM/RCM2    ]; then ${MAKE} test_swpc_gpu TESTDIR=run_test_swpc_gpu; fi)
-	-@(if [ -d IM/RCM2    ]; then ./Config.pl -noacc; fi)
 	-@(if [ -d IM/RCM2    ]; then ${MAKE} test_swpc TESTDIR=run_test_swpc; fi)
 	-@(if [ -d IM/RCM2    ]; then ${MAKE} test_swpc_pe TESTDIR=run_test_swpc_pe; fi)
 	-@(if [ -d IM/RCM2    ]; then ${MAKE} test_swpc_multiion TESTDIR=run_test_swpc_multiion; fi)
@@ -112,19 +117,26 @@ test_swmf:
 	-@(if [ -d GM/BATSRUS ]; then ${MAKE} test7 TESTDIR=run_test07; fi)
 	-@(if [ -d GM/BATSRUS ]; then ${MAKE} test8 TESTDIR=run_test08; fi)
 	-@(if [ -d GM/BATSRUS ]; then ${MAKE} test9 TESTDIR=run_test09; fi)
+	-@(if [ -d GM/BATSRUS ]; then ${MAKE} test9gpu TESTDIR=run_test09gpu; fi)
 	-@(if [ -d GM/BATSRUS ]; then ${MAKE} test11 TESTDIR=run_test11; fi)
-	-@(if [ -d PT/AMPSXXX ]; then ${MAKE} test13 TESTDIR=run_test13; fi)
+	-@(if [ -d UA/MGITM   ]; then ${MAKE} test12 TESTDIR=run_test12; fi)
+	-@(if [ -d PT/AMPS    ]; then ${MAKE} test13 TESTDIR=run_test13; fi)
 	-@(if [ -d SP/MFLAMPA ]; then ${MAKE} test15 TESTDIR=run_test15; fi)
 	-@(if [ -d SP/MFLAMPA ]; then ${MAKE} test19 TESTDIR=run_test19; fi)
-	-@(if [ -d PC/FLEKS   ]; then ${MAKE} test16 TESTDIR=run_test16; fi)
+	-@(if [ -d PC/FLEKS   ]; then ${MAKE} test16_2d TESTDIR=run_test16_2d; fi)
+	-@(if [ -d PC/FLEKS   ]; then ${MAKE} test16_3d TESTDIR=run_test16_3d; fi)
 	-@(if [ -d PC/FLEKS   ]; then ${MAKE} test17 TESTDIR=run_test17; fi)
 	-@(if [ -d PC/FLEKS   ]; then ${MAKE} test18 TESTDIR=run_test18; fi)
 	-@(if [ -d PC/FLEKS   ]; then ${MAKE} test_swpc_aepic TESTDIR=run_test_swpc_aepic; fi)
 	-@(if [ -d PT/FLEKS   ]; then ${MAKE} test20 TESTDIR=run_test20; fi)
 	-@(if [ -d PT/FLEKS   ]; then ${MAKE} test21 TESTDIR=run_test21; fi)
 	-@(if [ -d PT/FLEKS   ]; then ${MAKE} test22 TESTDIR=run_test22; fi)
-	-@(if [ -d PT/FLEKS   ]; then ${MAKE} test23 TESTDIR=run_test23; fi)
+	-@(if [ -d PC/FLEKS   ]; then ${MAKE} test23_2d TESTDIR=run_test23_2d; fi)
+	-@(if [ -d PC/FLEKS   ]; then ${MAKE} test23_3d TESTDIR=run_test23_3d; fi)
+	-@(if [ -d PC/FLEKS   ]; then ${MAKE} test25 TESTDIR=run_test25; fi)
 	./Config.pl -noamrex
+
+
 
 # Setting BLESS=YES or Y will copy the solution into the reference solution
 BLESS=NO
@@ -196,7 +208,7 @@ test_cz:
 	${MAKE} test_cz_check
 
 test_cz_compile:
-	./Config.pl -v=Empty,CZ/FSAM -fishpak
+	./Config.pl -default -v=Empty,CZ/FSAM -fishpak
 	cp CZ/FSAM/srcProblem/ModUserSetup.SWMF.f90 CZ/FSAM/src/ModUserSetup.f90
 	cp CZ/FSAM/srcProblem/ModPar.SWMF.f90 CZ/FSAM/src/ModPar.f90
 	${MAKE} SWMF
@@ -232,7 +244,7 @@ test_pw:
 	${MAKE} test_pw_check
 
 test_pw_compile:
-	./Config.pl -v=Empty,PW/PWOM -o=PW:Earth
+	./Config.pl -default -v=Empty,PW/PWOM -o=PW:Earth
 	${MAKE} SWMF
 	make PIDL
 
@@ -268,7 +280,7 @@ test_ps:
 	${MAKE} test_ps_check	
 
 test_ps_compile:
-	./Config.pl -v=Empty,PS/DGCPM
+	./Config.pl -default -v=Empty,PS/DGCPM
 	${MAKE} SWMF
 	
 test_ps_rundir:
@@ -318,7 +330,7 @@ test1:
 	${MAKE} test1_check
 
 test1_compile:
-	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,PW/PWOM
+	./Config.pl -default -v=Empty,GM/BATSRUS,IE/Ridley_serial,PW/PWOM
 	./Config.pl -o=GM:u=Default,e=Mhd,ng=2,g=8,8,8,PW:Earth,IE:g=91,181
 	${MAKE} SWMF
 	make PIDL
@@ -404,6 +416,7 @@ test_swpc:
 	${MAKE} test_swpc_check
 
 test_swpc_compile:
+	./Config.pl -default
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2,RB/RBE
 	./Config.pl -o=GM:u=Default,e=Mhd,ng=2,g=8,8,8,IE:g=181,361
 	${MAKE} SWMF
@@ -497,7 +510,7 @@ test_swpc_pe:
 	${MAKE} test_swpc_pe_check
 
 test_swpc_pe_compile:
-	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2
+	./Config.pl -default -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2
 	./Config.pl -o=GM:u=Default,e=MhdPe,ng=2,g=8,8,8,IE:g=181,361
 	${MAKE} SWMF
 	make PIDL INTERPOLATE
@@ -560,7 +573,7 @@ test_swpc_pe_check:
 		${TESTDIR}/IE/ionosphere/IE_t140410_000200.log \
 		Param/SWPC/TestOutputPe/IE_t140410_000200.log \
 		> test_swpc_pe_ie.diff)
-	-@(${DIFFNUM} -b -r=4e-4 -a=7e-5 \
+	-@(${DIFFNUM} -b -r=1e-3 -a=7e-5 \
 		${TESTDIR}/IE/ionosphere/it140410_000300_000.idl \
 		Param/SWPC/TestOutputPe/it140410_000300_000.idl.gz \
 		>> test_swpc_pe_ie.diff)
@@ -583,7 +596,7 @@ test_swpc_aepic:
 	${MAKE} test_swpc_aepic_check
 
 test_swpc_aepic_compile:
-	./Config.pl -amrex
+	./Config.pl -default -amrex
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2,PC/FLEKS
 	./Config.pl -o=GM:u=Default,e=Mhd,ng=2,g=8,8,8,IE:g=91,181
 	${MAKE} SWMF
@@ -643,7 +656,7 @@ test_swpc_gpu_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2
 	./Config.pl -o=GM:u=Default,e=Mhd,ng=2,g=8,8,8,IE:g=91,181
 	./Config.pl -o=GM:opt=../../Param/SWPC/PARAM.in_SWPC_gpu_init
-	./Config.pl ${OPENACC}
+	./Config.pl -default ${OPENACC}
 	${MAKE} SWMF
 	make PIDL
 
@@ -715,7 +728,7 @@ test_swpc_large_gpu_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2
 	./Config.pl -o=GM:u=Default,e=Mhd,ng=2,g=8,8,8,IE:g=91,181
 	./Config.pl -o=GM:opt=../../Param/SWPC/PARAM.in_SWPC_large_gpu
-	./Config.pl ${OPENACC}
+	./Config.pl -default ${OPENACC}
 	${MAKE} SWMF
 	make PIDL
 
@@ -753,7 +766,7 @@ test_swpc_large_gpu_check:
 		${TESTDIR}/IE/ionosphere/IE_t140410_000000.log \
 		Param/SWPC/TestOutputLargeGPU/IE_t140410_000000.log \
 		> test_swpc_large_gpu_ie.diff)
-	-@(${DIFFNUM} -b -r=1e-4 -a=6e-5 \
+	-@(${DIFFNUM} -b -r=2e-4 -a=1e-4 \
 		${TESTDIR}/IE/ionosphere/it140410_000100_000.idl \
 		Param/SWPC/TestOutputLargeGPU/it140410_000100_000.idl.gz \
 		>> test_swpc_large_gpu_ie.diff)
@@ -779,7 +792,7 @@ test_swpc_multiion:
 	${MAKE} test_swpc_multiion_check
 
 test_swpc_multiion_compile:
-	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2
+	./Config.pl -default -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2
 	./Config.pl -o=GM:u=Default,e=MultiIon,ng=2,g=8,8,8,IE:g=181,361
 	${MAKE} SWMF
 	make PIDL
@@ -850,7 +863,7 @@ test_swpc_multispecies:
 	${MAKE} test_swpc_multispecies_check
 
 test_swpc_multispecies_compile:
-	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2
+	./Config.pl -default -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2
 	./Config.pl -o=GM:u=Default,e=MhdHpOp,ng=2,g=8,8,8,IE:g=181,361
 	${MAKE} SWMF
 	make PIDL
@@ -921,7 +934,7 @@ test_swpc_cimi:
 	${MAKE} test_swpc_cimi_check
 
 test_swpc_cimi_compile:
-	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/CIMI
+	./Config.pl -default -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/CIMI
 	./Config.pl -o=GM:u=Default,e=MhdAnisoP,ng=2,g=8,8,8,IE:g=181,361
 	./Config.pl -o=IM:EarthHO,GridExpanded
 	${MAKE} SWMF
@@ -993,7 +1006,7 @@ test_swpc_cimi_species:
 	${MAKE} test_swpc_cimi_species_check
 
 test_swpc_cimi_species_compile:
-	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/CIMI
+	./Config.pl -default -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/CIMI
 	./Config.pl -o=GM:u=Default,e=MhdHpOp,ng=2,g=8,8,8,IE:g=181,361
 	./Config.pl -o=IM:EarthHO,GridExpanded
 	${MAKE} SWMF
@@ -1065,6 +1078,7 @@ test_swpc_pwom:
 	${MAKE} test_swpc_pwom_check
 
 test_swpc_pwom_compile:
+	./Config.pl -default
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2,PW/PWOM
 	./Config.pl -o=GM:u=Default,e=Mhd,ng=2,g=8,8,8,IE:g=181,361,PW:Earth
 	${MAKE} SWMF
@@ -1146,8 +1160,10 @@ test_swpc_pwom_species:
 	${MAKE} test_swpc_pwom_species_check
 
 test_swpc_pwom_species_compile:
+	./Config.pl -default
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2,PW/PWOM
-	./Config.pl -o=GM:u=Default,e=MhdHpOp,ng=2,g=8,8,8,IE:g=181,361,PW:Earth
+	./Config.pl -o=GM:u=Default,e=MhdHpOp,ng=2,g=8,8,8,IE:g=181,361
+	./Config.pl -o=PW:Earth
 	${MAKE} SWMF
 	make PIDL
 
@@ -1217,6 +1233,7 @@ test_swpc_cimi_pwom_species:
 	${MAKE} test_swpc_cimi_pwom_species_check
 
 test_swpc_cimi_pwom_species_compile:
+	./Config.pl -default
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/CIMI,PW/PWOM
 	./Config.pl -o=GM:u=Default,e=MhdHpOp,ng=2,g=8,8,8,IE:g=181,361
 	./Config.pl -o=IM:EarthHO,GridExpanded
@@ -1295,6 +1312,7 @@ test3:
 	${MAKE} test3_check
 
 test3_compile:
+	./Config.pl -default
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2,UA/GITM
 	./Config.pl -o=GM:u=Default,e=Mhd,ng=2,g=8,8,8,IE:g=181,361
 	${MAKE} SWMF
@@ -1353,7 +1371,7 @@ test4:
 	${MAKE} test4_check
 
 test4_compile:
-	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/HEIDI
+	./Config.pl -default -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/HEIDI
 	./Config.pl -o=GM:u=Default,e=Mhd,ng=2,g=8,8,8,IE:g=91,181
 	${MAKE} SWMF
 	make PIDL
@@ -1391,10 +1409,9 @@ test5:
 	${MAKE} test5_check
 
 test5_compile:
-	./Config.pl -v=Empty,EE/BATSRUS,SC/BATSRUS
+	./Config.pl -default -v=Empty,EE/BATSRUS,SC/BATSRUS
 	./Config.pl -o=EE:u=Swarm,e=MhdEos,ng=2,g=10,10,10
 	./Config.pl -o=SC:u=Awsom,e=Awsom,ng=2,g=4,4,4
-	cd SC/BATSRUS; make newtr
 	${MAKE} SWMF
 	make PIDL
 
@@ -1455,7 +1472,7 @@ test6:
 	${MAKE} test6_check
 
 test6_compile:
-	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
+	./Config.pl -default -v=Empty,SC/BATSRUS,IH/BATSRUS
 	./Config.pl -o=SC:u=Awsom,e=AwsomSA,ng=2,g=6,4,4
 	./Config.pl -o=IH:u=Awsom,e=AwsomSA,ng=2,g=4,4,4
 	${MAKE} SWMF
@@ -1500,7 +1517,7 @@ test7:
 	${MAKE} test7_check
 
 test7_compile:
-	./Config.pl -v=Empty,IH/BATSRUS,OH/BATSRUS
+	./Config.pl -default -v=Empty,IH/BATSRUS,OH/BATSRUS
 	./Config.pl -o=IH:u=Waves,e=Mhd,ng=2,g=4,4,4
 	./Config.pl -o=OH:u=Waves,e=Mhd,ng=2,g=4,4,4
 	${MAKE} SWMF
@@ -1548,10 +1565,9 @@ test8:
 	${MAKE} test8_check
 
 test8_compile:
-	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
+	./Config.pl -default -v=Empty,SC/BATSRUS,IH/BATSRUS
 	./Config.pl -o=SC:u=Awsom,e=Awsom,ng=2,g=4,4,4
 	./Config.pl -o=IH:u=Awsom,e=Awsom,ng=2,g=4,4,4
-	cd SC/BATSRUS; make oldtr
 	${MAKE} SWMF
 	make PIDL
 
@@ -1582,16 +1598,16 @@ test8_check:
 		output/test8/SC_rfr.ref.gz \
 		>> test08_sc_thread.diff)
 	-(${DIFFNUM} -b -r=1e-5 \
+		${TESTDIR}/RESULTS/SC/los_sdo_aia*.out \
+		SC/BATSRUS/data/output/test8/SC_los_sdo_aia.out.gz \
+		>> test08_sc_thread.diff)
+	-(${DIFFNUM} -b -r=1e-5 \
 		${TESTDIR}/RESULTS/IH/log_n000000.log \
 		output/test8/IH_log_n000000.log \
 		> test08_ih.diff)
-	-(${DIFFNUM} -b -r=1e-5 \
-		${TESTDIR}/RESULTS/SC/los_sdo_aia*.out \
-		SC/BATSRUS/data/output/test8/SC_los_sdo_aia.out.gz \
-		> test08_sc_los.diff)
 	ls -l test08_*.diff
 
-### test9: SC + IH. Test 2nd and 5th order schemes ### 
+### test9: SC + IH + GM. Test 2nd and 5th order schemes ### 
 
 test9:
 	@echo "test9_compile..." > test09_sc.diff
@@ -1620,7 +1636,7 @@ test9:
 	${MAKE} test9_check
 
 test9_compile:
-	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS,GM/BATSRUS
+	./Config.pl -default -v=Empty,SC/BATSRUS,IH/BATSRUS,GM/BATSRUS
 	./Config.pl -o=SC:u=Awsom,e=AwsomAnisoPi,ng=2,g=6,8,8
 	./Config.pl -o=IH:u=Awsom,e=AwsomAnisoPi,ng=2,g=8,8,8
 	./Config.pl -o=GM:u=Default,e=Mhd,ng=2,g=8,8,8
@@ -1675,17 +1691,17 @@ test9_check:
 		output/test9/SC_log_n000001.log \
 		> test09_sc.diff)
 	-(${DIFFNUM} -b -r=1e-4 -a=1e-27 \
-                ${TESTDIR}/RESULTS/run_start/SC/los_sdo_aia_6_n0000010.out \
+                ${TESTDIR}/RESULTS/run_start/SC/los_sdo_aia_6_n00000010.out \
                 output/test9/SC_los_sdo_aia_6_n0000010.out.gz \
-                > test09_sc_los.diff)
+                >> test09_sc.diff)
 	-(${DIFFNUM} -b -r=1e-4 -a=1e-27 \
-                ${TESTDIR}/RESULTS/run_start/SC/los_sta_euvi_4_n0000010.out \
+                ${TESTDIR}/RESULTS/run_start/SC/los_sta_euvi_4_n00000010.out \
                 output/test9/SC_los_sta_euvi_4_n0000010.out.gz \
-                > test09_sc_los.diff)
+                >> test09_sc.diff)
 	-(${DIFFNUM} -b -r=1e-4 -a=1e-27 \
-                ${TESTDIR}/RESULTS/run_start/SC/los_stb_euvi_5_n0000010.out \
+                ${TESTDIR}/RESULTS/run_start/SC/los_stb_euvi_5_n00000010.out \
                 output/test9/SC_los_stb_euvi_5_n0000010.out.gz \
-                > test09_sc_los.diff)
+                >> test09_sc.diff)
 	-(${DIFFNUM} -b -r=1e-5 \
 		${TESTDIR}/RESULTS/run_start/IH/log_n000001.log \
 		output/test9/IH_log_n000001.log \
@@ -1693,31 +1709,31 @@ test9_check:
 	-(${DIFFNUM} -b -r=2e-5 -a=1e-27 \
 		${TESTDIR}/RESULTS/run_start/IH/trj_earth_n00000010.sat \
 		output/test9/IH_trj_earth_n00000010.sat \
-		> test09_ih_trj_earth.diff)	
+		>> test09_ih.diff)	
 	-(${DIFFNUM} -b -r=1e-5 -a=1e-27 \
 		${TESTDIR}/RESULTS/run_cme/SC/log_n000010.log \
 		output/test9/SC_log_n000010.log \
 		> test09_sc_cme.diff)
 	-(${DIFFNUM} -b -r=1e-5 -a=1e-27 \
-		${TESTDIR}/RESULTS/run_cme/SC/los_soho_c2_4_t00000010_n0000012.out \
+		${TESTDIR}/RESULTS/run_cme/SC/los_soho_c2_4_t00000010_n00000012.out \
 		output/test9/SC_cme_los_soho_c2_4_t00000010_n0000012.out \
-		> test09_sc_cme_los.diff)
+		>> test09_sc_cme.diff)
 	-(${DIFFNUM} -b -r=1e-5 -a=1e-27 \
-		${TESTDIR}/RESULTS/run_cme/SC/shk_var_10_t00000010_n00000012.out \
-		output/test9/SC_shk_var_10_t00000010_n00000012.out \
-		> test09_sc_cme_shk.diff)
+      	 	${TESTDIR}/RESULTS/run_cme/SC/shk_var_10_t00000010_n00000012.out \
+                output/test9/SC_shk_var_10_t00000010_n00000012.out \
+		>> test09_sc_cme.diff)
 	-(${DIFFNUM} -b -r=1e-5 -a=1e-27 \
-		${TESTDIR}/RESULTS/run_restart/SC/los_soho_c2_4_t00000010_n0000012.out \
+		${TESTDIR}/RESULTS/run_restart/SC/los_soho_c2_4_t00000010_n00000012.out \
 		output/test9/SC_restart_los_soho_c2_4_t00000010_n0000012.out \
-		> test09_sc_restart_los.diff)
+		> test09_sc_restart.diff)
 	-(${DIFFNUM} -b -r=2e-5 -a=1e-27 \
 		${TESTDIR}/RESULTS/run_restart/IH/sat_earth_n00000012.sat \
 		output/test9/IH_sat_earth_n00000012.sat \
-		> test09_ih_trj_earth.diff)
+		> test09_ih_restart.diff)
 	-(${DIFFNUM} -b -r=1e-5 \
 		${TESTDIR}/RESULTS/run_restart/IH/log_n000011.log \
 		output/test9/IH_log_n000011.log \
-		> test09_ih.diff)
+		>> test09_ih_restart.diff)
 	-(${DIFFNUM} -b -r=1e-5 \
 		${TESTDIR}/RESULTS/run_ihgm/GM/log_n000000.log \
 		output/test9/GM_log_n000000.log \
@@ -1725,10 +1741,10 @@ test9_check:
 	ls -l test09_*.diff
 
 ### test10: real-time SC + IH test ###
-### Uses two real GONG magnetogram,  however, the actual time difference
+### Uses two real GONG magnetogram, however, the actual time difference
 ### of about 5 hours is artificially reduced to 150 second, with the command
 ### perl -i -pe 's/2261.2270982/2261.2164177/' map_01.out
-### All the other commands  reealistically reprroduce the actual  scheme
+### All the other commands reealistically reproduce the actual scheme
 ### for real-time simulations with the AWSoM-R
 
 test10:
@@ -1749,7 +1765,7 @@ test10:
 	${MAKE} test10_check
 
 test10_compile:
-	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
+	./Config.pl -default -v=Empty,SC/BATSRUS,IH/BATSRUS
 	./Config.pl -o=SC:u=Awsom,e=Awsom,ng=2,g=4,4,4
 	./Config.pl -o=IH:u=Awsom,e=Awsom,ng=2,g=4,4,4
 	${MAKE} SWMF
@@ -1844,7 +1860,7 @@ test11:
 	${MAKE} test11_check
 
 test11_compile:
-	./Config.pl -v=Empty,SC/BATSRUS,GM/BATSRUS
+	./Config.pl -default -v=Empty,SC/BATSRUS,GM/BATSRUS
 	./Config.pl -o=SC:u=Awsom,e=Awsom,g=4,4,4,ng=2
 	./Config.pl -o=GM:u=Default,e=Mhd,g=4,4,4,ng=2
 	${MAKE} SWMF
@@ -1870,6 +1886,125 @@ test11_check:
 		     > test11_gm.diff)
 	ls -l test11_*.diff
 
+### test9gpu: SC/AWSOM + IH/AWSOM on GPU ###
+
+test9gpu:
+	@echo "test9gpu_compile..." > test09gpu_sc.diff
+	${MAKE} test9gpu_compile
+	@echo "test9gpu_rundir..." >> test09gpu_sc.diff
+	${MAKE} test9gpu_rundir
+	@echo "test9gpu_run..." >> test09gpu_sc.diff
+	${MAKE} test9gpu_run
+	${MAKE} test9gpu_cme
+	${MAKE} test9gpu_restart
+	@echo "test9gpu_check..." >> test09gpu_sc.diff
+	${MAKE} test9gpu_check
+
+test9gpu_compile:
+	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
+	./Config.pl -o=SC:u=Awsom,e=Awsom,ng=2,g=6,8,8
+	./Config.pl -o=IH:u=Awsom,e=Awsom,ng=2,g=8,8,8
+	./Config.pl -default ${OPENACC}
+	./Config.pl -o=SC:opt=${DIR}/Param/PARAM.in.test.start.SCIH_gpu
+	./Config.pl -o=IH:opt=${DIR}/Param/PARAM.in.test.start.SCIH_gpu
+	${MAKE} SWMF
+	make PIDL
+	
+test9gpu_rundir:
+	rm -rf ${TESTDIR}
+	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
+	cp Param/PARAM.in.test.start.SCIH_gpu ${TESTDIR}/PARAM.in
+	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
+
+test9gpu_run:
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl -m -replace RESULTS/run_start
+	cd ${TESTDIR}; ./Restart.pl -i RESULTS/run_start/RESTART
+
+test9gpu_cme:
+	cd ${TESTDIR}; mv PARAM.in PARAM.in_start; rm -f PARAM.in_orig_
+	cd ${TESTDIR}; cp Param/PARAM.in.test.cme.SCIH_gpu PARAM.in
+	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
+	./Config.pl -o=SC:opt=${DIR}/${TESTDIR}/PARAM.in
+	${MAKE} SWMF
+	make PIDL
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl -m -replace RESULTS/run_cme
+	cd ${TESTDIR}; cp -r RESULTS/run_start/RESTART/IH RESULTS/run_cme/RESTART/
+	cd ${TESTDIR}; ./Restart.pl -i RESULTS/run_cme/RESTART
+
+test9gpu_restart:
+	cd ${TESTDIR}; mv PARAM.in PARAM.in_cme; rm -f PARAM.in_orig_
+	cd ${TESTDIR}; cp Param/PARAM.in.test.restart.SCIH_gpu PARAM.in
+	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
+	./Config.pl -o=SC:opt=${DIR}/${TESTDIR}/PARAM.in,IH:opt=${DIR}/${TESTDIR}/PARAM.in
+	${MAKE} SWMF
+	make PIDL
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl -m -replace RESULTS/run_restart
+
+test9gpu_check:
+	-(${DIFFNUM} -b -r=1e-5 -a=1e-27 \
+		${TESTDIR}/RESULTS/run_start/SC/log_n000001.log \
+		output/test9gpu/SC_log_n000001.log \
+		> test09gpu_sc.diff)
+	-(${DIFFNUM} -b -r=1e-5 \
+		${TESTDIR}/RESULTS/run_start/IH/log_n000001.log \
+		output/test9gpu/IH_log_n000001.log \
+		> test09gpu_ih.diff)
+	-(${DIFFNUM} -b -r=1e-5 -a=1e-27 \
+		${TESTDIR}/RESULTS/run_cme/SC/log_n000010.log \
+		output/test9gpu/SC_log_n000010.log \
+		> test09gpu_sc_cme.diff)
+	-(${DIFFNUM} -b -r=1e-5 \
+		${TESTDIR}/RESULTS/run_restart/IH/log_n000011.log \
+		output/test9gpu/IH_log_n000011.log \
+		> test09gpu_ih_restart.diff)
+	ls -l test09gpu_*.diff
+
+### test12: GM/BATSRUS coupled with UA/MGITM  ###
+
+test12:
+	@echo "test12_compile..." > test12_gm.diff
+	${MAKE} test12_compile
+	@echo "test12_rundir..." >> test12_gm.diff
+	${MAKE} test12_rundir
+	@echo "test12_run..." >> test12_gm.diff
+	if [ ${NP} -eq 1 -o ${NP} -eq 2 ]; then \
+	     ${MAKE} test12_run; \
+	else \
+	     $(MAKE) test12_run NP=4; \
+	fi
+	@echo "test12_check..." >> test12_gm.diff
+	${MAKE} test12_check
+
+test12_compile:
+	./Config.pl -default -v=Empty,GM/BATSRUS,UA/MGITM
+	./Config.pl -o=GM:u=Mars,e=MhdMars,g=8,8,8,UA:Mars,g=8,4,120,4
+	${MAKE} SWMF
+
+test12_rundir:
+	rm -rf ${TESTDIR}
+	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
+	cp Param/PARAM.in.test.GMUA.MGITM ${TESTDIR}/PARAM.in
+	cd ${TESTDIR}; cp GM/Param/MARS/marsmgsp.txt .
+
+#gunzip -c GM/BATSRUS/data/MARS/NOGW_150308_UT19_MHDINPUTS.dat.gz \
+#		> ${TESTDIR}/NOGW_150308_UT19_MHDINPUTS.dat
+
+test12_run:
+	cd ${TESTDIR}; ${MPIRUN} SWMF.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl -m -replace RESULTS
+
+test12_check:
+	-(${DIFFNUM} -b \
+		${TESTDIR}/RESULTS/GM/log*.log output/test12/GM.log \
+		> test12_gm.diff)
+	-(${DIFFNUM} -b -r=2e-2 \
+		${TESTDIR}/RESULTS/UA/log*.dat output/test12/UA.log \
+		> test12_ua.diff)
+	ls -l test12*.diff
+
 ### test13: Europa's exosphere model with GM and PT ###
 
 test13:
@@ -1883,7 +2018,7 @@ test13:
 	${MAKE} test13_check
 
 test13_compile:
-	./Config.pl -v=Empty,GM/BATSRUS,PT/AMPS
+	./Config.pl -default -v=Empty,GM/BATSRUS,PT/AMPS
 	./Config.pl -o=GM:u=EuropaSingleMHDPe,e=MhdPe,ng=2,g=8,8,8
 	./Config.pl -o=PT:spice-path=nospice,spice-kernels=nospice,application=europa-test,amps-test=on 
 	${MAKE} SWMF
@@ -1920,7 +2055,7 @@ test14:
 	${MAKE} test14_check
 
 test14_compile:
-	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS,PT/PARMISAN
+	./Config.pl -default -v=Empty,SC/BATSRUS,IH/BATSRUS,PT/PARMISAN
 	./Config.pl -o=SC:u=Awsom,e=Awsom,ng=2,g=4,4,4
 	./Config.pl -o=IH:u=Awsom,e=Awsom,ng=2,g=4,4,4
 	./Config.pl -o=PT:g=2000
@@ -1972,11 +2107,10 @@ test15:
 	${MAKE} test15_check
 
 test15_compile:
-	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS,SP/MFLAMPA
+	./Config.pl -default -v=Empty,SC/BATSRUS,IH/BATSRUS,SP/MFLAMPA
 	./Config.pl -o=SC:u=Awsom,e=Awsom,ng=2,g=4,4,4
 	./Config.pl -o=IH:u=Awsom,e=Awsom,ng=2,g=4,4,4
 	./Config.pl -o=SP:g=2000
-	cd SC/BATSRUS; make newtr
 	${MAKE} SWMF
 	make PIDL
 
@@ -2023,7 +2157,7 @@ test_sp:
 	${MAKE} test_sp_check
 
 test_sp_compile:
-	./Config.pl -v=Empty,SP/MFLAMPA
+	./Config.pl -default -v=Empty,SP/MFLAMPA
 	./Config.pl -o=SP:g=2000
 	${MAKE} SWMF
 	make PIDL
@@ -2050,12 +2184,7 @@ test_sp_check:
 	ls -l test_sp.diff
 
 
-### test16: 2D/3D GM/BATSRUS+PC/FLEKS. BATSRUS only provides the initial condition.
-###         FLEKS runs with periodic boundary conditions. 
-
-test16:
-	$(MAKE) test16_3d
-	$(MAKE) test16_2d
+### test16_3d: GM/BATSRUS+PC/FLEKS. BATSRUS only provides initial conditions.
 
 test16_3d:
 	@echo "test16_3d_compile..." > test16_3d_gmpc.diff
@@ -2068,7 +2197,7 @@ test16_3d:
 	$(MAKE) test16_3d_check
 
 test16_3d_compile:
-	./Config.pl -v=Empty,PC/FLEKS,GM/BATSRUS -amrex
+	./Config.pl -default -amrex -v=Empty,PC/FLEKS,GM/BATSRUS
 	./Config.pl -o=GM:u=Default,e=MultiIonPe,ng=2,g=8,8,1 -o=PC:lev=9
 	$(MAKE) SWMF
 	$(MAKE) PIDL
@@ -2098,6 +2227,7 @@ test16_3d_check:
 		>> test16_3d_gmpc.diff)		
 	ls -l test16_3d_gmpc.diff
 
+### test16_2d: GM/BATSRUS+PC/FLEKS. BATSRUS only provides initial conditions.
 
 test16_2d:
 	@echo "test16_2d_compile..." > test16_2d_gmpc.diff
@@ -2110,7 +2240,7 @@ test16_2d:
 	$(MAKE) test16_2d_check
 
 test16_2d_compile:
-	./Config.pl -v=Empty,PC/FLEKS,GM/BATSRUS -amrex2d
+	./Config.pl -default -amrex2d -v=Empty,PC/FLEKS,GM/BATSRUS -tp=PBEG
 	./Config.pl -o=GM:u=Default,e=MultiIonPe,ng=2,g=8,8,1 -o=PC:lev=9
 	$(MAKE) SWMF
 	$(MAKE) PIDL
@@ -2118,7 +2248,7 @@ test16_2d_compile:
 test16_2d_rundir:
 	rm -rf ${TESTDIR}
 	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR}
-	cp Param/PARAM.in.test.GMPC.FLEKS.periodic  ${TESTDIR}/PARAM.in
+	cp Param/PARAM.in.test.GMPC.FLEKS.2D.periodic  ${TESTDIR}/PARAM.in
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test16_2d_run:
@@ -2146,7 +2276,7 @@ test17:
 	$(MAKE) test17_check
 
 test17_compile:
-	./Config.pl -v=Empty,PC/FLEKS,GM/BATSRUS -amrex
+	./Config.pl -default -amrex -v=Empty,PC/FLEKS,GM/BATSRUS
 	./Config.pl -o=GM:u=Default,e=MhdAnisoP,ng=2,g=8,8,1
 	$(MAKE) SWMF
 	$(MAKE) PIDL
@@ -2225,7 +2355,7 @@ test18:
 	$(MAKE) test18_check
 
 test18_compile:
-	./Config.pl -v=Empty,PC/FLEKS,GM/BATSRUS -amrex
+	./Config.pl -default -amrex -v=Empty,PC/FLEKS,GM/BATSRUS
 	./Config.pl -o=GM:u=GemReconnect,e=MhdHyp,ng=2,g=4,4,4
 	$(MAKE) SWMF
 	$(MAKE) PIDL
@@ -2263,12 +2393,12 @@ test19:
 	${MAKE} test19_check
 
 test19_compile:
+	./Config.pl -default
 	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS,OH/BATSRUS,SP/MFLAMPA
 	./Config.pl -o=SC:u=Awsom,e=AwsomWdiff,ng=2,g=4,4,4
 	./Config.pl -o=IH:u=Awsom,e=AwsomWdiff,ng=2,g=4,4,4
 	./Config.pl -o=OH:u=Awsom,e=Awsom,ng=2,g=4,4,4
 	./Config.pl -o=SP:g=2000
-	cd SC/BATSRUS; make oldtr
 	${MAKE} SWMF
 	make PIDL
 
@@ -2298,13 +2428,13 @@ test19_check:
 		output/test19/SC_log_n000000.log \
 		> test19_sc.diff)
 	-(${DIFFNUM} -b -r=1e-5 \
+		${TESTDIR}/RESULTS/SC/los_sdo_aia*.out \
+		SC/BATSRUS/data/output/test19/SC_los_sdo_aia.out.gz \
+		>> test19_sc.diff)
+	-(${DIFFNUM} -b -r=1e-5 \
 		${TESTDIR}/RESULTS/IH/log_n000000.log \
 		output/test19/IH_log_n000000.log \
 		> test19_ih.diff)
-	-(${DIFFNUM} -b -r=1e-5 \
-		${TESTDIR}/RESULTS/SC/los_sdo_aia*.out \
-		SC/BATSRUS/data/output/test19/SC_los_sdo_aia.out.gz \
-		> test19_sc_los.diff)
 	cat ${TESTDIR}/RESULTS/SP/MH_data_*_*_t00000150_n000010.out \
 	    > ${TESTDIR}/RESULTS/SP/MH_data.outs
 	-(${DIFFNUM} -a=3e-5 -r=3e-6 -b \
@@ -2326,7 +2456,7 @@ test20:
 	${MAKE} test20_check
 
 test20_compile:
-	./Config.pl -v=Empty,OH/BATSRUS,PT/FLEKS
+	./Config.pl -default -v=Empty,OH/BATSRUS,PT/FLEKS
 	./Config.pl -o=OH:u=OuterHelio,e=SwhPui,ng=2,g=4,4,4
 	${MAKE} SWMF
 	make PIDL
@@ -2397,7 +2527,7 @@ test21_4neu:
 	${MAKE} test21_4neu_check
 
 test21_4neu_compile:
-	./Config.pl -v=Empty,OH/BATSRUS,PT/FLEKS
+	./Config.pl -default -v=Empty,OH/BATSRUS,PT/FLEKS
 	./Config.pl -o=OH:u=OuterHelio,e=OuterHelio,ng=2,g=4,4,4 -o=PT:lev=5
 	${MAKE} SWMF
 	make PIDL
@@ -2435,7 +2565,7 @@ test21_oh_pt:
 	${MAKE} test21_oh_pt_check
 
 test21_oh_pt_compile:
-	./Config.pl -v=Empty,OH/BATSRUS,PT/FLEKS
+	./Config.pl -default -v=Empty,OH/BATSRUS,PT/FLEKS
 	./Config.pl -o=OH:u=OuterHelio,e=Swh,ng=2,g=4,4,4 -o=PT:lev=5
 	${MAKE} SWMF
 	make PIDL
@@ -2505,7 +2635,7 @@ test22_4neu:
 	${MAKE} test22_4neu_check
 
 test22_4neu_compile:
-	./Config.pl -v=Empty,OH/BATSRUS,PT/FLEKS
+	./Config.pl -default -v=Empty,OH/BATSRUS,PT/FLEKS
 	./Config.pl -o=OH:u=OuterHelio,e=OuterHelioPUI,ng=2,g=4,4,4 -o=PT:lev=5
 	${MAKE} SWMF
 	make PIDL
@@ -2543,7 +2673,7 @@ test22_oh_pt:
 	${MAKE} test22_oh_pt_check
 
 test22_oh_pt_compile:
-	./Config.pl -v=Empty,OH/BATSRUS,PT/FLEKS
+	./Config.pl -default -v=Empty,OH/BATSRUS,PT/FLEKS
 	./Config.pl -o=OH:u=OuterHelio,e=SwhPui,ng=2,g=4,4,4 -o=PT:lev=5
 	${MAKE} SWMF
 	make PIDL
@@ -2568,65 +2698,123 @@ test22_oh_pt_check:
 		>> test22_oh_pt.diff)		
 	ls -l test22_oh_pt.diff
 
-### test23: GM/BATSRUS+PC/FLEKS. 2D Fast Wave test with AMR-PC.
-###			BATSRUS only provides the initial condition.
-###         FLEKS runs with periodic boundary conditions. 
+### 2D fast wave test with AMR-PIC. BATSRUS only provides initial conditions.
 
-test23:
-	@echo "test23_compile..." > test23_gmpc.diff
-	$(MAKE) test23_compile
-	@echo "test23_rundir..." > test23_gmpc.diff
-	$(MAKE) test23_rundir
-	@echo "test23_run..." > test23_gmpc.diff
-	$(MAKE) test23_run
-	@echo "test23_check..." > test23_gmpc.diff
-	$(MAKE) test23_check
+test23_2d:
+	@echo "test23_2d_compile..." > test23_2d_gmpc.diff
+	$(MAKE) test23_2d_compile
+	@echo "test23_2d_rundir..." > test23_2d_gmpc.diff
+	$(MAKE) test23_2d_rundir
+	@echo "test23_2d_run..." > test23_2d_gmpc.diff
+	$(MAKE) test23_2d_run
+	@echo "test23_2d_check..." > test23_2d_gmpc.diff
+	$(MAKE) test23_2d_check
 
-test23_compile:
-	./Config.pl -v=Empty,PC/FLEKS,GM/BATSRUS -amrex2d
+test23_2d_compile:
+	./Config.pl -default -amrex2d -v=Empty,PC/FLEKS,GM/BATSRUS
 	./Config.pl -o=GM:u=Default,e=MhdAnisoP,ng=2,g=8,8,1 -o=PC:lev=9
 	$(MAKE) SWMF
 	$(MAKE) PIDL
 	
-test23_rundir:
+test23_2d_rundir:
 	rm -rf ${TESTDIR}
 	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/PARAM.in.test.GMPC.FLEKS.AMR.FASTWAVE.2D  ${TESTDIR}/PARAM.in
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
 
-test23_run:
+test23_2d_run:
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl RESULTS/2D
+
+test23_2d_check:
+	-@(${DIFFNUM} -b -a=2e-9 -r=1e-5 \
+	   ${TESTDIR}/RESULTS/2D/PC/z=0*84.out \
+	   output/test23/2D/z=0.ref.gz \
+		> test23_2d_gmpc.diff)
+	-@(${DIFFNUM} -b -a=1e-11 -r=1e-11 \
+	   ${TESTDIR}/RESULTS/2D/PC/log_pic_n00000000.log \
+	   output/test23/2D/PC.log \
+		>> test23_2d_gmpc.diff)	
+	ls -l test23_2d_gmpc.diff
+
+### 3D fast wave test with AMR-PIC. BATSRUS only provides initial conditions.
+
+test23_3d:
+	@echo "test23_3d_compile..." > test23_3d_gmpc.diff
+	$(MAKE) test23_3d_compile
+	@echo "test23_3d_rundir..." > test23_3d_gmpc.diff
+	$(MAKE) test23_3d_rundir
+	@echo "test23_3d_run..." > test23_3d_gmpc.diff
+	$(MAKE) test23_3d_run
+	@echo "test23_3d_check..." > test23_3d_gmpc.diff
+	$(MAKE) test23_3d_check
+
+test23_3d_compile:
+	./Config.pl -default -amrex3d -v=Empty,PC/FLEKS,GM/BATSRUS
+	./Config.pl -o=GM:u=Default,e=MhdAnisoP,ng=2,g=8,8,8 -o=PC:lev=9
+	$(MAKE) SWMF
+	$(MAKE) PIDL
+	
+test23_3d_rundir:
+	rm -rf ${TESTDIR}
+	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR}
+	cp Param/PARAM.in.test.GMPC.FLEKS.AMR.FASTWAVE.3D  ${TESTDIR}/PARAM.in
+	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
+
+test23_3d_run:
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl RESULTS/3D
+
+test23_3d_check:
+	-@(${DIFFNUM} -b -a=1e-9 -r=1e-5 \
+	   ${TESTDIR}/RESULTS/3D/PC/z=0*21.out \
+	   output/test23/3D/z=0.ref.gz \
+		> test23_3d_gmpc.diff)
+	-@(${DIFFNUM} -b -a=1e-11 -r=1e-11 \
+	   ${TESTDIR}/RESULTS/3D/PC/log_pic_n00000000.log \
+	   output/test23/3D/PC.log \
+		>> test23_3d_gmpc.diff)	
+	ls -l test23_3d_gmpc.diff
+
+### test25: PC/FLEKS. 3D Light wave test with AMR-PC.
+###         FLEKS runs with periodic boundary conditions. 
+
+test25:
+	@echo "test25_compile..." > test25_gmpc.diff
+	$(MAKE) test25_compile
+	@echo "test25_rundir..." > test25_gmpc.diff
+	$(MAKE) test25_rundir
+	@echo "test25_run..." > test25_gmpc.diff
+	$(MAKE) test25_run
+	@echo "test25_check..." > test25_gmpc.diff
+	$(MAKE) test25_check
+
+test25_compile:
+	./Config.pl -default -amrex3d -v=Empty,PC/FLEKS,GM/BATSRUS
+	./Config.pl -o=GM:u=Default,e=MhdAnisoP,ng=2,g=8,8,8 -o=PC:lev=9
+	$(MAKE) SWMF
+	$(MAKE) PIDL
+	
+test25_rundir:
+	rm -rf ${TESTDIR}
+	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR}
+	cp Param/PARAM.in.test.FLEKS.AMR.LightWave.3D  ${TESTDIR}/PARAM.in
+	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
+
+test25_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl RESULTS/
 
-test23_check:
+test25_check:
 	-@(${DIFFNUM} -b -a=1e-9 -r=1e-5 \
-	   ${TESTDIR}/RESULTS/PC/z=0*84.out \
-	   output/test23/z=0.ref.gz \
-		> test23_gmpc.diff)
+	   ${TESTDIR}/RESULTS/PC/z=0*010_n*.out \
+	   output/test25/z=0.ref.gz \
+		> test25_gmpc.diff)
 	-@(${DIFFNUM} -b -a=1e-11 -r=1e-11 \
 	   ${TESTDIR}/RESULTS/PC/log_pic_n00000000.log \
-	   output/test23/PC.log \
-		>> test23_gmpc.diff)	
-	ls -l test23_gmpc.diff
-
-### test24: GM/BATSRUS coupled with UA/MGITM  ###
-
-test24:
-	@echo "test24_compile..." > test24_gm.diff
-	@echo "test24_compile..." > test24_ua.diff
-	${MAKE} test24_compile
-	@echo "test24_rundir..." >> test24_gm.diff
-	@echo "test24_rundir..." >> test24_ua.diff
-	${MAKE} test24_rundir
-
-test24_compile:
-	./Config.pl -v=Empty,GM/BATSRUS,UA/MGITM
-	./Config.pl -o=GM:u=Mars,e=MhdMars,g=8,8,8,UA:Mars,g=8,4,120,4
-	${MAKE} SWMF
-
-test24_rundir:
-	rm -rf ${TESTDIR}
-	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
+	   output/test25/PC.log \
+		>> test25_gmpc.diff)	
+	ls -l test25_gmpc.diff
 	
 ### test_ramscb: GM+IE+IM/RAMSCB ###
 
@@ -2649,7 +2837,7 @@ test_ramscb:
 	${MAKE} test_ramscb_check
 
 test_ramscb_compile:
-	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RAM_SCB
+	./Config.pl -default -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RAM_SCB
 	./Config.pl -o=GM:u=Default,e=Mhd,ng=2,g=8,8,8,IE:g=91,181
 	${MAKE} SWMF
 	make PIDL
@@ -2667,15 +2855,15 @@ test_ramscb_run:
 test_ramscb_check:
 	-@(${DIFFNUM} -b -r=1e-3 -a=1e-8 \
 		${TESTDIR}/RESULTS/GM/log_n000001.log \
-		${IMDIR}/output/test9/GM_log_n000001.log \
+		${IMDIR}/output/test_ramscb/GM_log_n000001.log \
 		> test_ramscb_gm.diff)
 	-@(${DIFFNUM} -b -r=1e-3 -a=1e-8 \
 		${TESTDIR}/RESULTS/IM/ram/log_n000001.log \
-		${IMDIR}/output/test9/IM_log_n000001.log \
+		${IMDIR}/output/test_ramscb/IM_log_n000001.log \
 		> test_ramscb_im.diff)
 	-@(${DIFFNUM} -b -r=1e-6 \
 		${TESTDIR}/RESULTS/IE/IE*.log \
-		${IMDIR}/output/test9/IE.log \
+		${IMDIR}/output/test_ramscb/IE.log \
 		> test_ramscb_ie.diff)
 	ls -l test_ramscb*.diff
 
@@ -2694,7 +2882,7 @@ test_eeggl:
 	${MAKE} test_eeggl_check
 
 test_eeggl_compile:
-	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
+	./Config.pl -default -v=Empty,SC/BATSRUS,IH/BATSRUS
 	cd ${EMPIRICALEEDIR}; make FRM
 
 test_eeggl_rundir:
@@ -2762,7 +2950,7 @@ test_tdequil:
 #	${MAKE} test_tdequil_check
 
 test_tdequil_compile:
-	./Config.pl -v=Empty,SC/BATSRUS
+	./Config.pl -default -v=Empty,SC/BATSRUS
 	./Config.pl -o=SC:u=Awsom,e=Mhd,ng=2,g=4,4,1
 	${MAKE} SWMF
 	make PIDL

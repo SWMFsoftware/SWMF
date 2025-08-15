@@ -298,6 +298,23 @@ T 			UseDecay
 #RESTART
 T			DoRestart
 
+#AURORA
+T                       DoUseAurora
+MAGNIT                  NameAurMod
+
+#LOSSCONEFACTORS
+0.207                   ConeEfluxDifp
+0.100                   ConeNfluxDifp
+0.600                   ConeEfluxDife
+0.110                   ConeNfluxDife
+1.000                   ConeEfluxMono
+0.741                   ConeNfluxMono
+2.247                   ConeEfluxBbnd
+0.494                   ConeNfluxBbnd
+
+#MAGNITPRECIPSMOOTHING
+F			UsePrecipSmoothing
+
 #SAVEPLOT
 1			nPlotFile
 aur idl			StringPlot

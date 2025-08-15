@@ -1,0 +1,160 @@
+Name Root Last Stride
+#COMPONENTMAP
+GM  0 -1  1		CompMap
+PC  0 -1  1		CompMap
+
+#DESCRIPTION
+Param/PARAM.in.test.FLEKS.AMR.LightWave.3D: Light wave test in periodic PIC with adaptive mesh refinement		StringDescription
+
+#PLANET
+NONE			NamePlanet
+
+#COUPLE2
+GM			NameComp1
+PC			NameComp2
+-1			DnCouple
+1.			DtCouple
+
+#COUPLETIME
+GM			NameComp
+F			DoCoupleOnTime
+
+#COUPLETIME
+PC			NameComp
+F			DoCoupleOnTime
+
+#PROGRESS
+1			DnProgressShort
+1			DnProgressLong
+
+#BEGIN_COMP GM ---------------------------------------------------------------
+
+#CHECKGRIDSIZE
+  8			nI
+  8			nJ
+  8			nK
+8000			MinBlockAll
+
+#NORMALIZATION
+NONE			TypeNormalization
+
+#UNIFORMSTATE
+1.0			StateVar
+0.0			StateVar
+0.0			StateVar
+0.0			StateVar
+0.0			StateVar
+0.04			StateVar
+0.0			StateVar
+4.5e-4			StateVar
+4.5e-4			StateVar
+
+#GRID
+1			nRootBlock1
+1			nRootBlock2
+1			nRootBlock3
+-100			xMin
+ 100  			xMax
+-100			yMin
+ 100			yMax
+-100			zMin
+ 100			zMax
+
+#PICUNIT
+1			xUnitPicSi [m]
+1.0			uUnitPicSi [m/s] Speed of light for the first PIC region
+
+#PICGRID
+1			nPicGrid
+-40			xMinPic
+ 40			xMaxPic
+-30.0			yMinPic
+ 30.0			yMaxPic
+ -4.0			zMinPic
+ 4.0			zMaxPic
+ 1.0			DxPic
+ 1.0			DyPic
+ 1.0			DzPic
+
+#OUTERBOUNDARY
+periodic		TypeBc1
+periodic		TypeBc2
+periodic		TypeBc3
+periodic		TypeBc4
+periodic		TypeBc5
+periodic		TypeBc6
+
+#END_COMP GM -----------------------------------------------------------------
+
+#BEGIN_COMP PC ---------------------------------------------------------------
+
+#TESTCASE
+lightwave		testCase
+
+#TIMESTEPPING
+T			useFixedDt
+0.4			dt
+
+#PERIODICITY
+T			isPeriodicX
+T			isPeriodicY
+T			isPeriodicZ
+
+#DISCRETIZATION
+0.50			theta
+0.0			ratioDivC2C
+
+#MONITOR
+10			dnReport
+
+#DIVE
+F			doCorrectDivE
+
+
+#SAVEPLOT
+1			nPlotFile
+z=0 var ascii si		StringPlot
+-1			DnSavePlot
+10			DtSavePlot
+-1			DxSavePlot
+Ex Ey Ez Bx By Bz		NameVars
+
+#REGION
+region1			regionName
+box			shape
+-20.0			xMinBox
+20.0			xMaxBox
+-15.0			yMinBox
+15.0			yMaxBox
+-2.0			zMinBox
+2.0			zMaxBox
+
+#REFINEREGION
+0			refineLev
++region1 		refineArea
+
+#GRIDEFFICIENCY
+1.0			gridEfficiency
+
+#RESAMPLING
+F			doReSampling
+
+#END_COMP PC -----------------------------------------------------------------
+
+#STOP
+0			MaxIter
+0			TimeMax
+
+
+#RUN ##########################################################################
+
+#COMPONENT
+GM			NameComp
+F			UseComp
+
+#STOP
+-1			MaxIter
+10.0			TimeMax
+
+
+

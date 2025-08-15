@@ -16,7 +16,6 @@ T			IsTimeAccurate
 #INCLUDE
 SC/restartIN/restart.H
 
-
 #PLASMA
 1.0			FluidMass [amu]
 1.0			IonCharge [e]
@@ -112,6 +111,9 @@ ascii			TypeFile
 2			nStage
 0.8			CflExpl
 
+ENFORCECFL
+T			DoEnforceCfl
+
 #MINIMUMPRESSURE
 1.0E-9			pMinDim
 1.0e-9			PeMinDim
@@ -132,7 +134,7 @@ T			UseLogPLimiter
 F			UseRhoRatioLimiter
 
 #NONCONSERVATIVE
-T			UseNonConservative
+F			UseNonConservative
 
 #MESSAGEPASS
 all			TypeMessagePass
@@ -230,6 +232,21 @@ los LGQ idl		StringPlot
 0.0			MuLimbDarkening
 300			nPix
 
+#INSTRUMENT
+sdo:aia			StringInstrument
+0			OffsetAngle
+1.25			rSizeImage
+0			xOffset
+0			yOffset
+0			rOccult
+0			MuLimbDarkening
+512			nPix
+
+#SAVEPLOTNAME
+F			UsePlotNameStep
+F			UsePlotNameTime
+T			UsePlotNameDateTime
+
 #LOOKUPTABLE		OffsetAngle
 AiaXrt			NameTable
 load			NameCommand
@@ -268,6 +285,11 @@ MHD			StringSatellite
 -1			DnOutput
 -1.0			DtOutput [sec]
 SC/TRAJECTORY/stb.dat		NameTrajectoryFile
+
+
+#ELECTRONENTROPY
+F			UseElectronEntropy
+F			UseElectronEnergy
 
 #END_COMP SC -----------------------------------------------------------------
 
@@ -311,11 +333,14 @@ mc3			TypeLimiter
 1.2			LimiterBeta
 
 #NONCONSERVATIVE
-T			UseNonConservative
+F			UseNonConservative
 
 #TIMESTEPPING
 2			nStage
 0.8			CflExpl
+
+ENFORCECFL
+T			DoEnforceCfl
 
 #DIVB
 T			UseDivbSource
@@ -350,11 +375,33 @@ z=0 VAR idl		StringPlot
 -1.			DtSavePlot
 -1.0			DxSavePlot
 rho ux uy uz ti te bx by bz I01 I02 p		NameVars
-g rbody			NamePars
+x_earth y_earth		NamePars
 buf MHD idl		StringPlot
 -1			DnSavePlot
 50.0			DtSavePlot
 
+#SATELLITE
+3			nSatellite
+MHD			StringSatellite
+-1			DnOutput
+1.0			DtOutput [sec]
+IH/TRAJECTORY/earth.dat		NameTrajectoryFile
+MHD			StringSatellite
+-1			DnOutput
+1.0			DtOutput [sec]
+IH/TRAJECTORY/sta.dat		NameTrajectoryFile
+MHD			StringSatellite
+-1			DnOutput
+1.0			DtOutput [sec]
+IH/TRAJECTORY/stb.dat		NameTrajectoryFile
+
+
+#ELECTRONENTROPY
+F			UseElectronEntropy
+F			UseElectronEnergy
+
+#TEST
+set_name_file		StringTest
 #END_COMP IH -----------------------------------------------------------------
 
 #COUPLE1
@@ -398,7 +445,7 @@ z=0 VAR idl		StringPlot
 -1.			DtSavePlot
 -1.0			DxSavePlot
 rho ux uy uz ti te bx by bz I01 I02 p sign
-g rbody
+x_earth y_earth
 
 #END_COMP IH ------------------------------------------------------------------
 
