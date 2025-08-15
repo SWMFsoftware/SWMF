@@ -255,7 +255,6 @@ sphere			shape
 0.0			centerX
 0.0			centerY
 1.0			radius
-0.0			notusedin2D
 
 #TPCELLINTERVAL
 8			nIntervalX
