@@ -4,7 +4,7 @@ GM  0 -1  1		CompMap
 PC  0  7  1		CompMap
 
 #DESCRIPTION
-Param/PARAM.in.test.GMPC.FLEKS.periodic		StringDescription
+Param/PARAM.in.test.GMPC.FLEKS.2D.periodic		StringDescription
 
 #PLANET
 NONE			NamePlanet
