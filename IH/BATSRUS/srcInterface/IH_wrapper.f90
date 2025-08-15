@@ -1689,12 +1689,11 @@ contains
        NameVar, nVarData, nPoint, Data_VI, iPoint_I, Pos_DI)
 
     use IH_BATL_lib, ONLY: &
-         nDim, nBlock, MaxBlock, Unused_B, nI, nJ, nK, Xyz_DGB, &
+         nDim, nBlock, MaxBlock, Unused_B, nI, nJ, nK, Xyz_DGB, Used_GB, &
          iTest, jTest, kTest, iBlockTest
     use IH_ModPhysics, ONLY: &
          No2Si_V, Si2No_V, UnitX_, UnitRho_, UnitN_, UnitRhoU_, &
          UnitEnergyDens_, UnitT_
-    use IH_ModGeometry, ONLY: Used_GB
     use IH_ModAdvance, ONLY: ExtraSource_ICB
 
     character(len=*), intent(inout):: NameVar  ! List of variables
