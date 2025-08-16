@@ -3,8 +3,6 @@
 %\title{\bf \Large Release Notes for the Milestone 7I and Reference Manual}
 %\maketitle
 
-
-
 \chapter{Introduction}
 
 This document describes a working prototype of the 
@@ -30,12 +28,14 @@ Earth:
 \item SP -- Solar Energetic Particles 
 \item UA -- Upper Atmosphere
 \end{enumerate}
-The core of the SWMF and most of the models are implemented in Fortran 90.
+The core of the SWMF and most of the models are implemented in Fortran90.
 Some models are written in Fortran 77, and others are written in C++.
 A few features of Fortran 2003 and 2008 are also used.
 The parallel communications use the Message Passing Interface (MPI) library. 
 Some models can also take advantage of multi-threaded execution using the 
-OpenMP library. The SWMF creates a single executable. Note, however, that the
+OpenMP library. A significant fraction of the SWMF has been ported to GPUs
+using the OpenACC library.
+The SWMF creates a single executable. Note, however, that the
 models in the SWMF can still be compiled into stand-alone executables.
 This means that the models preserve their individuality while being
 compatible with the SWMF.
@@ -122,13 +122,15 @@ energy electrons of the radiation belt
 The HEIDI model was developed by Mike Liemohn and Raluca Ilie 
 at the University of Michigan.
 The RAM-SCB model was developed by Vania Jordanova, Sorin Zaharia and
-Dan Welling. The CIMI, HEIDI and RAM-SCB models are also 2 dimensional
+Dan Welling at Los Alamos.
+The CIMI, HEIDI and RAM-SCB models are also 2 dimensional
 in space, but they resolve energy as well as pitch angle.
 
 \item
 There are three Particle-in-Cell (PC) models in the SWMF. 
 All of them use an energy conserving semi-implicit PIC algorithm.
-The iPIC3D code was originally developed by Stefano Markidis and his group at KTH Sweden
+The iPIC3D code was originally developed by Stefano Markidis and
+his group at KTH Sweden
 and Giovanni Lapenta and his group at KU Leuven, Belgium.
 The code was adapted, integrated into the SWMF and coupled
 with BATS-R-US by Lars Daldorff and Gabor Toth. 
@@ -141,7 +143,8 @@ The Adaptive Mesh Particle Solver (AMPS) code, was developed by
 Valeriy Tenishev. It was modified into a PIC solver by Valeriy Tenishev
 and Yinsi Shou with help from Yuxi Chen. The Flexible Exascale Kinetic
 Solver (FLEKS) was developed by Yuxi Chen. Both AMPS and FLEKS allow
-the PIC region to be adapted during the run.
+the PIC region to be adapted during the run. Currently FLEKS is the main
+PIC model.
 
 \item
 The Polar Wind (PW) component is the Polar Wind Outflow Model (PWOM)
@@ -154,6 +157,7 @@ The Particle Tracker (PT) model is the Adaptive Mesh Particle Scheme (AMPS).
 The main developer of AMPS is Valeriy Tenishev. AMPS solves the motion
 and interaction of neutral and charged particles on an up to 3D 
 adaptive grid. AMPS is a parallel code written in C++.
+FLEKS can also be used as a PT model.
 
 \item
 The Radiation Belt Environment (RBE) model is developed by Meiching Fok
@@ -178,14 +182,14 @@ Global Ionosphere-Thermosphere Model (GITM)
 developed by Aaron Ridley, Yue Deng, and Gabor Toth at CSEM.
 GITM is 3-dimensional spherical
 fully parallel hydrodynamic model with ions, neutrals, chemistry etc.
-The current version is the GITM2 model.
+The Mars version of GITM (MGITM) is being developed by Dave Pawlowski.
 
 \end{itemize}
 The following empirical models are available:
 \begin{itemize}
 \item[EEE] The Gibbson-Low and the Titov-Demoulin flux rope models
           can be used to initiate CME-s. The breakout model is
-          also available.
+          also available. The STITCH model is a recent addition.
 \item[EGM] The Tsyganenko 1996 and 2004 models.
 \item[EIE] The Weimer 1996 and 2000 models, and many more empirical
           ionospheric electrodynamics models.
@@ -631,7 +635,7 @@ collects data written out by different processors, and it can also
 process and transform the data. 
 
 The PostProc.pl script greatly simplifies the post-processing and
-it also helps to collect the run results in a well contained directory tree.
+it also helps to collect the run results in a well-structured directory tree.
 The script can also be used to do post-processing while the code is running.
 Usually the processed output files are much smaller than the raw output file,
 so post-processing during the run can limit the amount of disk space used
@@ -663,14 +667,14 @@ of all the components, the input parameter file,
 a restart directory tree (if restart information was saved), 
 and the {\tt runlog} file (if present):
 \begin{verbatim}
-./PostProc.pl -M -cat -o RESULTS/NewRun
+./PostProc.pl -M -cat RESULTS/NewRun
 \end{verbatim}
 The {\tt RESULTS/NewRun} directory will contain the PARAM.in file, the
 runlog file (the standard output should be piped into that file),
 the restart directory named {\tt RESULTS/NewRun/RESTART/},
 and the output files for each component in a subdirectory named
 accordingly (eg. {\tt RESULTS/NewRun/GM/}). The output directories of
-the components (e.g. {\tt GM/IO2/}) will be empty after this.
+the components (e.g. {\tt GM/plots/}) will be empty after this.
 
 To see all the options of the script, including parallel processing and
 syncing results to a remote computer, type
