@@ -53,7 +53,8 @@ EXE: DEPEND
 $(EXE): $(OBJECTS)
 	${LINK.f90} -o ${EXE} $(OBJECTS) \
 		${ESMF_F90LINKPATHS} $(ESMF_F90ESMFLINKLIBS) \
-		-L${LIBDIR} -lSWMF ${LflagMpi} ${IPELIBS}
+		${ESMF_F90LINKOPTS} -L${LIBDIR} \
+		-lSWMF ${LflagMpi} ${IPELIBS}
 
 clean: cleanfiles
 
