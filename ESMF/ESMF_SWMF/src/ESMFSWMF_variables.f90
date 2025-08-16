@@ -45,7 +45,7 @@ module ESMFSWMF_variables
   integer, public:: iProc0SwmfComp=0, iProcLastSwmfComp=0
 
   ! Testing
-  logical, public, parameter:: DoTest = .true.
+  logical, public :: DoTest = .false.
 
   ! Field values and coordinate coefficients for testing
   real, public, parameter:: FieldTest_V(nVarEsmf) = [3.0, 5.0]
@@ -141,6 +141,18 @@ contains
        if(iProc == 0)write(*,*) 'ESMF_SWMF: ', &
             'Setting default for SWMF Component: IE'
        NameSwmfComp = 'IE'
+    end if
+
+    ! Read testing option
+    call ESMF_ConfigGetAttribute(Config, DoTest, &
+         label='DoTest:', rc=iError)
+    if(iError /= ESMF_SUCCESS) then
+       if(iProc == 0) write(*,*) 'ESMF_SWMF did not read ', &
+            'DoTest: setting default value = true'
+       DoTest = .true.
+    else
+       if(iProc == 0) write(*,*) 'ESMF_SWMF ', &
+            'DoTest is set to ', DoTest
     end if
 
     call ESMF_ConfigDestroy(Config, rc=iError)
