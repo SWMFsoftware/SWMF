@@ -258,10 +258,10 @@ T
 #GRID
 2	        lons
 2	        lats
--90		minimum latitude to model
-90		maximum latitude to model
-0.0		longitude to model (ignored in everything but 1D)
-0.0
+-90		latstart minimum latitude to model
+90		latend maximum latitude to model
+0.0		lonstart
+360.0		lonend
 
 #ALTITUDE
 0.0		minimum altitude to use
