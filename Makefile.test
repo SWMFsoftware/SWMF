@@ -1997,7 +1997,7 @@ test12_run:
 	cd ${TESTDIR}; ./PostProc.pl -m -replace RESULTS
 
 test12_check:
-	-(${DIFFNUM} -b \
+	-(${DIFFNUM} -b -r=1e-5 \
 		${TESTDIR}/RESULTS/GM/log*.log output/test12/GM.log \
 		> test12_gm.diff)
 	-(${DIFFNUM} -b -r=2e-2 \

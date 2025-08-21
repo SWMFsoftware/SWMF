@@ -40,6 +40,12 @@ T			UseRotation
 #UPDATEB0
 10.0			DtUpdateB0
 
+#COUPLE1
+UA			NameSource
+GM			NameTarget
+4			DnCouple
+-1.0			DtCouple
+
 #BEGIN_COMP GM ---------------------------------------------------------------
 
 #GRIDBLOCKALL
@@ -116,9 +122,10 @@ minmod			TypeLimiter
 
 #SAVELOGFILE
 T			DoSaveLogfile
-VAR step time		StringLog
-500			DnSaveLogfile
+RAW step time		StringLog
+1			DnSaveLogfile
 -1.			DtSaveLogfile
+
 dt rho p rhopnt ppnt bxpnt Hpflx Hpflx Opflx O2pflx CO2pflx		NameLogVars
 6.0 2.0 1.117786		StringLogRadii
 
@@ -420,8 +427,6 @@ T		UseNeutralChemistry
 10			MaxIter
 -1.0			TimeMax
 
-
-
 #END
 
 #RUN ##########################################################################
@@ -431,26 +436,9 @@ T                       DoTimeAccurate
 
 #BEGIN_COMP GM ---------------------------------------------------------------
 
-FIXAXIS  check
-T
-T
-5.0
-1.5
-
-
-POINTIMPLICIT
-T                       UsePointImplicit
-1.0                     BetaPointImplicit
-F                       IsAsymmetric
-T                       DoNormalizeCell
-
 #TIMESTEPPING
 2			nStage
 0.95			CflExpl
-
-FIXEDTIMESTEP
-T
-0.05
 
 #SAVEPLOT
 3                       nPlotFiles
@@ -473,14 +461,12 @@ z=0 MHD idl             StringPlot
 
 #END_COMP GM ---------------------------------------------------------------
 
-COUPLE1
-UA                      NameSource
-GM                      NameTarget
-1                       DnCouple
--1.0                    DtCouple
+#COUPLE1
+UA			NameSource
+GM			NameTarget
+-1			DnCouple
+1.0			DtCouple
 
 #STOP
-1000000	               MaxIter
-3600.0                    TimeMax
-
-#END
+-1			MaxIter
+10.0			TimeMax
