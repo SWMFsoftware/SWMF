@@ -23,16 +23,16 @@ module CON_couple_all
   use ModUtilities, ONLY: CON_set_do_test, CON_stop
 
   !^CMP IF GM BEGIN
-  use CON_couple_ih_gm        !^CMP IF IH
-  use CON_couple_sc_gm        !^CMP IF SC
   use CON_couple_gm_ie        !^CMP IF IE
+  use CON_couple_gm_ih        !^CMP IF IH
   use CON_couple_gm_im        !^CMP IF IM
   use CON_couple_gm_ps        !^CMP IF PS
   use CON_couple_gm_pt        !^CMP IF PT
   use CON_couple_gm_pc        !^CMP IF PC
   use CON_couple_gm_pw        !^CMP IF PW
   use CON_couple_gm_rb        !^CMP IF RB
-  use CON_couple_ua_gm        !^CMP IF UA
+  use CON_couple_gm_sc        !^CMP IF SC
+  use CON_couple_gm_ua        !^CMP IF UA
   !^CMP END GM
   !^CMP IF IE BEGIN
   use CON_couple_ie_im        !^CMP IF IM
