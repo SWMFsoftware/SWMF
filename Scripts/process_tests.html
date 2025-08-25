@@ -62,7 +62,7 @@ the results per year, month and day.
 </td>
   <tr>
       <td><b>nagfor optimized</b></td>
-      <td>Mac Studio with 8-core M1</td>
+      <td>Mac Studio M4 Max</td>
       <td>nagfor,gcc_mpicc</td>
       <td>NAGFOR v7.1(7114) with gcc 12.2<br>-O2</td>
       <td>mpich 4.1.2</td>
@@ -76,7 +76,7 @@ the results per year, month and day.
       <td>comp-intel, gcc/9.3</td>
       <td>mpi-hpe/mpt</td>
       <td>NP=8, NTHREAD=2</td>
-      <td><font color=RED>MPICC_CC=icc, MPICXX_CXX=icpc</font></td>
+      <td><font color=RED>MPIF90_F90=ifort, MPICC_CC=icc, MPICXX_CXX=icpc</font></td>
   </tr>
   <tr>
       <td><b>nvfortran serial</b></td>
@@ -85,7 +85,7 @@ the results per year, month and day.
       <td>purge, use -a /nasa/nvidia/hpc_sdk/toss4/modulefiles, nvhpc/24.11-nompi<br>-O1</td>
       <td>mpi-hpe/mpt</td>
       <td>NP=1, NGPU=1</td>
-      <td><font color=RED>MPICC_CC=nvc, MPICXX_CXX=nvc++</font></td>
+      <td><font color=RED>MPIF90_F90=nvfortran, MPICC_CC=nvc, MPICXX_CXX=nvc++</font></td>
   </tr>
   <tr>
       <td><b>nvfortran parallel</b></td>
@@ -94,7 +94,7 @@ the results per year, month and day.
       <td>purge, use -a /nasa/nvidia/hpc_sdk/toss4/modulefiles, nvhpc/24.11-nompi<br>-O1</td>
       <td>mpi-hpe/mpt</td>
       <td>NP=4, NGPU=4</td>
-      <td><font color=RED>MPICC_CC=nvc, MPICXX_CXX=nvc++</font></td>
+      <td><font color=RED>MPIF90_F90=nvfortran, MPICC_CC=nvc, MPICXX_CXX=nvc++</font></td>
   </tr>
   <tr>
       <td><b>STABLE gfortran</b></td>
@@ -103,7 +103,7 @@ the results per year, month and day.
       <td>gcc/9.3</td>
       <td>mpi-hpe/mpt</td>
       <td>NP=8, NTHREAD=2</td>
-      <td></td>
+      <td><font color=RED>MPIF90_F90=gfortran, MPICC_CC=gcc, MPICXX_CXX=g++</font></td>
   </tr>
   <tr>
       <td><b>STABLE ifort</b></td>
@@ -112,7 +112,7 @@ the results per year, month and day.
       <td>comp-intel, gcc/9.3</td>
       <td>mpi-hpe/mpt</td>
       <td>NP=7, NTHREAD=2</td>
-      <td><font color=RED>MPICC_CC=icc, MPICXX_CXX=icpc</font></td>
+      <td><font color=RED>MPIF90_F90=ifort, MPICC_CC=icc, MPICXX_CXX=icpc</font></td>
   </tr>
 </table>
 <hr>
