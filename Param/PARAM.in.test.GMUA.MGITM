@@ -170,11 +170,11 @@ T			UseMarsB0
 -20.559			Thetilt
 marsmgsp.txt		NameFileB0
 
-111.09
--17.4966     !at Nov, 1, 2014 for MAVEN
+111.09			Rot     ! at Nov, 1, 2014 for MAVEN
+-17.4966		Thetilt
 
--59.4
--13.0        !at May 2005, 16, 00:01 UT
+-59.4			Rot	! at May 2005, 16, 00:01 UT
+-13.0			Thetilt
 
 MSO
 T			UseMso	!if true, read rotation axis in MSO
@@ -182,14 +182,13 @@ T			UseMso	!if true, read rotation axis in MSO
 0.24038			RotAxisMsoY
 0.90487			RotAxisMsoZ
 
-NOGW_150308_UT19_MHDINPUTS_2.dat 		filename
-UseMarsAtm
+MARSATMOSPHEREFILE
 T			UseMarsAtm
-NOGW_150308_UT19_MHDINPUTS.dat		TGCMFilename
+NOGW_150308_UT19_MHDINPUTS.dat		NameFileTGCM
+72                      NLong
+36                      NLat
 81                     	NAlt
 
-36                      NLat
-72                      NLong
 0.0                     subsolarlat
 0.0                     subsolarlong
 2.5                     longstart
@@ -422,6 +421,23 @@ T		UseNeutralChemistry
 1.0		! More control of stretch ( > 1 stretch less < 1 stretch more)
 
 #END_COMP UA ------------------------------------------------------------------
+
+#STOP
+1			MaxIter
+-1.0			TimeMax
+
+#RUN ##########################################################################
+
+#BEGIN_COMP GM ================================================================
+
+#USERINPUTBEGIN ---------------------------------------------------------------
+
+#MARSATMOSPHEREMODEL
+T			UseMarsAtm
+
+#USERINPUTEND -----------------------------------------------------------------
+
+#END_COMP GM ==================================================================
 
 #STOP
 10			MaxIter
