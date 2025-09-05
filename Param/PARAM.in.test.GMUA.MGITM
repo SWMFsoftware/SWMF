@@ -220,18 +220,24 @@ T			DoReplaceDensity
 
 #SAVEPLOT
 3			nPlotFile
-x=0 MHD idl		StringPlot
+x=0 VAR idl		StringPlot
 1000			DnSavePlot
 -1.0			DtSavePlot
 -1.0			DxSavePlot
-y=0 MHD idl		StringPlot
+{MHD} tneu nco2 no noh nh iop ico2p		NameVars
+{default}		NamePars
+y=0 VAR idl		StringPlot
 1000			DnSavePlot
 -1.0			DtSavePlot
 -1.0			DxSavePlot
-z=0 MHD idl		StringPlot
+{MHD} tneu nco2 no noh nh iop ico2p		NameVars
+{default}		NamePars
+z=0 VAR idl		StringPlot
 1000			DnSavePlot
 -1.0			DtSavePlot
 -1.0			DxSavePlot
+{MHD} tneu nco2 no noh nh iop ico2p		NameVars
+{default}		NamePars
 
 3d MHD tec		StringPlot
 1000			DnSavePlot
