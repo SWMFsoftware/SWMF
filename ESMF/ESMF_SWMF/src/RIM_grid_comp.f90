@@ -195,6 +195,7 @@ contains
     integer                         :: iVar
 
     ! Access to time
+    type(ESMF_Time) :: CurrTime
     type(ESMF_TimeInterval) :: SimTime, TimeStep
     integer(ESMF_KIND_I4)   :: iSec, iMilliSec
 
@@ -204,6 +205,7 @@ contains
     ! Misc variables
     type(ESMF_Field):: Field
     character(len=4):: NameField
+    character(len=ESMF_MAXSTR) :: timeStr
     integer:: i, j
     real(ESMF_KIND_R8):: Exact_V(2)
     !--------------------------------------------------------------------------
@@ -217,11 +219,15 @@ contains
 
     ! Get the current time from the clock
     call ESMF_ClockGet(Clock, CurrSimTime=SimTime, TimeStep=TimeStep, &
-         rc=iError)
+         currTime=CurrTime, rc=iError)
     if(iError /= ESMF_SUCCESS) call my_error('ESMF_ClockGet')
     call ESMF_TimeIntervalGet(SimTime, s=iSec, ms=iMilliSec, rc=iError)
     if(iError /= ESMF_SUCCESS) call my_error('ESMF_TimeIntervalGet current')
     tCurrent = iSec + 0.001*iMilliSec
+
+    ! Get time in ISO format
+    call ESMF_TimeGet(CurrTime, timeStringISOFrac=timeStr , rc=iError)
+    if(iError /= ESMF_SUCCESS) call my_error('ESMF_TimeGet ISO')
 
     ! Obtain pointer to the data obtained from the ESMF component
     allocate(Data_VII(nVarEsmf,MinLon:MaxLon,MinLat:MaxLat), stat=iError)
@@ -234,6 +240,9 @@ contains
        call ESMF_StateGet(ImportState, itemName=NameField, &
             field=Field, rc=iError)
        if(iError /= ESMF_SUCCESS) call my_error("ESMF_StateGet")
+       call ESMF_FieldWrite(Field, "rim_import_"//trim(timeStr)//".nc", &
+            overwrite=.true., rc=iError)
+       if(iError /= ESMF_SUCCESS) call my_error("ESMF_FieldWrite")
        call ESMF_FieldGet(Field, farrayPtr=Ptr_II, rc=iError)
        if(iError /= ESMF_SUCCESS) call my_error("ESMF_FieldGet")
 
