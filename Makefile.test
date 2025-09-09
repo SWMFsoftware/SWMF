@@ -1982,6 +1982,8 @@ test12_compile:
 	./Config.pl -default -v=Empty,GM/BATSRUS,UA/MGITM
 	./Config.pl -o=GM:u=Mars,e=MhdMars,g=8,8,8,UA:Mars,g=8,4,120,4
 	${MAKE} SWMF
+	make PIDL
+	make PGITM
 
 test12_rundir:
 	rm -rf ${TESTDIR}
