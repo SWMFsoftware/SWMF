@@ -64,6 +64,9 @@ help:
 	@#^CMP IF IE BEGIN
 	@echo '    PIONO       (bin/PostIONO.exe creates ionosphere tec file from idl files)'
 	@#^CMP END IE
+	@#^CMP IF UA BEGIN
+	@echo '	   PGITM       (bin/PostGITM.exe post-processes GITM files)'
+	@#^CMP END UA
 	@#^CMP IF GM BEGIN
 	@echo '    PIDL        (bin/PostIDL.exe post-processes *.idl files)'
 	@echo '    SNAPSHOT    (SNAPSHOT.exe extract snapshots from *.outs files)'
@@ -249,6 +252,14 @@ PIONO:	ENV_CHECK
 	@echo ' '
 
 #^CMP END IE
+
+#^CMP IF UA BEGIN
+#	Post processing codes for GITM plot files
+#
+PGITM:	ENV_CHECK
+	cd UA/MGITM; $(MAKE) POST
+	@echo ' '
+#^CMP END UA
 
 #					^CMP IF DOC BEGIN
 #	Create the documentation files      ^CMP IF NOT REMOVEDOCTEX BEGIN
