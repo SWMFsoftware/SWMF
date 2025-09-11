@@ -57,7 +57,7 @@ contains
 
     ! Store IM grid size and figure out coupling variables
 
-    use ModProcessVarName,  ONLY: process_var_name
+    use ModProcessVarName, ONLY: process_var_name
 
     integer :: nDensityGm, nPparGm
     integer :: nDensityIm, nPparIm

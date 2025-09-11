@@ -11,7 +11,7 @@ module CON_domain_decomposition
   use CON_world
   use ModNumConst
   use ModMpi
-  use ModKind,      ONLY: nByteReal
+  use ModKind, ONLY: nByteReal
 
   ! revision history:
   ! 6/18/03-7/11/03 Sokolov I.V. <igorsok@umich.edu> phone(734)647-4705

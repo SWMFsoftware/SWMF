@@ -49,7 +49,7 @@ module  CON_world
   ! the available information with a single call.
 
   use ModMpi
-  use ModIoUnit, ONLY : UNITTMP_, io_unit_clean
+  use ModIoUnit, ONLY: UNITTMP_, io_unit_clean
   use ModUtilities, ONLY: CON_stop
   use CON_comp_param
   use CON_comp_info, &

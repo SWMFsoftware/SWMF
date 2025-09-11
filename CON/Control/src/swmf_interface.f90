@@ -15,12 +15,12 @@
 subroutine SWMF_initialize(iComm, iTimeStart_I, TimeSim, TimeStop, &
      IsLastSession, iError)
 
-  use CON_main,      ONLY: initialize
+  use CON_main, ONLY: initialize
   use CON_variables, ONLY: iErrorSwmf
-  use CON_time,      ONLY: TimeStart, tSimulation, tSimulationMax, &
+  use CON_time, ONLY: TimeStart, tSimulation, tSimulationMax, &
        DoTimeAccurate, MaxIteration
   use ModTimeConvert, ONLY: time_int_to_real, time_real_to_int
-  use ModKind,       ONLY: Real8_
+  use ModKind, ONLY: Real8_
 
   implicit none
 
@@ -70,8 +70,8 @@ subroutine SWMF_initialize_session(IsLastSession, iError)
 
   ! read parameters and initialize session
 
-  use CON_io,        ONLY: read_inputs
-  use CON_session,   ONLY: init_session
+  use CON_io, ONLY: read_inputs
+  use CON_session, ONLY: init_session
   use CON_variables, ONLY: iErrorSwmf
   implicit none
   logical, intent(out):: IsLastSession ! True if this is the last session
@@ -88,11 +88,11 @@ end subroutine SWMF_initialize_session
 !==============================================================================
 subroutine SWMF_run(NameComp, tCouple, tSimulationOut, DoStop, iError)
 
-  use CON_session,    ONLY: do_session
-  use CON_variables,  ONLY: iErrorSwmf
-  use CON_time,       ONLY: tSimulation
+  use CON_session, ONLY: do_session
+  use CON_variables, ONLY: iErrorSwmf
+  use CON_time, ONLY: tSimulation
   use CON_comp_param, ONLY: MaxComp, lNameComp, i_comp_name
-  use ModKind,        ONLY: Real8_
+  use ModKind, ONLY: Real8_
 
   implicit none
 
@@ -133,7 +133,7 @@ end subroutine SWMF_run
 !==============================================================================
 subroutine SWMF_finalize(iError)
 
-  use CON_main,      ONLY: finalize
+  use CON_main, ONLY: finalize
   use CON_variables, ONLY: iErrorSwmf
 
   implicit none
@@ -152,7 +152,7 @@ subroutine SWMF_couple(NameFrom, NameTo, NameCoord, &
 
   use ModKind, ONLY: Real8_
   use CON_comp_param, ONLY: lNameComp, i_comp_name
-  use CON_world,      ONLY: i_comm
+  use CON_world, ONLY: i_comm
   use ModMpiOrig
 
   use GM_wrapper, ONLY: GM_put_from_ih_buffer

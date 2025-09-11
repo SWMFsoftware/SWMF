@@ -8,7 +8,7 @@ module CON_session
   ! are separated by #RUN commands.
 
   use CON_comp_param, ONLY: MaxComp, NameComp_I, PC_, PT_
-  use CON_bline,      ONLY: BL_
+  use CON_bline, ONLY: BL_
   use CON_world, ONLY: i_comm, is_proc, is_proc0, i_proc, &
        i_comp, n_comp, use_comp, is_thread, world_used, CON_
 
@@ -18,7 +18,7 @@ module CON_session
   use CON_coupler, ONLY: &
        Couple_CC, nCouple, iCompCoupleOrder_II, &
        DoCoupleOnTime_C, IsTightCouple_CC
-  use CON_io, ONLY : DnShowProgressShort, DnShowProgressLong, &
+  use CON_io, ONLY: DnShowProgressShort, DnShowProgressLong, &
        SaveRestart, save_restart, IsRestartSaved
   use CON_time, ONLY: iSession, DoTimeAccurate, &
        nStep, nIteration, MaxIteration, DnRun_C, tSimulation, tSimulationMax, &

@@ -11,7 +11,7 @@
 module CON_couple_all
 
   use CON_comp_param
-  use CON_world,   ONLY: use_comp, is_proc, i_proc, lComp_I
+  use CON_world, ONLY: use_comp, is_proc, i_proc, lComp_I
   use CON_coupler, ONLY: &
        iCompSourceCouple, iCompTargetCouple, &
        iVar_V, iVar_VCC, nVarCouple, nVarCouple_CC, &
