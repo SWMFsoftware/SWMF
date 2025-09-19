@@ -267,6 +267,18 @@ T			useParticleTracker
 #TPREGION
 +tpsphere		region
 
+#TPSAVE
+0			iSpecies
+planet			unit
+10			dnSave
+0.5			launchThreshold
+
+#TPSAVE
+1			iSpecies
+planet			unit
+1			dnSave
+0.0			launchThreshold
+
 #SAVELOG
 1			dnSavePic
 1			dnSavePT
