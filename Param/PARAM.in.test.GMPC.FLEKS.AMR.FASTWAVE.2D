@@ -4,7 +4,7 @@ GM  0 -1  1		CompMap
 PC  0 -1  1		CompMap
 
 #DESCRIPTION
-Param/PARAM.in.test.GMPC.FLEKS.AMR.FASTWAVE.2D: FastWave in periodic PIC with adaptive mesh refinement		StringDescription
+Param/PARAM.in.test.GMPC.FLEKS.AMR.FASTWAVE.2D: FastWave in periodic MHD domain with embedded AMR PIC		StringDescription
 
 #PLANET
 NONE			NamePlanet
@@ -17,11 +17,11 @@ PC			NameComp2
 
 #COUPLETIME
 GM			NameComp
-F			DoCoupleOnTime
+T			DoCoupleOnTime
 
 #COUPLETIME
 PC			NameComp
-F			DoCoupleOnTime
+T			DoCoupleOnTime
 
 #PROGRESS
 1			DnProgressShort
@@ -59,22 +59,6 @@ T			UseNonConservative
 0.0			StateVar
 4.5e-4			StateVar
 4.5e-4			StateVar
-
-rho			= 1
-By			= 0.04
-cA			= By/sqrt(rho)   = 0.04
-cS			= sqrt(2*p/rho)  = 0.03
-cF			= sqrt(cA^2+cS^2)= 0.05
-lambda= 32
-t			= lambda/(cF) = 640.0
-
-p = pe = 2.25e-4
-vth			= sqrt(p/rho) = 0.015
-me = mi/25
-vthe  = 5*vth		= 0.075
-dx = 0.4
-dtmax = dx/vthe		= 5.333
-dt			= 0.2*dtmax   = 1.066
 
 USERINPUTBEGIN -----------------------------------
 
@@ -127,18 +111,18 @@ USERINPUTEND -------------------------------------
 
 #GRID
 8			nRootBlock1
-4			nRootBlock2
+8			nRootBlock2
 1			nRootBlock3
--160			xMin
- 160  			xMax
--160			yMin
- 160			yMax
+-64			xMin
+ 64  			xMax
+-64			yMin
+ 64			yMax
 -0.5			zMin
  0.5			zMax
 
 #PICUNIT
 1			xUnitPicSi [m]
-0.5			uUnitPicSi [m/s] Speed of light for the first PIC region
+1.0			uUnitPicSi [m/s] Speed of light for the first PIC region
 
 #PICGRID
 1			nPicGrid
@@ -184,7 +168,7 @@ T			DoSaveInitial
 1			nPlotFile
 z=0 var idl		StringPlot
 -1			DnSavePlot
-20			DtSavePlot
+2.0			DtSavePlot
 0.			DxSavePlot
 {MHD} pic pic_active		NameVars
 g rbody			NamePars
@@ -202,11 +186,6 @@ F			useFixedDt
 8			nCellY
 1			nCellZ
 
-#PERIODICITY
-T			isPeriodicX
-T			isPeriodicY
-T			isPeriodicZ
-
 #DISCRETIZATION
 0.51			theta
 0.1			ratioDivC2C
@@ -214,37 +193,44 @@ T			isPeriodicZ
 #MONITOR
 1			dnReport
 
-#DIVE
-F			doCorrectDivE
-
 #ELECTRON_FLEKS0
 -25.0			electronChargePerMass ratio (qom)
 
 #PARTICLES
-20			nParticleX per cell in X Region 1
-20			nParticleY per cell in Y Region 1
+40			nParticleX per cell in X Region 1
+40			nParticleY per cell in Y Region 1
 1			nParticleZ per cell in Z Region 1
 
 #SAVEPLOT
 1			nPlotFile
 z=0 fluid ascii si		StringPlot
 -1			DnSavePlot
-50			DtSavePlot
+1.0			DtSavePlot
 -1			DxSavePlot
 
 #REGION
 region1			regionName
 box			shape
+-24.0			xMinBox
+24.0			xMaxBox
+-24.0			yMinBox
+24.0			yMaxBox
+
+#REGION
+region2			regionName
+box			shape
 -16.0			xMinBox
 16.0			xMaxBox
 -16.0			yMinBox
 16.0			yMaxBox
-0.0			zMinBox
-0.0			zMaxBox
 
 #REFINEREGION
 0			refineLev
 +region1 		refineArea
+
+#REFINEREGION
+1			refineLev
++region2 		refineArea
 
 #GRIDEFFICIENCY
 1.0			gridEfficiency
@@ -258,18 +244,7 @@ T			isPPVconstant
 #END_COMP PC -----------------------------------------------------------------
 
 #STOP
-0			MaxIter
-0			TimeMax
-
-
-#RUN ##########################################################################
-
-#COMPONENT
-GM			NameComp
-F			UseComp
-
-#STOP
 -1			MaxIter
-200.0			TimeMax
+5.0			TimeMax
 
 
