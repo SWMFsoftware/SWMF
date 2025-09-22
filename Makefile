@@ -373,7 +373,7 @@ rundir: ENV_CHECK
 	@touch  share/JobScripts/job._TMP_${MACHINE} \
 		share/JobScripts/_TMP_.${MACHINE}.pl
 	@cp share/JobScripts/job.*${MACHINE}* \
-	    share/JobScripts/*.${MACHINE}*.pl       ${RUNDIR}/
+	    share/JobScripts/*.${MACHINE}*.[ps][lh] ${RUNDIR}/
 	@echo "cp share/JobScripts/job.*${MACHINE}* ${RUNDIR}/"
 	@rm -rf ${RUNDIR}/*_TMP_* share/JobScripts/*_TMP_*
 	@echo
