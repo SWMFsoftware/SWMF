@@ -2769,7 +2769,7 @@ test23_3d_run:
 
 test23_3d_check:
 	-@(${DIFFNUM} -b -a=1e-9 -r=1e-5 \
-	   ${TESTDIR}/RESULTS/3D/PC/z=0*21.out \
+	   ${TESTDIR}/RESULTS/3D/PC/z=0*3.out \
 	   output/test23/3D/z=0.ref.gz \
 		> test23_3d_gmpc.diff)
 	-@(${DIFFNUM} -b -a=1e-11 -r=1e-11 \
