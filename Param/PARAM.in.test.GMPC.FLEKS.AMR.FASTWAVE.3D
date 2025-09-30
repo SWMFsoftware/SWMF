@@ -270,12 +270,12 @@ box			shape
 
 #RESAMPLING
 T			doReSampling
-0.8
-1.2
-2.0
+0.8			splittingLimit
+1.2			mergingLimit
+2.0			maxWeightRatio
 
 #PRESPLITTING
-T
+T			doPreSplitting
 
 #END_COMP PC -----------------------------------------------------------------
 
