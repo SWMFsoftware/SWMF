@@ -20,6 +20,9 @@ module RIM_grid_comp
   ! Size of ionosphere grid in SWMF/IE model
   use IE_ModSize, ONLY: nLat => IONO_nTheta, nLon => IONO_nPsi
 
+  use CON_axes, ONLY: transform_matrix
+  use ModNumConst, ONLY: cRadToDeg, cDegToRad
+
   ! Conversion to radians
 
   implicit none
@@ -36,7 +39,7 @@ module RIM_grid_comp
   ! +Z points to north magnetic dipole and the Sun is in the +X-Z halfplane.
 
   ! Coordinate arrays
-  real(ESMF_KIND_R8), pointer, save:: Lon_I(:), Lat_I(:)
+  real(ESMF_KIND_R8), pointer, save:: Lon_I(:), Lat_I(:)  
 
   integer:: MinLon, MaxLon, MinLat, MaxLat
 
@@ -118,6 +121,17 @@ contains
     type(ESMF_Grid)  :: Grid
     integer          :: PetCount
     type(ESMF_TimeInterval) :: SimTime, RunDuration
+    
+    integer(ESMF_KIND_I4)   :: iSec, iMilliSec
+    real(ESMF_KIND_R8) :: tCurrent
+
+    real(ESMF_KIND_R8), allocatable :: LonSM_I(:)
+
+    real(ESMF_KIND_R8) :: SmToMag_DD(3,3)
+
+    ! Theta is the rotation angle from SM to MAG coordinates 
+    ! in the counter-clockwise direction.
+    real(ESMF_KIND_R8) :: CosTheta, SinTheta, Theta
 
     integer:: i, j
     !--------------------------------------------------------------------------
@@ -160,10 +174,42 @@ contains
     MinLon = lbound(Lon_I, dim=1)
     MaxLon = ubound(Lon_I, dim=1)
     write(*,'(a,2i4)')'RIM grid: Lon_I Min, Max=', MinLon, MaxLon
+
+    allocate(LonSM_I(MinLon:MaxLon))
+    
     do i = MinLon, MaxLon
-       Lon_I(i) = (i-1)*(360.0/(nLon-1)) - 180
+       LonSM_I(i) = (i-1)*(360.0/(nLon-1)) - 180
     end do
+
+    write(*,*)'RIM grid: LonSM_I(Min,Min+1,Max)=', LonSM_I([MinLon,MinLon+1,MaxLon])
+
+    ! Get the current time from the clock
+    call ESMF_ClockGet(ExternalClock, CurrSimTime=SimTime, rc=iError)
+    if(iError /= ESMF_SUCCESS) call my_error('ESMF_ClockGet')
+    call ESMF_TimeIntervalGet(SimTime, s=iSec, ms=iMilliSec, rc=iError)
+    if(iError /= ESMF_SUCCESS) call my_error('ESMF_TimeIntervalGet current')
+    tCurrent = iSec + 0.001*iMilliSec
+    write(*,*)'RIM_grid_comp init_realize: current time, isec, msec=', &
+         tCurrent, iSec, iMilliSec
+
+    SmToMag_DD = transform_matrix(tCurrent, 'SMG', 'MAG') 
+    write(*,*)'RIM_grid_comp: SM to MAG matrix='
+    do i = 1, 3
+       write(*,'(3f12.6)') SmToMag_DD(i,:)
+    end do
+    CosTheta = SmToMag_DD(1, 1)
+    SinTheta = SmToMag_DD(1, 2)
+    Theta = atan2(SinTheta, CosTheta)*cRadToDeg
+    write(*,*)'RIM_grid_comp: rotation angle from SM to MAG=', Theta
+
+    Lon_I = mod(LonSM_I + 180 + 360 - Theta, 360.0) - 180
     write(*,*)'RIM grid: Lon_I(Min,Min+1,Max)=', Lon_I([MinLon,MinLon+1,MaxLon])
+
+    !do i = MinLon, MaxLon
+     !write(*,*)'lonsm lonmag lon sm=', i, LonSM_I(i), Lon_I(i)
+    !end do
+
+
     ! Uniform latitude grid
     MinLat = lbound(Lat_I, dim=1)
     MaxLat = ubound(Lat_I, dim=1)
@@ -176,6 +222,8 @@ contains
     ! Add fields to the RIM import state
     call add_fields(Grid, ImportState, IsFromEsmf=.true., iError=iError)
     if(iError /= ESMF_SUCCESS) call my_error('add_fields')
+
+    if(allocated(LonSM_I)) deallocate(LonSM_I)
 
     iError = ESMF_SUCCESS
     call write_log("RIM_grid_comp:init_realize routine returned")
