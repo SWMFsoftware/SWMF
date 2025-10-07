@@ -38,7 +38,8 @@ module RIM_grid_comp
   ! RIM is in SM coordinates (aligned with Sun-Earth direction):
   ! +Z points to north magnetic dipole and the Sun is in the +X-Z halfplane.
 
-  ! Coordinate arrays
+  ! Coordinate arrays. They store the RIM mesh node coordinates 
+  ! in MAG (used by IPE) coordinates. They are used for coupling.
   real(ESMF_KIND_R8), pointer, save:: Lon_I(:), Lat_I(:)  
 
   integer:: MinLon, MaxLon, MinLat, MaxLat
@@ -129,9 +130,9 @@ contains
 
     real(ESMF_KIND_R8) :: SmToMag_DD(3,3)
 
-    ! Theta is the rotation angle from SM to MAG coordinates 
+    ! Phi is the rotation angle from SM to MAG coordinates 
     ! in the counter-clockwise direction.
-    real(ESMF_KIND_R8) :: CosTheta, SinTheta, Theta
+    real(ESMF_KIND_R8) :: CosPhi, SinPhi, Phi
 
     integer:: i, j
     !--------------------------------------------------------------------------
@@ -197,12 +198,13 @@ contains
     do i = 1, 3
        write(*,'(3f12.6)') SmToMag_DD(i,:)
     end do
-    CosTheta = SmToMag_DD(1, 1)
-    SinTheta = SmToMag_DD(1, 2)
-    Theta = atan2(SinTheta, CosTheta)*cRadToDeg
-    write(*,*)'RIM_grid_comp: rotation angle from SM to MAG=', Theta
+    CosPhi = SmToMag_DD(1, 1)
+    SinPhi = SmToMag_DD(1, 2)
+    Phi = atan2(SinPhi, CosPhi)*cRadToDeg
+    write(*,*)'RIM_grid_comp: rotation angle from SM to MAG=', Phi
 
-    Lon_I = mod(LonSM_I + 180 + 360 - Theta, 360.0) - 180
+    ! Make sure the range is [-180, 180] after the shift by Theta.
+    Lon_I = modulo(LonSM_I + 180 - Phi, 360.0) - 180
     write(*,*)'RIM grid: Lon_I(Min,Min+1,Max)=', Lon_I([MinLon,MinLon+1,MaxLon])
 
     !do i = MinLon, MaxLon
