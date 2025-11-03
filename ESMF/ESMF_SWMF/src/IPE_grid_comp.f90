@@ -11,8 +11,8 @@ module IPE_grid_comp
   use NUOPC_Model, only: model_label_Finalize => label_Finalize
 
   use ESMFSWMF_variables, ONLY: add_fields, nVarEsmf, NameFieldEsmf_V, &
-       DoTest, FieldTest_V, CoordCoefTest, dHallPerDtTest, &
-       write_log, write_error
+       nVarSwmf, NameFieldSwmf_V, DoTest, FieldTest_V, CoordCoefTest, &
+       dHallPerDtTest, write_log, write_error
 
   implicit none
   private
@@ -110,7 +110,15 @@ contains
     iError = ESMF_FAILURE
 
     do n = 1, nVarEsmf
+      ! IPE -> RIM coupling
       call NUOPC_Advertise(ExportState, standardName=trim(NameFieldEsmf_V(n)), &
+           TransferOfferGeomObject='will provide', rc=iError)
+      if(iError /= ESMF_SUCCESS) call my_error('NUOPC_Advertise')
+    end do
+
+    do n = 1, nVarSwmf
+      ! RIM -> IPE coupling
+      call NUOPC_Advertise(ImportState, standardName=trim(NameFieldSwmf_V(n)), &
            TransferOfferGeomObject='will provide', rc=iError)
       if(iError /= ESMF_SUCCESS) call my_error('NUOPC_Advertise')
     end do
