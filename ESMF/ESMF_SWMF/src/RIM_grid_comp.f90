@@ -121,20 +121,6 @@ contains
     type(ESMF_VM)    :: Vm
     type(ESMF_Grid)  :: Grid
     integer          :: PetCount
-    type(ESMF_TimeInterval) :: SimTime, RunDuration
-    
-    integer(ESMF_KIND_I4)   :: iSec, iMilliSec
-    real(ESMF_KIND_R8) :: tCurrent
-
-    real(ESMF_KIND_R8), allocatable :: LonSM_I(:)
-
-    real(ESMF_KIND_R8) :: SmToMag_DD(3,3)
-
-    ! Phi is the rotation angle from SM to MAG coordinates 
-    ! in the counter-clockwise direction.
-    real(ESMF_KIND_R8) :: CosPhi, SinPhi, Phi
-
-    integer:: i, j
     !--------------------------------------------------------------------------
     call write_log("RIM_grid_comp:init_realize routine called")
     iError = ESMF_FAILURE
@@ -159,73 +145,11 @@ contains
     call ESMF_GridAddCoord(Grid, staggerloc=ESMF_STAGGERLOC_CORNER, rc=iError)
     if(iError /= ESMF_SUCCESS)call my_error('ESMF_GridAddCoord')
 
-    nullify(Lon_I)
-    call ESMF_GridGetCoord(Grid, CoordDim=1, &
-         staggerLoc=ESMF_STAGGERLOC_CORNER, farrayPtr=Lon_I, rc=iError)
-    if(iError /= ESMF_SUCCESS)call my_error('ESMF_GridGetCoord 1')
-    write(*,*)'ESMF_GridComp size(Lon_I)=', size(Lon_I)
-
-    nullify(Lat_I)
-    call ESMF_GridGetCoord(Grid, CoordDim=2, &
-         staggerLoc=ESMF_STAGGERLOC_CORNER, farrayPtr=Lat_I, rc=iError)
-    if(iError /= ESMF_SUCCESS)call my_error('ESMF_GridGetCoord 2')
-    write(*,*)'ESMF_GridComp size(Lat_I)=', size(Lat_I)
-
-    ! Uniform longitude grid from -180 to 180 (to match IPE)
-    MinLon = lbound(Lon_I, dim=1)
-    MaxLon = ubound(Lon_I, dim=1)
-    write(*,'(a,2i4)')'RIM grid: Lon_I Min, Max=', MinLon, MaxLon
-
-    allocate(LonSM_I(MinLon:MaxLon))
-    
-    do i = MinLon, MaxLon
-       LonSM_I(i) = (i-1)*(360.0/(nLon-1)) - 180
-    end do
-
-    write(*,*)'RIM grid: LonSM_I(Min,Min+1,Max)=', LonSM_I([MinLon,MinLon+1,MaxLon])
-
-    ! Get the current time from the clock
-    call ESMF_ClockGet(ExternalClock, CurrSimTime=SimTime, rc=iError)
-    if(iError /= ESMF_SUCCESS) call my_error('ESMF_ClockGet')
-    call ESMF_TimeIntervalGet(SimTime, s=iSec, ms=iMilliSec, rc=iError)
-    if(iError /= ESMF_SUCCESS) call my_error('ESMF_TimeIntervalGet current')
-    tCurrent = iSec + 0.001*iMilliSec
-    write(*,*)'RIM_grid_comp init_realize: current time, isec, msec=', &
-         tCurrent, iSec, iMilliSec
-
-    SmToMag_DD = transform_matrix(tCurrent, 'SMG', 'MAG') 
-    write(*,*)'RIM_grid_comp: SM to MAG matrix='
-    do i = 1, 3
-       write(*,'(3f12.6)') SmToMag_DD(i,:)
-    end do
-    CosPhi = SmToMag_DD(1, 1)
-    SinPhi = SmToMag_DD(1, 2)
-    Phi = atan2(SinPhi, CosPhi)*cRadToDeg
-    write(*,*)'RIM_grid_comp: rotation angle from SM to MAG=', Phi
-
-    ! Make sure the range is [-180, 180] after the shift by Theta.
-    Lon_I = modulo(LonSM_I + 180 - Phi, 360.0) - 180
-    write(*,*)'RIM grid: Lon_I(Min,Min+1,Max)=', Lon_I([MinLon,MinLon+1,MaxLon])
-
-    !do i = MinLon, MaxLon
-     !write(*,*)'lonsm lonmag lon sm=', i, LonSM_I(i), Lon_I(i)
-    !end do
-
-
-    ! Uniform latitude grid
-    MinLat = lbound(Lat_I, dim=1)
-    MaxLat = ubound(Lat_I, dim=1)
-    write(*,'(a,2i4)')'RIM grid: Lat_I Min, Max=', MinLat, MaxLat
-    do j = MinLat, MaxLat
-       Lat_I(j) = (j-1)*(180./(nLat-1)) - 90
-    end do
-    write(*,*)'RIM grid: Lat_I(Min,Min+1,Max)=', Lat_I([MinLat,MinLat+1,MaxLat])
+    call update_coordinates(Grid, ExternalClock, iError)
 
     ! Add fields to the RIM import state
     call add_fields(Grid, ImportState, IsFromEsmf=.true., iError=iError)
     if(iError /= ESMF_SUCCESS) call my_error('add_fields')
-
-    if(allocated(LonSM_I)) deallocate(LonSM_I)
 
     iError = ESMF_SUCCESS
     call write_log("RIM_grid_comp:init_realize routine returned")
@@ -347,5 +271,95 @@ contains
 
   end subroutine my_error
   !============================================================================
+  subroutine update_coordinates(Grid, Clock, iError)
+    type(ESMF_Grid) :: Grid
+    type(ESMF_Clock) :: Clock
+    integer, intent(out):: iError
+
+    type(ESMF_TimeInterval) :: SimTime
+
+    integer(ESMF_KIND_I4)   :: iSec, iMilliSec
+    real(ESMF_KIND_R8) :: tCurrent
+
+    real(ESMF_KIND_R8), allocatable :: LonSM_I(:)
+
+    real(ESMF_KIND_R8) :: SmToMag_DD(3,3)
+
+    ! Phi is the rotation angle from SM to MAG coordinates 
+    ! in the counter-clockwise direction.
+    real(ESMF_KIND_R8) :: CosPhi, SinPhi, Phi
+
+    integer:: i, j
+    !--------------------------------------------------------------------------
+    call write_log("RIM_grid_comp:update_coordinates routine called")
+
+    nullify(Lon_I)
+    call ESMF_GridGetCoord(Grid, CoordDim=1, &
+         staggerLoc=ESMF_STAGGERLOC_CORNER, farrayPtr=Lon_I, rc=iError)
+    if(iError /= ESMF_SUCCESS)call my_error('ESMF_GridGetCoord 1')
+    write(*,*)'ESMF_GridComp size(Lon_I)=', size(Lon_I)
+
+    nullify(Lat_I)
+    call ESMF_GridGetCoord(Grid, CoordDim=2, &
+         staggerLoc=ESMF_STAGGERLOC_CORNER, farrayPtr=Lat_I, rc=iError)
+    if(iError /= ESMF_SUCCESS)call my_error('ESMF_GridGetCoord 2')
+    write(*,*)'ESMF_GridComp size(Lat_I)=', size(Lat_I)
+
+    ! Uniform longitude grid from -180 to 180 (to match IPE)
+    MinLon = lbound(Lon_I, dim=1)
+    MaxLon = ubound(Lon_I, dim=1)
+    write(*,'(a,2i4)')'RIM grid: Lon_I Min, Max=', MinLon, MaxLon
+
+    allocate(LonSM_I(MinLon:MaxLon))
+
+    do i = MinLon, MaxLon
+       LonSM_I(i) = (i-1)*(360.0/(nLon-1)) - 180
+    end do
+
+    write(*,*)'RIM grid: LonSM_I(Min,Min+1,Max)=', LonSM_I([MinLon,MinLon+1,MaxLon])
+
+    ! Get the current time from the clock
+    call ESMF_ClockGet(Clock, CurrSimTime=SimTime, rc=iError)
+    if(iError /= ESMF_SUCCESS) call my_error('ESMF_ClockGet')
+    call ESMF_TimeIntervalGet(SimTime, s=iSec, ms=iMilliSec, rc=iError)
+    if(iError /= ESMF_SUCCESS) call my_error('ESMF_TimeIntervalGet current')
+    tCurrent = iSec + 0.001*iMilliSec
+    write(*,*)'RIM_grid_comp init_realize: current time, isec, msec=', &
+         tCurrent, iSec, iMilliSec
+
+    SmToMag_DD = transform_matrix(tCurrent*1e3, 'SMG', 'MAG') 
+    write(*,*)'RIM_grid_comp: SM to MAG matrix='
+    do i = 1, 3
+       write(*,'(3f12.6)') SmToMag_DD(i,:)
+    end do
+    CosPhi = SmToMag_DD(1, 1)
+    SinPhi = SmToMag_DD(1, 2)
+    Phi = atan2(SinPhi, CosPhi)*cRadToDeg
+    write(*,*)'RIM_grid_comp: rotation angle from SM to MAG=', Phi
+
+    ! Make sure the range is [-180, 180] after the shift by Theta.
+    Lon_I = modulo(LonSM_I + 180 - Phi, 360.0) - 180
+    write(*,*)'RIM grid: Lon_I(Min,Min+1,Max)=', Lon_I([MinLon,MinLon+1,MaxLon])
+
+    !do i = MinLon, MaxLon
+    !write(*,*)'lonsm lonmag lon sm=', i, LonSM_I(i), Lon_I(i)
+    !end do
+
+
+    ! Uniform latitude grid
+    MinLat = lbound(Lat_I, dim=1)
+    MaxLat = ubound(Lat_I, dim=1)
+    write(*,'(a,2i4)')'RIM grid: Lat_I Min, Max=', MinLat, MaxLat
+    do j = MinLat, MaxLat
+       Lat_I(j) = (j-1)*(180./(nLat-1)) - 90
+    end do
+    write(*,*)'RIM grid: Lat_I(Min,Min+1,Max)=', Lat_I([MinLat,MinLat+1,MaxLat])
+
+    if(allocated(LonSM_I)) deallocate(LonSM_I)
+
+    call write_log("RIM_grid_comp:update_coordinates routine returned")
+
+    iError = ESMF_SUCCESS
+  end subroutine update_coordinates
 end module RIM_grid_comp
 !==============================================================================
