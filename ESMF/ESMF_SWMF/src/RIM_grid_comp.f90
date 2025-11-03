@@ -63,7 +63,7 @@ contains
          phaseLabelList=["IPDv01p3"], userRoutine=my_init_realize, rc=iError)
     if(iError /= ESMF_SUCCESS) call my_error('NUOPC_CompSetEntryPoint')
     call NUOPC_CompSpecialize(gcomp, specLabel=model_label_Advance, &
-          specRoutine=my_run, rc=iError)
+         specRoutine=my_run, rc=iError)
     if(iError /= ESMF_SUCCESS) call my_error('NUOPC_CompSetEntryPoint')
     call NUOPC_CompSpecialize(gcomp, specLabel=model_label_Finalize, &
          specRoutine=my_final, rc=iError)
@@ -100,9 +100,9 @@ contains
     iError = ESMF_FAILURE
 
     do n = 1, nVarEsmf
-      call NUOPC_Advertise(ImportState, standardName=trim(NameFieldEsmf_V(n)), &
-           TransferOfferGeomObject='will provide', rc=iError)
-      if(iError /= ESMF_SUCCESS) call my_error('NUOPC_Advertise')
+       call NUOPC_Advertise(ImportState, standardName=trim(NameFieldEsmf_V(n)), &
+            TransferOfferGeomObject='will provide', rc=iError)
+       if(iError /= ESMF_SUCCESS) call my_error('NUOPC_Advertise')
     end do
 
     iError = ESMF_SUCCESS
@@ -162,7 +162,7 @@ contains
     integer, intent(out):: iError
 
     ! Access to the data
-    type(ESMF_State):: ImportState
+    type(ESMF_State):: ImportState    
     type(ESMF_Clock):: Clock
     real(ESMF_KIND_R8), pointer     :: Ptr_II(:,:)
     real(ESMF_KIND_R8), allocatable :: Data_VII(:,:,:)
@@ -174,6 +174,9 @@ contains
 
     ! Current time (needed for test only)
     real(ESMF_KIND_R8) :: tCurrent
+
+    ! Grid 
+    type(ESMF_Grid) :: Grid
 
     ! Misc variables
     type(ESMF_Field):: Field
@@ -240,6 +243,20 @@ contains
             Data_VII(:,(MinLon+MaxLon)/2,(MinLat+MaxLat)/2)
     end if
     deallocate(Data_VII)
+
+
+    if(.false.) then
+       ! Update the coordinates based on the current time. Still does not
+       ! work because of the ESMF coupler limitations.
+
+       ! Potential problem: the time used for the coordinate transformation
+       ! here will be different from the time used in the next coupling step, 
+       ! so the verification test may fail without special care.   
+       call ESMF_FieldGet(Field, grid=Grid, rc=iError)
+       if(iError /= ESMF_SUCCESS) call my_error('ESMF_FieldGetGrid')
+
+       call update_coordinates(Grid, Clock, iError)       
+    end if
 
     call write_log("RIM_grid_comp:run routine returned")
 
