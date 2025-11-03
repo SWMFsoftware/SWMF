@@ -194,6 +194,10 @@ contains
     call add_fields(Grid, ExportState, IsFromEsmf=.true., iError=iError)
     if(iError /= ESMF_SUCCESS) call my_error("add_fields")
 
+    ! Add fields to the import state
+    call add_fields(Grid, ImportState, IsFromEsmf=.false., iError=iError)
+    if(iError /= ESMF_SUCCESS) call my_error("add_fields")
+
     iError = ESMF_SUCCESS
     call write_log("IPE_grid_comp init_realize returned")
     call ESMF_LogFlush()

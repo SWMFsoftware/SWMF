@@ -159,6 +159,10 @@ contains
     call add_fields(Grid, ImportState, IsFromEsmf=.true., iError=iError)
     if(iError /= ESMF_SUCCESS) call my_error('add_fields')
 
+    ! Add fields to the RIM export state
+    call add_fields(Grid, ExportState, IsFromEsmf=.false., iError=iError)
+    if(iError /= ESMF_SUCCESS) call my_error('add_fields')
+
     iError = ESMF_SUCCESS
     call write_log("RIM_grid_comp:init_realize routine returned")
 
