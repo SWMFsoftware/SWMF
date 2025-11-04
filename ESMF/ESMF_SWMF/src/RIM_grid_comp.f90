@@ -9,6 +9,7 @@ module RIM_grid_comp
 
   use NUOPC_Model, only: NUOPC_ModelGet
   use NUOPC_Model, only: modelSS => SetServices
+  use NUOPC_Model, only: model_label_DataInitialize => label_DataInitialize
   use NUOPC_Model, only: model_label_Advance => label_Advance
   use NUOPC_Model, only: model_label_Finalize => label_Finalize
 
@@ -62,6 +63,9 @@ contains
     call NUOPC_CompSetEntryPoint(gComp, ESMF_METHOD_INITIALIZE, &
          phaseLabelList=["IPDv01p3"], userRoutine=my_init_realize, rc=iError)
     if(iError /= ESMF_SUCCESS) call my_error('NUOPC_CompSetEntryPoint')
+    call NUOPC_CompSpecialize(gcomp, specLabel=model_label_DataInitialize, &
+         specRoutine=my_data_init, rc=iError)
+    if(iError /= ESMF_SUCCESS) call my_error('NUOPC_CompSpecialize')
     call NUOPC_CompSpecialize(gcomp, specLabel=model_label_Advance, &
          specRoutine=my_run, rc=iError)
     if(iError /= ESMF_SUCCESS) call my_error('NUOPC_CompSetEntryPoint')
@@ -167,6 +171,22 @@ contains
     call write_log("RIM_grid_comp:init_realize routine returned")
 
   end subroutine my_init_realize
+  !============================================================================
+  subroutine my_data_init(gComp, iError)
+
+    type(ESMF_GridComp):: gComp
+    integer, intent(out):: iError
+
+    !--------------------------------------------------------------------------
+    call write_log("RIM_grid_comp:data_init routine called")
+
+    ! Add any data initialization here if needed
+
+    iError = ESMF_SUCCESS
+    call write_log("RIM_grid_comp:data_init routine returned")    
+    call ESMF_LogFlush()
+
+  end subroutine my_data_init
   !============================================================================
   subroutine my_run(gComp, iError)
 
