@@ -280,8 +280,11 @@ contains
     type(ESMF_Field):: Field
     type(ESMF_State):: ExportState
 
-    ! Access to the MHD data
-    real(ESMF_KIND_R8), pointer :: Ptr_II(:,:)
+    type(ESMF_State):: ImportState
+    character(len=4):: NameField
+    real(ESMF_KIND_R8), pointer     :: Ptr_II(:,:)
+    real(ESMF_KIND_R8), allocatable :: Data_VII(:,:,:)
+    integer                         :: iVar
     !--------------------------------------------------------------------------
     call write_log("IPE_grid_comp run called")
     iError = ESMF_FAILURE
@@ -314,6 +317,28 @@ contains
        write(*,*)'IPE_grid_comp:run new Hall=', &
             Ptr_II((MaxLon+MinLon)/2,(MaxLat+MinLat)/2)
     end if
+
+    ! Query component
+    call NUOPC_ModelGet(gComp, importState=ImportState, rc=iError)
+    if(iError /= ESMF_SUCCESS) call my_error('NUOPC_ModelGet')
+
+    allocate(Data_VII(nVarSwmf,MinLon:MaxLon,MinLat:MaxLat), stat=iError)
+    if(iError /= 0) call my_error('allocate(Data_VII)')
+
+    do iVar = 1, nVarSwmf
+       nullify(Ptr_II)
+       NameField = NameFieldSwmf_V(iVar)
+       call ESMF_StateGet(ImportState, itemName=NameField, &
+            field=Field, rc=iError)
+       if(iError /= ESMF_SUCCESS) call my_error("ESMF_StateGet")
+       call ESMF_FieldGet(Field, farrayPtr=Ptr_II, rc=iError)
+       if(iError /= ESMF_SUCCESS) call my_error("ESMF_FieldGet")
+
+       Data_VII(iVar,:,:) = Ptr_II
+       write(*,*)'IPE_grid_comp: received ', NameField, ' sample=', &
+            Data_VII(iVar,(MaxLon+MinLon)/2,(MaxLat+MinLat)/2)
+    end do
+
 
     iError = ESMF_SUCCESS
     call write_log("IPE_grid_comp run returned")
