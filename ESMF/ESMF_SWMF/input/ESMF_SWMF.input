@@ -71,6 +71,7 @@ RIM_attributes::
 runSeq::
 @2
   IPE -> RIM :remapMethod=bilinear:unmappedaction=ignore:zeroregion=select:srcTermProcessing=0:termOrder:srcseq
+  RIM -> IPE :remapMethod=bilinear:unmappedaction=ignore:zeroregion=select:srcTermProcessing=0:termOrder:srcseq
   RIM
   SWMF
   IPE
