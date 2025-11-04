@@ -177,10 +177,58 @@ contains
     type(ESMF_GridComp):: gComp
     integer, intent(out):: iError
 
+    type(ESMF_State):: ExportState
+    type(ESMF_Field):: Field
+    real(ESMF_KIND_R8), pointer :: Ptr_II(:,:)
+    integer:: i, j, iVar
+    character(len=4):: NameField
     !--------------------------------------------------------------------------
     call write_log("RIM_grid_comp:data_init routine called")
 
-    ! Add any data initialization here if needed
+    call NUOPC_ModelGet(gComp, exportState=ExportState, rc=iError)
+    if(iError /= ESMF_SUCCESS) call my_error("NUOPC_ModelGet")
+
+    do iVar = 1, nVarSwmf
+       ! Get pointers to the variables in the export state
+       nullify(Ptr_II)
+       NameField = NameFieldSwmf_V(iVar)
+       call ESMF_StateGet(ExportState, itemName=NameField, field=Field, &
+            rc=iError)
+       if(iError /= ESMF_SUCCESS) call my_error("ESMF_StateGet "//NameField)
+
+       call ESMF_FieldGet(Field, farrayPtr=Ptr_II, rc=iError)
+       if(iError /= ESMF_SUCCESS) call my_error("ESMF_FieldGet "//NameField)
+
+       ! Get dimension extents
+       MinLon = lbound(Ptr_II, dim=1)
+       MaxLon = ubound(Ptr_II, dim=1)
+       MinLat = lbound(Ptr_II, dim=2)
+       MaxLat = ubound(Ptr_II, dim=2)
+
+       if(iError /= ESMF_SUCCESS) RETURN
+       select case(NameField)
+       case('jFac')
+          Ptr_II(MinLon:MaxLon,MinLat:MaxLat) = 111
+       case('Epot')
+          Ptr_II(MinLon:MaxLon,MinLat:MaxLat) = 222
+       case ('Aver')
+          Ptr_II(MinLon:MaxLon,MinLat:MaxLat) = 333
+       case ('Diff')
+          Ptr_II(MinLon:MaxLon,MinLat:MaxLat) = 444
+       case default
+          write(*,*)'ERROR in ESMF_GridComp:init: unknown NameField=',&
+               NameField,' for iVar=',iVar
+          iError = ESMF_FAILURE; RETURN
+       end select
+
+       ! Add coordinate dependence
+       !do j = MinLat, MaxLat; do i = MinLon, MaxLon
+       !     Ptr_II(i,j) = Ptr_II(i,j) + CoordCoefTest &
+       !          *abs(Lon_I(i))*(90-abs(Lat_I(j)))
+       !end do; end do
+
+    end do ! iVar
+        
 
     iError = ESMF_SUCCESS
     call write_log("RIM_grid_comp:data_init routine returned")    
