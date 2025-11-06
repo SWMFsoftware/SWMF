@@ -318,10 +318,6 @@ F		if you want to run with msis and iri only (i.e. not GITM)
 #CRUSTAL
 F         UseCrustalFields
 
-#USELILLIS
-F        use empirical ionization
-0.42     Solar wind pressure (should be between 0.39 and 1.36)
-
 #MHDFIELD
 F    
 
