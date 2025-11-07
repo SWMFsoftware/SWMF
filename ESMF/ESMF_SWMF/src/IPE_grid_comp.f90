@@ -285,6 +285,9 @@ contains
     real(ESMF_KIND_R8), pointer     :: Ptr_II(:,:)
     real(ESMF_KIND_R8), allocatable :: Data_VII(:,:,:)
     integer                         :: iVar
+
+    integer :: i, j
+    real(ESMF_KIND_R8) :: Coef, ExactValue
     !--------------------------------------------------------------------------
     call write_log("IPE_grid_comp run called")
     iError = ESMF_FAILURE
@@ -335,8 +338,18 @@ contains
        if(iError /= ESMF_SUCCESS) call my_error("ESMF_FieldGet")
 
        Data_VII(iVar,:,:) = Ptr_II
-       write(*,*)'IPE_grid_comp: received ', NameField, ' sample=', &
-            Data_VII(iVar,(MaxLon+MinLon)/2,(MaxLat+MinLat)/2)
+
+       Coef = 10**iVar
+       ! Skip boundary longitudes (+180 and -180), where the interpolated 
+       ! values and the ExactValue are different.  
+       do i = MinLon+1, MaxLon-1; do j = MinLat, MaxLat
+          ExactValue = Lon_I(i)*Lat_I(j)*Coef
+          if( abs(Data_VII(iVar,i,j)-ExactValue) > 1.0e-6 ) then
+             write(*,*)'Error in RIM->IPE coupling for ', NameField, &
+                  ' at lon=', Lon_I(i), ' lat=', Lat_I(j), &
+                  ' value=', Data_VII(iVar,i,j), ' ExactValue=', ExactValue
+          end if
+       end do; end do
     end do
 
 

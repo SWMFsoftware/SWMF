@@ -179,9 +179,12 @@ contains
 
     type(ESMF_State):: ExportState
     type(ESMF_Field):: Field
+    type(ESMF_Grid):: Grid
     real(ESMF_KIND_R8), pointer :: Ptr_II(:,:)
     integer:: i, j, iVar
     character(len=4):: NameField
+
+    real(ESMF_KIND_R8):: Coef
     !--------------------------------------------------------------------------
     call write_log("RIM_grid_comp:data_init routine called")
 
@@ -197,7 +200,20 @@ contains
        if(iError /= ESMF_SUCCESS) call my_error("ESMF_StateGet "//NameField)
 
        call ESMF_FieldGet(Field, farrayPtr=Ptr_II, rc=iError)
-       if(iError /= ESMF_SUCCESS) call my_error("ESMF_FieldGet "//NameField)
+       if(iError /= ESMF_SUCCESS) call my_error("ESMF_FieldGet "//NameField)      
+       
+       call ESMF_FieldGet(Field, grid=Grid, rc=iError)
+       if(iError /= ESMF_SUCCESS) call my_error('ESMF_FieldGet Grid')
+
+       nullify(Lon_I)
+       call ESMF_GridGetCoord(Grid, CoordDim=1, &
+            staggerLoc=ESMF_STAGGERLOC_CORNER, farrayPtr=Lon_I, rc=iError)
+       if(iError /= ESMF_SUCCESS)call my_error('ESMF_GridGetCoord 1')
+
+       nullify(Lat_I)
+       call ESMF_GridGetCoord(Grid, CoordDim=2, &
+            staggerLoc=ESMF_STAGGERLOC_CORNER, farrayPtr=Lat_I, rc=iError)
+       if(iError /= ESMF_SUCCESS)call my_error('ESMF_GridGetCoord 2')
 
        ! Get dimension extents
        MinLon = lbound(Ptr_II, dim=1)
@@ -206,27 +222,15 @@ contains
        MaxLat = ubound(Ptr_II, dim=2)
 
        if(iError /= ESMF_SUCCESS) RETURN
-       select case(NameField)
-       case('jFac')
-          Ptr_II(MinLon:MaxLon,MinLat:MaxLat) = 111
-       case('Epot')
-          Ptr_II(MinLon:MaxLon,MinLat:MaxLat) = 222
-       case ('Aver')
-          Ptr_II(MinLon:MaxLon,MinLat:MaxLat) = 333
-       case ('Diff')
-          Ptr_II(MinLon:MaxLon,MinLat:MaxLat) = 444
-       case default
-          write(*,*)'ERROR in ESMF_GridComp:init: unknown NameField=',&
-               NameField,' for iVar=',iVar
-          iError = ESMF_FAILURE; RETURN
-       end select
+
+       Coef = 10**iVar
 
        ! Add coordinate dependence
-       !do j = MinLat, MaxLat; do i = MinLon, MaxLon
-       !     Ptr_II(i,j) = Ptr_II(i,j) + CoordCoefTest &
-       !          *abs(Lon_I(i))*(90-abs(Lat_I(j)))
-       !end do; end do
-
+       ! With abs(Lon)*abs(Lat) dependence, the coupling does not pass
+       ! correct values. To be investigated.
+       do j = MinLat, MaxLat; do i = MinLon, MaxLon
+          Ptr_II(i,j) = Lon_I(i)*Lat_I(j)*Coef
+       end do; end do
     end do ! iVar
         
 
