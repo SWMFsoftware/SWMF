@@ -108,7 +108,7 @@ contains
        call NUOPC_Advertise(ImportState, standardName=trim(NameFieldEsmf_V(n)), &
             TransferOfferGeomObject='will provide', rc=iError)
        if(iError /= ESMF_SUCCESS) call my_error('NUOPC_Advertise')
-    end do 
+    end do
 
     do n = 1, nVarSwmf
        ! RIM -> IPE coupling
@@ -201,7 +201,7 @@ contains
 
        call ESMF_FieldGet(Field, farrayPtr=Ptr_II, rc=iError)
        if(iError /= ESMF_SUCCESS) call my_error("ESMF_FieldGet "//NameField)      
-       
+
        call ESMF_FieldGet(Field, grid=Grid, rc=iError)
        if(iError /= ESMF_SUCCESS) call my_error('ESMF_FieldGet Grid')
 
@@ -232,7 +232,7 @@ contains
           Ptr_II(i,j) = Lon_I(i)*Lat_I(j)*Coef
        end do; end do
     end do ! iVar
-        
+
 
     iError = ESMF_SUCCESS
     call write_log("RIM_grid_comp:data_init routine returned")    

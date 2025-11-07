@@ -73,7 +73,7 @@ contains
          specRoutine=my_data_init, rc=iError)
     if(iError /= ESMF_SUCCESS) call my_error('NUOPC_CompSpecialize')
     call NUOPC_CompSpecialize(gcomp, specLabel=model_label_Advance, &
-          specRoutine=my_run, rc=iError)
+         specRoutine=my_run, rc=iError)
     if(iError /= ESMF_SUCCESS) call my_error('NUOPC_CompSpecialize')
     call NUOPC_CompSpecialize(gcomp, specLabel=model_label_Finalize, &
          specRoutine=my_final, rc=iError)
@@ -110,17 +110,17 @@ contains
     iError = ESMF_FAILURE
 
     do n = 1, nVarEsmf
-      ! IPE -> RIM coupling
-      call NUOPC_Advertise(ExportState, standardName=trim(NameFieldEsmf_V(n)), &
-           TransferOfferGeomObject='will provide', rc=iError)
-      if(iError /= ESMF_SUCCESS) call my_error('NUOPC_Advertise')
+       ! IPE -> RIM coupling
+       call NUOPC_Advertise(ExportState, standardName=trim(NameFieldEsmf_V(n)), &
+            TransferOfferGeomObject='will provide', rc=iError)
+       if(iError /= ESMF_SUCCESS) call my_error('NUOPC_Advertise')
     end do
 
     do n = 1, nVarSwmf
-      ! RIM -> IPE coupling
-      call NUOPC_Advertise(ImportState, standardName=trim(NameFieldSwmf_V(n)), &
-           TransferOfferGeomObject='will provide', rc=iError)
-      if(iError /= ESMF_SUCCESS) call my_error('NUOPC_Advertise')
+       ! RIM -> IPE coupling
+       call NUOPC_Advertise(ImportState, standardName=trim(NameFieldSwmf_V(n)), &
+            TransferOfferGeomObject='will provide', rc=iError)
+       if(iError /= ESMF_SUCCESS) call my_error('NUOPC_Advertise')
     end do
 
     iError = ESMF_SUCCESS
@@ -300,7 +300,7 @@ contains
     ! the fields of the ExportState
     if(DoTest)then
        ! Get pointers to the MHD variables in the export state
-       !!! This could be done in the initialization ?!
+!!! This could be done in the initialization ?!
        nullify(Ptr_II)
        call ESMF_StateGet(ExportState, itemName='Hall', field=Field, rc=iError)
        if(iError /= ESMF_SUCCESS) call my_error("ESMF_StateGet for Hall")
