@@ -223,14 +223,25 @@ contains
 
        if(iError /= ESMF_SUCCESS) RETURN
 
-       Coef = 10**iVar
+       if(DoTest)then
+          Coef = 10**iVar
 
-       ! Add coordinate dependence
-       ! With abs(Lon)*abs(Lat) dependence, the coupling does not pass
-       ! correct values. To be investigated.
-       do j = MinLat, MaxLat; do i = MinLon, MaxLon
-          Ptr_II(i,j) = Lon_I(i)*Lat_I(j)*Coef
-       end do; end do
+          ! Add coordinate dependence
+          ! With abs(Lon)*abs(Lat) dependence, the coupling does not pass
+          ! correct values. To be investigated.
+          do j = MinLat, MaxLat; do i = MinLon, MaxLon
+             Ptr_II(i,j) = Lon_I(i)*Lat_I(j)*Coef
+          end do; end do
+       else
+          select case(NameField)
+          case('jFac')
+             ! Put RIM variables into Ptr
+          case('Epot')
+             
+          case('Aver')
+          case('Diff')
+          end select
+       end if
     end do ! iVar
 
 
@@ -325,9 +336,10 @@ contains
        end do; end do
        write(*,*)'SWMF_GridComp value of Data(MidLon,MidLat)=', &
             Data_VII(:,(MinLon+MaxLon)/2,(MinLat+MaxLat)/2)
+    else
+       ! Put Data_VII into RIM conductances
     end if
     deallocate(Data_VII)
-
 
     if(.false.) then
        ! Update the coordinates based on the current time. Still does not
