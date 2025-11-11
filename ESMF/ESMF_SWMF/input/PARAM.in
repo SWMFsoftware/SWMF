@@ -1,7 +1,7 @@
 Name Root Last Stride nThread
 #COMPONENTMAP		For testing
 GM  0 -1  1		CompMap all PEs
-IE -2 -1  1  		CompMap last 2 PEs
+IE  0  1  1 	CompMap first 2 PEs
 
 #DESCRIPTION
 ESMF/ESMF_SWMF/input/PARAM.in based on Param/SWPC/PARAM.in_SWPC_v2

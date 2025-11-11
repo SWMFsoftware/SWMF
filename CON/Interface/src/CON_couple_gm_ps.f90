@@ -43,7 +43,7 @@ contains
   subroutine couple_gm_ps_init
     !DESCRIPTOIN:
     ! Store PS grid size, determine number of GM fluids.
-    use ModProcessVarName,  ONLY: process_var_name
+    use ModProcessVarName, ONLY: process_var_name
 
     integer :: nSpeedGm, nPGm, nPparGm, nWaveGm, nMaterialGm, nChargeStateAllGm
 

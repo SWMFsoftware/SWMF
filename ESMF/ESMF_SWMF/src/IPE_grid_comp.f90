@@ -11,8 +11,8 @@ module IPE_grid_comp
   use NUOPC_Model, only: model_label_Finalize => label_Finalize
 
   use ESMFSWMF_variables, ONLY: add_fields, nVarEsmf, NameFieldEsmf_V, &
-       DoTest, FieldTest_V, CoordCoefTest, dHallPerDtTest, &
-       write_log, write_error
+       nVarSwmf, NameFieldSwmf_V, DoTest, FieldTest_V, CoordCoefTest, &
+       dHallPerDtTest, write_log, write_error
 
   implicit none
   private
@@ -73,7 +73,7 @@ contains
          specRoutine=my_data_init, rc=iError)
     if(iError /= ESMF_SUCCESS) call my_error('NUOPC_CompSpecialize')
     call NUOPC_CompSpecialize(gcomp, specLabel=model_label_Advance, &
-          specRoutine=my_run, rc=iError)
+         specRoutine=my_run, rc=iError)
     if(iError /= ESMF_SUCCESS) call my_error('NUOPC_CompSpecialize')
     call NUOPC_CompSpecialize(gcomp, specLabel=model_label_Finalize, &
          specRoutine=my_final, rc=iError)
@@ -110,9 +110,17 @@ contains
     iError = ESMF_FAILURE
 
     do n = 1, nVarEsmf
-      call NUOPC_Advertise(ExportState, standardName=trim(NameFieldEsmf_V(n)), &
-           TransferOfferGeomObject='will provide', rc=iError)
-      if(iError /= ESMF_SUCCESS) call my_error('NUOPC_Advertise')
+       ! IPE -> RIM coupling
+       call NUOPC_Advertise(ExportState, standardName=trim(NameFieldEsmf_V(n)), &
+            TransferOfferGeomObject='will provide', rc=iError)
+       if(iError /= ESMF_SUCCESS) call my_error('NUOPC_Advertise')
+    end do
+
+    do n = 1, nVarSwmf
+       ! RIM -> IPE coupling
+       call NUOPC_Advertise(ImportState, standardName=trim(NameFieldSwmf_V(n)), &
+            TransferOfferGeomObject='will provide', rc=iError)
+       if(iError /= ESMF_SUCCESS) call my_error('NUOPC_Advertise')
     end do
 
     iError = ESMF_SUCCESS
@@ -184,6 +192,10 @@ contains
 
     ! Add fields to the export state
     call add_fields(Grid, ExportState, IsFromEsmf=.true., iError=iError)
+    if(iError /= ESMF_SUCCESS) call my_error("add_fields")
+
+    ! Add fields to the import state
+    call add_fields(Grid, ImportState, IsFromEsmf=.false., iError=iError)
     if(iError /= ESMF_SUCCESS) call my_error("add_fields")
 
     iError = ESMF_SUCCESS
@@ -268,8 +280,14 @@ contains
     type(ESMF_Field):: Field
     type(ESMF_State):: ExportState
 
-    ! Access to the MHD data
-    real(ESMF_KIND_R8), pointer :: Ptr_II(:,:)
+    type(ESMF_State):: ImportState
+    character(len=4):: NameField
+    real(ESMF_KIND_R8), pointer     :: Ptr_II(:,:)
+    real(ESMF_KIND_R8), allocatable :: Data_VII(:,:,:)
+    integer                         :: iVar
+
+    integer :: i, j
+    real(ESMF_KIND_R8) :: Coef, ExactValue
     !--------------------------------------------------------------------------
     call write_log("IPE_grid_comp run called")
     iError = ESMF_FAILURE
@@ -282,7 +300,7 @@ contains
     ! the fields of the ExportState
     if(DoTest)then
        ! Get pointers to the MHD variables in the export state
-       !!! This could be done in the initialization ?!
+!!! This could be done in the initialization ?!
        nullify(Ptr_II)
        call ESMF_StateGet(ExportState, itemName='Hall', field=Field, rc=iError)
        if(iError /= ESMF_SUCCESS) call my_error("ESMF_StateGet for Hall")
@@ -302,6 +320,38 @@ contains
        write(*,*)'IPE_grid_comp:run new Hall=', &
             Ptr_II((MaxLon+MinLon)/2,(MaxLat+MinLat)/2)
     end if
+
+    ! Query component
+    call NUOPC_ModelGet(gComp, importState=ImportState, rc=iError)
+    if(iError /= ESMF_SUCCESS) call my_error('NUOPC_ModelGet')
+
+    allocate(Data_VII(nVarSwmf,MinLon:MaxLon,MinLat:MaxLat), stat=iError)
+    if(iError /= 0) call my_error('allocate(Data_VII)')
+
+    do iVar = 1, nVarSwmf
+       nullify(Ptr_II)
+       NameField = NameFieldSwmf_V(iVar)
+       call ESMF_StateGet(ImportState, itemName=NameField, &
+            field=Field, rc=iError)
+       if(iError /= ESMF_SUCCESS) call my_error("ESMF_StateGet")
+       call ESMF_FieldGet(Field, farrayPtr=Ptr_II, rc=iError)
+       if(iError /= ESMF_SUCCESS) call my_error("ESMF_FieldGet")
+
+       Data_VII(iVar,:,:) = Ptr_II
+
+       Coef = 10**iVar
+       ! Skip boundary longitudes (+180 and -180), where the interpolated 
+       ! values and the ExactValue are different.  
+       do i = MinLon+1, MaxLon-1; do j = MinLat, MaxLat
+          ExactValue = Lon_I(i)*Lat_I(j)*Coef
+          if( abs(Data_VII(iVar,i,j)-ExactValue) > 1.0e-6 ) then
+             write(*,*)'Error in RIM->IPE coupling for ', NameField, &
+                  ' at lon=', Lon_I(i), ' lat=', Lat_I(j), &
+                  ' value=', Data_VII(iVar,i,j), ' ExactValue=', ExactValue
+          end if
+       end do; end do
+    end do
+
 
     iError = ESMF_SUCCESS
     call write_log("IPE_grid_comp run returned")

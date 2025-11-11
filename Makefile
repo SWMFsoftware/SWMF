@@ -64,6 +64,9 @@ help:
 	@#^CMP IF IE BEGIN
 	@echo '    PIONO       (bin/PostIONO.exe creates ionosphere tec file from idl files)'
 	@#^CMP END IE
+	@#^CMP IF UA BEGIN
+	@echo '	   PGITM       (bin/PostGITM.exe post-processes GITM files)'
+	@#^CMP END UA
 	@#^CMP IF GM BEGIN
 	@echo '    PIDL        (bin/PostIDL.exe post-processes *.idl files)'
 	@echo '    SNAPSHOT    (SNAPSHOT.exe extract snapshots from *.outs files)'
@@ -250,6 +253,14 @@ PIONO:	ENV_CHECK
 
 #^CMP END IE
 
+#^CMP IF UA BEGIN
+#	Post processing codes for GITM plot files
+#
+PGITM:	ENV_CHECK
+	cd UA/MGITM; $(MAKE) POST
+	@echo ' '
+#^CMP END UA
+
 #					^CMP IF DOC BEGIN
 #	Create the documentation files      ^CMP IF NOT REMOVEDOCTEX BEGIN
 #	
@@ -362,7 +373,7 @@ rundir: ENV_CHECK
 	@touch  share/JobScripts/job._TMP_${MACHINE} \
 		share/JobScripts/_TMP_.${MACHINE}.pl
 	@cp share/JobScripts/job.*${MACHINE}* \
-	    share/JobScripts/*.${MACHINE}*.pl       ${RUNDIR}/
+	    share/JobScripts/*.${MACHINE}*.[ps][lh] ${RUNDIR}/
 	@echo "cp share/JobScripts/job.*${MACHINE}* ${RUNDIR}/"
 	@rm -rf ${RUNDIR}/*_TMP_* share/JobScripts/*_TMP_*
 	@echo

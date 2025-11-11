@@ -40,6 +40,12 @@ T			UseRotation
 #UPDATEB0
 10.0			DtUpdateB0
 
+#COUPLE1
+UA			NameSource
+GM			NameTarget
+4			DnCouple
+-1.0			DtCouple
+
 #BEGIN_COMP GM ---------------------------------------------------------------
 
 #GRIDBLOCKALL
@@ -116,9 +122,10 @@ minmod			TypeLimiter
 
 #SAVELOGFILE
 T			DoSaveLogfile
-VAR step time		StringLog
-500			DnSaveLogfile
+RAW step time		StringLog
+1			DnSaveLogfile
 -1.			DtSaveLogfile
+
 dt rho p rhopnt ppnt bxpnt Hpflx Hpflx Opflx O2pflx CO2pflx		NameLogVars
 6.0 2.0 1.117786		StringLogRadii
 
@@ -163,11 +170,11 @@ T			UseMarsB0
 -20.559			Thetilt
 marsmgsp.txt		NameFileB0
 
-111.09
--17.4966     !at Nov, 1, 2014 for MAVEN
+111.09			Rot     ! at Nov, 1, 2014 for MAVEN
+-17.4966		Thetilt
 
--59.4
--13.0        !at May 2005, 16, 00:01 UT
+-59.4			Rot	! at May 2005, 16, 00:01 UT
+-13.0			Thetilt
 
 MSO
 T			UseMso	!if true, read rotation axis in MSO
@@ -175,14 +182,13 @@ T			UseMso	!if true, read rotation axis in MSO
 0.24038			RotAxisMsoY
 0.90487			RotAxisMsoZ
 
-NOGW_150308_UT19_MHDINPUTS_2.dat 		filename
-UseMarsAtm
+MARSATMOSPHEREFILE
 T			UseMarsAtm
-NOGW_150308_UT19_MHDINPUTS.dat		TGCMFilename
+NOGW_150308_UT19_MHDINPUTS.dat		NameFileTGCM
+72                      NLong
+36                      NLat
 81                     	NAlt
 
-36                      NLat
-72                      NLong
 0.0                     subsolarlat
 0.0                     subsolarlong
 2.5                     longstart
@@ -214,18 +220,24 @@ T			DoReplaceDensity
 
 #SAVEPLOT
 3			nPlotFile
-x=0 MHD idl		StringPlot
+x=0 VAR idl		StringPlot
 1000			DnSavePlot
 -1.0			DtSavePlot
 -1.0			DxSavePlot
-y=0 MHD idl		StringPlot
+{MHD} tneu nco2 no noh nh iop ico2p		NameVars
+{default}		NamePars
+y=0 VAR idl		StringPlot
 1000			DnSavePlot
 -1.0			DtSavePlot
 -1.0			DxSavePlot
-z=0 MHD idl		StringPlot
+{MHD} tneu nco2 no noh nh iop ico2p		NameVars
+{default}		NamePars
+z=0 VAR idl		StringPlot
 1000			DnSavePlot
 -1.0			DtSavePlot
 -1.0			DxSavePlot
+{MHD} tneu nco2 no noh nh iop ico2p		NameVars
+{default}		NamePars
 
 3d MHD tec		StringPlot
 1000			DnSavePlot
@@ -258,10 +270,10 @@ T
 #GRID
 2	        lons
 2	        lats
--90		minimum latitude to model
-90		maximum latitude to model
-0.0		longitude to model (ignored in everything but 1D)
-0.0
+-90		latstart minimum latitude to model
+90		latend maximum latitude to model
+0.0		lonstart
+360.0		lonend
 
 #ALTITUDE
 0.0		minimum altitude to use
@@ -305,10 +317,6 @@ F		if you want to run with msis and iri only (i.e. not GITM)
 
 #CRUSTAL
 F         UseCrustalFields
-
-#USELILLIS
-F        use empirical ionization
-0.42     Solar wind pressure (should be between 0.39 and 1.36)
 
 #MHDFIELD
 F    
@@ -420,8 +428,6 @@ T		UseNeutralChemistry
 10			MaxIter
 -1.0			TimeMax
 
-
-
 #END
 
 #RUN ##########################################################################
@@ -431,26 +437,9 @@ T                       DoTimeAccurate
 
 #BEGIN_COMP GM ---------------------------------------------------------------
 
-FIXAXIS  check
-T
-T
-5.0
-1.5
-
-
-POINTIMPLICIT
-T                       UsePointImplicit
-1.0                     BetaPointImplicit
-F                       IsAsymmetric
-T                       DoNormalizeCell
-
 #TIMESTEPPING
 2			nStage
 0.95			CflExpl
-
-FIXEDTIMESTEP
-T
-0.05
 
 #SAVEPLOT
 3                       nPlotFiles
@@ -473,14 +462,12 @@ z=0 MHD idl             StringPlot
 
 #END_COMP GM ---------------------------------------------------------------
 
-COUPLE1
-UA                      NameSource
-GM                      NameTarget
-1                       DnCouple
--1.0                    DtCouple
+#COUPLE1
+UA			NameSource
+GM			NameTarget
+-1			DnCouple
+1.0			DtCouple
 
 #STOP
-1000000	               MaxIter
-3600.0                    TimeMax
-
-#END
+-1			MaxIter
+10.0			TimeMax

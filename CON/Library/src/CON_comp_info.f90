@@ -15,7 +15,7 @@ module CON_comp_info
 
   use CON_comp_param
   use ModMpi
-  use ModIoUnit, ONLY : STDOUT_
+  use ModIoUnit, ONLY: STDOUT_
 
   implicit none
 

@@ -264,7 +264,7 @@ contains
     if(DoTest .or. DoDebug)then
        NameSourceTarget = NameComp_I(Coupler%iCompSource) &
             //            NameComp_I(Coupler%iCompTarget)
-       if(DoDebug) iUnitTest = i_proc() + 10
+       if(DoDebug) iUnitTest = i_proc() + 100
        if(DoTestMe) write(*,*) NameSub,' doing ',NameSourceTarget
 
        if(DoTest) call timing_start('pnt_cpl_'//NameSourceTarget)

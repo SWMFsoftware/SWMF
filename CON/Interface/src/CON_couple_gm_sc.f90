@@ -3,7 +3,9 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !^CMP FILE SC
 !^CMP FILE GM
-module CON_couple_sc_gm
+
+module CON_couple_gm_sc
+
   ! This coupler uses the SWMF coupling toolkit.
   ! Both the SC and GM grids use AMR.
   ! SC is a source, GM is a target.
@@ -21,9 +23,10 @@ module CON_couple_sc_gm
   ! {\bf V}_{SC}={\bf A}_{SC,GM}\cdot{\bf V}_{GM},
   ! {\bf V}_{GM}={\bf A}_{GM,SC}\cdot{\bf V}_{SC}
   ! $$
+
   use CON_coupler
   use CON_transfer_data, ONLY: transfer_real_array, transfer_integer
-  use CON_time, ONLY:TimeStart
+  use CON_time, ONLY: TimeStart
   use ModConst
   use CON_axes, ONLY: transform_matrix, vPlanetHgi_D, XyzPlanetHgi_D
 
@@ -39,7 +42,6 @@ module CON_couple_sc_gm
 
   private ! except
 
-  !
   public:: couple_sc_gm_init
   public:: couple_sc_gm
   public:: couple_gm_sc
@@ -80,9 +82,7 @@ module CON_couple_sc_gm
 
 contains
   !============================================================================
-
   subroutine couple_sc_gm_init
-
     !--------------------------------------------------------------------------
     if(.not.DoInitialize)RETURN
     DoInitialize=.false.
@@ -125,7 +125,6 @@ contains
 
     ! Last coupling time
     real :: TimeCouplingLast = -1.0
-
     !--------------------------------------------------------------------------
     call CON_set_do_test(NameMod,DoTest,DoTestMe)
     if(DoTest)write(*,*)'couple_sc_gm iProc=',i_proc()
@@ -193,47 +192,42 @@ contains
   logical function GM_is_west_block(iBlockLocal)
 
     integer,intent(in)  :: iBlockLocal
-    logical             ::IsRightBoundary_D(GM_grid%nDim)
-    integer,parameter::x_=1
-
+    logical             :: IsRightBoundary_D(GM_grid%nDim)
+    integer, parameter:: x_=1
     !--------------------------------------------------------------------------
     IsRightBoundary_D = GM_is_right_boundary_d(iBlockLocal)
     GM_is_west_block=IsRightBoundary_D(x_)
 
   end function GM_is_west_block
   !============================================================================
-  subroutine GM_west_cells(&
-       nDim,      &
-       Xyz_D,     &
-       nIndex,    &
-       i_D,       &
-       IsInterfacePoint)
-    integer,          intent(in):: nDim, nIndex
-    real,          intent(inout):: Xyz_D(nDim)
-    integer,intent(inout)       :: i_D(nIndex)
-    logical,intent(out)         :: IsInterfacePoint
+  subroutine GM_west_cells(nDim, Xyz_D, nIndex, i_D, IsInterfacePoint)
 
-    logical,dimension(nDim)::IsLeftFace_D, IsRightFace_D
-    integer,parameter::x_=1,y_=2,z_=3
+    integer, intent(in):: nDim, nIndex
+    real,    intent(inout):: Xyz_D(nDim)
+    integer, intent(inout)       :: i_D(nIndex)
+    logical, intent(out)         :: IsInterfacePoint
 
+    logical:: IsLeftFace_D(nDim), IsRightFace_D(nDim)
+    integer, parameter:: x_=1, y_=2, z_=3
     !--------------------------------------------------------------------------
-    IsLeftFace_D=i_D(x_:z_)  < 1
-    IsRightFace_D=i_D(x_:z_) > GM_Grid%Domain%Ptr%nCell_D
-    IsInterfacePoint=IsRightFace_D(x_).and..not.&
-         (any(IsLeftFace_D(y_:z_)).or.any(IsRightFace_D(y_:z_)))
+    IsLeftFace_D = i_D(x_:z_)  < 1
+    IsRightFace_D = i_D(x_:z_) > GM_Grid%Domain%Ptr%nCell_D
+    IsInterfacePoint = IsRightFace_D(x_) .and. &
+         .not.(any(IsLeftFace_D(y_:z_)) .or. any(IsRightFace_D(y_:z_)))
 
   end subroutine GM_west_cells
   !============================================================================
-
-  subroutine map_gm_sc(&
+  subroutine map_gm_sc( &
        GM_nDim, XyzGm_D, SC_nDim, CoordSc_D, IsInterfacePoint)
 
     integer,intent(in) :: GM_nDim, SC_nDim
     real,   intent(in) :: XyzGm_D(GM_nDim)
     real,   intent(out):: CoordSc_D(SC_nDim)
     logical,intent(out)::IsInterfacePoint
+
     ! In each mapping the corrdinates of the TARGET grid point (GM)
     ! shoud be be transformed to the SOURCE (SC) generalized coords.
+
     real :: XyzSc_D(nDim)
     !--------------------------------------------------------------------------
     XyzSc_D = XyzPlanetSc_D + matmul(GmToSc_DD, XyzGm_D)*&
@@ -243,14 +237,13 @@ contains
 
   end subroutine map_gm_sc
   !============================================================================
+  subroutine SC_get_for_gm_and_transform( &
+       nPartial, iGetStart, Get, w, State_V, nVar)
 
-  subroutine SC_get_for_gm_and_transform(&
-       nPartial,iGetStart,Get,w,State_V,nVar)
-
-    integer,intent(in)::nPartial,iGetStart,nVar
-    type(IndexPtrType),intent(in)::Get
-    type(WeightPtrType),intent(in)::w
-    real,dimension(nVar),intent(out)::State_V
+    integer, intent(in):: nPartial, iGetStart, nVar
+    type(IndexPtrType), intent(in):: Get
+    type(WeightPtrType), intent(in):: w
+    real, intent(out)::State_V(nVar)
 
     integer, parameter :: Rho_=1, RhoUx_=2, RhoUz_=4, Bx_=5, Bz_=7
     !--------------------------------------------------------------------------
@@ -264,7 +257,6 @@ contains
 
   end subroutine SC_get_for_gm_and_transform
   !============================================================================
-
   subroutine couple_gm_sc(TimeCoupling)
 
     real, intent(in) :: TimeCoupling     ! simulation time at coupling
@@ -303,6 +295,5 @@ contains
 
   end subroutine couple_gm_sc
   !============================================================================
-end module CON_couple_sc_gm
+end module CON_couple_gm_sc
 !==============================================================================
-

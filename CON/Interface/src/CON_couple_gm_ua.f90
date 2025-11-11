@@ -4,10 +4,9 @@
 !^CMP FILE UA
 !^CMP FILE GM
 
-!
-! UA provides source terms for GM where possible
-!
-module CON_couple_ua_gm
+module CON_couple_gm_ua
+
+  ! UA provides source terms for GM where possible
 
   use CON_coupler
 
@@ -49,7 +48,6 @@ contains
 
   end subroutine couple_ua_gm_init
   !============================================================================
-
   subroutine couple_ua_gm(tSimulation)
 
     real, intent(in) :: tSimulation
@@ -69,6 +67,5 @@ contains
 
   end subroutine couple_ua_gm
   !============================================================================
-
-end module CON_couple_ua_gm
+end module CON_couple_gm_ua
 !==============================================================================

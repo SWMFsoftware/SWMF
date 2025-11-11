@@ -6,9 +6,9 @@ module CON_bline
 #ifdef OPENACC
   use ModUtilities, ONLY: norm2
 #endif
-  use ModUtilities,      ONLY: check_allocate, CON_stop
-  use ModConst,          ONLY: cBoltzmann
-  use CON_coupler,       ONLY: MaxComp, is_proc0, i_proc, &
+  use ModUtilities, ONLY: check_allocate, CON_stop
+  use ModConst, ONLY: cBoltzmann
+  use CON_coupler, ONLY: MaxComp, is_proc0, i_proc, &
        GridType, LocalGridType, set_standard_grid_descriptor, set_local_gd
   implicit none
 
@@ -520,14 +520,14 @@ contains
   !============================================================================
   ! Put MHD data in a single point
   subroutine BL_put_from_mh(nPartial, iPutStart, Put, W, DoAdd, Buff_I, nVar)
-    use CON_axes,    ONLY: transform_velocity
+    use CON_axes, ONLY: transform_velocity
     use CON_coupler, ONLY: iVar_V, DoCoupleVar_V   ,&
          Density_, RhoCouple_, Pressure_, PCouple_ ,&
          Momentum_, RhoUxCouple_, RhoUzCouple_     ,&
          BField_, BxCouple_, BzCouple_             ,&
          Wave_, WaveFirstCouple_, WaveLastCouple_
-    use CON_router,  ONLY: IndexPtrType, WeightPtrType
-    use ModConst,    ONLY: cProtonMass
+    use CON_router, ONLY: IndexPtrType, WeightPtrType
+    use ModConst, ONLY: cProtonMass
     integer,intent(in)            :: nPartial, iPutStart, nVar
     type(IndexPtrType), intent(in):: Put
     type(WeightPtrType),intent(in):: W

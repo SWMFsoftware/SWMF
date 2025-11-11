@@ -4,7 +4,7 @@ GM  0 -1  1		CompMap
 PC  0 -1  1		CompMap
 
 #DESCRIPTION
-Param/PARAM.in.test.GMPC.FLEKS.AMR.FASTWAVE.3D: FastWave in periodic PIC with adaptive mesh refinement		StringDescription
+Param/PARAM.in.test.GMPC.FLEKS.AMR.FASTWAVE.3D: FastWave in periodic MHD domain with embedded AMR PIC		StringDescription
 
 #PLANET
 NONE			NamePlanet
@@ -12,16 +12,16 @@ NONE			NamePlanet
 #COUPLE2
 GM			NameComp1
 PC			NameComp2
--1			DnCouple
-1.			DtCouple
+1			DnCouple
+0.5			DtCouple
 
 #COUPLETIME
 GM			NameComp
-F			DoCoupleOnTime
+T			DoCoupleOnTime
 
 #COUPLETIME
 PC			NameComp
-F			DoCoupleOnTime
+T			DoCoupleOnTime
 
 #PROGRESS
 1			DnProgressShort
@@ -126,19 +126,19 @@ P			NameVar
 USERINPUTEND -------------------------------------
 
 #GRID
-8			nRootBlock1
-8			nRootBlock2
-8			nRootBlock3
--160			xMin
- 160  			xMax
--160			yMin
- 160			yMax
--160			zMin
- 160			zMax
+16			nRootBlock1
+16			nRootBlock2
+1			nRootBlock3
+-64			xMin
+ 64  			xMax
+-64			yMin
+ 64			yMax
+-4			zMin
+ 4			zMax
 
 #PICUNIT
 1			xUnitPicSi [m]
-0.5			uUnitPicSi [m/s] Speed of light for the first PIC region
+1.0			uUnitPicSi [m/s] Speed of light for the first PIC region
 
 #PICGRID
 1			nPicGrid
@@ -189,7 +189,7 @@ T			DoSaveInitial
 1			nPlotFile
 z=0 var idl		StringPlot
 -1			DnSavePlot
-20			DtSavePlot
+0.5			DtSavePlot
 0.			DxSavePlot
 {MHD} pic pic_active		NameVars
 g rbody			NamePars
@@ -226,19 +226,33 @@ F			doCorrectDivE
 -25.0			electronChargePerMass ratio (qom)
 
 #PARTICLES
-10			nParticleX per cell in X Region 1
-10			nParticleY per cell in Y Region 1
-10			nParticleZ per cell in Z Region 1
+5			nParticleX per cell in X Region 1
+5			nParticleY per cell in Y Region 1
+5			nParticleZ per cell in Z Region 1
 
 #SAVEPLOT
 1			nPlotFile
 z=0 fluid ascii si		StringPlot
 -1			DnSavePlot
-10			DtSavePlot
+0.5			DtSavePlot
 -1			DxSavePlot
 
 #REGION
 region1			regionName
+box			shape
+-24.0			xMinBox
+24.0			xMaxBox
+-24.0			yMinBox
+24.0			yMaxBox
+-1.0			zMinBox
+1.0			zMaxBox
+
+#REFINEREGION
+0			refineLev
++region1 		refineArea
+
+#REGION
+region2			regionName
 box			shape
 -16.0			xMinBox
 16.0			xMaxBox
@@ -249,33 +263,25 @@ box			shape
 
 #REFINEREGION
 0			refineLev
-+region1 		refineArea
++region2 		refineArea
 
 #GRIDEFFICIENCY
 1.0			gridEfficiency
 
 #RESAMPLING
-F			doReSampling
+T			doReSampling
+0.8			splittingLimit
+1.2			mergingLimit
+2.0			maxWeightRatio
 
-#CONSTANTPPV
-T			isPPVconstant
+#PRESPLITTING
+T			doPreSplitting
 
 #END_COMP PC -----------------------------------------------------------------
 
 #STOP
-0			MaxIter
-0			TimeMax
-
-
-#RUN ##########################################################################
-
-#COMPONENT
-GM			NameComp
-F			UseComp
-
-#STOP
 -1			MaxIter
-50.0			TimeMax
+5.0			TimeMax
 
 
 

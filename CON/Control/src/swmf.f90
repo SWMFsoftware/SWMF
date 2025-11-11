@@ -6,11 +6,11 @@
 !
 program swmf
 
-  use CON_main,      ONLY: initialize, finalize
-  use CON_session,   ONLY: init_session, do_session
-  use CON_io,        ONLY: read_inputs
+  use CON_main, ONLY: initialize, finalize
+  use CON_session, ONLY: init_session, do_session
+  use CON_io, ONLY: read_inputs
   use CON_variables, ONLY: iErrorSwmf
-  use ModMpi,        ONLY: MPI_SUCCESS
+  use ModMpi, ONLY: MPI_SUCCESS
 
   implicit none
 

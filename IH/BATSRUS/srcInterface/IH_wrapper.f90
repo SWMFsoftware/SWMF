@@ -449,7 +449,7 @@ contains
     use IH_ModMain, ONLY: TypeCoordSystem, nVar, NameVarCouple, nG
     use IH_ModPhysics, ONLY:No2Si_V, UnitX_
     use IH_ModGeometry, ONLY: RadiusMin, RadiusMax
-    use IH_BATL_geometry, ONLY: TypeGeometry, IsGenRadius, LogRGen_I
+    use IH_BATL_geometry, ONLY: TypeGeometryBatl, IsGenRadius, LogRGen_I
     use IH_BATL_lib, ONLY: CoordMin_D, CoordMax_D, Particle_I,  &
          rRound0, rRound1
     use IH_ModParticleFieldLine, ONLY: iKindReg, UseParticles
@@ -483,17 +483,17 @@ contains
             UnitX     = No2Si_V(UnitX_), &
             nVar      = nVar,            &
             NameVar   = NameVarCouple,   &
-            TypeGeometry = TypeGeometry, &
+            TypeGeometry = TypeGeometryBatl, &
             Coord1_I  = LogRGen_I,       &
             Coord2_I  = [RadiusMin, RadiusMax])
-    elseif(TypeGeometry=='roundcube')then
+    elseif(TypeGeometryBatl == 'roundcube')then
        call set_coord_system(&
             GridID_   = IH_,             &
             TypeCoord = TypeCoordSystem, &
             UnitX     = No2Si_V(UnitX_), &
             nVar      = nVar,            &
             NameVar   = NameVarCouple,   &
-            TypeGeometry = TypeGeometry, &
+            TypeGeometry = TypeGeometryBatl, &
             Coord2_I  = [rRound0, rRound1])
     else
        call set_coord_system(&
@@ -502,7 +502,7 @@ contains
             UnitX     = No2Si_V(UnitX_), &
             nVar      = nVar,            &
             NameVar   = NameVarCouple,   &
-            TypeGeometry = TypeGeometry, &
+            TypeGeometry = TypeGeometryBatl, &
             Coord2_I  = [RadiusMin, RadiusMax])
     end if
 
@@ -1689,12 +1689,11 @@ contains
        NameVar, nVarData, nPoint, Data_VI, iPoint_I, Pos_DI)
 
     use IH_BATL_lib, ONLY: &
-         nDim, nBlock, MaxBlock, Unused_B, nI, nJ, nK, Xyz_DGB, &
+         nDim, nBlock, MaxBlock, Unused_B, nI, nJ, nK, Xyz_DGB, Used_GB, &
          iTest, jTest, kTest, iBlockTest
     use IH_ModPhysics, ONLY: &
          No2Si_V, Si2No_V, UnitX_, UnitRho_, UnitN_, UnitRhoU_, &
          UnitEnergyDens_, UnitT_
-    use IH_ModGeometry, ONLY: Used_GB
     use IH_ModAdvance, ONLY: ExtraSource_ICB
 
     character(len=*), intent(inout):: NameVar  ! List of variables

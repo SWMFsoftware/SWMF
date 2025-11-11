@@ -9,14 +9,14 @@ module CON_main
   use CON_world
   use CON_comp_param
   use CON_wrapper
-  use CON_io, ONLY : SaveRestart, save_restart, IsRestartSaved
+  use CON_io, ONLY: SaveRestart, save_restart, IsRestartSaved
 
   use CON_time
   use CON_variables, ONLY: IsStandAlone, iErrorSwmf, lVerbose, DnTiming
   use CON_session
   use ModUtilities, ONLY: remove_file, touch_file
   use ModPlanetConst, ONLY: init_planet_const
-  use CON_planet,     ONLY: set_planet_defaults
+  use CON_planet, ONLY: set_planet_defaults
   use ModMpi, ONLY: MPI_WTIME, MPI_allreduce, MPI_INTEGER, MPI_MIN
 
   implicit none

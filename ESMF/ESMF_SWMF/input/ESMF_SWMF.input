@@ -62,7 +62,7 @@ SWMF_petlist_bounds: 1 -1
 SWMF_attributes::
 ::
 RIM_model: rim
-RIM_petlist_bounds: -2 -1
+RIM_petlist_bounds: 1 2
 RIM_attributes::
 ::
 #
@@ -71,6 +71,7 @@ RIM_attributes::
 runSeq::
 @2
   IPE -> RIM :remapMethod=bilinear:unmappedaction=ignore:zeroregion=select:srcTermProcessing=0:termOrder:srcseq
+  RIM -> IPE :remapMethod=bilinear:unmappedaction=ignore:zeroregion=select:srcTermProcessing=0:termOrder:srcseq
   RIM
   SWMF
   IPE

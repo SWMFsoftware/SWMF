@@ -10,4 +10,18 @@
      - standard_name: Ped
        alias: pedersen_conductance
        canonical_units: mho 
-       description: IPE export 
+       description: IPE export
+# Warning: The units for the following fields are set to 1 as placeholders!
+     - standard_name: jFac
+       canonical_units: 1
+       description: RIM export
+     - standard_name: Epot
+       canonical_units: 1
+       description: RIM export
+     - standard_name: Aver 
+       canonical_units: 1
+       description: RIM export
+     - standard_name: Diff
+       canonical_units: 1
+       description: RIM export
+ 

@@ -11,7 +11,7 @@
 module CON_couple_all
 
   use CON_comp_param
-  use CON_world,   ONLY: use_comp, is_proc, i_proc, lComp_I
+  use CON_world, ONLY: use_comp, is_proc, i_proc, lComp_I
   use CON_coupler, ONLY: &
        iCompSourceCouple, iCompTargetCouple, &
        iVar_V, iVar_VCC, nVarCouple, nVarCouple_CC, &
@@ -23,17 +23,16 @@ module CON_couple_all
   use ModUtilities, ONLY: CON_set_do_test, CON_stop
 
   !^CMP IF GM BEGIN
-  use CON_couple_ee_gm        !^CMP IF EE
-  use CON_couple_ih_gm        !^CMP IF IH
-  use CON_couple_sc_gm        !^CMP IF SC
   use CON_couple_gm_ie        !^CMP IF IE
+  use CON_couple_gm_ih        !^CMP IF IH
   use CON_couple_gm_im        !^CMP IF IM
   use CON_couple_gm_ps        !^CMP IF PS
   use CON_couple_gm_pt        !^CMP IF PT
   use CON_couple_gm_pc        !^CMP IF PC
   use CON_couple_gm_pw        !^CMP IF PW
   use CON_couple_gm_rb        !^CMP IF RB
-  use CON_couple_ua_gm        !^CMP IF UA
+  use CON_couple_gm_sc        !^CMP IF SC
+  use CON_couple_gm_ua        !^CMP IF UA
   !^CMP END GM
   !^CMP IF IE BEGIN
   use CON_couple_ie_im        !^CMP IF IM
@@ -89,7 +88,6 @@ contains
     if(use_comp(SC_).and.use_comp(GM_))call couple_sc_gm_init  !^CMP IF IH
     if(use_comp(GM_).and.use_comp(PT_))call couple_gm_pt_init  !^CMP IF PT
     if(use_comp(GM_).and.use_comp(PC_))call couple_gm_pc_init  !^CMP IF PC
-    if(use_comp(EE_).and.use_comp(GM_))call couple_ee_gm_init  !^CMP IF EE
     if(use_comp(UA_).and.use_comp(GM_))call couple_ua_gm_init  !^CMP IF UA
     !                                                     ^CMP END GM
     !                                                     ^CMP IF IE BEGIN
@@ -185,8 +183,6 @@ contains
     select case(iCompSource)
     case(EE_)                                 !^CMP IF EE BEGIN
        select case(iCompTarget)
-       case(GM_)                              !^CMP IF GM
-          call couple_ee_gm(TimeSimulation)   !^CMP IF GM
        case(SC_)                              !^CMP IF SC
           call couple_ee_sc(TimeSimulation)   !^CMP IF SC
        case default
@@ -247,8 +243,6 @@ contains
        end select                                  !^CMP END OH
     case(GM_)                                 !^CMP IF GM BEGIN
        select case(iCompTarget)
-       case(EE_)                                   !^CMP IF EE
-          call couple_gm_ee(TimeSimulation)        !^CMP IF EE
        case(IE_)                                   !^CMP IF IE
           call couple_gm_ie(TimeSimulation)        !^CMP IF IE
        case(IM_)                                   !^CMP IF IM

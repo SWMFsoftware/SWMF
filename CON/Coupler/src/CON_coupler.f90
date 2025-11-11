@@ -571,8 +571,8 @@ contains
     ! revision history:
     ! Feb 2011 - R. Oran - initial version.
 
-    use ModProcessVarName,  ONLY: process_var_name, nVarMax
-    use ModUtilities,       ONLY: split_string, join_string
+    use ModProcessVarName, ONLY: process_var_name, nVarMax
+    use ModUtilities, ONLY: split_string, join_string
 
     integer, intent(in):: iCompSource, iCompTarget
     character(len=1500):: NameVarSource, NameVarTarget

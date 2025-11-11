@@ -30,7 +30,7 @@ module CON_wrapper
   use CON_world
   use CON_comp_param
   use CON_comp_info
-  use ModMpi, ONLY : MPI_WTIME
+  use ModMpi, ONLY: MPI_WTIME
   use ModIoUnit, ONLY: UNITTMP_
   use CON_time, ONLY: nStep, tSimulation
   use ModReadParam
