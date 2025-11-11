@@ -25,6 +25,7 @@ module ESMF_grid_comp
   use IPE_grid_comp,  ONLY: ipe_set_services     => set_services
 #endif
   use RIM_grid_comp,  ONLY: rim_set_services     => set_services
+  use CON_cpl_comp,   ONLY: con_set_services     => set_services
 
   implicit none
   private
@@ -32,6 +33,7 @@ module ESMF_grid_comp
   public:: ESMF_set_services
 
   type(ESMF_GridComp), save :: IpeComp, SwmfComp, RimComp
+  type(ESMF_CplComp) , save :: ConComp
 
 contains
   !============================================================================
@@ -102,6 +104,7 @@ contains
     integer, allocatable :: petList(:)
     character(len=32) :: model, prefix
     character(len=32), allocatable :: compLabels(:)
+    integer :: ipeCompId, rimCompId
     !--------------------------------------------------------------------------
     call write_log("ESMF_gric_comp set_model_services called")
     iError = ESMF_FAILURE
@@ -162,16 +165,30 @@ contains
           call NUOPC_DriverAddComp(gComp, trim(prefix), &
                ipe_set_services, petlist=petList, comp=IpeComp, rc=iError)
           if(iError /= ESMF_SUCCESS)call my_error('NUOPC_DriverAddComp - IPE')
+          ipeCompId = i
        end if
        ! RIM
        if (trim(model) == 'rim') then
           call NUOPC_DriverAddComp(gComp, trim(prefix), &
                rim_set_services, petlist=petList, comp=RimComp, rc=iError)
           if(iError /= ESMF_SUCCESS)call my_error('NUOPC_DriverAddComp - RIM')
+          rimCompId = i
        end if
        ! Clear memory
        deallocate(petList)
     end do
+
+    ! Add connector for IPE -> RIM
+    call NUOPC_DriverAddComp(gComp, srcCompLabel=trim(compLabels(ipeCompId)), &
+      dstCompLabel=trim(compLabels(rimCompId)), &
+      compSetServicesRoutine=con_set_services, comp=conComp, rc=iError)
+    if(iError /= ESMF_SUCCESS)call my_error('NUOPC_DriverAddComp - CON (IPE -> RIM)')
+
+    ! Add connector for RIM -> IPE
+    call NUOPC_DriverAddComp(gComp, srcCompLabel=trim(compLabels(rimCompId)), &
+      dstCompLabel=trim(compLabels(ipeCompId)), &
+      compSetServicesRoutine=con_set_services, comp=conComp, rc=iError)
+    if(iError /= ESMF_SUCCESS)call my_error('NUOPC_DriverAddComp - CON (RIM -> IPE)')
 
     iError = ESMF_SUCCESS
     call write_log("ESMF_grid_comp set_model_services finished")
