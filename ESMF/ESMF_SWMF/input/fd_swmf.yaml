@@ -3,6 +3,7 @@
    institution: National ESPC, CSC & MCL Working Groups
    description: Community-based dictionary for shared coupling fields
    entries:
+# RIM export
      - standard_name: Hall
        alias: hall_conductance 
        canonical_units: mho
@@ -24,4 +25,71 @@
      - standard_name: Diff
        canonical_units: 1
        description: RIM export
- 
+# IPE import
+     - standard_name: temp_neutral
+       canonical_units: 1
+       description: IPE import
+     - standard_name: eastward_wind_neutral
+       canonical_units: 1
+       description: IPE import
+     - standard_name: northward_wind_neutral
+       canonical_units: 1
+       description: IPE import
+     - standard_name: upward_wind_neutral
+       canonical_units: 1
+       description: IPE import
+     - standard_name: O_Density
+       canonical_units: 1
+       description: IPE import
+     - standard_name: O2_Density
+       canonical_units: 1
+       description: IPE import
+     - standard_name: N2_Density
+       canonical_units: 1
+       description: IPE import
+     - standard_name: O_plus_density
+       canonical_units: 1
+# IPE export
+       description: IPE export
+     - standard_name: H_plus_density
+       canonical_units: 1
+       description: IPE export
+     - standard_name: He_plus_density
+       canonical_units: 1
+       description: IPE export
+     - standard_name: N_plus_density
+       canonical_units: 1
+       description: IPE export
+     - standard_name: NO_plus_density
+       canonical_units: 1
+       description: IPE export
+     - standard_name: O2_plus_density
+       canonical_units: 1
+       description: IPE export
+     - standard_name: N2_plus_density
+       canonical_units: 1
+       description: IPE export
+     - standard_name: O_plus_2D_density
+       canonical_units: 1
+       description: IPE export
+     - standard_name: O_plus_2P_density
+       canonical_units: 1
+       description: IPE export
+     - standard_name: ion_temperature
+       canonical_units: 1
+       description: IPE export
+     - standard_name: electron_temperature
+       canonical_units: 1
+       description: IPE export
+     - standard_name: electron_density
+       canonical_units: 1
+       description: IPE export
+     - standard_name: eastward_exb_velocity
+       canonical_units: 1
+       description: IPE export
+     - standard_name: northward_exb_velocity
+       canonical_units: 1
+       description: IPE export
+     - standard_name: upward_exb_velocity
+       canonical_units: 1
+       description: IPE export
