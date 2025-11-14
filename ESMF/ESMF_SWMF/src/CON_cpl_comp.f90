@@ -104,7 +104,8 @@ contains
 
     ! Perform interpolation
     call ESMF_FieldBundleRegrid(srcFields, dstFields, &
-      routehandle=rh, rc=iError)
+      routehandle=rh, zeroregion=ESMF_REGION_SELECT, &
+      termorderflag=(/ESMF_TERMORDER_SRCSEQ/), rc=iError)
     if(iError /= ESMF_SUCCESS) call my_error('ESMF_FieldBundleRegrid failed')
 
     ! Release Route Handle
