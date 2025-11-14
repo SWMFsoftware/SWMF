@@ -350,18 +350,13 @@ contains
     deallocate(Data_VII, stat=iError)
     if(iError /= 0) call my_error('deallocate(Data_VII)')
 
-    if(.false.) then
-       ! Update the coordinates based on the current time. Still does not
-       ! work because of the ESMF coupler limitations.
-
-       ! Potential problem: the time used for the coordinate transformation
-       ! here will be different from the time used in the next coupling step, 
-       ! so the verification test may fail without special care.   
-       call ESMF_FieldGet(Field, grid=Grid, rc=iError)
-       if(iError /= ESMF_SUCCESS) call my_error('ESMF_FieldGetGrid')
-
-       call update_coordinates(Grid, Clock, iError)       
-    end if
+    ! Update the corner coordinates based on the current time
+    ! Potential problem: the time used for the coordinate transformation
+    ! here will be different from the time used in the next coupling step,
+    ! so the verification test may fail without special care.
+    !call ESMF_FieldGet(Field, grid=Grid, rc=iError)
+    !if(iError /= ESMF_SUCCESS) call my_error('ESMF_FieldGetGrid')
+    !call update_coordinates(Grid, Clock, iError)
 
     call write_log("RIM_grid_comp:run routine returned")
 
