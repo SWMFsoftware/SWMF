@@ -23,15 +23,16 @@ OBJECTS = \
 	ESMF_grid_comp.o \
 	SWMF_grid_comp.o \
 	IPE_grid_comp.o \
-	RIM_grid_comp.o
+	RIM_grid_comp.o \
+	CON_cpl_comp.o
 else
 OBJECTS = \
-        ESMF_driver.o \
-        ESMFSWMF_variables.o \
-        ESMF_grid_comp.o \
-        SWMF_grid_comp.o \
-        RIM_grid_comp.o \
-        CON_cpl_comp.o
+	ESMF_driver.o \
+	ESMFSWMF_variables.o \
+	ESMF_grid_comp.o \
+	SWMF_grid_comp.o \
+	RIM_grid_comp.o \
+	CON_cpl_comp.o
 INCL_EXTRA += -I$(ipe_ROOT)/include
 IPELIBS = -L$(ipe_ROOT)/lib -lipe -lipm -lshared \
           -L$(comio_ROOT)/lib -lcomio \

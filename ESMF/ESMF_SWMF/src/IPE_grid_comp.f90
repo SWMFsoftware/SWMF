@@ -110,6 +110,8 @@ contains
     call write_log("IPE_grid_comp:init_advertise routine called")
     iError = ESMF_FAILURE
 
+    ! Note that NameFieldImport_V and NameFieldExport_V are defined for RIM
+    ! RIM export is IPE import and RIM import is IPE export
     do n = 1, nVarImport
        ! IPE -> RIM coupling
        call NUOPC_Advertise(ExportState, standardName=trim(NameFieldImport_V(n)), &
@@ -191,12 +193,15 @@ contains
     end do
     write(*,*)'IPE grid: Lat_I(MinLat,MinLat+1,MaxLat)=', Lat_I([MinLat, MinLat+1, MaxLat])
 
+    ! Note that NameFieldImport_V and NameFieldExport_V are defined for RIM
+    ! RIM export is IPE import and RIM import is IPE export
+
     ! Add fields to the export state
-    call add_fields(Grid, ExportState, IsFromEsmf=.true., iError=iError)
+    call add_fields(Grid, ExportState, nVarImport, NameFieldImport_V, iError=iError)
     if(iError /= ESMF_SUCCESS) call my_error("add_fields")
 
     ! Add fields to the import state
-    call add_fields(Grid, ImportState, IsFromEsmf=.false., iError=iError)
+    call add_fields(Grid, ImportState, nVarExport, NameFieldExport_V, iError=iError)
     if(iError /= ESMF_SUCCESS) call my_error("add_fields")
 
     iError = ESMF_SUCCESS
@@ -301,7 +306,7 @@ contains
     ! the fields of the ExportState
     if(DoTest)then
        ! Get pointers to the MHD variables in the export state
-!!! This could be done in the initialization ?!
+       !!! This could be done in the initialization ?!
        nullify(Ptr_II)
        call ESMF_StateGet(ExportState, itemName='Hall', field=Field, rc=iError)
        if(iError /= ESMF_SUCCESS) call my_error("ESMF_StateGet for Hall")
@@ -354,7 +359,7 @@ contains
     end do
 
     ! Clean memory
-    deallocate(Data_VII, stat=iError
+    deallocate(Data_VII, stat=iError)
     if(iError /= 0) call my_error('deallocate(Data_VII)')
 
     iError = ESMF_SUCCESS
