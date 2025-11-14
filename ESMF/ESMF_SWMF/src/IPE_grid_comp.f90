@@ -10,8 +10,9 @@ module IPE_grid_comp
   use NUOPC_Model, only: model_label_Advance => label_Advance
   use NUOPC_Model, only: model_label_Finalize => label_Finalize
 
-  use ESMFSWMF_variables, ONLY: add_fields, nVarEsmf, NameFieldEsmf_V, &
-       nVarSwmf, NameFieldSwmf_V, DoTest, FieldTest_V, CoordCoefTest, &
+  use ESMFSWMF_variables, ONLY: &
+       NameFieldImport_V, nVarImport, NameFieldExport_V, nVarExport, &
+       add_fields, DoTest, FieldTest_V, CoordCoefTest, &
        dHallPerDtTest, write_log, write_error
 
   implicit none
@@ -109,16 +110,16 @@ contains
     call write_log("IPE_grid_comp:init_advertise routine called")
     iError = ESMF_FAILURE
 
-    do n = 1, nVarEsmf
+    do n = 1, nVarImport
        ! IPE -> RIM coupling
-       call NUOPC_Advertise(ExportState, standardName=trim(NameFieldEsmf_V(n)), &
+       call NUOPC_Advertise(ExportState, standardName=trim(NameFieldImport_V(n)), &
             TransferOfferGeomObject='will provide', rc=iError)
        if(iError /= ESMF_SUCCESS) call my_error('NUOPC_Advertise')
     end do
 
-    do n = 1, nVarSwmf
+    do n = 1, nVarExport
        ! RIM -> IPE coupling
-       call NUOPC_Advertise(ImportState, standardName=trim(NameFieldSwmf_V(n)), &
+       call NUOPC_Advertise(ImportState, standardName=trim(NameFieldExport_V(n)), &
             TransferOfferGeomObject='will provide', rc=iError)
        if(iError /= ESMF_SUCCESS) call my_error('NUOPC_Advertise')
     end do
@@ -229,10 +230,10 @@ contains
     call ESMF_TimeIntervalGet(TimeStep, s=iCoupleFreq, rc=iError)
     if(iError /= ESMF_SUCCESS)call my_error('ESMF_TimeIntervalGet')
 
-    do iVar = 1, nVarEsmf
+    do iVar = 1, nVarImport
        ! Get pointers to the variables in the export state
        nullify(Ptr_II)
-       NameField = NameFieldEsmf_V(iVar)
+       NameField = NameFieldImport_V(iVar)
        call ESMF_StateGet(ExportState, itemName=NameField, field=Field, &
             rc=iError)
        if(iError /= ESMF_SUCCESS) call my_error("ESMF_StateGet "//NameField)
@@ -325,12 +326,12 @@ contains
     call NUOPC_ModelGet(gComp, importState=ImportState, rc=iError)
     if(iError /= ESMF_SUCCESS) call my_error('NUOPC_ModelGet')
 
-    allocate(Data_VII(nVarSwmf,MinLon:MaxLon,MinLat:MaxLat), stat=iError)
+    allocate(Data_VII(nVarExport,MinLon:MaxLon,MinLat:MaxLat), stat=iError)
     if(iError /= 0) call my_error('allocate(Data_VII)')
 
-    do iVar = 1, nVarSwmf
+    do iVar = 1, nVarExport
        nullify(Ptr_II)
-       NameField = NameFieldSwmf_V(iVar)
+       NameField = NameFieldExport_V(iVar)
        call ESMF_StateGet(ImportState, itemName=NameField, &
             field=Field, rc=iError)
        if(iError /= ESMF_SUCCESS) call my_error("ESMF_StateGet")
@@ -352,6 +353,9 @@ contains
        end do; end do
     end do
 
+    ! Clean memory
+    deallocate(Data_VII, stat=iError
+    if(iError /= 0) call my_error('deallocate(Data_VII)')
 
     iError = ESMF_SUCCESS
     call write_log("IPE_grid_comp run returned")
