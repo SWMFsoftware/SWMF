@@ -94,7 +94,8 @@ contains
       dstFields=dstFields, rc=iError)
     if(iError /= ESMF_SUCCESS) call my_error('NUOPC_ConnectorGet failed')
 
-    ! Compute Route Handle routine for the Connector Component    
+    ! Compute Route Handle routine for the Connector Component
+    ! RIM grid is changing so we need to create again
     call ESMF_FieldBundleRegridStore(srcFields, dstFields, routehandle=rh, &
       regridmethod=ESMF_REGRIDMETHOD_BILINEAR, srcTermProcessing=srcTermProcessing, &
       ignoreDegenerate=ignoreDegenerate, unmappedaction=ESMF_UNMAPPEDACTION_IGNORE, &
@@ -105,6 +106,10 @@ contains
     call ESMF_FieldBundleRegrid(srcFields, dstFields, &
       routehandle=rh, rc=iError)
     if(iError /= ESMF_SUCCESS) call my_error('ESMF_FieldBundleRegrid failed')
+
+    ! Release Route Handle
+    call ESMF_FieldBundleRegridRelease(rh, rc=iError)
+    if(iError /= ESMF_SUCCESS) call my_error('ESMF_FieldBundleRegridRelease failed')
 
     call write_log("CON_cpl_comp:execute_rh routine returned")
 

@@ -14,7 +14,7 @@ module RIM_grid_comp
   use NUOPC_Model, only: model_label_Finalize => label_Finalize
 
   use ESMFSWMF_variables, ONLY: &
-       NameFieldEsmf_V, nVarEsmf, NameFieldSwmf_V, nVarSwmf, &
+       NameFieldImport_V, nVarImport, NameFieldExport_V, nVarExport, &
        add_fields, write_log, write_error, &
        DoTest, FieldTest_V, CoordCoefTest, dHallPerDtTest
 
@@ -103,18 +103,18 @@ contains
     call write_log("RIM_grid_comp:init_advertise routine called")
     iError = ESMF_FAILURE
 
-    do n = 1, nVarEsmf
+    do n = 1, nVarImport
        ! IPE -> RIM coupling 
-       call NUOPC_Advertise(ImportState, standardName=trim(NameFieldEsmf_V(n)), &
+       call NUOPC_Advertise(ImportState, standardName=trim(NameFieldImport_V(n)), &
             TransferOfferGeomObject='will provide', rc=iError)
-       if(iError /= ESMF_SUCCESS) call my_error('NUOPC_Advertise')
+       if(iError /= ESMF_SUCCESS) call my_error('NUOPC_Advertise - import')
     end do
 
-    do n = 1, nVarSwmf
+    do n = 1, nVarExport
        ! RIM -> IPE coupling
-       call NUOPC_Advertise(ExportState, standardName=trim(NameFieldSwmf_V(n)), &
+       call NUOPC_Advertise(ExportState, standardName=trim(NameFieldExport_V(n)), &
             TransferOfferGeomObject='will provide', rc=iError)
-       if(iError /= ESMF_SUCCESS) call my_error('NUOPC_Advertise')
+       if(iError /= ESMF_SUCCESS) call my_error('NUOPC_Advertise - export')
     end do
 
     iError = ESMF_SUCCESS
@@ -154,18 +154,20 @@ contains
          name="RIM grid", rc=iError)
     if(iError /= ESMF_SUCCESS)call my_error('ESMF_GridCreateNoPeriDim')
 
+    ! Add corner coordinates to the grid
     call ESMF_GridAddCoord(Grid, staggerloc=ESMF_STAGGERLOC_CORNER, rc=iError)
     if(iError /= ESMF_SUCCESS)call my_error('ESMF_GridAddCoord')
 
+    ! Sets the corner coordinates based on the initial time
     call update_coordinates(Grid, ExternalClock, iError)
 
     ! Add fields to the RIM import state
-    call add_fields(Grid, ImportState, IsFromEsmf=.true., iError=iError)
-    if(iError /= ESMF_SUCCESS) call my_error('add_fields')
+    call add_fields(Grid, ImportState, nVarImport, NameFieldImport_V, iError=iError)
+    if(iError /= ESMF_SUCCESS) call my_error('add_fields - import')
 
     ! Add fields to the RIM export state
-    call add_fields(Grid, ExportState, IsFromEsmf=.false., iError=iError)
-    if(iError /= ESMF_SUCCESS) call my_error('add_fields')
+    call add_fields(Grid, ExportState, nVarExport, NameFieldExport_V, iError=iError)
+    if(iError /= ESMF_SUCCESS) call my_error('add_fields - export')
 
     iError = ESMF_SUCCESS
     call write_log("RIM_grid_comp:init_realize routine returned")
@@ -181,7 +183,7 @@ contains
     type(ESMF_Field):: Field
     type(ESMF_Grid):: Grid
     real(ESMF_KIND_R8), pointer :: Ptr_II(:,:)
-    integer:: i, j, iVar
+    integer:: i, j, iVar, itemCount
     character(len=4):: NameField
 
     real(ESMF_KIND_R8):: Coef
@@ -191,48 +193,53 @@ contains
     call NUOPC_ModelGet(gComp, exportState=ExportState, rc=iError)
     if(iError /= ESMF_SUCCESS) call my_error("NUOPC_ModelGet")
 
-    do iVar = 1, nVarSwmf
+    do iVar = 1, nVarExport
        ! Get pointers to the variables in the export state
        nullify(Ptr_II)
-       NameField = NameFieldSwmf_V(iVar)
-       call ESMF_StateGet(ExportState, itemName=NameField, field=Field, &
+       NameField = NameFieldExport_V(iVar)
+
+       ! Check field is available or not
+       ! Export fields may not be defined in case of uni-directional coupling
+       call ESMF_StateGet(ExportState, itemSearch=trim(NameField), &
+          itemCount=itemCount, rc=iError)
+ 
+       if (itemCount /= 0) then
+          call ESMF_StateGet(ExportState, itemName=NameField, field=Field, &
             rc=iError)
-       if(iError /= ESMF_SUCCESS) call my_error("ESMF_StateGet "//NameField)
+          if(iError /= ESMF_SUCCESS) call my_error("ESMF_StateGet "//NameField)
 
-       call ESMF_FieldGet(Field, farrayPtr=Ptr_II, rc=iError)
-       if(iError /= ESMF_SUCCESS) call my_error("ESMF_FieldGet "//NameField)      
+          call ESMF_FieldGet(Field, farrayPtr=Ptr_II, rc=iError)
+          if(iError /= ESMF_SUCCESS) call my_error("ESMF_FieldGet "//NameField)
 
-       call ESMF_FieldGet(Field, grid=Grid, rc=iError)
-       if(iError /= ESMF_SUCCESS) call my_error('ESMF_FieldGet Grid')
+          call ESMF_FieldGet(Field, grid=Grid, rc=iError)
+          if(iError /= ESMF_SUCCESS) call my_error('ESMF_FieldGet Grid')
 
-       nullify(Lon_I)
-       call ESMF_GridGetCoord(Grid, CoordDim=1, &
+          nullify(Lon_I)
+          call ESMF_GridGetCoord(Grid, CoordDim=1, &
             staggerLoc=ESMF_STAGGERLOC_CORNER, farrayPtr=Lon_I, rc=iError)
-       if(iError /= ESMF_SUCCESS)call my_error('ESMF_GridGetCoord 1')
+          if(iError /= ESMF_SUCCESS) call my_error('ESMF_GridGetCoord 1')
 
-       nullify(Lat_I)
-       call ESMF_GridGetCoord(Grid, CoordDim=2, &
+          nullify(Lat_I)
+          call ESMF_GridGetCoord(Grid, CoordDim=2, &
             staggerLoc=ESMF_STAGGERLOC_CORNER, farrayPtr=Lat_I, rc=iError)
-       if(iError /= ESMF_SUCCESS)call my_error('ESMF_GridGetCoord 2')
+          if(iError /= ESMF_SUCCESS) call my_error('ESMF_GridGetCoord 2')
 
-       ! Get dimension extents
-       MinLon = lbound(Ptr_II, dim=1)
-       MaxLon = ubound(Ptr_II, dim=1)
-       MinLat = lbound(Ptr_II, dim=2)
-       MaxLat = ubound(Ptr_II, dim=2)
+          ! Get dimension extents
+          MinLon = lbound(Ptr_II, dim=1)
+          MaxLon = ubound(Ptr_II, dim=1)
+          MinLat = lbound(Ptr_II, dim=2)
+          MaxLat = ubound(Ptr_II, dim=2)
 
-       if(iError /= ESMF_SUCCESS) RETURN
+          Coef = 10**iVar
 
-       Coef = 10**iVar
-
-       ! Add coordinate dependence
-       ! With abs(Lon)*abs(Lat) dependence, the coupling does not pass
-       ! correct values. To be investigated.
-       do j = MinLat, MaxLat; do i = MinLon, MaxLon
-          Ptr_II(i,j) = Lon_I(i)*Lat_I(j)*Coef
-       end do; end do
+          ! Add coordinate dependence
+          ! With abs(Lon)*abs(Lat) dependence, the coupling does not pass
+          ! correct values. To be investigated.
+          do j = MinLat, MaxLat; do i = MinLon, MaxLon
+             Ptr_II(i,j) = Lon_I(i)*Lat_I(j)*Coef
+          end do; end do
+       end if
     end do ! iVar
-
 
     iError = ESMF_SUCCESS
     call write_log("RIM_grid_comp:data_init routine returned")    
@@ -291,13 +298,13 @@ contains
     if(iError /= ESMF_SUCCESS) call my_error('ESMF_TimeGet ISO')
 
     ! Obtain pointer to the data obtained from the ESMF component
-    allocate(Data_VII(nVarEsmf,MinLon:MaxLon,MinLat:MaxLat), stat=iError)
+    allocate(Data_VII(nVarImport,MinLon:MaxLon,MinLat:MaxLat), stat=iError)
     if(iError /= 0) call my_error('allocate(Data_VII)')
 
     ! Copy fields into an array
-    do iVar = 1, nVarEsmf
+    do iVar = 1, nVarImport
        nullify(Ptr_II)
-       NameField = NameFieldEsmf_V(iVar)
+       NameField = NameFieldImport_V(iVar)
        call ESMF_StateGet(ImportState, itemName=NameField, &
             field=Field, rc=iError)
        if(iError /= ESMF_SUCCESS) call my_error("ESMF_StateGet")
@@ -309,6 +316,7 @@ contains
 
        Data_VII(iVar,:,:) = Ptr_II
     end do
+
     if(DoTest)then
        write(*,*)'SWMF_GridComp shape of Ptr =', shape(Ptr_II)
        ! Do not check the poles
@@ -335,8 +343,10 @@ contains
        write(*,*)'SWMF_GridComp value of Data(MidLon,MidLat)=', &
             Data_VII(:,(MinLon+MaxLon)/2,(MinLat+MaxLat)/2)
     end if
-    deallocate(Data_VII)
 
+    ! Clean memory
+    deallocate(Data_VII, stat=iError)
+    if(iError /= 0) call my_error('deallocate(Data_VII)')
 
     if(.false.) then
        ! Update the coordinates based on the current time. Still does not
