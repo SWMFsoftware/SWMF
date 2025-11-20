@@ -11,9 +11,10 @@ module IPE_grid_comp
   use NUOPC_Model, only: model_label_Finalize => label_Finalize
 
   use ESMFSWMF_variables, ONLY: &
-       NameFieldImport_V, nVarImport, NameFieldExport_V, nVarExport, &
+       NameFieldIpe2Rim_V, nVarIpe2Rim, NameFieldRim2Ipe_V, nVarRim2Ipe, &
        add_fields, DoTest, FieldTest_V, CoordCoefTest, &
-       dHallPerDtTest, write_log, write_error
+       dHallPerDtTest, write_log, write_error, get_coords, &
+       update_coordinates, DoShiftDataCoupling, get_sm_to_mag_angle
 
   implicit none
   private
@@ -47,6 +48,10 @@ module IPE_grid_comp
        44.9776, 48.0138, 51.0045, 53.9323, 56.7835, 59.5484, 62.2208,  &
        64.7977, 67.2793, 69.6682, 71.9690, 74.1877, 76.3318, 78.4095,  &
        80.4296, 82.4013, 84.3344, 86.2386, 88.1238, 90.0000 ]
+
+  real(ESMF_KIND_R8):: LonIpe_I(nLon)
+
+  real(ESMF_KIND_R8):: dPhiMag2Sm
 
   ! Coupling interval
   integer :: iCoupleFreq
@@ -112,16 +117,16 @@ contains
 
     ! Note that NameFieldImport_V and NameFieldExport_V are defined for RIM
     ! RIM export is IPE import and RIM import is IPE export
-    do n = 1, nVarImport
+    do n = 1, nVarIpe2Rim
        ! IPE -> RIM coupling
-       call NUOPC_Advertise(ExportState, standardName=trim(NameFieldImport_V(n)), &
+       call NUOPC_Advertise(ExportState, standardName=trim(NameFieldIpe2Rim_V(n)), &
             TransferOfferGeomObject='will provide', rc=iError)
        if(iError /= ESMF_SUCCESS) call my_error('NUOPC_Advertise')
     end do
 
-    do n = 1, nVarExport
+    do n = 1, nVarRim2Ipe
        ! RIM -> IPE coupling
-       call NUOPC_Advertise(ImportState, standardName=trim(NameFieldExport_V(n)), &
+       call NUOPC_Advertise(ImportState, standardName=trim(NameFieldRim2Ipe_V(n)), &
             TransferOfferGeomObject='will provide', rc=iError)
        if(iError /= ESMF_SUCCESS) call my_error('NUOPC_Advertise')
     end do
@@ -139,7 +144,7 @@ contains
     type(ESMF_Clock)   :: Clock
     integer, intent(out):: iError
 
-    type(ESMF_Grid):: Grid
+    type(ESMF_Grid):: ExportGrid, ImportGrid
     type(ESMF_Field):: Field
     type(ESMF_VM):: Vm
     real(ESMF_KIND_R8), pointer :: Ptr_II(:,:)
@@ -157,51 +162,68 @@ contains
     if(iError /= ESMF_SUCCESS)call my_error('ESMF_VMGet')
 
     ! Create Lon-Lat grid where -180<=Lon<=180-dLon, -90<=Lat<=90
-    Grid = ESMF_GridCreateNoPeriDim(maxIndex=[nLon-1, nLat-1], &
+    ExportGrid = ESMF_GridCreateNoPeriDim(maxIndex=[nLon-1, nLat-1], &
          regDecomp=[1, petCount], coordDep1=[1], coordDep2=[2], &
          coordSys=ESMF_COORDSYS_CART, indexflag=ESMF_INDEX_GLOBAL, &
          name="dynamo grid", rc=iError)
     if(iError /= ESMF_SUCCESS)call my_error('ESMF_GridCreateNoPeriDim')
 
-    call ESMF_GridAddCoord(Grid, staggerloc=ESMF_STAGGERLOC_CORNER, rc=iError)
+    call ESMF_GridAddCoord(ExportGrid, staggerloc=ESMF_STAGGERLOC_CORNER, rc=iError)
     if(iError /= ESMF_SUCCESS)call my_error('ESMF_GridAddCoord')
 
-    nullify(Lon_I)
-    call ESMF_GridGetCoord(Grid, CoordDim=1, &
-         staggerLoc=ESMF_STAGGERLOC_CORNER, farrayPtr=Lon_I, rc=iError)
-    if(iError /= ESMF_SUCCESS)call my_error('ESMF_GridGetCoord 1')
-    write(*,*)'IPE size(Lon_I)=', size(Lon_I)
-
-    nullify(Lat_I)
-    call ESMF_GridGetCoord(Grid, CoordDim=2, &
-         staggerLoc=ESMF_STAGGERLOC_CORNER, farrayPtr=Lat_I, rc=iError)
-    if(iError /= ESMF_SUCCESS)call my_error('ESMF_GridGetCoord 2')
-    write(*,*)'IPE size(Lat_I)=', size(Lat_I)
+    call get_coords(ExportGrid, Lon_I, Lat_I, iError)
+    if(iError /= ESMF_SUCCESS)call my_error('get_coords')
 
     ! Uniform longitude grid from -180 to 180
     MinLon = lbound(Lon_I, dim=1)
     MaxLon = ubound(Lon_I, dim=1)
     do i = MinLon, MaxLon
-       Lon_I(i) = (i-1)*(360.0/(nLon-1)) - 180
+       LonIpe_I(i) = (i-1)*(360.0/(nLon-1)) - 180
     end do
+    Lon_I = LonIpe_I
     write(*,*)'IPE grid: Lon_I(MinLon,MinLon+1,MaxLon)=', Lon_I([MinLon, MinLon+1, MaxLon])
+
     ! Nonuniform latitude grid
     MinLat = lbound(Lat_I, dim=1)
     MaxLat = ubound(Lat_I, dim=1)
-    do j = MinLat, MaxLat
-       Lat_I(j) = LatIpe_I(j)
-    end do
+    Lat_I = LatIpe_I
     write(*,*)'IPE grid: Lat_I(MinLat,MinLat+1,MaxLat)=', Lat_I([MinLat, MinLat+1, MaxLat])
 
-    ! Note that NameFieldImport_V and NameFieldExport_V are defined for RIM
-    ! RIM export is IPE import and RIM import is IPE export
-
     ! Add fields to the export state
-    call add_fields(Grid, ExportState, nVarImport, NameFieldImport_V, iError=iError)
+    call add_fields(ExportGrid, ExportState, nVarIpe2Rim, NameFieldIpe2Rim_V, iError=iError)
     if(iError /= ESMF_SUCCESS) call my_error("add_fields")
 
+
+    !------Create Import Grid -----------------------------------------------
+    ImportGrid = ESMF_GridCreateNoPeriDim(maxIndex=[nLon-1, nLat-1], &
+         regDecomp=[1, petCount], coordDep1=[1], coordDep2=[2], &
+         coordSys=ESMF_COORDSYS_CART, indexflag=ESMF_INDEX_GLOBAL, &
+         name="dynamo grid", rc=iError)
+    if(iError /= ESMF_SUCCESS)call my_error('ESMF_GridCreateNoPeriDim')
+
+    call ESMF_GridAddCoord(ImportGrid, staggerloc=ESMF_STAGGERLOC_CORNER, rc=iError)
+    if(iError /= ESMF_SUCCESS)call my_error('ESMF_GridAddCoord')
+
+
+    if(DoShiftDataCoupling) then 
+       call get_sm_to_mag_angle(Clock, dPhiMag2Sm, iError)
+       dPhiMag2Sm = -dPhiMag2Sm  
+       call get_coords(ImportGrid, Lon_I, Lat_I, iError)
+       Lon_I = LonIpe_I
+       Lat_I = LatIpe_I
+    else 
+
+       ! Warning: the following call works only if the IPE processor is also 
+       ! running SWMF. Otherwise, parameters used for coordinate transformation
+       ! are not initialized and the rotation angle will always be zero.     
+       call update_coordinates(ImportGrid, Clock, LonIpe_I, LatIpe_I, &
+            .false., dPhiMag2Sm=dPhiMag2Sm, iError=iError)
+       if(iError /= ESMF_SUCCESS)call my_error('update_coordinates')
+    end if
+    !----------------------------------------------------------------------
+
     ! Add fields to the import state
-    call add_fields(Grid, ImportState, nVarExport, NameFieldExport_V, iError=iError)
+    call add_fields(ImportGrid, ImportState, nVarRim2Ipe, NameFieldRim2Ipe_V, iError=iError)
     if(iError /= ESMF_SUCCESS) call my_error("add_fields")
 
     iError = ESMF_SUCCESS
@@ -235,10 +257,10 @@ contains
     call ESMF_TimeIntervalGet(TimeStep, s=iCoupleFreq, rc=iError)
     if(iError /= ESMF_SUCCESS)call my_error('ESMF_TimeIntervalGet')
 
-    do iVar = 1, nVarImport
+    do iVar = 1, nVarIpe2Rim
        ! Get pointers to the variables in the export state
        nullify(Ptr_II)
-       NameField = NameFieldImport_V(iVar)
+       NameField = NameFieldIpe2Rim_V(iVar)
        call ESMF_StateGet(ExportState, itemName=NameField, field=Field, &
             rc=iError)
        if(iError /= ESMF_SUCCESS) call my_error("ESMF_StateGet "//NameField)
@@ -285,6 +307,8 @@ contains
 
     type(ESMF_Field):: Field
     type(ESMF_State):: ExportState
+    type(ESMF_Grid) :: Grid
+    type(ESMF_Clock):: Clock
 
     type(ESMF_State):: ImportState
     character(len=4):: NameField
@@ -293,7 +317,7 @@ contains
     integer                         :: iVar
 
     integer :: i, j
-    real(ESMF_KIND_R8) :: Coef, ExactValue
+    real(ESMF_KIND_R8) :: Coef, ExactValue, LonSM
     !--------------------------------------------------------------------------
     call write_log("IPE_grid_comp run called")
     iError = ESMF_FAILURE
@@ -306,7 +330,7 @@ contains
     ! the fields of the ExportState
     if(DoTest)then
        ! Get pointers to the MHD variables in the export state
-       !!! This could be done in the initialization ?!
+!!! This could be done in the initialization ?!
        nullify(Ptr_II)
        call ESMF_StateGet(ExportState, itemName='Hall', field=Field, rc=iError)
        if(iError /= ESMF_SUCCESS) call my_error("ESMF_StateGet for Hall")
@@ -315,11 +339,6 @@ contains
        if(iError /= ESMF_SUCCESS) call my_error("ESMF_FieldGet for Hall")
 
        ! Update state by changing Hall conductivity
-       ! Get dimension extents
-       MinLon = lbound(Ptr_II, dim=1)
-       MaxLon = ubound(Ptr_II, dim=1)
-       MinLat = lbound(Ptr_II, dim=2)
-       MaxLat = ubound(Ptr_II, dim=2)
        write(*,*)'IPE_grid_comp:run old Hall=', &
             Ptr_II((MaxLon+MinLon)/2,(MaxLat+MinLat)/2)
        Ptr_II = Ptr_II + iCoupleFreq*dHallPerDtTest
@@ -328,15 +347,16 @@ contains
     end if
 
     ! Query component
-    call NUOPC_ModelGet(gComp, importState=ImportState, rc=iError)
+    call NUOPC_ModelGet(gComp, importState=ImportState, &
+         modelClock=Clock, rc=iError)
     if(iError /= ESMF_SUCCESS) call my_error('NUOPC_ModelGet')
 
-    allocate(Data_VII(nVarExport,MinLon:MaxLon,MinLat:MaxLat), stat=iError)
+    allocate(Data_VII(nVarRim2Ipe,MinLon:MaxLon,MinLat:MaxLat), stat=iError)
     if(iError /= 0) call my_error('allocate(Data_VII)')
 
-    do iVar = 1, nVarExport
+    do iVar = 1, nVarRim2Ipe
        nullify(Ptr_II)
-       NameField = NameFieldExport_V(iVar)
+       NameField = NameFieldRim2Ipe_V(iVar)
        call ESMF_StateGet(ImportState, itemName=NameField, &
             field=Field, rc=iError)
        if(iError /= ESMF_SUCCESS) call my_error("ESMF_StateGet")
@@ -346,21 +366,35 @@ contains
        Data_VII(iVar,:,:) = Ptr_II
 
        Coef = 10**iVar
-       ! Skip boundary longitudes (+180 and -180), where the interpolated 
-       ! values and the ExactValue are different.  
-       do i = MinLon+1, MaxLon-1; do j = MinLat, MaxLat
-          ExactValue = Lon_I(i)*Lat_I(j)*Coef
+       do i = MinLon, MaxLon; do j = MinLat, MaxLat
+          LonSM = modulo(LonIpe_I(i) + 180 - dPhiMag2Sm, 360.0) - 180
+          ExactValue = abs(LonSM)*abs(Lat_I(j))*Coef
           if( abs(Data_VII(iVar,i,j)-ExactValue) > 1.0e-6 ) then
              write(*,*)'Error in RIM->IPE coupling for ', NameField, &
-                  ' at lon=', Lon_I(i), ' lat=', Lat_I(j), &
+                  ' at lon=', LonIpe_I(i), ' lat=', Lat_I(j), &
                   ' value=', Data_VII(iVar,i,j), ' ExactValue=', ExactValue
           end if
        end do; end do
     end do
+    write(*,*)'IPE_grid_comp: received=', Data_VII(1, 1, 1)
 
     ! Clean memory
     deallocate(Data_VII, stat=iError)
     if(iError /= 0) call my_error('deallocate(Data_VII)')
+
+
+    if(DoShiftDataCoupling) then
+       call get_sm_to_mag_angle(Clock, dPhiMag2Sm, iError)    
+       dPhiMag2Sm = -dPhiMag2Sm
+    else 
+       ! Update grid coordinates of the ImportState
+       call ESMF_FieldGet(Field, grid=Grid, rc=iError)
+       if(iError /= ESMF_SUCCESS) call my_error('ESMF_FieldGetGrid')
+
+       call update_coordinates(Grid, Clock, LonIpe_I, LatIpe_I, &
+            .false., dPhiMag2Sm=dPhiMag2Sm, iError=iError)
+       if(iError /= ESMF_SUCCESS) call my_error('update_coordinates')
+    end if
 
     iError = ESMF_SUCCESS
     call write_log("IPE_grid_comp run returned")

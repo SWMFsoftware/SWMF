@@ -58,7 +58,7 @@ IPE_petlist_bounds: 0 0
 IPE_attributes::
 ::
 SWMF_model: swmf
-SWMF_petlist_bounds: 1 -1
+SWMF_petlist_bounds: 0 -1
 SWMF_attributes::
 ::
 RIM_model: rim
