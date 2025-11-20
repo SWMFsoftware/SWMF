@@ -8,6 +8,7 @@ module ESMFSWMF_variables
 
   private
   public:: read_esmf_swmf_input, add_fields, write_log, write_error
+  public:: get_coords, update_coordinates, get_sm_to_mag_angle
 
   ! main configuration file
   character (len=*), public, parameter :: NameParamFile = "ESMF_SWMF.input"
@@ -16,14 +17,14 @@ module ESMFSWMF_variables
   integer, public, parameter :: &
        Year_=1, Month_=2, Day_=3, Hour_=4, Minute_=5, Second_=6, MilliSec_=7
 
-  ! number of ESMF variables for import and their names
-  integer, public, parameter :: nVarImport = 2
-  character(len=4), public, parameter :: NameFieldImport_V(nVarImport) = &
+  ! Variables for IPE -> RIM coupling
+  integer, public, parameter :: nVarIpe2Rim = 2
+  character(len=4), public, parameter :: NameFieldIpe2Rim_V(nVarIpe2Rim) = &
        [ 'Hall', 'Ped ' ]
 
-  ! number of SWMF variables for export and their names
-  integer, public, parameter :: nVarExport = 4
-  character(len=4), public, parameter :: NameFieldExport_V(nVarExport) = &
+  ! Variables for RIM -> IPE coupling
+  integer, public, parameter :: nVarRim2Ipe = 4
+  character(len=4), public, parameter :: NameFieldRim2Ipe_V(nVarRim2Ipe) = &
        [ 'jFac', 'Epot', 'Aver', 'Diff' ]
 
   ! Time related variables
@@ -48,11 +49,24 @@ module ESMFSWMF_variables
   logical, public :: DoTest = .false.
 
   ! Field values and coordinate coefficients for testing
-  real, public, parameter:: FieldTest_V(nVarImport) = [3.0, 5.0]
+  real, public, parameter:: FieldTest_V(nVarIpe2Rim) = [3.0, 5.0]
   real, public, parameter:: CoordCoefTest = 0.1
 
   ! Change of Hall field during ESMF run
   real, public, parameter:: dHallPerDtTest = 0.4
+
+  ! If DoShiftDataCoupling is true:
+  ! IPE->RIM: RIM interpolate data from the ImportState to the RIM grid. 
+  !           ImportState is in IPE MAG coordinates.
+  ! RIM->IPE: RIM shift the data from SM to MAG before putting data to
+  !           the ExportState. ExportState is in IPE MAG coordinates.
+
+  ! If DoShiftDataCoupling is false:
+  ! Source->Receiver: Receiver transform the ImportState coordinates to the 
+  !                   'Source' coordinates before coupling. After receiving
+  !                   the data, the Receiver just copy the data from ImportState.
+  !                   to its own data arrays.
+  logical, public :: DoShiftDataCoupling = .true.
 
 contains
   !============================================================================
@@ -253,29 +267,142 @@ contains
     call ESMF_ArraySpecSet(ArraySpec, rank=2, typekind=ESMF_TYPEKIND_R8)
     if (iError /= ESMF_SUCCESS) call my_error('ESMF_ArraySpecSet')
 
-     do iVar = 1, nVar
-        NameField = VarNames(iVar)
-        if (NUOPC_IsConnected(State, fieldName=trim(NameField))) then
-           call ESMF_LogWrite("Add field "//trim(NameField)//" to state", ESMF_LOGMSG_INFO)
-           Field = ESMF_FieldCreate(Grid, arrayspec=ArraySpec, &
-           staggerloc=ESMF_STAGGERLOC_CORNER, name=NameField, rc=iError)
-           if(iError /= ESMF_SUCCESS) call my_error('ESMF_FieldCreate ' &
-              //NameField//' for '//trim(Name))
-           call NUOPC_Realize(State, field=Field, rc=iError)
-           if(iError /= ESMF_SUCCESS) call my_error( &
-              'NUOPC_Realize '//NameField//' to '//trim(Name))
-        else
-           call ESMF_LogWrite("Remove field "//trim(NameField)//" from state", ESMF_LOGMSG_INFO)
-           call ESMF_StateRemove(State, [ trim(NameField) ], rc=iError)
-           if(iError /= ESMF_SUCCESS) call my_error( &
-              'ESMF_StateRemove '//NameField)
-        end if
-     end do
+    do iVar = 1, nVar
+       NameField = VarNames(iVar)
+       if (NUOPC_IsConnected(State, fieldName=trim(NameField))) then
+          call ESMF_LogWrite("Add field "//trim(NameField)//" to state", ESMF_LOGMSG_INFO)
+          Field = ESMF_FieldCreate(Grid, arrayspec=ArraySpec, &
+               staggerloc=ESMF_STAGGERLOC_CORNER, name=NameField, rc=iError)
+          if(iError /= ESMF_SUCCESS) call my_error('ESMF_FieldCreate ' &
+               //NameField//' for '//trim(Name))
+          call NUOPC_Realize(State, field=Field, rc=iError)
+          if(iError /= ESMF_SUCCESS) call my_error( &
+               'NUOPC_Realize '//NameField//' to '//trim(Name))
+       else
+          call ESMF_LogWrite("Remove field "//trim(NameField)//" from state", ESMF_LOGMSG_INFO)
+          call ESMF_StateRemove(State, [ trim(NameField) ], rc=iError)
+          if(iError /= ESMF_SUCCESS) call my_error( &
+               'ESMF_StateRemove '//NameField)
+       end if
+    end do
 
     iError = ESMF_SUCCESS
     call write_log("ESMF_SWMF_Mod:add_fields returned")
 
   end subroutine add_fields
+  !============================================================================
+  subroutine get_coords(Grid, Lon_I, Lat_I, iError)
+
+    type(ESMF_Grid), intent(in)  :: Grid
+    real(ESMF_KIND_R8), pointer, intent(out) :: Lon_I(:)
+    real(ESMF_KIND_R8), pointer, intent(out) :: Lat_I(:)
+    integer, intent(out)        :: iError     
+    !--------------------------------------------------------------------------
+    call write_log("ESMFSWMF_variables:get_coords called")
+    iError = ESMF_FAILURE
+
+    nullify(Lon_I)
+    call ESMF_GridGetCoord(Grid, CoordDim=1, &
+         staggerLoc=ESMF_STAGGERLOC_CORNER, farrayPtr=Lon_I, rc=iError)
+    if(iError /= ESMF_SUCCESS)call my_error('ESMF_GridGetCoord 1')
+    write(*,*)'ESMF_GridComp size(Lon_I)=', size(Lon_I)
+
+    nullify(Lat_I)
+    call ESMF_GridGetCoord(Grid, CoordDim=2, &
+         staggerLoc=ESMF_STAGGERLOC_CORNER, farrayPtr=Lat_I, rc=iError)
+    if(iError /= ESMF_SUCCESS)call my_error('ESMF_GridGetCoord 2')
+    write(*,*)'ESMF_GridComp size(Lat_I)=', size(Lat_I)
+
+    iError = ESMF_SUCCESS     
+    call write_log("ESMFSWMF_variables:get_coords returned")
+
+  end subroutine get_coords
+  !============================================================================
+  subroutine update_coordinates(Grid, Clock, LonIn_I, LatIn_I, DoSm2Mag, &
+       dPhiSm2Mag, dPhiMag2Sm, iError)
+    ! If DoSm2Mag is true, convert the coordinates in SM to MAG.
+    ! If DoSm2Mag is false, convert the coordinates in MAG to SM.
+
+    ! dphiSm2Mag is the rotation angle (in degree) from SM to MAG in the 
+    ! counter-clockwise direction.
+
+    type(ESMF_Grid) :: Grid
+    type(ESMF_Clock) :: Clock
+    real(ESMF_KIND_R8), intent(in) :: LonIn_I(:)
+    real(ESMF_KIND_R8), intent(in) :: LatIn_I(:)
+    logical, intent(in) :: DoSm2Mag
+    real(ESMF_KIND_R8), optional, intent(out) :: dPhiSm2Mag, dPhiMag2Sm
+    integer, optional, intent(out):: iError
+
+    real(ESMF_KIND_R8), pointer :: Lon_I(:), Lat_I(:)  
+
+    real(ESMF_KIND_R8) :: dPhi    
+    !--------------------------------------------------------------------------
+    call write_log("update_coordinates routine called")
+
+    call get_coords(Grid, Lon_I, Lat_I, iError)
+    if(iError /= ESMF_SUCCESS) call my_error('get_coords')
+
+    call get_sm_to_mag_angle(Clock, dPhi, iError)
+
+    if(present(dPhiSm2Mag)) dPhiSm2Mag = dPhi
+    if(present(dPhiMag2Sm)) dPhiMag2Sm = -dPhi
+
+    if(.not.DoSm2Mag) dPhi = -dPhi
+
+    ! Make sure the range is [-180, 180] after the shift by dPhi.
+    Lon_I = modulo(LonIn_I + 180 - dPhi, 360.0) - 180
+    ! write(*,*)'RIM grid: Lon_I(Min,Min+1,Max)=', Lon_I([MinLon,MinLon+1,MaxLon])
+
+    Lat_I = LatIn_I
+
+    call write_log("update_coordinates routine returned")
+
+    iError = ESMF_SUCCESS
+  end subroutine update_coordinates
+  !============================================================================
+  subroutine get_sm_to_mag_angle(Clock, dPhiSm2Mag, iError)
+    use CON_axes, ONLY: transform_matrix
+    use ModNumConst, ONLY: cRadToDeg, cDegToRad
+
+    type(ESMF_Clock), intent(in) :: Clock
+    real(ESMF_KIND_R8), intent(out) :: dPhiSm2Mag
+    integer, intent(out) :: iError
+
+    type(ESMF_TimeInterval) :: SimTime
+
+    integer(ESMF_KIND_I4)   :: iSec, iMilliSec
+    real(ESMF_KIND_R8) :: tCurrent
+    real(ESMF_KIND_R8) :: SmToMag_DD(3,3)
+
+    real(ESMF_KIND_R8) :: CosPhi, SinPhi
+
+    integer:: i, j
+    !--------------------------------------------------------------------------
+    call write_log("get_sm_to_mag_angle routine called")
+
+    ! Get the current time from the clock
+    call ESMF_ClockGet(Clock, CurrSimTime=SimTime, rc=iError)
+    if(iError /= ESMF_SUCCESS) call my_error('ESMF_ClockGet')
+    call ESMF_TimeIntervalGet(SimTime, s=iSec, ms=iMilliSec, rc=iError)
+    if(iError /= ESMF_SUCCESS) call my_error('ESMF_TimeIntervalGet current')
+    tCurrent = iSec + 0.001*iMilliSec
+    write(*,*)'Current time, isec, msec=', &
+         tCurrent, iSec, iMilliSec
+
+    SmToMag_DD = transform_matrix(tCurrent*1e3, 'SMG', 'MAG') 
+    write(*,*)'SM to MAG matrix='
+    do i = 1, 3
+       write(*,'(3f12.6)') SmToMag_DD(i,:)
+    end do
+    CosPhi = SmToMag_DD(1, 1)
+    SinPhi = SmToMag_DD(1, 2)
+    dPhiSm2Mag = atan2(SinPhi, CosPhi)*cRadToDeg
+    write(*,*)'Rotation angle from SM to MAG=', dPhiSm2Mag
+
+    call write_log("get_sm_to_mag_angle routine returned")
+
+  end subroutine get_sm_to_mag_angle
   !============================================================================
   subroutine my_error(String)
 
