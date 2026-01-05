@@ -12,11 +12,11 @@ my $SiteDir = `pwd`; chop($SiteDir);
 
 # weights for each platform to calculate skill scores
 my %WeightMachine = (
-    "pleiades"     => "0.0",  # ifort pleiades
-    "nvidia"       => "0.0",  # nvfortran pleiades 2 cores
-    "nvidia_serial"=> "0.0",  # nvfortran pleiades 1 core
-    "mstemgcc"     => "0.0",  # mstem-quda+gcc pleiades
-    "mstemifort"   => "0.0",  # mstem-quda+ifort pleiades
+    "athena"       => "0.0",  # ifort athena
+    "nvidia"       => "1.0",  # nvfortran cabeus multiple cores
+    "nvidia_serial"=> "1.0",  # nvfortran cabeus 1 core
+    "mstemgcc"     => "0.0",  # mstem-quda+gcc electra
+    "mstemifort"   => "0.0",  # mstem-quda+ifort electra
     "gfortran"     => "1.0",  # gfortran optimized
     "nag_debug"    => "1.0",  # nagfor debug on M1
     "nag"          => "1.0",  # nagfor on M1
@@ -27,7 +27,7 @@ my %WeightMachine = (
 my $MinScore =
     10 *$WeightMachine{"nvidia_serial"} + # 1 GPU tests
     10 *$WeightMachine{"nvidia"}        + # multi-GPU tests
-    150*($WeightMachine{"pleiades"}     + # CPU tests
+    150*($WeightMachine{"athena"}       + # CPU tests
 	 $WeightMachine{"gfortran"}     +
 	 $WeightMachine{"nag_debug"}    +
 	 $WeightMachine{"nag"}          );
@@ -42,11 +42,11 @@ my $merge_stable =
 
 # Describe machine in the Html table
 my %HtmlMachine = (
-    "pleiades"     => "ifort<br>pleiades",
-    "nvidia"       => "nvfortran<br>parallel pleiades",
-    "nvidia_serial"=> "nvfortran<br>serial pleiades",
-    "mstemgcc"     => "STABLE<br>gfortran pleiades",
-    "mstemifort"   => "STABLE<br>ifort pleiades",
+    "athena"       => "ifort<br>athena",
+    "nvidia"       => "nvfortran<br>parallel cabeus",
+    "nvidia_serial"=> "nvfortran<br>serial cabeus",
+    "mstemgcc"     => "STABLE<br>gfortran electra",
+    "mstemifort"   => "STABLE<br>ifort electra",
     "gfortran"     => "gfortran<br>optimized",
     "nag_debug"    => "nagfor<br>debug",
     "nag"          => "nagfor<br>optimized",
@@ -54,7 +54,7 @@ my %HtmlMachine = (
 
 # List of platforms in a logical order
 my @machines =
-    ("gfortran", "nag_debug", "nag", "pleiades",
+    ("gfortran", "nag_debug", "nag", "athena",
      "nvidia_serial", "nvidia", "mstemgcc", "mstemifort");
 
 my $ERROR = "ERROR in process_tests.pl";
