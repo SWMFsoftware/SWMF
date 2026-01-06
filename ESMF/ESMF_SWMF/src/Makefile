@@ -58,6 +58,13 @@ $(EXE): $(OBJECTS)
 		${ESMF_F90LINKOPTS} -L${LIBDIR} \
 		-lSWMF ${LflagMpi} ${IPELIBS}
 
+info:
+	@echo ESMF_F90LINKPATHS=${ESMF_F90LINKPATHS}
+	@echo ESMF_F90ESMFLINKLIBS ${ESMF_F90ESMFLINKLIBS}
+	@echo ESMF_F90LINKOPTS=${ESMF_F90LINKOPTS}
+	@echo LflagMpi=${LflagMpi}
+	@echo IPELIBS=${IPELIBS}
+
 clean: cleanfiles
 
 distclean: clean
