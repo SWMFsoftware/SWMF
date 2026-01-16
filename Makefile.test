@@ -57,7 +57,7 @@ test_help:
 	@(if [ -d GM/BATSRUS ]; then echo "    test11                      (run SC-GM coupling test)"; fi)
 	@(if [ -d UA/MGITM   ]; then echo "    test12                      (run GM-UA/MGITM test)"; fi)
 	@(if [ -d PT/AMPS    ]; then echo "    test13                      (run GM-PT/AMPS test: Europa)"; fi)
-	@(if [ -d PT/PARMISAN ];then echo "    test14                      (run SC-IH-PT/PARMISAN test)"; fi)
+	@(if [ -d PT/MITTENS ];then echo "    test14                      (run SC-IH-PT/MITTENS test)"; fi)
 	@(if [ -d SP/MFLAMPA ]; then echo "    test15                      (run SC-IH-SP/MFLAMPA test)"; fi)
 	@(if [ -d SP/MFLAMPA ]; then echo "    test15_build                (configure SC-IH-SP/MFLAMPA, run test15)"; fi)
 	@(if [ -d PC/FLEKS   ]; then echo "    test16_2d                   (run GM-PC/FLEKS test in 2D)"; fi)
@@ -2057,7 +2057,7 @@ test14:
 	${MAKE} test14_check
 
 test14_compile:
-	./Config.pl -default -v=Empty,SC/BATSRUS,IH/BATSRUS,PT/PARMISAN
+	./Config.pl -default -v=Empty,SC/BATSRUS,IH/BATSRUS,PT/MITTENS
 	./Config.pl -o=SC:u=Awsom,e=Awsom,ng=2,g=4,4,4
 	./Config.pl -o=IH:u=Awsom,e=Awsom,ng=2,g=4,4,4
 	./Config.pl -o=PT:g=2000
@@ -2069,7 +2069,7 @@ test14_rundir:
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/PARAM.in.test.SCIHPT ${TESTDIR}/PARAM.in
 	cp GM/BATSRUS/Param/CORONA/RadCoolCorona.dat ${TESTDIR}/RadCoolCorona.dat
-	cp -r PT/PARMISAN/data/input/test14/RESTART_t0020.0000s ${TESTDIR}/
+	cp -r PT/MITTENS/data/input/test14/RESTART_t0020.0000s ${TESTDIR}/
 	cd ${TESTDIR}; ./Restart.pl -i RESTART_t0020.0000s
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
 
