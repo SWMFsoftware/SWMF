@@ -1,5 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 module IM_wrapper
@@ -7,7 +7,7 @@ module IM_wrapper
   ! Wrapper for empty Internal Magnetosphere (IM) component
 
   use ModUtilities, ONLY: CON_stop
-  
+
   implicit none
 
   private ! except
@@ -17,8 +17,9 @@ module IM_wrapper
   public:: IM_run
   public:: IM_save_restart
   public:: IM_finalize
-  
+
   ! Coupling with IE
+  public:: IM_get_info_for_ie
   public:: IM_get_for_ie
   public:: IM_put_from_ie_mpi
   public:: IM_put_from_ie
@@ -210,6 +211,16 @@ contains
     call CON_stop(NameSub//': IM_ERROR: empty version cannot be used!')
 
   end subroutine IM_put_sat_from_gm
+  !============================================================================
+  subroutine IM_get_info_for_ie(nEngIM)
+
+    character(len=*), parameter :: NameSub='IM_get_info_for_ie'
+
+    integer, intent(out) :: nEngIM
+
+    call CON_stop(NameSub//': IM_ERROR: empty version cannot be used!')
+
+  end subroutine IM_get_info_for_ie
   !============================================================================
   subroutine IM_get_for_ie(nPoint,iPointStart,Index,Weight,Buff_V,nVar)
 

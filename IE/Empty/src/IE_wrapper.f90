@@ -1,11 +1,11 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 module IE_wrapper
 
   use ModUtilities, ONLY: CON_stop
-  
+
   implicit none
 
 contains
@@ -149,6 +149,18 @@ contains
 
   end subroutine IE_get_for_ps
   !============================================================================
+  subroutine IE_get_info_for_im(use_ua, nEngInput, nVarImIe)
+
+    integer,          intent(out) :: nVarImIe
+    integer,          intent(in) :: nEngInput
+    logical,          intent(out) :: use_ua
+
+    character (len=*), parameter :: NameSub='IE_get_info_for_im'
+
+    call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
+
+  end subroutine IE_get_info_for_im
+  !============================================================================
   subroutine IE_get_for_im(nPoint,iPointStart,Index,Weight,Buff_V,nVar)
 
     use CON_router,   ONLY: IndexPtrType, WeightPtrType
@@ -169,7 +181,7 @@ contains
     integer,          intent(in) :: nMlts, nLats, nVarIn
     character(len=3), intent(in) :: NameVarUaIn_V(nVarIn)
     real,             intent(in) :: Buffer_IIBV(nMlts, nLats, 2, nVarIn)
-    
+
     character (len=*),parameter :: NameSub='IE_put_from_UA'
 
     call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
@@ -182,11 +194,11 @@ contains
     character(len=*), intent(out), optional :: NameVar_V(:)
 
     character(len=*), parameter :: NameSub='IE_get_info_for_ua'
-    
+
     call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
 
   end subroutine IE_get_info_for_ua
-  
+
   !============================================================================
 
   subroutine IE_get_for_ua(Buffer_IIV,iSize,jSize,nVarIn,NameVar_V, &
@@ -264,7 +276,7 @@ subroutine SPS_put_into_ie(Buffer_II, iSize, jSize, NameVar, iBlock)
 
   use ModUtilities, ONLY: CON_stop
   implicit none
-  
+
   integer, intent(in)           :: iSize,jSize
   real, intent(in)              :: Buffer_II(iSize,jSize)
   character (len=*),intent(in)  :: NameVar
@@ -280,7 +292,7 @@ subroutine initialize_ie_ua_buffers(iOutputError)
 
   use ModUtilities, ONLY: CON_stop
   implicit none
-  
+
   integer :: iOutputError
 
   character (len=*),parameter :: NameSub='initialize_ie_ua_buffers'
