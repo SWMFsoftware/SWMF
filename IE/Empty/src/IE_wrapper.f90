@@ -153,7 +153,7 @@ contains
 
     integer,          intent(out) :: nVarImIe
     integer,          intent(in) :: nEngInput
-    logical,          intent(out) :: use_ua
+    logical,          intent(in) :: use_ua
 
     character (len=*), parameter :: NameSub='IE_get_info_for_im'
 
