@@ -150,9 +150,9 @@ contains
     if(.not.RouterImIe%IsProc) RETURN
 
     call couple_comp(&
-            RouterImIe, nVarImIe, &
-            fill_buffer =IM_get_for_ie,&
-            apply_buffer=IE_put_from_im)
+         RouterImIe, nVarImIe, &
+         fill_buffer =IM_get_for_ie,&
+         apply_buffer=IE_put_from_im)
 
     if(is_proc(IE_)) call IE_put_from_im_complete
 
