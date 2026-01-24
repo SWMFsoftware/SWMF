@@ -55,7 +55,6 @@ module CON_couple_ie_im
   integer, save :: nTheta, nPhi
   integer, save :: nVarImIe=3
 
-
   ! Name of this interface
   character (len=*), parameter :: NameMod='CON_couple_ie_im'
 
@@ -71,8 +70,8 @@ contains
     use CON_world, ONLY: get_comp_info
 
     integer :: nEngIM
-    !--------------------------------------------------------------------------
 
+    !--------------------------------------------------------------------------
     if(IsInitialized) RETURN
     IsInitialized = .true.
 
