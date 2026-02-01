@@ -101,7 +101,7 @@ module CON_router
   ! is more stable and rarely it is more efficient either. In
   ! the first case use DoRSend=.true. (default), otherwise use
   ! DoRSend=.false.
-  logical, parameter :: DoRSend=.true.
+  logical, parameter :: DoRSend=.false.
 
   ! aux integer arrays to put data in BufferS_II in the correct order
   integer, allocatable :: iProc_I(:), iOrder_I(:), iTranslated_P(:), iAux_P(:)
