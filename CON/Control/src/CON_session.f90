@@ -89,7 +89,7 @@ contains
 
     ! Initialize components for this session.
     do lComp = 1, nComp; iComp = i_comp(lComp)
-       call init_session_comp(iComp,iSession,tSimulation)
+       if(use_comp(iComp)) call init_session_comp(iComp,iSession,tSimulation)
     end do
 
     ! Initialize and broadcast grid descriptors to all the components.
