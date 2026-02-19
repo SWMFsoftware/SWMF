@@ -28,25 +28,7 @@ T			IsTimeAccurate
 #SAVERESTART
 T			DoSaveRestart
 -1			DnSaveRestart
-1 min			DtSaveRestart
-
-! On Pleiades, switch on MAKEDIR and switch off RESTARTOUTDIR
-MAKEDIR
-F			DoMakeDir
-
-#RESTARTOUTDIR
-SWMF_RESTART.YYYYMMDD_HHMMSS		NameRestartOutDir
-
-#CHECKKILL
-GM			NameCompCheckKill
-
-#CHECKSTOP
-T			DoCheckStop
--1			DnCheckStop
-1 min			DtCheckStop
-
-CPUTIMEMAX
-47.5 hour		CpuTimeMax [sec]
+1 hour			DtSaveRestart
 
 #COUPLEORDER
 5			nCouple
@@ -111,9 +93,6 @@ T			UseCpcpBc  (rest is read if true)
 T			UseSolarWindFile
 IMF.dat			NameSolarWindFile
 
-#REFRESHSOLARWINDFILE
-T			DoReadAgain
-
 ! Satellite trajectories
 #INCLUDE
 SATELLITES.in
@@ -129,7 +108,7 @@ single			TypeFileOut
 1 min			DtOutput      [sec]
 
 #MAGNETOMETERGRID
-2			nMagGridFile
+1			nMagGridFile
 global ascii		StrGridFileOut
 GEO			TypeCoordGrid
 360			nGridLon
@@ -140,6 +119,7 @@ GEO			TypeCoordGrid
 85.			GridLatMax
 -1			DnSaveMagGrid
 1 min			DtSaveMagGrid
+
 us ascii		StrGridFileOut
 GEO			TypeCoordGrid
 221			nGridLon
