@@ -15,8 +15,10 @@ INCL_EXTRA = ${ESMF_F90COMPILEPATHS}
 # The executable
 EXE = ${BINDIR}/ESMF_SWMF.exe
 
+EXTERNAL_IPE ?= no
+
 # object files which need to be compiled into the executable.
-ifeq ($(ipe_ROOT),)
+ifeq ($(EXTERNAL_IPE),no)
 OBJECTS = \
 	ESMF_driver.o \
 	ESMFSWMF_variables.o \
@@ -33,12 +35,15 @@ OBJECTS = \
 	SWMF_grid_comp.o \
 	RIM_grid_comp.o \
 	CON_cpl_comp.o
+
+# ipe_ROOT, comio_ROOT, parallel_netcdf_ROOT, hdf5_ROOT should be 
+# set as environment variables	
 INCL_EXTRA += -I$(ipe_ROOT)/include
 IPELIBS = -L$(ipe_ROOT)/lib -lipe -lipm -lshared \
           -L$(comio_ROOT)/lib -lcomio \
           -L$(parallel_netcdf_ROOT)/lib -lpnetcdf \
           -L$(hdf5_ROOT)/lib -lhdf5_fortran
-Cflag2 += -DEXTERNAL_IPE
+CFLAG += -DEXTERNAL_IPE
 endif
 
 # Dependencies:
@@ -68,4 +73,5 @@ info:
 clean: cleanfiles
 
 distclean: clean
+
 
