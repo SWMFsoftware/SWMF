@@ -1,0 +1,83 @@
+# This file is read by the ESMF_SWMF code.
+# It contains parameters for
+# the processor layouts for the ESMF and SWMF subcomponents,
+# the 2D uniform grid coupling the ESMF/IPE with SWMF/RIM,
+# the coupling frequency and the simulation starting and finishing times.
+#
+# Lines starting with # are comments
+#
+# Running
+#
+Run the SWMF [y/n]: y
+#
+# Coupling parameters
+#
+SWMF Component: IE
+Block all SWMF [y/n]: y
+#Coupling Frequency: 2
+Coupling Frequency: 300 
+DoTest: false
+DebugMode: false
+#
+# WAM-IPE grid size and range (in degrees)
+#
+nLon:  72
+nLat:  50
+LatMin: -50.0
+LatMax: +50.0
+#
+# Start and End of the simulation
+#
+Start Year:  2013 #2000
+Start Month:   03 #03
+Start Day:     16 #21
+Start Hour:    00 #10
+Start Minute:   0 #45
+Start Second:   0
+Start Millisec: 0
+#
+Finish Year:  2013 #2000
+Finish Month:   03 #03
+Finish Day:     16 #21
+Finish Hour:    00 #10
+Finish Minute:  10 #45
+Finish Second:   0 #10 #0 #10
+Finish Millisec: 0
+#
+Simulation Time: 0.0
+#
+# Driver
+#
+DRV_component_list: IPE SWMF RIM
+DRV_attributes::
+  Verbosity = "low"
+::
+#
+# Model components
+#
+IPE_model: ipe
+IPE_petlist_bounds: 0 39
+#IPE_petlist_bounds: 0 0
+IPE_attributes::
+::
+SWMF_model: swmf
+SWMF_petlist_bounds: 0 -1
+#SWMF_petlist_bounds: 1 -1
+SWMF_attributes::
+::
+RIM_model: rim
+RIM_petlist_bounds: -2 -1 # can not use more than 2
+RIM_attributes::
+::
+#
+# Run sequence
+#
+runSeq::
+@300
+  IPE -> RIM :remapMethod=bilinear:unmappedaction=ignore:zeroregion=select:srcTermProcessing=0:termOrder:srcseq
+  RIM
+  SWMF
+  IPE
+@
+::
+
