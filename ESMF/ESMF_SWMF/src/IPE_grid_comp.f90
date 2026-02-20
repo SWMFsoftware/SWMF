@@ -186,7 +186,7 @@ contains
     ! Nonuniform latitude grid
     MinLat = lbound(Lat_I, dim=1)
     MaxLat = ubound(Lat_I, dim=1)
-    Lat_I = LatIpe_I
+    Lat_I = LatIpe_I(MinLat:MaxLat)
     write(*,*)'IPE grid: Lat_I(MinLat,MinLat+1,MaxLat)=', Lat_I([MinLat, MinLat+1, MaxLat])
 
     ! Add fields to the export state
@@ -205,17 +205,17 @@ contains
     if(iError /= ESMF_SUCCESS)call my_error('ESMF_GridAddCoord')
 
 
-    if(DoShiftDataCoupling) then 
+    if(DoShiftDataCoupling) then
        call get_sm_to_mag_angle(Clock, dPhiMag2Sm, iError)
-       dPhiMag2Sm = -dPhiMag2Sm  
+       dPhiMag2Sm = -dPhiMag2Sm
        call get_coords(ImportGrid, Lon_I, Lat_I, iError)
        Lon_I = LonIpe_I
-       Lat_I = LatIpe_I
-    else 
+       Lat_I = LatIpe_I(MinLat:MaxLat)
+    else
 
-       ! Warning: the following call works only if the IPE processor is also 
+       ! Warning: the following call works only if the IPE processor is also
        ! running SWMF. Otherwise, parameters used for coordinate transformation
-       ! are not initialized and the rotation angle will always be zero.     
+       ! are not initialized and the rotation angle will always be zero.
        call update_coordinates(ImportGrid, Clock, LonIpe_I, LatIpe_I, &
             .false., dPhiMag2Sm=dPhiMag2Sm, iError=iError)
        if(iError /= ESMF_SUCCESS)call my_error('update_coordinates')
@@ -384,9 +384,9 @@ contains
 
 
     if(DoShiftDataCoupling) then
-       call get_sm_to_mag_angle(Clock, dPhiMag2Sm, iError)    
+       call get_sm_to_mag_angle(Clock, dPhiMag2Sm, iError)
        dPhiMag2Sm = -dPhiMag2Sm
-    else 
+    else
        ! Update grid coordinates of the ImportState
        call ESMF_FieldGet(Field, grid=Grid, rc=iError)
        if(iError /= ESMF_SUCCESS) call my_error('ESMF_FieldGetGrid')

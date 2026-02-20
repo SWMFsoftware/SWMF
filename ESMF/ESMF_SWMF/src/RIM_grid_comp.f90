@@ -16,7 +16,7 @@ module RIM_grid_comp
   use ESMFSWMF_variables, ONLY: &
        NameFieldIpe2Rim_V, nVarIpe2Rim, NameFieldRim2Ipe_V, nVarRim2Ipe, &
        add_fields, write_log, write_error, &
-       DoTest, FieldTest_V, CoordCoefTest, dHallPerDtTest, &
+       DoTest, DebugMode, FieldTest_V, CoordCoefTest, dHallPerDtTest, &
        get_coords, update_coordinates, DoShiftDataCoupling, &
        get_sm_to_mag_angle
 
@@ -54,7 +54,7 @@ module RIM_grid_comp
   real(ESMF_KIND_R8), allocatable :: LonSM_I(:), LatSM_I(:)
   integer:: MinLon, MaxLon, MinLat, MaxLat
 
-  ! dPhiSm2Mag is the rotation angle from SM to MAG coordinates 
+  ! dPhiSm2Mag is the rotation angle from SM to MAG coordinates
   ! in the counter-clockwise direction.
   real(ESMF_KIND_R8) :: dPhiSm2Mag
 
@@ -117,7 +117,7 @@ contains
     iError = ESMF_FAILURE
 
     do n = 1, nVarIpe2Rim
-       ! IPE -> RIM coupling 
+       ! IPE -> RIM coupling
        call NUOPC_Advertise(ImportState, &
             standardName=trim(NameFieldIpe2Rim_V(n)), &
             TransferOfferGeomObject='will provide', rc=iError)
@@ -150,7 +150,7 @@ contains
     type(ESMF_Grid)  :: ImportGrid, ExportGrid
     integer          :: PetCount, i, j
 
-    real(ESMF_KIND_R8), pointer :: Lon_I(:), Lat_I(:)  
+    real(ESMF_KIND_R8), pointer :: Lon_I(:), Lat_I(:)
     !--------------------------------------------------------------------------
     call write_log("RIM_grid_comp:init_realize routine called")
     iError = ESMF_FAILURE
@@ -203,11 +203,11 @@ contains
     write(*,*)'RIM grid: LatSM_I(Min,Min+1,Max)=', &
          LatSM_I([MinLat,MinLat+1,MaxLat])
 
-    if(DoShiftDataCoupling) then 
+    if(DoShiftDataCoupling) then
        Lon_I = LonSM_I
        Lat_I = LatSM_I
        call get_sm_to_mag_angle(ExternalClock, dPhiSm2Mag, iError)
-    else 
+    else
        ! Sets the corner coordinates
        call update_coordinates(ImportGrid, ExternalClock, LonSM_I, LatSM_I, &
             .true., dPhiSm2Mag = dPhiSm2Mag, iError=iError)
@@ -248,7 +248,6 @@ contains
   end subroutine my_init_realize
   !============================================================================
   subroutine my_data_init(gComp, iError)
-
     type(ESMF_GridComp):: gComp
     integer, intent(out):: iError
     !--------------------------------------------------------------------------
@@ -262,7 +261,7 @@ contains
     integer, intent(out):: iError
 
     ! Access to the data
-    type(ESMF_State):: ImportState    
+    type(ESMF_State):: ImportState
     type(ESMF_Clock):: Clock
     real(ESMF_KIND_R8), pointer     :: Ptr_II(:,:)
     real(ESMF_KIND_R8), allocatable :: Data_VII(:,:,:)
@@ -276,15 +275,15 @@ contains
     ! Current time (needed for test only)
     real(ESMF_KIND_R8) :: tCurrent
 
-    ! Grid 
+    ! Grid
     type(ESMF_Grid) :: Grid
 
     ! Misc variables
     type(ESMF_Field):: Field
     character(len=4):: NameField
-    ! character(len=ESMF_MAXSTR) :: TimeStr
+    character(len=ESMF_MAXSTR) :: TimeStr
     integer:: i, j, iLeft, iRight, iLat, iTheta
-    real(ESMF_KIND_R8):: Exact_V(2), LonMag, dLon, CoefL, CoefR    
+    real(ESMF_KIND_R8):: Exact_V(2), LonMag, dLon, CoefL, CoefR
     !--------------------------------------------------------------------------
     call write_log("RIM_grid_comp:run routine called")
     iError = ESMF_FAILURE
@@ -302,9 +301,11 @@ contains
     if(iError /= ESMF_SUCCESS) call my_error('ESMF_TimeIntervalGet current')
     tCurrent = iSec + 0.001*iMilliSec
 
-    ! Get time in ISO format for debugging
-    ! call ESMF_TimeGet(CurrTime, timeStringISOFrac=TimeStr , rc=iError)
-    ! if(iError /= ESMF_SUCCESS) call my_error('ESMF_TimeGet ISO')
+    ! Get time in ISO format
+    if (DebugMode) then
+       call ESMF_TimeGet(CurrTime, timeStringISOFrac=timeStr , rc=iError)
+       if(iError /= ESMF_SUCCESS) call my_error('ESMF_TimeGet ISO')
+    end if
 
     ! Obtain pointer to the data obtained from the ESMF component
     allocate(Data_VII(nVarIpe2Rim,MinLon:MaxLon,MinLat:MaxLat), stat=iError)
@@ -317,29 +318,31 @@ contains
        call ESMF_StateGet(ImportState, itemName=NameField, &
             field=Field, rc=iError)
        if(iError /= ESMF_SUCCESS) call my_error("ESMF_StateGet")
-       !   call ESMF_FieldWrite(Field, "rim_import_"//trim(timeStr)//".nc", &
-       !        overwrite=.true., rc=iError)
-       !   if(iError /= ESMF_SUCCESS) call my_error("ESMF_FieldWrite")
+       if (DebugMode) then
+          call ESMF_FieldWrite(Field, "rim_import_"//trim(timeStr)//".nc", &
+               overwrite=.true., rc=iError)
+          if(iError /= ESMF_SUCCESS) call my_error("ESMF_FieldWrite")
+       end if
        call ESMF_FieldGet(Field, farrayPtr=Ptr_II, rc=iError)
        if(iError /= ESMF_SUCCESS) call my_error("ESMF_FieldGet")
 
-       if(DoShiftDataCoupling) then        
+       if(DoShiftDataCoupling) then
           ! Ptr_II is the data in IPE(MAG) coordinates,
-          ! need to shift and interpolate to RIM(SM) coordinates. 
+          ! need to shift and interpolate to RIM(SM) coordinates.
           do i = MinLon, MaxLon
              dLon = LonSM_I(2) - LonSM_I(1)
              LonMag = modulo(LonSM_I(i) + 180 - dPhiSm2Mag, 360.0) - 180
 
-             ! The starting position of Ptr_II lon (in MAG) is 
+             ! The starting position of Ptr_II lon (in MAG) is
              ! the same as LonSM_I(1)
-             iLeft = floor((LonMag - LonSM_I(1))/dLon) + 1           
+             iLeft = floor((LonMag - LonSM_I(1))/dLon) + 1
              iRight = iLeft + 1
              CoefL = (LonSM_I(iRight) - LonMag)/dLon
              CoefR = 1 - CoefL
              Data_VII(iVar,i,:) = &
                   Ptr_II(iLeft,:)*CoefL + Ptr_II(iRight,:)*CoefR
           end do
-       else 
+       else
           Data_VII(iVar,:,:) = Ptr_II(:,:)
        end if
     end do
@@ -378,17 +381,17 @@ contains
             allocate(HallSouth_II(nLat,nLon), PedSouth_II(nLat,nLon))
        if(LatSm_I(MaxLat) > 0 .and. .not.allocated(PedNorth_II)) &
             allocate(HallNorth_II(nLat,nLon), PedNorth_II(nLat,nLon))
-          
+
        do iLat = MinLat, MaxLat
           iTheta = MaxLat - iLat + 1
-          if(LatSm_I(iLat) > 0.0)then
+          if(LatSm_I(iLat) >= 0.0)then
              ! Northern hemisphere
-             HallNorth_II(iTheta,:) = Data_VII(1,iLat,:)
-             PedNorth_II(iTheta,:)  = Data_VII(2,iLat,:)
+             HallNorth_II(iTheta,:) = Data_VII(1,:,iLat)
+             PedNorth_II(iTheta,:)  = Data_VII(2,:,iLat)
           else
              ! Southern hemisphere
-             HallSouth_II(iTheta,:) = Data_VII(1,iLat,:)
-             PedSouth_II(iTheta,:)  = Data_VII(2,iLat,:)             
+             HallSouth_II(iTheta,:) = Data_VII(1,:,iLat)
+             PedSouth_II(iTheta,:)  = Data_VII(2,:,iLat)
           endif
        end do
     end if
@@ -397,10 +400,10 @@ contains
     deallocate(Data_VII, stat=iError)
     if(iError /= 0) call my_error('deallocate(Data_VII)')
 
-    if(DoShiftDataCoupling) then 
+    if(DoShiftDataCoupling) then
        call get_sm_to_mag_angle(Clock, dPhiSm2Mag, iError)
        call update_export_state(gComp, iError)
-    else 
+    else
        call ESMF_FieldGet(Field, grid=Grid, rc=iError)
        if(iError /= ESMF_SUCCESS) call my_error('ESMF_FieldGetGrid')
 
@@ -423,7 +426,7 @@ contains
     type(ESMF_Field):: Field
     type(ESMF_Grid):: Grid
 
-    real(ESMF_KIND_R8), pointer :: Ptr_II(:,:), Lon_I(:), Lat_I(:)  
+    real(ESMF_KIND_R8), pointer :: Ptr_II(:,:), Lon_I(:), Lat_I(:)
     real(ESMF_KIND_R8), allocatable :: Data_VII(:,:,:)
     integer:: i, j, iVar, itemCount
     character(len=4):: NameField
@@ -471,7 +474,7 @@ contains
              Data_VII(iVar,i,j) = abs(Lon_I(i))*abs(Lat_I(j))*Coef
           end do; end do
 
-          if(DoShiftDataCoupling) then 
+          if(DoShiftDataCoupling) then
              do i = MinLon, MaxLon
                 dLon = LonSM_I(2) - LonSM_I(1)
 
@@ -486,7 +489,7 @@ contains
                 Ptr_II(i,:) = Data_VII(iVar,iLeft,:)*CoefL &
                      +        Data_VII(iVar,iRight,:)*CoefR
              end do
-          else 
+          else
              Ptr_II(:,:) = Data_VII(iVar,:,:)
           end if
 
