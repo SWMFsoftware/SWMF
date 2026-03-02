@@ -376,7 +376,7 @@ contains
           end if
        end do; end do
     end do
-    write(*,*)'IPE_grid_comp: received=', Data_VII(1, 1, 1)
+    write(*,*)'IPE_grid_comp: received=', Data_VII(1, MinLon, MinLat)
 
     ! Clean memory
     deallocate(Data_VII, stat=iError)
