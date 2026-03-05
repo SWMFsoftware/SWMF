@@ -11,14 +11,17 @@
 module CON_couple_ie_im
 
   use CON_coupler
+  use CON_world, ONLY: use_comp
+  use CON_comp_param, ONLY: UA_
   use CON_transfer_data, ONLY: transfer_real_array
 
-  use IE_wrapper, ONLY: IE_get_for_im, IE_put_from_im, IE_put_from_im_complete
+  use IE_wrapper, ONLY: IE_get_for_im, IE_put_from_im, IE_put_from_im_complete,&
+                        IE_get_info_for_im
 
   use IE_wrapper, ONLY: IE_get_for_gm ! this is used by RAM-SCB coupler ???
   use IE_wrapper, ONLY: IE_run        ! forces IE and IM run sequentially???
 
-  use IM_wrapper, ONLY: IM_get_for_ie, IM_put_from_ie_mpi, &
+  use IM_wrapper, ONLY: IM_get_info_for_ie, IM_get_for_ie, IM_put_from_ie_mpi, &
        IM_put_from_ie, IM_put_from_ie_complete
 
   implicit none
@@ -50,6 +53,7 @@ module CON_couple_ie_im
 
   ! Variables for the simple coupler
   integer, save :: nTheta, nPhi
+  integer, save :: nVarImIe=3
 
   ! Name of this interface
   character (len=*), parameter :: NameMod='CON_couple_ie_im'
@@ -64,8 +68,10 @@ contains
     ! static, the router is formed here for the whole run.
 
     use CON_world, ONLY: get_comp_info
-    !--------------------------------------------------------------------------
 
+    integer :: nEngIM
+
+    !--------------------------------------------------------------------------
     if(IsInitialized) RETURN
     IsInitialized = .true.
 
@@ -77,6 +83,13 @@ contains
        nTheta = size(Grid_C(IE_) % Coord1_I)
        nPhi   = size(Grid_C(IE_) % Coord2_I)
     else
+       ! Get extra info from IE when using CIMI
+       if(NameVersionIm(1:3) == 'CIM')then
+         ! IE-IM/CIMI coupling is being updated
+         call IM_get_info_for_ie(nEngIM)
+         call IE_get_info_for_im(use_comp(UA_), nEngIM, nVarImIe)
+      end if
+
        ! IE-IM/RCM coupling uses the coupling toolkit
        call init_coupler(                 &
             iCompSource=IE_,              &
@@ -128,7 +141,6 @@ contains
     !
     ! Send field-align current from IM to IE.
 
-    integer, parameter :: nVarImIe=3
     character(len=*), parameter:: NameSub = 'couple_im_ie'
     !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)

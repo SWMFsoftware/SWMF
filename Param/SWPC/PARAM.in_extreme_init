@@ -132,9 +132,6 @@ T			UseCpcpBc  (rest is read if true)
 T			UseSolarWindFile
 IMF.dat			NameSolarWindFile
 
-#REFRESHSOLARWINDFILE
-T			DoReadAgain
-
 #SCHEME
 1			nOrder
 Sokolov			TypeFlux
@@ -197,7 +194,7 @@ single			TypeFileOut
 1 min			DtOutput      [sec]
 
 #MAGNETOMETERGRID
-2			nMagGridFile
+1			nMagGridFile
 global real4		StrGridFileOut
 GEO			TypeCoordGrid
 360			nGridLon
@@ -208,6 +205,7 @@ GEO			TypeCoordGrid
 85.			GridLatMax
 -1			DnSaveMagGrid
 1 min			DtSaveMagGrid
+
 us real4		StrGridFileOut
 GEO			TypeCoordGrid
 221			nGridLon
@@ -270,25 +268,7 @@ T			IsTimeAccurate
 #SAVERESTART
 T			DoSaveRestart
 -1			DnSaveRestart
-1 min			DtSaveRestart
-
-! On Pleiades, switch on MAKEDIR and switch off RESTARTOUTDIR
-MAKEDIR
-F			DoMakeDir
-
-#RESTARTOUTDIR
-SWMF_RESTART.YYYYMMDD_HHMMSS		NameRestartOutDir
-
-#CHECKKILL
-GM			NameCompCheckKill
-
-#CHECKSTOP
-T			DoCheckStop
--1			DnCheckStop
-1 min			DtCheckStop
-
-CPUTIMEMAX
-47.5 hour		CpuTimeMax [sec]
+1 hour			DtSaveRestart
 
 #COMPONENT
 IM			NameComp
@@ -363,7 +343,7 @@ End of setting 2
 1e-5			pMinDim [nPa]
 
 #SAVEPLOT
-4			nPlotFile
+2			nPlotFile
 y=0 MHD idl		StringPlot
 -1			DnSavePlot
 5 min			DtSavePlot
@@ -372,22 +352,6 @@ z=0 MHD idl		StringPlot
 -1			DnSavePlot
 5 min			DtSavePlot
 -1.0			DxSavePlot
-shl MHD idl_ascii		StringPlot
--1			DnSavePlot
-1 min			DtSavePlot
-GEO			TypeCoordPlot
-6.6			rMin
-6.6			rMax
-0.			LonMin
-360.			LonMax
-10.			dLon
-0.			LatMin
-0.			LatMax
-lcb nul tec		StringPlot  !last closed field line plots
--1  			DnSavePlot  !Tecplot (ONLY!)
-5 min			DtSavePlot
-5.			Radius
-36			nLon
 
 #BORIS
 T			UseBorisCorrection
@@ -434,40 +398,3 @@ aur idl			StringPlot
 0.0			FracSecond
 
 #END ############################################################
-
-
-! This is here as an example, also to make documentation
-#BEGIN_COMP GM
-
-#SATELLITE
-7			nSatellite
-MHD time date			StringSatellite
--1			DnOutput
-5.			DtOutput
-Satellites/goes11.dat
-MHD time date			StringSatellite
--1			DnOutput
-5.			DtOutput
-Satellites/goes12.dat
-MHD time date			StringSatellite
--1			DnOutput
-5.  			DtOutput
-Satellites/lanl89.dat
-MHD time date			StringSatellite
--1			DnOutput
-5.  			DtOutput
-Satellites/lanl94.dat
-MHD time date			StringSatellite
--1			DnOutput
-5.  			DtOutput
-Satellites/lanl97.dat
-MHD time date			StringSatellite
--1			DnOutput
-5.  			DtOutput
-Satellites/lanl01.dat
-MHD time date			StringSatellite
--1			DnOutput
-5.  			DtOutput
-Satellites/lanl02.dat
-
-#END_COMP GM
