@@ -105,8 +105,7 @@ single			TypeFileOut
 
 #GEOMAGINDICES
 180			nSizeKpWindow [min]
-1 min			DtOutput      [sec]
-
+1 min			DtOutput
 #MAGNETOMETERGRID
 1			nMagGridFile
 global ascii		StrGridFileOut

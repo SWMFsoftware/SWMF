@@ -40,7 +40,7 @@ T			DoCheckStop
 1 min			DtCheckStop
 
 CPUTIMEMAX
-47.5 hour		CpuTimeMax [sec]
+47.5 hour		CpuTimeMax
 
 #COUPLEORDER
 5			nCouple
@@ -120,7 +120,7 @@ single			TypeFileOut
 
 #GEOMAGINDICES
 180			nSizeKpWindow [min]
-1 min			DtOutput      [sec]
+1 min			DtOutput
 
 #MAGNETOMETERGRID
 1			nMagGridFile
@@ -268,7 +268,7 @@ ellipse			TypeBoundary
 
 #DECAY
 T			UseDecay
-10 hour			DecayTimescale [s]
+10 hour			DecayTimescale
 
 #COMPOSITION
 FIXED			TypeComposition

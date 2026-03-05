@@ -38,7 +38,7 @@ IE			NameComp2
 #CHECKTIMESTEP
 T			DoCheckTimeStep (rest is read if true)
 100			DnCheckTimeStep (2 or more)
-1e-6			TimeStepMin [s] (negative value means SessionTime/1e7)
+1e-6			TimeStepMin(negative value means SessionTime/1e7)
 
 #BEGIN_COMP GM ---------------------------------------------------------------
 
@@ -199,8 +199,7 @@ single			TypeFileOut
 
 #GEOMAGINDICES
 180			nSizeKpWindow [min]
-1 min			DtOutput      [sec]
-
+1 min			DtOutput
 #MAGNETOMETERGRID
 1			nMagGridFile
 global ascii		StrGridFileOut
@@ -279,8 +278,7 @@ T			DoCheckStop
 1 min			DtCheckStop
 
 #CPUTIMEMAX
-23.5 hour		CpuTimeMax [sec]
-
+23.5 hour		CpuTimeMax
 #COMPONENT
 IM			NameComp
 T			UseComp
