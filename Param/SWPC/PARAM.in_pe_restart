@@ -47,6 +47,7 @@ T			DoCheckStop
 
 CPUTIMEMAX
 47.5 hour		CpuTimeMax
+
 #COUPLEORDER
 5			nCouple
 IE GM			NameSourceTarget
@@ -133,6 +134,7 @@ single			TypeFileOut
 #GEOMAGINDICES
 180			nSizeKpWindow [min]
 1 min			DtOutput
+
 #MAGNETOMETERGRID
 2			nMagGridFile
 global ascii		StrGridFileOut

@@ -188,6 +188,7 @@ single			TypeFileOut
 #GEOMAGINDICES
 180			nSizeKpWindow [min]
 1 min			DtOutput
+
 #MAGNETOMETERGRID
 1			nMagGridFile
 global ascii		StrGridFileOut
@@ -253,6 +254,7 @@ T			DoSaveRestart
 
 CPUTIMEMAX
 47.5 hour		CpuTimeMax
+
 #COMPONENT
 IM			NameComp
 T			UseComp

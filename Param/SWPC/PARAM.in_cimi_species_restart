@@ -41,6 +41,7 @@ T			DoCheckStop
 
 CPUTIMEMAX
 47.5 hour		CpuTimeMax
+
 #COUPLEORDER
 5			nCouple
 IE GM			NameSourceTarget
