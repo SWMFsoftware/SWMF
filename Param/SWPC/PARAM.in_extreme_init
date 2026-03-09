@@ -217,6 +217,9 @@ GEO			TypeCoordGrid
 -1			DnSaveMagGrid
 20			DtSaveMagGrid
 
+#SUPERMAGINDICES
+T			DoWriteSupermagIndices
+
 #END_COMP GM -----------------------------------------------------------------
 
 #BEGIN_COMP IE ---------------------------------------------------------------
