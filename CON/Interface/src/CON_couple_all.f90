@@ -18,7 +18,7 @@ module CON_couple_all
        DoCoupleVar_V, DoCoupleVar_VCC, &
        nVarBuffer, nVarBuffer_CC, &
        iVarSource_V, iVarSource_VCC, &
-       iVarTarget_V, iVarTarget_VCC
+       iVarTarget_V, iVarTarget_VCC, Couple_CC
   use CON_bline, ONLY: UseBLine_C, IsSource4BL_C
   use ModUtilities, ONLY: CON_set_do_test, CON_stop
 
@@ -79,30 +79,49 @@ contains
   subroutine couple_all_init
     !                                                     ^CMP IF GM BEGIN
     !--------------------------------------------------------------------------
-    if(use_comp(GM_).and.use_comp(IE_))call couple_gm_ie_init  !^CMP IF IE
-    if(use_comp(GM_).and.use_comp(IM_))call couple_gm_im_init  !^CMP IF IM
-    if(use_comp(GM_).and.use_comp(PS_))call couple_gm_ps_init  !^CMP IF PS
-    if(use_comp(GM_).and.use_comp(PW_))call couple_gm_pw_init  !^CMP IF PW
-    if(use_comp(GM_).and.use_comp(RB_))call couple_gm_rb_init  !^CMP IF RB
-    if(use_comp(IH_).and.use_comp(GM_))call couple_ih_gm_init  !^CMP IF IH
-    if(use_comp(SC_).and.use_comp(GM_))call couple_sc_gm_init  !^CMP IF IH
-    if(use_comp(GM_).and.use_comp(PT_))call couple_gm_pt_init  !^CMP IF PT
-    if(use_comp(GM_).and.use_comp(PC_))call couple_gm_pc_init  !^CMP IF PC
-    if(use_comp(UA_).and.use_comp(GM_))call couple_ua_gm_init  !^CMP IF UA
+    if(Couple_CC(GM_, IE_) % DoThis .or. Couple_CC(IE_, GM_) % DoThis) &
+         call couple_gm_ie_init  !^CMP IF IE
+            
+    if(Couple_CC(GM_, IM_) % DoThis .or. Couple_CC(IM_, GM_) % DoThis) &
+         call couple_gm_im_init  !^CMP IF IM
+    if(Couple_CC(GM_, PS_) % DoThis .or. Couple_CC(PS_, GM_) % DoThis) &
+         call couple_gm_ps_init  !^CMP IF PS
+    if(Couple_CC(GM_, PW_) % DoThis .or. Couple_CC(PW_, GM_) % DoThis) &
+         call couple_gm_pw_init  !^CMP IF PW
+    if(Couple_CC(GM_, RB_) % DoThis .or. Couple_CC(RB_, GM_) % DoThis) &
+         call couple_gm_rb_init  !^CMP IF RB
+    if(Couple_CC(GM_, IH_) % DoThis .or. Couple_CC(IH_, GM_) % DoThis) &
+         call couple_ih_gm_init  !^CMP IF IH
+    if(Couple_CC(GM_, SC_) % DoThis .or. Couple_CC(SC_, GM_) % DoThis) &
+         call couple_sc_gm_init  !^CMP IF IH
+    if(Couple_CC(GM_, PT_) % DoThis .or. Couple_CC(PT_, GM_) % DoThis) &
+         call couple_gm_pt_init  !^CMP IF PT
+    if(Couple_CC(GM_, PC_) % DoThis .or. Couple_CC(PC_, GM_) % DoThis) &
+         call couple_gm_pc_init  !^CMP IF PC
+    if(Couple_CC(GM_, UA_) % DoThis .or. Couple_CC(UA_, GM_) % DoThis) &
+         call couple_ua_gm_init  !^CMP IF UA
     !                                                     ^CMP END GM
     !                                                     ^CMP IF IE BEGIN
-    if(use_comp(IE_).and.use_comp(IM_))call couple_ie_im_init  !^CMP IF IM
-    if(use_comp(IE_).and.use_comp(PW_))call couple_ie_pw_init  !^CMP IF PW
-    if(use_comp(IE_).and.use_comp(RB_))call couple_ie_rb_init  !^CMP IF RB
-    if(use_comp(IE_).and.use_comp(UA_))call couple_ie_ua_init  !^CMP IF UA
-    if(use_comp(IE_).and.use_comp(PS_))call couple_ie_ps_init  !^CMP IF PS
+    if(Couple_CC(IE_, IM_) % DoThis .or. Couple_CC(IM_, IE_) % DoThis) &
+         call couple_ie_im_init  !^CMP IF IM
+    if(Couple_CC(IE_, PW_) % DoThis .or. Couple_CC(PW_, IE_) % DoThis) &
+         call couple_ie_pw_init  !^CMP IF PW
+    if(Couple_CC(IE_, RB_) % DoThis .or. Couple_CC(RB_, IE_) % DoThis) &
+         call couple_ie_rb_init  !^CMP IF RB
+    if(Couple_CC(IE_, UA_) % DoThis .or. Couple_CC(UA_, IE_) % DoThis) &
+         call couple_ie_ua_init  !^CMP IF UA
+    if(Couple_CC(IE_, PS_) % DoThis .or. Couple_CC(PS_, IE_) % DoThis) &
+         call couple_ie_ps_init  !^CMP IF PS
     !                                                     ^CMP END IE
     !                                                     ^CMP IF IH BEGIN
-    if(use_comp(IH_).and.use_comp(SC_))call couple_ih_sc_init  !^CMP IF SC
-    if(use_comp(IH_).and.use_comp(OH_))call couple_ih_oh_init  !^CMP IF OH
+    if(Couple_CC(IH_, SC_) % DoThis .or. Couple_CC(SC_, IH_) % DoThis) &
+         call couple_ih_sc_init  !^CMP IF SC
+    if(Couple_CC(IH_, OH_) % DoThis .or. Couple_CC(OH_, IH_) % DoThis) &
+         call couple_ih_oh_init  !^CMP IF OH
     !                                                     ^CMP END IH
     !                                                     ^CMP IF SC BEGIN
-    if(use_comp(SC_).and.use_comp(EE_))call couple_ee_sc_init  !^CMP IF EE
+    if(Couple_CC(EE_, SC_) % DoThis .or. Couple_CC(SC_, EE_) % DoThis) &
+         call couple_ee_sc_init  !^CMP IF EE
     !                                                     ^CMP END SC
     if(UseBLine_C(SP_).and.(&                             !^CMP IF SP BEGIN
          IsSource4Bl_C(OH_).or.&                          !^CMP IF OH
@@ -116,11 +135,14 @@ contains
          .false.))then
        call couple_mh_sp_init
     else
-       if(use_comp(SC_).and.use_comp(PT_))call couple_sc_pt_init !^CMP IF SC
-       if(use_comp(IH_).and.use_comp(PT_))call couple_ih_pt_init !^CMP IF IH
+       if(Couple_CC(SC_, PT_) % DoThis .or. Couple_CC(PT_, SC_) % DoThis) &
+            call couple_sc_pt_init !^CMP IF SC
+       if(Couple_CC(IH_, PT_) % DoThis .or. Couple_CC(PT_, IH_) % DoThis) &
+            call couple_ih_pt_init !^CMP IF IH
     end if                                                !^CMP END PT
     !	 				 		       ^CMP IF OH BEGIN
-    if(use_comp(OH_).and.use_comp(PT_))call couple_oh_pt_init  !^CMP IF PT
+    if(Couple_CC(OH_, PT_) % DoThis .or. Couple_CC(PT_, OH_) % DoThis) &
+         call couple_oh_pt_init  !^CMP IF PT
     !					    		       ^CMP END OH
   end subroutine couple_all_init
   !============================================================================
