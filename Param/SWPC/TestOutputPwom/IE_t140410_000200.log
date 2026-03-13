@@ -1,5 +1,6 @@
-Ridley Ionosphere Model, [deg] [kV] [MA] and [GW]
-t year mo dy hr mn sc msc tilt cpcpn cpcps jr_un jr_us jr_dn jr_ds hpown hpows hp_diffe_n hp_diffe_s hp_mono_n hp_mono_s hp_bbnd_n hp_bbnd_s hp_diffi_n hp_diffi_s
+Ridley Ionosphere Model, tilt [deg] CPCP [kV]Integrated Current [MA] and Hemispheric Power [GW]
+iru and ird: integrated upward and downward FACs. hpow vars: hemispheric power for total aurora and each subcomponent
+t year mo dy hr mn sc msc tilt n_cpcp s_cpcp n_iru s_iru n_ird s_ird n_hpow s_hpow n_hpow_diffe s_hpow_diffe n_hpow_mono s_hpow_mono n_hpow_bbnd s_hpow_bbnd n_hpow_diffi s_hpow_diffi
   0.00000E+00 2014  4 10  0  2  0   0   -4.51360  4.63849E+01  5.77133E+01  7.80021E-01  8.10802E-01 -8.05805E-01 -7.84699E-01  4.02409E+01  3.96069E+01  0.00000E+00  0.00000E+00  4.02409E+01  3.96069E+01  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00
   5.00000E+00 2014  4 10  0  2  5   0   -4.51029  5.38976E+01  6.49015E+01  9.02103E-01  9.03870E-01 -9.25008E-01 -8.85723E-01  4.18607E+01  4.06621E+01  0.00000E+00  0.00000E+00  4.18607E+01  4.06621E+01  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00
   1.00000E+01 2014  4 10  0  2 10   0   -4.50682  5.27326E+01  6.31081E+01  8.77050E-01  8.67001E-01 -9.00249E-01 -8.52397E-01  4.13441E+01  3.99061E+01  0.00000E+00  0.00000E+00  4.13441E+01  3.99061E+01  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00
