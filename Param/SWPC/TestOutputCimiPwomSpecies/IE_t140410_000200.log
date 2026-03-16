@@ -1,5 +1,5 @@
 Ridley Ionosphere Model, tilt [deg] CPCP [kV]Integrated Current [MA] and Hemispheric Power [GW]
-iru and ird: integrated upward and downward FACs. hpow vars: hemispheric power for total aurora and each subcomponent
+# iru and ird: integrated upward and downward FACs. hpow vars: hemispheric power for total aurora and each subcomponent
 t year mo dy hr mn sc msc tilt n_cpcp s_cpcp n_iru s_iru n_ird s_ird n_hpow s_hpow n_hpow_diffe s_hpow_diffe n_hpow_mono s_hpow_mono n_hpow_bbnd s_hpow_bbnd n_hpow_diffi s_hpow_diffi
   0.00000E+00 2014  4 10  0  2  0   0   -4.51360  5.32755E+01  6.30746E+01  9.15637E-01  8.69515E-01 -9.32949E-01 -8.58531E-01  4.22963E+01  3.98706E+01  0.00000E+00  0.00000E+00  4.22963E+01  3.98706E+01  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00
   5.00000E+00 2014  4 10  0  2  5   0   -4.51029  5.32255E+01  6.30071E+01  9.14705E-01  8.68313E-01 -9.31939E-01 -8.57499E-01  4.22786E+01  3.98344E+01  0.00000E+00  0.00000E+00  4.22786E+01  3.98344E+01  0.00000E+00  0.00000E+00  0.00000E+00  0.00000E+00
