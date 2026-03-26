@@ -30,7 +30,6 @@ module IPE_grid_comp
 
   ! Coordinate arrays
   integer:: MinLon, MaxLon, MinLat, MaxLat
-  real(ESMF_KIND_R8), pointer:: Lon_I(:), Lat_I(:)
 
   ! IPE dynamo grid latitudes
   real, parameter:: LatIpe_I(nLat) = [ &
@@ -147,7 +146,10 @@ contains
     type(ESMF_Grid):: ExportGrid, ImportGrid
     type(ESMF_Field):: Field
     type(ESMF_VM):: Vm
+
     real(ESMF_KIND_R8), pointer :: Ptr_II(:,:)
+    real(ESMF_KIND_R8), pointer :: Lon_I(:), Lat_I(:)
+
     integer:: iVar, i, j, PetCount
     character(len=4):: NameField
     !--------------------------------------------------------------------------
@@ -241,7 +243,11 @@ contains
     type(ESMF_TimeInterval) :: TimeStep
     type(ESMF_State):: ExportState
     type(ESMF_Field):: Field
+    type(ESMF_Grid):: Grid
+
     real(ESMF_KIND_R8), pointer :: Ptr_II(:,:)
+    real(ESMF_KIND_R8), pointer :: Lon_I(:), Lat_I(:)
+
     integer:: i, j, iVar
     character(len=4):: NameField
     !--------------------------------------------------------------------------
@@ -285,6 +291,10 @@ contains
                NameField,' for iVar=',iVar
           iError = ESMF_FAILURE; RETURN
        end select
+
+       call ESMF_FieldGet(Field, grid=Grid, rc=iError)
+       if(iError /= ESMF_SUCCESS) call my_error("ESMF_FieldGetGrid "//NameField)
+       call get_coords(Grid, Lon_I, Lat_I, iError)
 
        ! Add coordinate dependence
        do j = MinLat, MaxLat; do i = MinLon, MaxLon
@@ -367,10 +377,10 @@ contains
        Coef = 10**iVar
        do i = MinLon, MaxLon; do j = MinLat, MaxLat
           LonSM = modulo(LonIpe_I(i) + 180 - dPhiMag2Sm, 360.0) - 180
-          ExactValue = abs(LonSM)*abs(Lat_I(j))*Coef
+          ExactValue = abs(LonSM)*abs(LatIpe_I(j))*Coef
           if( abs(Data_VII(iVar,i,j)-ExactValue) > 1.0e-6 ) then
              write(*,*)'Error in RIM->IPE coupling for ', NameField, &
-                  ' at lon=', LonIpe_I(i), ' lat=', Lat_I(j), &
+                  ' at lon=', LonIpe_I(i), ' lat=', LatIpe_I(j), &
                   ' value=', Data_VII(iVar,i,j), ' ExactValue=', ExactValue
           end if
        end do; end do
