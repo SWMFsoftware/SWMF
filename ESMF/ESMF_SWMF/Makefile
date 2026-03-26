@@ -112,7 +112,7 @@ test2_rundir:
 	cp input/tiros_spectra ${RUNDIR}/
 	cp input/IPE.inp ${RUNDIR}/ 
 	ln -sf ${IPEDATA}/IPE_grid.nc ${RUNDIR}/
-	ln -sf ${IPEDATA}/IPE_State.apex.201303160000_AFTER.v3_fixed.nc ${RUNDIR}/IPE_State.apex.201303160000.nc
+	ln -sf ${IPEDATA}/IPE_State.apex.201303160000.nc ${RUNDIR}/
 	ln -sf ${IPEDATA}/global_idea_coeff_W05*.dat ${RUNDIR}/	
 	cd ${RUNDIR}; ln -sf ${BINDIR}/ESMF_SWMF.exe .
 
