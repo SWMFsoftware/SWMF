@@ -230,6 +230,9 @@ GEO			TypeCoordGrid
 #SUPERMAGINDICES
 T			DoWriteSupermagIndices
 
+#TRACEIE
+T
+
 #END_COMP GM -----------------------------------------------------------------
 
 #BEGIN_COMP IE ---------------------------------------------------------------

@@ -161,6 +161,9 @@ GEO			TypeCoordGrid
 #SUPERMAGINDICES
 T			DoWriteSupermagIndices
 
+#TRACEIE
+T
+
 #CONSERVATIVECRITERIA
 1			nConservCrit
 parabola		TypeConservCrit
