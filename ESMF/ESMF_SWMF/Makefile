@@ -1,3 +1,8 @@
+#
+# Default target is ESMF_SWMF so it is listed first
+#
+default: ESMF_SWMF
+
 include ../../Makefile.def
 
 DIFFNUM = ${SCRIPTDIR}/DiffNum.pl -BLESS=${BLESS}
@@ -7,9 +12,10 @@ DIFFNUM = ${SCRIPTDIR}/DiffNum.pl -BLESS=${BLESS}
 
 help:
 	@echo "Targets:"
+	@echo "ESMF_SWMF (default) - compile libSWMF Geospace and ESMF_SWMF.exe"
+	@echo "EXE                 - compile only ESMF_SWMF.exe"
 	@echo "help                - this help message"
 	@echo "install             - install ESMF_SWMF"
-	@echo "EXE                 - compile ESMF_SWMF.exe"
 	@echo "test                - run test1"
 	@echo "test1               - run fake IPE test on 2 processors"
 	@echo "test1 NP=4          - run test on 4 processors"
@@ -26,6 +32,7 @@ install:
 ESMF_SWMF:
 	cd ${DIR}; ${MAKE} test_swpc_compile
 	cd ${DIR}; ${MAKE} LIB
+	rm -f ${BINDIR}/ESMF_SWMF.exe
 	cd src; ${MAKE} EXE
 
 EXE:
@@ -47,7 +54,6 @@ rundir:
 
 test:
 	${MAKE} test1
-	
 
 test1:
 	@echo "test1_compile..." > test_esmf.diff

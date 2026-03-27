@@ -22,6 +22,7 @@ module RIM_grid_comp
 
   ! Size of ionosphere grid in SWMF/IE model (nLat is for one hemisphere!)
   use IE_ModSize, ONLY: nLat => IONO_nTheta, nLon => IONO_nPsi
+
   ! These arrays are indexed by co-latitude Theta, reverse of latitude Lat
   use ModIonosphere, ONLY: &
        HallNorth_II => IONO_NORTH_SigmaH_IPE, &
@@ -37,6 +38,9 @@ module RIM_grid_comp
        DiffNorth_II => IONO_NORTH_EFlux, & ! To be checked !
        DiffSouth_II => IONO_SOUTH_EFlux
 
+  ! For debugging
+  use ModProcIE, ONLY: iProcIE => iProc
+  
   ! Conversion to radians
 
   implicit none
@@ -377,11 +381,16 @@ contains
             Data_VII(:,(MinLon+MaxLon)/2,(MinLat+MaxLat)/2)
     else
        ! Put Data_VII into RIM conductances
-       if(LatSm_I(MinLat) < 0 .and. .not.allocated(HallSouth_II)) &
-            allocate(HallSouth_II(nLat,nLon), PedSouth_II(nLat,nLon))
-       if(LatSm_I(MaxLat) > 0 .and. .not.allocated(PedNorth_II)) &
-            allocate(HallNorth_II(nLat,nLon), PedNorth_II(nLat,nLon))
-
+       if(LatSm_I(MinLat) < 0 .and. .not.allocated(HallSouth_II))then
+          allocate(HallSouth_II(nLat,nLon), PedSouth_II(nLat,nLon))
+          write(*,*) 'RIM_grid_comp: MinLat, LatMin=', MinLat, LatSm_I(MinLat)
+          write(*,*) 'RIM_grid_comp: allocated *South_II on iProcIE=', iProcIE
+       if(LatSm_I(MaxLat) > 0 .and. .not.allocated(PedNorth_II))then
+          allocate(HallNorth_II(nLat,nLon), PedNorth_II(nLat,nLon))
+          write(*,*) 'RIM_grid_comp: MaxLat, LatMax=', MaxLat, LatSm_I(MaxLat)
+          write(*,*) 'RIM_grid_comp: allocated *North_II on iProcIE=', iProcIE
+       end if
+          
        do iLat = MinLat, MaxLat
           iTheta = MaxLat - iLat + 1
           if(LatSm_I(iLat) >= 0.0)then
