@@ -385,6 +385,7 @@ contains
           allocate(HallSouth_II(nLat,nLon), PedSouth_II(nLat,nLon))
           write(*,*) 'RIM_grid_comp: MinLat, LatMin=', MinLat, LatSm_I(MinLat)
           write(*,*) 'RIM_grid_comp: allocated *South_II on iProcIE=', iProcIE
+       end if
        if(LatSm_I(MaxLat) > 0 .and. .not.allocated(PedNorth_II))then
           allocate(HallNorth_II(nLat,nLon), PedNorth_II(nLat,nLon))
           write(*,*) 'RIM_grid_comp: MaxLat, LatMax=', MaxLat, LatSm_I(MaxLat)
