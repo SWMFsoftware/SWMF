@@ -615,7 +615,7 @@ contains
     if(R < rMinBl .or. R >= rMaxBl)then
        ! Sort out particles left the SP domain
        MHData_VIB(X_:Z_,iVertex, iLine) = 0.0
-       ! If the particle is already delivered to the SP from SC 
+       ! If the particle is already delivered to the SP from SC
     elseif(.not.all(MHData_VIB(X_:Z_,iVertex, iLine)==0.0)&
          ! ... and now the particle from IH comes
          .and. R <= rBufferLo)then

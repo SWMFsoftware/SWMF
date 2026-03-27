@@ -507,7 +507,6 @@ contains
     ! If OH is used, DoInit and DataInputTimeLast are reset in OH
     if(DoInit)DoInit = IsSource4BL_C(OH_)
     if(.not.IsSource4BL_C(OH_))DataInputTimeLast = DataInputTime
-    !==========================================================================
   end subroutine couple_ih_sp
   !============================================================================
   !^CMP IF OH BEGIN
@@ -681,7 +680,6 @@ contains
     end if
     DoInit = .false.
     DataInputTimeLast = DataInputTime
-    !==========================================================================
   end subroutine couple_oh_sp         !^CMP END OH
   !============================================================================
 end module CON_couple_mh_sp
