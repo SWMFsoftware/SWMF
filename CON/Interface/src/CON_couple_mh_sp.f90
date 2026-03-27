@@ -165,7 +165,7 @@ contains
     ! After couple_mh_sp_init
     ! (a) set of the Lagrangian point coordinates is in BL
     ! (b) logical DoInit is .true. to prevent the coordinate
-    ! info on BL to be overritten with that from MH models
+    ! info in BL to be overwritten with that from the MH models
   end subroutine couple_mh_sp_init
   !============================================================================
   subroutine couple_sc_sp_init(tNow)               !^CMP IF SC BEGIN
@@ -499,7 +499,6 @@ contains
     ! By the way get coords for particles in IH from the router buffer
     if(is_proc(IH_))then
        nLength = nlength_buffer_source(RouterIhBl)
-       if(IsSource4BL_C(SC_))call sort_out_sc_particles     !^CMP IF SC
        call IH_put_particles(Xyz_DI =  RouterIhBl%              &
             BufferSource_II(1:nDim, 1:nLength)                 ,&
             iIndex_II               = nint(RouterIhBl%          &
@@ -508,24 +507,6 @@ contains
     ! If OH is used, DoInit and DataInputTimeLast are reset in OH
     if(DoInit)DoInit = IsSource4BL_C(OH_)
     if(.not.IsSource4BL_C(OH_))DataInputTimeLast = DataInputTime
-  contains                                       !^CMP IF SC BEGIN
-    !==========================================================================
-    subroutine sort_out_sc_particles
-      ! Sort out particles with R < RScMax to be advected by the SC
-      integer:: iParticle, iParticleNew
-      real   :: Xyz_D(nDim), Coord_D(nDim)
-      !------------------------------------------------------------------------
-      iParticleNew = 0
-      do iParticle = 1, nLength
-         Coord_D = RouterIhBl%BufferSource_II(1:nDim, iParticle)
-         call IH_coord_to_xyz(Coord_D, Xyz_D)
-         if(norm2(Xyz_D) < RScMax*UnitBl2UnitMh)CYCLE
-         iParticleNew  = iParticleNew + 1
-         RouterIhBl%BufferSource_II(:, iParticleNew) = &
-              RouterIhBl%BufferSource_II(:, iParticle)
-      end do
-      nLength = iParticleNew
-    end subroutine sort_out_sc_particles                 !^CMP END SC
     !==========================================================================
   end subroutine couple_ih_sp
   !============================================================================
@@ -693,7 +674,6 @@ contains
     ! By the way get coords for particles in OH from the router buffer
     if(is_proc(OH_))then
        nLength = nlength_buffer_source(RouterOhBl)
-       if(IsSource4Bl_C(IH_))call sort_out_ih_particles
        call OH_put_particles(Xyz_DI =  RouterOhBl%              &
             BufferSource_II(1:nDim, 1:nLength)                 ,&
             iIndex_II               = nint(RouterOhBl%          &
@@ -701,25 +681,6 @@ contains
     end if
     DoInit = .false.
     DataInputTimeLast = DataInputTime
-  contains
-    !==========================================================================
-    subroutine sort_out_ih_particles
-      ! Sort out particles to be advected by the IH, which have
-      ! R in BL coordinates less than RIhMax**2
-      integer:: iParticle, iParticleNew
-      real   :: Xyz_D(3), Coord_D(3)
-      !------------------------------------------------------------------------
-      iParticleNew = 0
-      do iParticle = 1, nLength
-         Coord_D = RouterOhBl%BufferSource_II(1:nDim, iParticle)
-         call OH_coord_to_xyz(Coord_D, Xyz_D)
-         if(norm2(Xyz_D) < RIhMax*UnitBl2UnitMh)CYCLE
-         iParticleNew  = iParticleNew + 1
-         RouterOhBl%BufferSource_II(:, iParticleNew) = &
-              RouterOhBl%BufferSource_II(:, iParticle)
-      end do
-      nLength = iParticleNew
-    end subroutine sort_out_ih_particles
     !==========================================================================
   end subroutine couple_oh_sp         !^CMP END OH
   !============================================================================
