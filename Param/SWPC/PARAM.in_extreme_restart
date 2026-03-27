@@ -105,7 +105,7 @@ single			TypeFileOut
 
 #GEOMAGINDICES
 180			nSizeKpWindow [min]
-1 min			DtOutput      [sec]
+1 min			DtOutput
 
 #MAGNETOMETERGRID
 1			nMagGridFile
@@ -190,7 +190,7 @@ VAR step date		StringLog
 -1			DnSaveLogfile
 5.0			DtSaveLogfile
 dt rho mx my mz p bx by bz pmin pmax dst_sm dstflx		NameLogVars
-3.0			StringLogRadii
+2.4 3.0			StringLogRadii
 
 #SAVEPLOT
 4			nPlotFile

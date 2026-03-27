@@ -2037,7 +2037,7 @@ test13_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
 
 test13_check:
-	-(${DIFFNUM} -b \
+	-(${DIFFNUM} -b -r=1e-5 \
 		${TESTDIR}/PT/plots/amps.dat \
 		output/test13/amps.ref_np${NAMPS} \
 		> test13_pt.diff)

@@ -82,7 +82,7 @@ T			DoMultiFluidIMCoupling
 
 #COLLISION
 -1.0			CollisionCoefDim
-1.0e3			TauCutOffDim [s]
+1.0e3			TauCutOffDim
 100.0			uCutOffDim [km/s] read if TauCutOffDim positive
 2			nPowerCutOff read if TauCutOffDim positive
 
