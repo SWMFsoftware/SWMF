@@ -560,15 +560,11 @@ contains
     if(DoCoupleVar_V(Wave_))State_V(Wave1_:Wave2_) = &
          Buff_I(iVar_V(WaveFirstCouple_):iVar_V(WaveLastCouple_))        ! J/m3
     ! interpolation weight: if the point is within the buffer, the state vector
-    ! is interpolated between those in the components
-    Aux = 0; if(DoAdd)Aux = 1.0; Weight = 1.0; R = norm2(XyzBl_D)
-    if(R >= rInterfaceMin .and. R < rBufferLo)then
-       Aux = 1.0
-       Weight = Weight*(0.50 + 0.50*tanh(2*(2*R - &
-            RBufferLo - RInterfaceMin)/(RBufferLo - RInterfaceMin)))
-    elseif(R >= rBufferUp .and. R < rInterfaceMax)then
-       Weight = Weight*(0.50 - 0.50*tanh(2*(2*R - &
-            RInterfaceMax - RBufferUp)/(RInterfaceMax - RBufferUp)))
+    ! is interpolated between those in the MH components
+    Aux = 0;  Weight = 1.0; R = norm2(XyzBl_D)
+    if(R >= rInterfaceMin .and. R <= rBufferLo)then
+       Weight = (R - RInterfaceMin)/(RBufferLo - RInterfaceMin)
+       Aux = 1 - Weight
     end if
     ! put the data
     MHData_VIB(Rho_:Wave2_,i,iLine) = Aux*MHData_VIB(Rho_:Wave2_,i,iLine) &
@@ -608,7 +604,7 @@ contains
     ! indices of the particle
     integer :: iLine, iVertex
     ! Misc
-    real :: R
+    real :: R, wInterpolation, Aux
     character(len=*), parameter:: NameSub = 'BL_put_line'
     !--------------------------------------------------------------------------
     iLine    = Put%iCB_II(4,iPutStart)
@@ -619,6 +615,15 @@ contains
     if(R < rMinBl .or. R >= rMaxBl)then
        ! Sort out particles left the SP domain
        MHData_VIB(X_:Z_,iVertex, iLine) = 0.0
+       ! If the particle is already delivered to the SP from SC 
+    elseif(.not.all(MHData_VIB(X_:Z_,iVertex, iLine)==0.0)&
+         ! ... and now the particle from IH comes
+         .and. R <= rBufferLo)then
+       ! interpolate the particle coordinates
+       wInterpolation = (R - RInterfaceMin)/(RBufferLo - RInterfaceMin)
+       Aux = 1 - wInterpolation
+       MHData_VIB(X_:Z_,iVertex,iLine) = Aux*MHData_VIB(X_:Z_,iVertex,iLine) &
+         + wInterpolation*XyzBl_D
     else
        ! store passed particles coordinates
        MHData_VIB(X_:Z_,iVertex,iLine) = XyzBl_D
