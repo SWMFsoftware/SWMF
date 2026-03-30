@@ -123,7 +123,7 @@ contains
     do n = 1, nVarIpe2Rim
        ! IPE -> RIM coupling
        call NUOPC_Advertise(ImportState, &
-            standardName=trim(NameFieldIpe2Rim_V(n)), &
+            standardName=NameFieldIpe2Rim_V(n), &
             TransferOfferGeomObject='will provide', rc=iError)
        if(iError /= ESMF_SUCCESS) call my_error('NUOPC_Advertise - import')
     end do
@@ -131,7 +131,7 @@ contains
     do n = 1, nVarRim2Ipe
        ! RIM -> IPE coupling
        call NUOPC_Advertise(ExportState, &
-            standardName=trim(NameFieldRim2Ipe_V(n)), &
+            standardName=NameFieldRim2Ipe_V(n), &
             TransferOfferGeomObject='will provide', rc=iError)
        if(iError /= ESMF_SUCCESS) call my_error('NUOPC_Advertise - export')
     end do
@@ -153,6 +153,7 @@ contains
     type(ESMF_VM)    :: Vm
     type(ESMF_Grid)  :: ImportGrid, ExportGrid
     integer          :: PetCount, i, j
+    integer, allocatable :: petMap(:,:,:)
 
     real(ESMF_KIND_R8), pointer :: Lon_I(:), Lat_I(:)
     !--------------------------------------------------------------------------
@@ -167,13 +168,19 @@ contains
     call ESMF_VMGet(Vm, petCount=PetCount, rc=iError)
     if(iError /= ESMF_SUCCESS) call my_error('ESMF_VMGet')
 
+    ! Reverse order
+    allocate(petMap(1,petCount,1))
+    do i = 1, petCount
+       petMap(1,i,1) = petCount-i
+    enddo
+
     ! RIM grid is node based. Internally it is Colat-Lon grid, but we pretend
     ! here that it is a Lat-Lon grid, so ESMF can use it.
     ! Lon from 0 to 360-dPhi (periodic), Lat from -90 to +90
     ImportGrid = ESMF_GridCreateNoPeriDim(maxIndex=[nLon-1, nLat-1], &
          regDecomp=[1, petCount], coordDep1=[1], coordDep2=[2], &
          coordSys=ESMF_COORDSYS_CART, indexflag=ESMF_INDEX_GLOBAL, &
-         name="RIM grid", rc=iError)
+         petMap=petMap, name="RIM grid", rc=iError)
     if(iError /= ESMF_SUCCESS)call my_error('ESMF_GridCreateNoPeriDim')
 
     ! Add corner coordinates to the grid
@@ -227,7 +234,7 @@ contains
     ExportGrid = ESMF_GridCreateNoPeriDim(maxIndex=[nLon-1, nLat-1], &
          regDecomp=[1, petCount], coordDep1=[1], coordDep2=[2], &
          coordSys=ESMF_COORDSYS_CART, indexflag=ESMF_INDEX_GLOBAL, &
-         name="RIM grid", rc=iError)
+         petMap=petMap, name="RIM grid", rc=iError)
     if(iError /= ESMF_SUCCESS)call my_error('ESMF_GridCreateNoPeriDim')
 
     ! Add corner coordinates to the grid
@@ -458,7 +465,7 @@ contains
 
        ! Check field is available or not
        ! Export fields may not be defined in case of uni-directional coupling
-       call ESMF_StateGet(ExportState, itemSearch=trim(NameField), &
+       call ESMF_StateGet(ExportState, itemSearch=NameField, &
             itemCount=itemCount, rc=iError)
 
        if (itemCount /= 0) then
