@@ -8,10 +8,10 @@ module ESMF_grid_comp
   use NUOPC
 
   use NUOPC_Driver, &
-      Driver_routine_SS             => SetServices, &
-      Driver_label_SetModelServices => label_SetModelServices, &
-      Driver_label_SetRunSequence   => label_SetRunSequence, &
-      Driver_label_SetRunClock      => label_SetRunClock
+       Driver_routine_SS             => SetServices, &
+       Driver_label_SetModelServices => label_SetModelServices, &
+       Driver_label_SetRunSequence   => label_SetRunSequence, &
+       Driver_label_SetRunClock      => label_SetRunClock
   use NUOPC_Driver, only: NUOPC_DriverAddComp
 
   ! Various variables
@@ -48,18 +48,19 @@ contains
     if(iError /= ESMF_SUCCESS)call my_error('NUOPC_CompDerive')
     call NUOPC_CompSpecialize(gComp, specLabel=Driver_label_SetModelServices, &
          specRoutine=set_model_services, rc=iError)
-    if(iError /= ESMF_SUCCESS)call my_error('NUOPC_CompSpecialize - init')
+    if(iError /= ESMF_SUCCESS)call my_error('NUOPC_CompSpecialize init')
     call NUOPC_CompSpecialize(gComp, specLabel=Driver_label_SetRunSequence, &
          specRoutine=set_run_sequence, rc=iError)
-    if(iError /= ESMF_SUCCESS)call my_error('NUOPC_CompSpecialize - set run seq.')
+    if(iError /= ESMF_SUCCESS)call my_error( &
+         'NUOPC_CompSpecialize: set run seq.')
     call ESMF_MethodRemove(gComp, Driver_label_SetRunClock, rc=iError)
     if(iError /= ESMF_SUCCESS)call my_error('ESMF_MethodRemove')
     call NUOPC_CompSpecialize(gComp, specLabel=Driver_label_SetRunClock, &
          specRoutine=NUOPC_NoOp, rc=iError)
-    if(iError /= ESMF_SUCCESS)call my_error('NUOPC_CompSpecialize - set run clock')
+    if(iError /= ESMF_SUCCESS)call my_error('NUOPC_CompSpecialize: set clock')
     config = ESMF_ConfigCreate(rc=iError)
     if(iError /= ESMF_SUCCESS)call my_error('ESMF_ConfigCreate')
-    call ESMF_ConfigLoadFile(config, trim(NameParamFile), rc=iError)
+    call ESMF_ConfigLoadFile(config, NameParamFile, rc=iError)
     if(iError /= ESMF_SUCCESS)call my_error('ESMF_ConfigLoadFile')
     call ESMF_GridCompSet(gComp, config=config, rc=iError)
     if(iError /= ESMF_SUCCESS)call my_error('ESMF_GridCompSet')
@@ -99,8 +100,8 @@ contains
 
     type(ESMF_Config) :: config
     type(NUOPC_FreeFormat) :: attrFF
-    integer :: i, j, petCount, compCount
-    integer :: petListBounds(2)
+    integer :: iComp, iPet, petCount, compCount
+    integer :: petListBounds(2), nPet
     integer, allocatable :: petList(:)
     character(len=32) :: model, prefix
     character(len=32), allocatable :: compLabels(:)
@@ -115,7 +116,7 @@ contains
 
     ! Read and ingest free format driver attributes
     attrFF = NUOPC_FreeFormatCreate(config, label='DRV_attributes::', &
-             relaxedflag=.true., rc=iError)
+         relaxedflag=.true., rc=iError)
     if(iError /= ESMF_SUCCESS)call my_error('NUOPC_FreeFormatCreate')
     call NUOPC_CompAttributeIngest(gComp, attrFF, addFlag=.true., rc=iError)
     if(iError /= ESMF_SUCCESS)call my_error('NUOPC_CompAttributeIngest')
@@ -123,22 +124,24 @@ contains
     if(iError /= ESMF_SUCCESS)call my_error('NUOPC_FreeFormatDestroy')
 
     ! Determine the generic component labels
-    compCount = ESMF_ConfigGetLen(config, label='DRV_component_list:', rc=iError)
+    compCount = ESMF_ConfigGetLen(config, label='DRV_component_list:',&
+         rc=iError)
     if(iError /= ESMF_SUCCESS)call my_error('ESMF_ConfigGetLen')
 
     allocate(compLabels(compCount))
     call ESMF_ConfigGetAttribute(config, valueList=compLabels, &
          label="DRV_component_list:", count=compCount, rc=iError)
-    if(iError /= ESMF_SUCCESS)call my_error('ESMF_ConfigGetAttribute - drv')
+    if(iError /= ESMF_SUCCESS)call my_error('ESMF_ConfigGetAttribute: DRV')
 
     ! Determine information for each component and add to the driver
-    do i = 1, compCount
+    do iComp = 1, compCount
        ! Construct component prefix
-       prefix = trim(compLabels(i))
+       prefix = compLabels(iComp)
        ! Read in petList bounds
        call ESMF_ConfigGetAttribute(config, petListBounds, &
             label=trim(prefix)//"_petlist_bounds:", default=-1, rc=iError)
-       if(iError /= ESMF_SUCCESS)call my_error('ESMF_ConfigGetAttribute - '//trim(prefix))
+       if(iError /= ESMF_SUCCESS) &
+            call my_error('ESMF_ConfigGetAttribute: '//trim(prefix))
        ! Handle negative values
        if (petListBounds(1) < 0) petListBounds(1) = petCount + petListBounds(1)
        if (petListBounds(2) < 0) petListBounds(2) = petCount + petListBounds(2)
@@ -147,48 +150,48 @@ contains
        ! Read in model instance name
        call ESMF_ConfigGetAttribute(config, model, &
             label=trim(prefix)//"_model:", default="none", rc=iError)
-       if(iError /= ESMF_SUCCESS)call my_error('ESMF_ConfigGetAttribute - '//trim(model))
+       if(iError /= ESMF_SUCCESS) &
+            call my_error('ESMF_ConfigGetAttribute: '//trim(model))
        ! Set petList for this component
-       allocate(petList(petListBounds(2)-petListBounds(1)+1))
-       do j = petListBounds(1), petListBounds(2)
-          petList(j-petListBounds(1)+1) = j
+       nPet = petListBounds(2) - petListBounds(1) + 1
+       allocate(petList(nPet))
+       do iPet = 1, nPet
+          petList(iPet) = iPet + petListBounds(1) - 1
        end do
        ! Add component/s
-       ! SWMF
-       if (trim(model) == 'swmf') then
-          call NUOPC_DriverAddComp(gComp, trim(prefix), &
+       select case(model)
+       case('swmf')
+          call NUOPC_DriverAddComp(gComp, prefix, &
                swmf_set_services, petlist=petList, comp=SwmfComp, rc=iError)
-          if(iError /= ESMF_SUCCESS)call my_error('NUOPC_DriverAddComp - SWMF')
-       end if
-       ! IPE
-       if (trim(model) == 'ipe') then
-          call NUOPC_DriverAddComp(gComp, trim(prefix), &
+          if(iError /= ESMF_SUCCESS)call my_error('NUOPC_DriverAddComp: SWMF')
+       case('ipe')
+          call NUOPC_DriverAddComp(gComp, prefix, &
                ipe_set_services, petlist=petList, comp=IpeComp, rc=iError)
-          if(iError /= ESMF_SUCCESS)call my_error('NUOPC_DriverAddComp - IPE')
-          ipeCompId = i
-       end if
-       ! RIM
-       if (trim(model) == 'rim') then
-          call NUOPC_DriverAddComp(gComp, trim(prefix), &
+          if(iError /= ESMF_SUCCESS)call my_error('NUOPC_DriverAddComp: IPE')
+          ipeCompId = iComp
+       case('rim')
+          call NUOPC_DriverAddComp(gComp, prefix, &
                rim_set_services, petlist=petList, comp=RimComp, rc=iError)
-          if(iError /= ESMF_SUCCESS)call my_error('NUOPC_DriverAddComp - RIM')
-          rimCompId = i
-       end if
+          if(iError /= ESMF_SUCCESS)call my_error('NUOPC_DriverAddComp: RIM')
+          rimCompId = iComp
+       case default
+          call my_error('NUOPC_DriverAddComp - unknown model='//trim(model))
+       end select
        ! Clear memory
        deallocate(petList)
     end do
 
     ! Add connector for IPE -> RIM
-    call NUOPC_DriverAddComp(gComp, srcCompLabel=trim(compLabels(ipeCompId)), &
-      dstCompLabel=trim(compLabels(rimCompId)), &
-      compSetServicesRoutine=con_set_services, comp=conComp, rc=iError)
-    if(iError /= ESMF_SUCCESS)call my_error('NUOPC_DriverAddComp - CON (IPE -> RIM)')
+    call NUOPC_DriverAddComp(gComp, srcCompLabel=compLabels(ipeCompId), &
+         dstCompLabel=compLabels(rimCompId), &
+         compSetServicesRoutine=con_set_services, comp=conComp, rc=iError)
+    if(iError /= ESMF_SUCCESS)call my_error('NUOPC_DriverAddComp: IPE -> RIM')
 
     ! Add connector for RIM -> IPE
-    call NUOPC_DriverAddComp(gComp, srcCompLabel=trim(compLabels(rimCompId)), &
-      dstCompLabel=trim(compLabels(ipeCompId)), &
-      compSetServicesRoutine=con_set_services, comp=conComp, rc=iError)
-    if(iError /= ESMF_SUCCESS)call my_error('NUOPC_DriverAddComp - CON (RIM -> IPE)')
+    call NUOPC_DriverAddComp(gComp, srcCompLabel=compLabels(rimCompId), &
+         dstCompLabel=compLabels(ipeCompId), &
+         compSetServicesRoutine=con_set_services, comp=conComp, rc=iError)
+    if(iError /= ESMF_SUCCESS)call my_error('NUOPC_DriverAddComp: RIM -> IPE')
 
     iError = ESMF_SUCCESS
     call write_log("ESMF_grid_comp set_model_services finished")
