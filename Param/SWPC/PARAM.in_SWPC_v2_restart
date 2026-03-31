@@ -313,6 +313,15 @@ aur idl			StringPlot
 -1			DnSavePlot
 1 min			DtSavePlot
 
+#SOLVER
+gmres
+
+#KRYLOV
+T
+T
+0.0001
+300
+
 #END_COMP IE -----------------------------------------------------------------
 
 #BEGIN_COMP RB ---------------------------------------------------------------

@@ -251,6 +251,15 @@ MAGNIT                  NameAurMod
 2.247                   ConeEfluxBbnd
 0.494                   ConeNfluxBbnd
 
+#SOLVER
+gmres
+
+#KRYLOV
+T
+T
+0.0001
+400
+
 #MAGNITPRECIPSMOOTHING
 F			UsePrecipSmoothing
 
