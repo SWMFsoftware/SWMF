@@ -156,6 +156,7 @@ contains
     integer, allocatable :: petMap(:,:,:)
 
     real(ESMF_KIND_R8), pointer :: Lon_I(:), Lat_I(:)
+    real(ESMF_KIND_R8) :: dLonSm, dLatSm
     !--------------------------------------------------------------------------
     call write_log("RIM_grid_comp:init_realize routine called")
     iError = ESMF_FAILURE
@@ -203,17 +204,25 @@ contains
     allocate(LonSm_I(MinLon:MaxLon))
     allocate(LatSm_I(MinLat:MaxLat))
 
+    ! The real RIM grid goes from 0 to 360 in longitude
+    ! Here we pretend that it goes from -180 to +180
+    ! so that it is compatible with IPE domain
+    dLonSm = 360.0/(nLon-1)
     do i = MinLon, MaxLon
-       LonSm_I(i) = (i-1)*(360.0/(nLon-1)) - 180
+       LonSm_I(i) = (i-1)*dLonSm - 180
     end do
-    write(*,*)'RIM grid: LonSm_I(Min,Min+1,Max)=', &
+    write(*,*)'Shifted RIM grid: LonSm_I(Min,Min+1,Max)=', &
          LonSm_I([MinLon,MinLon+1,MaxLon])
 
+    ! The real RIM grid goes from 0 to 180 in colatitude
+    ! Here we pretend that it goes from -90 to 90 latitude
+    ! so that it is compatible with IPE domain
+    ! nLat nodes, or nLat-1 cells per hemisphere
+    dLatSm = 90./(nLat-1)
     do j = MinLat, MaxLat
-       ! nLat-1 cells per hemisphere
-       LatSm_I(j) = (j-1)*(90./(nLat-1)) - 90
+       LatSm_I(j) = (j-1)*dLatSm - 90
     end do
-    write(*,*)'RIM grid: LatSm_I(Min,Min+1,Max)=', &
+    write(*,*)'Flipped RIM grid: LatSm_I(Min,Min+1,Max)=', &
          LatSm_I([MinLat,MinLat+1,MaxLat])
 
     if(DoShiftDataCoupling) then
@@ -223,7 +232,7 @@ contains
     else
        ! Sets the corner coordinates
        call update_coordinates(ImportGrid, ExternalClock, LonSm_I, LatSm_I, &
-            .true., dPhiSm2Mag = dPhiSm2Mag, iError=iError)
+            .true., dPhiSm2Mag=dPhiSm2Mag, iError=iError)
        if(iError /= ESMF_SUCCESS) call my_error('update_coordinates')
     end if
 
@@ -295,7 +304,7 @@ contains
     type(ESMF_Field):: Field
     character(len=4):: NameField
     character(len=ESMF_MAXSTR) :: TimeStr
-    integer:: i, j, iLeft, iRight, iLat, iTheta
+    integer:: i, j, iLeft, iRight, iLon, iLat, iTheta, iPsi
     real(ESMF_KIND_R8):: Exact_V(2), LonMag, dLon, CoefL, CoefR
     !--------------------------------------------------------------------------
     call write_log("RIM_grid_comp:run routine called")
@@ -362,7 +371,9 @@ contains
     write(*,*)'RIM received = ', Data_VII(:, MinLon, MinLat)
 
     if(DoTest)then
+       ! Check the values against the analytic formula
        write(*,*)'SWMF_GridComp shape of Ptr =', shape(Ptr_II)
+       write(*,*)'tCurrent, dHallPerDtTest=', tCurrent, dHallPerDtTest
        ! Do not check the poles
        do j = MinLat, MaxLat; do i = MinLon, MaxLon
           ! Calculate exact solution
@@ -388,36 +399,50 @@ contains
        end do; end do
        write(*,*)'SWMF_GridComp value of Data(MidLon,MidLat)=', &
             Data_VII(:,(MinLon+MaxLon)/2,(MinLat+MaxLat)/2)
-    else
-       ! Put Data_VII into RIM conductances
-       if(LatSm_I(MinLat) < 0 .and. .not.allocated(HallSouth_II))then
-          allocate(HallSouth_II(nLat,nLon), PedSouth_II(nLat,nLon))
-          write(*,*) 'RIM_grid_comp: allocated *South_II on iProcIE=', iProcIE
-          ! Initialize to zero, because the equator may not get set
-          HallSouth_II = 0.0; PedSouth_II = 0.0
-       end if
-       if(LatSm_I(MaxLat) > 0 .and. .not.allocated(PedNorth_II))then
-          allocate(HallNorth_II(nLat,nLon), PedNorth_II(nLat,nLon))
-          write(*,*) 'RIM_grid_comp: allocated *North_II on iProcIE=', iProcIE
-          ! Initialize to zero, because the equator may not get set
-          HallNorth_II = 0.0; PedNorth_II = 0.0
-       end if
+    endif
 
-       do iLat = MinLat, MaxLat
-          if(LatSm_I(iLat) >= 0.0 .and. LatSm_I(MaxLat) > 0)then
-             ! Northern hemisphere
-             iTheta = MaxLat - iLat + 1
-             HallNorth_II(iTheta,:) = Data_VII(1,:,iLat)
-             PedNorth_II(iTheta,:)  = Data_VII(2,:,iLat)
-          end if
-          if(LatSm_I(iLat) <= 0.0 .and. LatSm_I(MinLat) < 0)then
-             ! Southern hemisphere
-             iTheta = nLat - iLat + 1
-             HallSouth_II(iTheta,:) = Data_VII(1,:,iLat)
-             PedSouth_II(iTheta,:)  = Data_VII(2,:,iLat)
-          endif
-       end do
+    ! Put Data_VII into RIM conductances
+    if(LatSm_I(MinLat) < 0 .and. .not.allocated(HallSouth_II))then
+       allocate(HallSouth_II(nLat,nLon), PedSouth_II(nLat,nLon))
+       write(*,*) 'RIM_grid_comp: allocated *South_II on iProcIE=', iProcIE
+       ! Initialize to zero, because the equator may not get set
+       HallSouth_II = 0.0; PedSouth_II = 0.0
     end if
+    if(LatSm_I(MaxLat) > 0 .and. .not.allocated(PedNorth_II))then
+       allocate(HallNorth_II(nLat,nLon), PedNorth_II(nLat,nLon))
+       write(*,*) 'RIM_grid_comp: allocated *North_II on iProcIE=', iProcIE
+       ! Initialize to zero, because the equator may not get set
+       HallNorth_II = 0.0; PedNorth_II = 0.0
+    end if
+
+    do iLat = MinLat, MaxLat
+       if(LatSm_I(iLat) > -0.001 .and. LatSm_I(MaxLat) > 0)then
+          ! Northern hemisphere: iLat = nLat/2..nLat, iTheta = 1..nLat/2
+          iTheta = MaxLat - iLat + 1
+          do iLon = 1, nLon-1
+             ! iLon=1 is -180 deg, which is iPhi=nLon/2+1 in RIM
+             ! iLon=nLon/2+1 is 0 deg, which iPhi=1 and nLon in RIM
+             ! iLon=nLon is +180 deg, which iPhi=nLon/2+1 in RIM
+             iPsi = modulo(iLon + nLon/2 - 1, nLon - 1) + 1
+             HallNorth_II(iTheta,iPsi) = Data_VII(1,iLon,iLat)
+             PedNorth_II(iTheta,iPsi)  = Data_VII(2,iLon,iLat)
+          end do
+          ! Fill in periodic edge cells
+          HallNorth_II(iTheta,nLon) = HallNorth_II(iTheta,1)
+          PedNorth_II(iTheta,nLon)  = PedNorth_II(iTheta,1)
+       end if
+       if(LatSm_I(iLat) < 0.001 .and. LatSm_I(MinLat) < 0)then
+          ! Southern hemisphere
+          iTheta = nLat - iLat + 1
+          do iLon = 1, nLon-1
+             iPsi = modulo(iLon + nLon/2 - 1, nLon - 1) + 1
+             HallSouth_II(iTheta,iPsi) = Data_VII(1,iLon,iLat)
+             PedSouth_II(iTheta,iPsi)  = Data_VII(2,iLon,iLat)
+          end do
+          HallSouth_II(iTheta,nLon) = HallSouth_II(iTheta,1)
+          PedSouth_II(iTheta,nLon)  = PedSouth_II(iTheta,1)
+       endif
+    end do
 
     ! Clean memory
     deallocate(Data_VII, stat=iError)
