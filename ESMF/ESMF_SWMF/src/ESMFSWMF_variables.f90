@@ -335,11 +335,14 @@ contains
   !============================================================================
   subroutine update_coordinates(Grid, Clock, LonIn_I, LatIn_I, DoSm2Mag, &
        dPhiSm2Mag, dPhiMag2Sm, iError)
-    ! If DoSm2Mag is true, convert the coordinates in SM to MAG.
-    ! If DoSm2Mag is false, convert the coordinates in MAG to SM.
 
-    ! dphiSm2Mag is the rotation angle (in degree) from SM to MAG in the 
-    ! counter-clockwise direction.
+    ! Grid contains the coordinates (Lon and Lat) which are set here
+    ! based on LonIn_I and LatIn_I [deg].
+    ! Clock is used to get the simulation time.
+    ! If DoSm2Mag is true, convert LonIn_I from SM to MAG,
+    ! otherwise convert from MAG to SM.
+    ! dPhiSm2Mag is the counter-clockwise rotation angle [deg] from SM to MAG
+    ! dPhiMag2Sm is the counter-clockwise rotation angle [deg] from MAG to SM
 
     type(ESMF_Grid) :: Grid
     type(ESMF_Clock) :: Clock
@@ -350,13 +353,13 @@ contains
     integer, optional, intent(out):: iError
 
     real(ESMF_KIND_R8), pointer :: Lon_I(:), Lat_I(:)  
-
-    real(ESMF_KIND_R8) :: dPhi    
+    real(ESMF_KIND_R8) :: dPhi
+    character(len=*), parameter:: NameSub = 'update_coordinates'
     !--------------------------------------------------------------------------
-    call write_log("update_coordinates routine called")
+    call write_log(NameSub//' starting')
 
     call get_coords(Grid, Lon_I, Lat_I, iError)
-    if(iError /= ESMF_SUCCESS) call my_error('get_coords')
+    if(iError /= ESMF_SUCCESS) call my_error(NameSub//': get_coords')
 
     call get_sm_to_mag_angle(Clock, dPhi, iError)
 
@@ -365,20 +368,25 @@ contains
 
     if(.not.DoSm2Mag) dPhi = -dPhi
 
-    ! Make sure the range is [-180, 180] after the shift by dPhi.
+    ! Setting Lon_I and Lat_I updates the coordinates of the Grid
+    ! Shift Lon_I relative to LonIn_I by -dPhi and keep the range [-180, 180]
     Lon_I = modulo(LonIn_I + 180 - dPhi, 360.0) - 180
-    ! write(*,*)'RIM grid: Lon_I(Min,Min+1,Max)=', Lon_I([MinLon,MinLon+1,MaxLon])
-
+    ! Simply set Lat_I = LatIn_I
     Lat_I = LatIn_I
 
-    call write_log("update_coordinates routine returned")
-
     iError = ESMF_SUCCESS
+    call write_log(NameSub//' finished')
+
   end subroutine update_coordinates
   !============================================================================
   subroutine get_sm_to_mag_angle(Clock, dPhiSm2Mag, iError)
+
+    ! Calculate the longitude shift between SM and MAG systems.
+    ! Return the dPhiSm2Mag in radians.
+    ! For testing purposes, increase the rotation rate 1000 times.
+    
     use CON_axes, ONLY: transform_matrix
-    use ModNumConst, ONLY: cRadToDeg, cDegToRad
+    use ModNumConst, ONLY: cRadToDeg
 
     type(ESMF_Clock), intent(in) :: Clock
     real(ESMF_KIND_R8), intent(out) :: dPhiSm2Mag
@@ -390,11 +398,10 @@ contains
     real(ESMF_KIND_R8) :: tCurrent
     real(ESMF_KIND_R8) :: SmToMag_DD(3,3)
 
-    real(ESMF_KIND_R8) :: CosPhi, SinPhi
-
-    integer:: i, j
+    real(ESMF_KIND_R8) :: CosPhi, SinPhi, tCoef
+    character(len=*), parameter:: NameSub = 'get_sm_to_mag_angle'
     !--------------------------------------------------------------------------
-    call write_log("get_sm_to_mag_angle routine called")
+    call write_log(NameSub//' starting')
 
     ! Get the current time from the clock
     call ESMF_ClockGet(Clock, CurrSimTime=SimTime, rc=iError)
@@ -402,20 +409,20 @@ contains
     call ESMF_TimeIntervalGet(SimTime, s=iSec, ms=iMilliSec, rc=iError)
     if(iError /= ESMF_SUCCESS) call my_error('ESMF_TimeIntervalGet current')
     tCurrent = iSec + 0.001*iMilliSec
-    write(*,*)'Current time, isec, msec=', &
-         tCurrent, iSec, iMilliSec
+    write(*,*) NameSub, ': time, isec, msec=', tCurrent, iSec, iMilliSec
 
-    SmToMag_DD = transform_matrix(tCurrent*1e3, 'SMG', 'MAG') 
-    write(*,*)'SM to MAG matrix='
-    do i = 1, 3
-       write(*,'(3f12.6)') SmToMag_DD(i,:)
-    end do
-    CosPhi = SmToMag_DD(1, 1)
-    SinPhi = SmToMag_DD(1, 2)
+    tCoef = 1.0
+    if(DoTest) tCoef = 1e3 ! Increase rotation rate for testing
+    SmToMag_DD = transform_matrix(tCoef*tCurrent, 'SMG', 'MAG')
+    write(*,*)NameSub,': SM to MAG matrix='
+    write(*,'(3(3f12.6,/))') transpose(SmToMag_DD)
+
+    CosPhi = SmToMag_DD(1,1)
+    SinPhi = SmToMag_DD(1,2)
     dPhiSm2Mag = atan2(SinPhi, CosPhi)*cRadToDeg
-    write(*,*)'Rotation angle from SM to MAG=', dPhiSm2Mag
+    write(*,*) NameSub, ': rotation angle [deg]=', dPhiSm2Mag
 
-    call write_log("get_sm_to_mag_angle routine returned")
+    call write_log(NameSub//' finished')
 
   end subroutine get_sm_to_mag_angle
   !============================================================================
