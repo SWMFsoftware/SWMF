@@ -316,13 +316,13 @@ MAGNIT                  NameAurMod
 0.494                   ConeNfluxBbnd
 
 #SOLVER
-gmres
+gmres			NameSolver
 
 #KRYLOV
-T
-T
-0.0001
-400
+T			UsePreconditioner
+T			UseInitialGuess
+0.0001			Tolerance
+400			MaxIteration
 
 #MAGNITPRECIPSMOOTHING
 F			UsePrecipSmoothing
