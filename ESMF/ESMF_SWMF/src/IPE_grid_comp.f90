@@ -329,8 +329,7 @@ contains
     ! We should execute the ESMF code here and put the result into
     ! the fields of the ExportState
     if(DoTest)then
-       ! Get pointers to the MHD variables in the export state
-!!! This could be done in the initialization ?!
+       ! Get pointers to the Hall field in the export state
        nullify(Ptr_II)
        call ESMF_StateGet(ExportState, itemName='Hall', field=Field, rc=iError)
        if(iError /= ESMF_SUCCESS) call my_error("ESMF_StateGet for Hall")
