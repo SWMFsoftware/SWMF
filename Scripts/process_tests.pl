@@ -12,7 +12,7 @@ my $SiteDir = `pwd`; chop($SiteDir);
 
 # weights for each platform to calculate skill scores
 my %WeightMachine = (
-    "athena"       => "0.0",  # ifort athena
+    "athena"       => "1.0",  # ifort athena
     "nvidia"       => "1.0",  # nvfortran cabeus multiple cores
     "nvidia_serial"=> "1.0",  # nvfortran cabeus 1 core
     "mstemgcc"     => "0.0",  # mstem-quda+gcc electra
@@ -364,7 +364,7 @@ foreach my $machine (@machines){
     my $Error = `grep -C2 '^Error at line' $file`;
     $Error .= `grep -C2 '^TestParam_ERROR' $file`;
     $Error .= `grep -C2 '^XML ERROR' $file`;
-    $Error .= `grep -C2 '/PARAM.in_orig_' $file`;
+    $Error .= `grep -C2 '/PARAM.in.*_orig_' $file`;
     next unless $Error;
     open ERR, ">$paramerrorfile";
     print ERR "$machine:\n$Error";
