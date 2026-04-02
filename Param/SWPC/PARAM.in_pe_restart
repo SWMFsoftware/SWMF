@@ -321,8 +321,8 @@ gmres			NameSolver
 #KRYLOV
 T			UsePreconditioner
 T			UseInitialGuess
-0.0001			Tolerance
-400			MaxIteration
+1e-6			Tolerance
+300			MaxIteration
 
 #MAGNITPRECIPSMOOTHING
 F			UsePrecipSmoothing
