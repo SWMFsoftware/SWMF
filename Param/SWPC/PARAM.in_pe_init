@@ -231,25 +231,25 @@ GEO			TypeCoordGrid
 T			DoWriteSupermagIndices
 
 #TRACEIE
-T
+T			DoTraceIE
 
 #END_COMP GM -----------------------------------------------------------------
 
 #BEGIN_COMP IE ---------------------------------------------------------------
 
 #AURORA
-T                       DoUseAurora
-MAGNIT                  NameAurMod
+T			DoUseAurora
+MAGNIT			NameAuroraMod
 
 #LOSSCONEFACTORS
-0.207                   ConeEfluxDifp
-0.100                   ConeNfluxDifp
-0.600                   ConeEfluxDife
-0.110                   ConeNfluxDife
-1.000                   ConeEfluxMono
-0.741                   ConeNfluxMono
-2.247                   ConeEfluxBbnd
-0.494                   ConeNfluxBbnd
+0.207			ConeEfluxDifp
+0.100			ConeNfluxDifp
+0.600			ConeEfluxDife
+0.110			ConeNfluxDife
+1.000			ConeEfluxMono
+0.741			ConeNfluxMono
+2.247			ConeEfluxBbnd
+0.494			ConeNfluxBbnd
 
 #SOLVER
 gmres			NameSolver
