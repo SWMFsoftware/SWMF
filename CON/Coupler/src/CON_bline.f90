@@ -881,8 +881,8 @@ contains
          if(norm2(MHData_VIB(X_:Z_,2,iLine) - &
               MHData_VIB(X_:Z_,1,iLine)) < DistMax*rMinBl)&
               MHData_VIB(X_:Z_,1,iLine) = 0.5*&
-              (MHData_VIB(X_:Z_,2,iLine) + MHData_VIB(X_:Z_,1,iLine)) 
-              
+              (MHData_VIB(X_:Z_,2,iLine) + MHData_VIB(X_:Z_,1,iLine))
+
          ! check if the beginning of the line moved far enough from its
          ! footprint on the solar surface
          DistanceToMin = norm2(&
