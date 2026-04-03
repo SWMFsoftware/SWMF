@@ -1249,8 +1249,7 @@ long runs.
 </command>
 
 <command name="RESTARTOUTDIR">
-	 <parameter name="NameRestartOutDir" type="string" length="100"
-	 	    			     default="" />
+  <parameter name="NameRestartOutDir" type="string" length="100" default=""/>
 
 #RESTARTOUTDIR
 SWMF_RESTART.YYYYMMDD_HHMMSS		NameRestartOutDir
@@ -1266,7 +1265,8 @@ The SWMF output restart file (see #RESTARTFILE) will be written into this
 directory. The components should also write their restart information into a 
 subdirectory named by the component ID, for example \\
 "SWMF_RESTART.20150209_124900/GM/". 
-This feature is currently only implemented for BATSRUS and IM/RCM2.
+This feature is currently implemented for
+BATSRUS, Ridley_serial, RCM2, CIMI, RBE and FLEKS.
 
 The default value is an empty string, so the SWMF restart file is written
 into the run directory and all components write into their respective

@@ -208,10 +208,14 @@ contains
 
   subroutine EE_save_restart(TimeSimulation)
 
+    use CON_coupler, ONLY: NameRestartOutDirComp
+    use EE_ModRestartFile, ONLY: NameRestartOutDir
+
     real, intent(in) :: TimeSimulation   ! seconds from start time
 
     character(len=*), parameter:: NameSub = 'EE_save_restart'
     !--------------------------------------------------------------------------
+    if(NameRestartOutDirComp /= '') NameRestartOutDir = NameRestartOutDirComp
     call BATS_save_files('RESTART')
 
   end subroutine EE_save_restart

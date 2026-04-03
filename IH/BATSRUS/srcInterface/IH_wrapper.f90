@@ -178,10 +178,14 @@ contains
   !============================================================================
   subroutine IH_save_restart(TimeSimulation)
 
+    use CON_coupler, ONLY: NameRestartOutDirComp
+    use IH_ModRestartFile, ONLY: NameRestartOutDir
+
     real, intent(in):: TimeSimulation   ! seconds from start time
 
     character(len=*), parameter:: NameSub = 'IH_save_restart'
     !--------------------------------------------------------------------------
+    if(NameRestartOutDirComp /= '') NameRestartOutDir = NameRestartOutDirComp
     call BATS_save_files('RESTART')
 
   end subroutine IH_save_restart
