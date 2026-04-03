@@ -48,7 +48,6 @@ module CON_bline
   public :: BL_interface_point_coords ! points rMinInterface<R<rMaxInterface
   public :: BL_put_line               ! points rMinBl < R < rMaxBl
   public :: BL_is_interface_block     ! to mark unusable lines
-  public :: BL_set_line_foot_b
   public :: save_mhd
 
   real,    public  :: TimeBl = -1.0   ! Time of the model! Time of the model
@@ -143,6 +142,10 @@ module CON_bline
 
   ! Allowed range of helocentric distances
   real :: rMinBl, rMaxBl
+
+  ! Maximum allowed distance between the first vertex and footpoint or
+  ! between the first and second vertices, in terms of rMinBl
+  real, parameter :: DistMax = 0.10
 
   ! Coefficient to transform energy
   real         :: EnergySi2Io = 1.0/cBoltzmann
@@ -648,7 +651,7 @@ contains
                MHData_VIB(LagrID_:Z_,iBegin:iEnd,iLine)
           nVertex_B(iLine) = nVertex_B(iLine) + iOffset
        end if
-       call BL_set_line_foot_b(iLine)
+       call set_line_foot(iLine)
     end do
   end subroutine BL_init_foot_points
   !============================================================================
@@ -853,7 +856,7 @@ contains
                State_VIB(R_         , iBegin:iEnd, iLine)
           nVertex_B(iLine) = nVertex_B(iLine) + iOffset_B(iLine)
           ! need to recalculate footpoints
-          call BL_set_line_foot_b(iLine)
+          call set_line_foot(iLine)
        end if
     end do line
     ! may need to add particles to the beginning of lines
@@ -873,6 +876,13 @@ contains
          ! check current value of offset: if not zero, adjustments have just
          ! been made, no need to append new particles
          if(iOffset_B(iLine) /= 0 )CYCLE line
+         ! Check if the distance between the first and second vertices is too
+         ! large:
+         if(norm2(MHData_VIB(X_:Z_,2,iLine) - &
+              MHData_VIB(X_:Z_,1,iLine)) < DistMax*rMinBl)&
+              MHData_VIB(X_:Z_,1,iLine) = 0.5*&
+              (MHData_VIB(X_:Z_,2,iLine) + MHData_VIB(X_:Z_,1,iLine)) 
+              
          ! check if the beginning of the line moved far enough from its
          ! footprint on the solar surface
          DistanceToMin = norm2(&
@@ -892,11 +902,12 @@ contains
          State_VIB(       R_        ,2:nVertex_B(iLine) + 1, iLine)&
               = State_VIB(R_        ,1:nVertex_B(iLine),     iLine)
          nVertex_B(iLine) = nVertex_B(iLine) + 1
-         ! put the new particle just above the lower boundary
-         MHData_VIB(X_:Z_,  1, iLine) = &
-              FootPoint_VB(X_:Z_, iLine)*(1.0 + cTol)
+         ! put the new particle in the mid point between the lower boundary
+         ! and old location of the first point
+         MHData_VIB(X_:Z_,1,iLine) = 0.50*(MHData_VIB(X_:Z_,1,iLine) + &
+              FootPoint_VB(X_:Z_, iLine) )
          State_VIB(R_,          1, iLine) = &
-              sqrt(sum((MHData_VIB(X_:Z_,  1, iLine))**2))
+              norm2(MHData_VIB(X_:Z_,  1, iLine))
          MHData_VIB(LagrID_,1, iLine) = MHData_VIB(LagrID_, 2, iLine) - 1.0
          FootPoint_VB(LagrID_,iLine) = MHData_VIB(LagrID_, 1, iLine) - 1.0
       end do line
@@ -916,7 +927,7 @@ contains
     end do
   end subroutine BL_update_r
   !============================================================================
-  subroutine BL_set_line_foot_b(iLine)
+  subroutine set_line_foot(iLine)
     integer, intent(in) :: iLine
 
     ! existing particle with lowest index along line
@@ -937,13 +948,13 @@ contains
     ! approximate it using directions of first 2 segments of the line
     Dist1_D = MHData_VIB(X_:Z_, 1, iLine) - &
          MHData_VIB(X_:Z_, 2, iLine)
-    Dist1 = sqrt(sum(Dist1_D**2))
+    Dist1 = norm2(Dist1_D)
     Dist2_D = MHData_VIB(X_:Z_, 2, iLine) - &
          MHData_VIB(X_:Z_, 3, iLine)
-    Dist2 = sqrt(sum(Dist2_D**2))
+    Dist2 = norm2(Dist2_D)
     Dir0_D = ((2*Dist1 + Dist2)*Dist1_D - Dist1*Dist2_D)/(Dist1 + Dist2)
 
-    Dir0_D = Dir0_D/sqrt(sum(Dir0_D**2))
+    Dir0_D = Dir0_D/norm2(Dir0_D)
 
     ! dot product and sign: used in computation below
     Dot = sum(Dir0_D*Xyz1_D)
@@ -954,7 +965,7 @@ contains
     ! no intersection of smoothly extended line with the sphere R = rMinBl
     if(Dot**2 - sum(Xyz1_D**2) + rMinBl**2 < 0)then
        ! project first particle for new footpoint
-       FootPoint_VB(X_:Z_,iLine) = Xyz1_D * rMinBl / sqrt(sum(Xyz1_D**2))
+       FootPoint_VB(X_:Z_,iLine) = Xyz1_D * rMinBl / norm2(Xyz1_D)
     else
        ! Xyz0, the footprint, is distance Alpha away from Xyz1:
        ! Xyz0 = Xyz1 + Alpha * Dir0 and R0 = rMinBl =>
@@ -964,7 +975,7 @@ contains
        ! use distance between 2nd and 3rd particles on the line as measure
        if(abs(Alpha) > Dist2)then
           ! project first particle for new footpoint
-          FootPoint_VB(X_:Z_,iLine) = Xyz1_D * rMinBl / sqrt(sum(Xyz1_D**2))
+          FootPoint_VB(X_:Z_,iLine) = Xyz1_D * rMinBl / norm2(Xyz1_D)
        else
           ! store newly found footpoint of the line
           FootPoint_VB(X_:Z_,iLine) = Xyz1_D + Alpha * Dir0_D
@@ -973,9 +984,9 @@ contains
 
     ! length is used to decide when need to append new particles:
     ! use distance between 2nd and 3rd particles on the line
-    FootPoint_VB(Length_,    iLine) = Dist2
+    FootPoint_VB(Length_,    iLine) = min(Dist2, DistMax*rMinBl)
     FootPoint_VB(LagrID_,    iLine) = MHData_VIB(LagrID_,1,iLine) - 1.0
-  end subroutine BL_set_line_foot_b
+  end subroutine set_line_foot
   !============================================================================
   subroutine make_file_name(Time, iLine, NameOut)
     ! creates a string with file name and stores in NameOut;
