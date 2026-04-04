@@ -888,7 +888,7 @@ contains
          ! check if the beginning of the line moved far enough from its
          ! footprint on the solar surface
          DistanceToMin = norm2(&
-              MHData_VIB(X_:Z_,1,iLine) - FootPint_VB(X_:Z_,iLine))
+              MHData_VIB(X_:Z_,1,iLine) - FootPoint_VB(X_:Z_,iLine))
          ! skip the line if it's still close to the Sun
          if(DistanceToMin*(1.0 + cTol) < FootPoint_VB(Length_, iLine))&
               CYCLE line
