@@ -697,7 +697,7 @@ contains
           write(*,*)NameSub//':Too short line deleted'
           ! Remove too short lines
           Used_B(iLine) = .false.
-          nVertex_B(iLine)=0
+          ! nVertex_B(iLine)=0
           CYCLE line
        end if
        iBegin = 1
@@ -878,15 +878,17 @@ contains
          if(iOffset_B(iLine) /= 0 )CYCLE line
          ! Check if the distance between the first and second vertices is too
          ! large:
-         if(norm2(MHData_VIB(X_:Z_,2,iLine) - &
-              MHData_VIB(X_:Z_,1,iLine)) < DistMax*rMinBl)&
-              MHData_VIB(X_:Z_,1,iLine) = 0.5*&
-              (MHData_VIB(X_:Z_,2,iLine) + MHData_VIB(X_:Z_,1,iLine))
-
+         if(norm2(MHData_VIB(X_:Z_,2,iLine)) - &
+              norm2(MHData_VIB(X_:Z_,1,iLine)) < DistMax*rMinBl)then
+            MHData_VIB(X_:Z_,1,iLine) = 0.5*&
+                 (MHData_VIB(X_:Z_,2,iLine) + MHData_VIB(X_:Z_,1,iLine)) 
+            State_VIB(R_,          1, iLine) = &
+                 norm2(MHData_VIB(X_:Z_,  1, iLine))
+         end if
          ! check if the beginning of the line moved far enough from its
          ! footprint on the solar surface
          DistanceToMin = norm2(&
-              MHData_VIB(X_:Z_,1,iLine) - FootPoint_VB(X_:Z_,iLine))
+              MHData_VIB(X_:Z_,1,iLine) - FootPint_VB(X_:Z_,iLine))
          ! skip the line if it's still close to the Sun
          if(DistanceToMin*(1.0 + cTol) < FootPoint_VB(Length_, iLine))&
               CYCLE line
