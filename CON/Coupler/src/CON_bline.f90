@@ -881,7 +881,7 @@ contains
          if(norm2(MHData_VIB(X_:Z_,2,iLine)) - &
               norm2(MHData_VIB(X_:Z_,1,iLine)) < DistMax*rMinBl)then
             MHData_VIB(X_:Z_,1,iLine) = 0.5*&
-                 (MHData_VIB(X_:Z_,2,iLine) + MHData_VIB(X_:Z_,1,iLine)) 
+                 (MHData_VIB(X_:Z_,2,iLine) + MHData_VIB(X_:Z_,1,iLine))
             State_VIB(R_,          1, iLine) = &
                  norm2(MHData_VIB(X_:Z_,  1, iLine))
          end if
