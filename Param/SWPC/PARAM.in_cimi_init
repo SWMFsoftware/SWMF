@@ -223,13 +223,13 @@ min idl			StringPlot
 -1.0			DtSavePlot
 
 #SOLVER
-gmres
+gmres                   NameSolver
 
 #KRYLOV
-T
-T
-0.0001
-300
+T                       UsePreconditioner
+T                       UseInitialGuess
+0.0001                  Tolerance
+300                     MaxIteration
 
 #END_COMP IE -----------------------------------------------------------------
 
