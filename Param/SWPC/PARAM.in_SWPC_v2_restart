@@ -313,15 +313,6 @@ aur idl			StringPlot
 -1			DnSavePlot
 1 min			DtSavePlot
 
-#SOLVER
-gmres			NameSolver
-
-#KRYLOV
-T			UsePreconditioner
-T			UseInitialGuess
-0.0001			Tolerance
-300			MaxIteration
-
 #END_COMP IE -----------------------------------------------------------------
 
 #BEGIN_COMP RB ---------------------------------------------------------------
