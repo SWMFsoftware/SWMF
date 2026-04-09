@@ -23,7 +23,8 @@ help:
 	@echo "test1_rundir        - create run/ directory for test"
 	@echo "test1_run NP=3      - create run/ directory for test"
 	@echo "test1_check         - write test results into test_esmf.diff"
-	@echo "test2               - run real IPE test"
+	@echo "test2               - run real IPE one-way coupling test"
+	@echo "test3               - run real IPE two-way coupling test"
 	@echo "clean               - clean object files"
 	@echo "distclean           - uninstall"
 
@@ -122,6 +123,50 @@ test2_run:
 
 test2_check:
 	# TODO: Add check for real IPE test
+
+#### Real IPE two-way coupling test##########################
+test3:
+	@echo "test3_compile..." > test_esmf.diff
+	${MAKE} test3_compile
+	@echo "test3_rundir..." >> test_esmf.diff
+	${MAKE} test3_rundir
+	@echo "test3_run..." >> test_esmf.diff
+	${MAKE} test3_run
+	@echo "test3_check..." >> test_esmf.diff
+	${MAKE} test3_check
+
+test3_compile:
+	${MAKE} ESMF_SWMF EXTERNAL_IPE=yes
+	cd ../..; ${MAKE} PIDL
+
+test3_rundir:
+	rm -rf ${RUNDIR}
+	cd ../../; ${MAKE} rundir RUNDIR=${RUNDIR}
+	cd ${RUNDIR}; rm -f SWMF.exe EIE SWMFDIR core
+	cp input/ESMF_SWMF.input.realIPE.twoway ${RUNDIR}/ESMF_SWMF.input
+	cp input/fd_swmf.yaml ${RUNDIR}/
+	cp -f input/PARAM.in ${RUNDIR}/
+	cp input/ionprof ${RUNDIR}/
+	cp input/tiros_spectra ${RUNDIR}/
+	cp input/IPE.inp ${RUNDIR}/
+	ln -sf ${IPEDATA}/IPE_Grid.nc ${RUNDIR}/
+	ln -sf ${IPEDATA}/IPE_State.apex.201303160000.nc ${RUNDIR}/
+	ln -sf ${IPEDATA}/global_idea_coeff_W05*.dat ${RUNDIR}/
+	cd ${RUNDIR}; ln -sf ${BINDIR}/ESMF_SWMF.exe .
+
+test3_run:
+	cd ${RUNDIR}; rm -f *ESMF_LogFile; ${MPIRUN} ./ESMF_SWMF.exe | tee runlog
+	cd ${RUNDIR}; ./PostProc.pl -M RESULTS
+
+test3_check:
+	@(perl -ne 'print if /error/i and not /Multi_On_Error/' \
+		${RUNDIR}/PET*.ESMF_LogFile > test_esmf.diff)
+	@(perl -ne 'print if /ERROR/' ${RUNDIR}/RESULTS/runlog >> test_esmf.diff)
+	@(perl -ne 'print if /BAD TERMINATION|Abort trap|Assertion|SIGABRT/' \
+		${RUNDIR}/RESULTS/runlog >> test_esmf.diff)
+	@(grep -q "RIM -> IPE" ${RUNDIR}/ESMF_SWMF.input || \
+		echo "ERROR: missing RIM -> IPE connector in test3 input" >> test_esmf.diff)
+	ls -l test_esmf.diff
 
 clean:
 	@(if([ "${ESMFMKFILE}" != "" ]); then cd src; make clean; fi)
