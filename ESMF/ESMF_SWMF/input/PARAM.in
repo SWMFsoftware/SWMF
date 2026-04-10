@@ -185,9 +185,8 @@ GEOMAGINDICES
 #BEGIN_COMP IE ---------------------------------------------------------------
 
 #IPECONDUCTANCE
-T			UseIpeConductance
-50.0			LatFullIpe
-60.0			LatFullRim
+30.0			LatFullIpe
+80.0			LatFullRim
 
 #SAVEPLOT
 1			nPlotFile
