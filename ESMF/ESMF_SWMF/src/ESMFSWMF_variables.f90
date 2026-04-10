@@ -53,7 +53,7 @@ module ESMFSWMF_variables
   
   ! Field values and coordinate coefficients for testing
   real, public, parameter:: FieldTest_V(nVarIpe2Rim) = [3.0, 5.0]
-  real, public, parameter:: CoordCoefTest = 1e-5
+  real, public, parameter:: CoordCoefTest = 1e-3
 
   ! Change of Hall field during ESMF run
   real, public, parameter:: dHallPerDtTest = 0.4
