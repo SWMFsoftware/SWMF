@@ -184,14 +184,10 @@ GEOMAGINDICES
 
 #BEGIN_COMP IE ---------------------------------------------------------------
 
-#SOLVER
-gmres			NameSolver
-
-#KRYLOV
-T			UsePreconditioner
-T			UseInitialGuess
-0.0001			Tolerance
-300			MaxIteration
+#IPECONDUCTANCE
+T			UseIpeConductance
+50.0			LatFullIpe
+60.0			LatFullRim
 
 #SAVEPLOT
 1			nPlotFile
