@@ -233,6 +233,9 @@ T			DoWriteSupermagIndices
 #TRACEIE
 T			DoTraceIE
 
+#IEPRECIP
+T			UseIEPrecip
+
 #END_COMP GM -----------------------------------------------------------------
 
 #BEGIN_COMP IE ---------------------------------------------------------------

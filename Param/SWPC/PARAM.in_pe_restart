@@ -164,6 +164,9 @@ T			DoWriteSupermagIndices
 #TRACEIE
 T			DoTraceIE
 
+#IEPRECIP
+T			UseIEPrecip
+
 #CONSERVATIVECRITERIA
 1			nConservCrit
 parabola		TypeConservCrit
