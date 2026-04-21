@@ -234,7 +234,7 @@ T			DoWriteSupermagIndices
 T			DoTraceIE
 
 #IEPRECIP
-T			UseIEPrecip
+T			UseIePrecip
 
 #END_COMP GM -----------------------------------------------------------------
 

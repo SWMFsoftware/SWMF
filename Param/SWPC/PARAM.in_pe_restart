@@ -165,7 +165,7 @@ T			DoWriteSupermagIndices
 T			DoTraceIE
 
 #IEPRECIP
-T			UseIEPrecip
+T			UseIePrecip
 
 #CONSERVATIVECRITERIA
 1			nConservCrit
