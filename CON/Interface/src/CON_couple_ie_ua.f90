@@ -32,8 +32,11 @@ module CON_couple_ie_ua
   logical :: IsInitialized = .false.
 
   ! Information about number and names of variables to share:
-  integer, save :: nVarIeUa, nVarUaIe, nUaMagLon, nUaMagLat
-  character(len=3), allocatable :: NameVarIeUa_V(:), NameVarUaIe_V(:)
+  integer, save :: nVarIeUa, nVarIeSpecUa, nVarUaIe, nUaMagLon, nUaMagLat, &
+                    nEngUA
+
+  character(len=3), allocatable :: NameVarIeUa_V(:), NameVarUaIe_V(:), &
+                                   NameVarIeSpecUa_V(:)
 
   ! Size of the 2D spherical structured IE grid
   integer, save :: iSize, jSize
@@ -47,40 +50,57 @@ contains
     ! Performs handshaking between UA and IE concerning names and number
     ! of variables to transfer.
 
-    use CON_transfer_data, ONLY: transfer_integer, transfer_string_array
+    use CON_transfer_data, ONLY: transfer_integer, transfer_string_array, &
+                                 transfer_real_array
     use UA_wrapper, ONLY: UA_get_info_for_ie
     use IE_wrapper, ONLY: IE_get_info_for_ua
 
     logical :: DoTest, DoTestMe
+
+    real, allocatable :: EngUA(:)
     character(len=*), parameter:: NameSub = 'couple_ie_ua_init'
     !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
+    if(.not. is_proc(IE_) .and. .not. is_proc(UA_)) return
     if(DoTestMe) write(*,*) NameSub//' called;, IsInitialized=', IsInitialized
     if(IsInitialized) RETURN
     IsInitialized = .true.
 
     ! IE to UA coupling: set names and number of variables
     ! Get number of variables to be passed from UA to IE, pass to IE
-    if(is_proc(UA_)) call UA_get_info_for_ie(nVarIeUa)
-    call transfer_integer(UA_, IE_, nVarIeUa,  UseSourceRootOnly=.false.)
+    if(is_proc(UA_)) call UA_get_info_for_ie(nVarIeUa, nVarIeSpecUa, nEngUA)
+
+    call transfer_integer(UA_, IE_, nVarIeUa,  nEngUA, nVarIeSpecUA, &
+                         UseSourceRootOnly=.false.)
 
     ! Allocate the array holding the variable names.
     if(allocated(NameVarIeUa_V)) deallocate(NameVarIeUa_V)
     allocate(NameVarIeUa_V(nVarIeUa))
 
+    ! Allocate array to pass UA energy grid
+    if(allocated(EngUA)) deallocate(EngUA)
+    allocate(EngUA(nEngUA))
+
+    if(allocated(NameVarIeSpecUA_V)) deallocate(NameVarIeSpecUA_V)
+    allocate(NameVarIeSpecUA_V(nVarIeSpecUa))
+
     ! Get variables names to be passed; transfer to IE
     ! Obtain number of magnetic (not total grid) lats/lons used by UA.
-    if(is_proc(UA_)) call UA_get_info_for_ie(nVarIeUa, &
-         NameVarIeUa_V, nUaMagLat, nUaMagLon)
+    if(is_proc(UA_)) call UA_get_info_for_ie(nVarIeUa, nVarIeSpecUa, nEngUA, &
+         NameVar_V=NameVarIeUa_V, NameVarSpec_V=NameVarIeSpecUa_V, &
+         nMagLat=nUaMagLat, nMagLon=nUaMagLon, EngUA=EngUA)
     call transfer_integer(UA_, IE_, nUaMagLat, UseSourceRootOnly=.false.)
     call transfer_integer(UA_, IE_, nUaMagLon, UseSourceRootOnly=.false.)
     call transfer_string_array(UA_, IE_, nVarIeUa, NameVarIeUa_V, &
          UseSourceRootOnly=.false.)
+    if (nVarIeSpecUa > 0) call transfer_string_array(UA_, IE_, &
+          nVarIeSpecUa, NameVarIeSpecUa_V, UseSourceRootOnly=.false.) 
+    call transfer_real_array(UA_, IE_, nEngUA, EngUA, UseSourceRootOnly=.false.)
 
     ! UA to IE coupling: set names and number of variables
     ! Get number of variables to be passed from IE to UA, pass to UA
-    if(is_proc(IE_)) call IE_get_info_for_ua(nVarUaIe)
+    if(is_proc(IE_)) call IE_get_info_for_ua(nVarUaIe, nEngUA)
     call transfer_integer(IE_, UA_, nVarUaIe, UseSourceRootOnly=.false.)
 
     ! Allocate the array holding the variable names.
@@ -88,7 +108,8 @@ contains
     allocate(NameVarUaIe_V(nVarUaIe))
 
     ! Get variables names to be passed; transfer to IE
-    if(is_proc(IE_)) call IE_get_info_for_ua(nVarUaIe, NameVarUaIe_V)
+    if(is_proc(IE_)) call IE_get_info_for_ua(nVarUaIe, nEngUA, NameVarUaIe_V, &
+                                             EngUA)
     call transfer_string_array(IE_, UA_, nVarUaIe, NameVarUaIe_V, &
          UseSourceRootOnly=.false.)
 
@@ -98,12 +119,15 @@ contains
             NameVarUaIe_V
        write(*,*) '   UA requests ', nVarIeUa, ' variables from IE:', &
             NameVarIeUa_V
+       if (nVarIeSpecUa > 0) write(*,*) '   UA requests', nVarIeSpecUa, &
+            ' spectral variables from IE:', NameVarIeSpecUa_V
     end if
 
     ! Store grid size
     iSize = Grid_C(IE_) % nCoord_D(1)
     jSize = Grid_C(IE_) % nCoord_D(2)
 
+    if(allocated(EngUA)) deallocate(EngUA)
   end subroutine couple_ie_ua_init
   !============================================================================
   subroutine couple_ie_ua(tSimulation)
