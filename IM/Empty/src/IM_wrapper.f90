@@ -212,11 +212,12 @@ contains
 
   end subroutine IM_put_sat_from_gm
   !============================================================================
-  subroutine IM_get_info_for_ie(nEngIM)
+  subroutine IM_get_info_for_ie(nEngIM, EngIM)
 
     character(len=*), parameter :: NameSub='IM_get_info_for_ie'
 
     integer, intent(out) :: nEngIM
+    real, intent(out), optional :: EngIM(:, :)
 
     call CON_stop(NameSub//': IM_ERROR: empty version cannot be used!')
 

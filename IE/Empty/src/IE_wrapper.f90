@@ -149,11 +149,12 @@ contains
 
   end subroutine IE_get_for_ps
   !============================================================================
-  subroutine IE_get_info_for_im(use_ua, nEngInput, nVarImIe)
+  subroutine IE_get_info_for_im(use_ua, nEngInput, nVarImIe, EngInput)
 
-    integer,          intent(out) :: nVarImIe
-    integer,          intent(in) :: nEngInput
-    logical,          intent(in) :: use_ua
+    logical,intent(in) :: use_ua
+    integer, intent(in) :: nEngInput
+    integer,intent(out) :: nVarImIe
+    real, intent(in), optional :: EngInput(:, :)
 
     character (len=*), parameter :: NameSub='IE_get_info_for_im'
 
@@ -176,7 +177,7 @@ contains
 
   end subroutine IE_get_for_im
   !============================================================================
-  subroutine IE_put_from_UA(Buffer_IIBV, nMLTs, nLats, nVarIn, NameVarUaIn_V)
+  subroutine IE_put_from_ua(Buffer_IIBV, nMLTs, nLats, nVarIn, NameVarUaIn_V)
 
     integer,          intent(in) :: nMlts, nLats, nVarIn
     character(len=3), intent(in) :: NameVarUaIn_V(nVarIn)
@@ -188,10 +189,12 @@ contains
 
   end subroutine IE_put_from_UA
   !============================================================================
-  subroutine IE_get_info_for_ua(nVar, NameVar_V)
+  subroutine IE_get_info_for_ua(nVar, nEngInput, NameVar_V, EngInput)
 
-    integer,          intent(out)           :: nVar
+    integer, intent(out) :: nVar
+    integer, intent(in) :: nEngInput
     character(len=*), intent(out), optional :: NameVar_V(:)
+    real, intent(in), optional :: EngInput(:)
 
     character(len=*), parameter :: NameSub='IE_get_info_for_ua'
 
@@ -201,14 +204,18 @@ contains
 
   !============================================================================
 
-  subroutine IE_get_for_ua(Buffer_IIV,iSize,jSize,nVarIn,NameVar_V, &
-       iBlock,tSimulation)
+  subroutine IE_get_for_ua(Buffer_IIV, iSize, jSize, nVarIn, NameVar_V, &
+                           tSimulation, nVarSpecIn, Buffer_IIIV,&
+                           NameVarSpec_V)
 
-    integer,          intent(in)  :: iSize,jSize, nVarIn, iBlock
+    integer,          intent(in)  :: iSize, jSize, nVarIn
     real,             intent(out) :: Buffer_IIV(iSize,jSize,nVarIn)
     character (len=*),intent(in)  :: NameVar_V(nVarIn)
     real,             intent(in)  :: tSimulation
-
+    integer, intent(in) :: nVarSpecIn
+    real, intent(out), optional   :: Buffer_IIIV(iSize,jSize,0,nVarSpecIn)
+    character (len=*), intent(in), optional :: NameVarSpec_V(nVarSpecIn)
+    
     character (len=*),parameter :: NameSub='IE_get_for_ua'
 
     call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
