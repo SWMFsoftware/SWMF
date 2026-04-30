@@ -62,7 +62,7 @@ contains
     !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
-    if(.not. is_proc(IE_) .and. .not. is_proc(UA_)) return
+    if(.not. is_proc(IE_) .and. .not. is_proc(UA_)) RETURN
     if(DoTestMe) write(*,*) NameSub//' called;, IsInitialized=', IsInitialized
     if(IsInitialized) RETURN
     IsInitialized = .true.
@@ -95,7 +95,7 @@ contains
     call transfer_string_array(UA_, IE_, nVarIeUa, NameVarIeUa_V, &
          UseSourceRootOnly=.false.)
     if (nVarIeSpecUa > 0) call transfer_string_array(UA_, IE_, &
-          nVarIeSpecUa, NameVarIeSpecUa_V, UseSourceRootOnly=.false.) 
+          nVarIeSpecUa, NameVarIeSpecUa_V, UseSourceRootOnly=.false.)
     call transfer_real_array(UA_, IE_, nEngUA, EngUA, UseSourceRootOnly=.false.)
 
     ! UA to IE coupling: set names and number of variables
