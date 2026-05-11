@@ -112,6 +112,7 @@ test2_rundir:
 	cp input/ionprof ${RUNDIR}/
 	cp input/tiros_spectra ${RUNDIR}/
 	cp input/IPE.inp ${RUNDIR}/ 
+	cp input/wam_input_f107_kp.txt ${RUNDIR}/
 	ln -sf ${IPEDATA}/IPE_Grid.nc ${RUNDIR}/
 	ln -sf ${IPEDATA}/IPE_State.apex.201303160000.nc ${RUNDIR}/
 	ln -sf ${IPEDATA}/global_idea_coeff_W05*.dat ${RUNDIR}/	
@@ -149,6 +150,7 @@ test3_rundir:
 	cp input/ionprof ${RUNDIR}/
 	cp input/tiros_spectra ${RUNDIR}/
 	cp input/IPE.inp ${RUNDIR}/
+	cp input/wam_input_f107_kp.txt ${RUNDIR}/
 	ln -sf ${IPEDATA}/IPE_Grid.nc ${RUNDIR}/
 	ln -sf ${IPEDATA}/IPE_State.apex.201303160000.nc ${RUNDIR}/
 	ln -sf ${IPEDATA}/global_idea_coeff_W05*.dat ${RUNDIR}/
