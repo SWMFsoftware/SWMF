@@ -187,11 +187,13 @@ contains
          compSetServicesRoutine=con_set_services, comp=conComp, rc=iError)
     if(iError /= ESMF_SUCCESS)call my_error('NUOPC_DriverAddComp: IPE -> RIM')
 
+#ifndef EXTERNAL_IPE
     ! Add connector for RIM -> IPE
     call NUOPC_DriverAddComp(gComp, srcCompLabel=compLabels(rimCompId), &
          dstCompLabel=compLabels(ipeCompId), &
          compSetServicesRoutine=con_set_services, comp=conComp, rc=iError)
     if(iError /= ESMF_SUCCESS)call my_error('NUOPC_DriverAddComp: RIM -> IPE')
+#endif
 
     iError = ESMF_SUCCESS
     call write_log("ESMF_grid_comp set_model_services finished")
