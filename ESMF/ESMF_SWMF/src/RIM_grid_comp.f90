@@ -40,6 +40,8 @@ module RIM_grid_comp
 
   ! For debugging
   use ModProcIE, ONLY: iProcIE => iProc
+
+  use CON_world, ONLY: is_proc
   
   ! Conversion to radians
 
@@ -309,6 +311,11 @@ contains
     !--------------------------------------------------------------------------
     call write_log("RIM_grid_comp:run routine called")
     iError = ESMF_FAILURE
+
+    if(.not.is_proc('IE')) then 
+     write(*,*)"Error: iProc = ", iProcIE, ' is not runing IE! Fix ESMF_SWMF.inp!'
+     return
+    end if 
 
     ! Query component
     call NUOPC_ModelGet(gComp, modelClock=Clock, &
