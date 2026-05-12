@@ -66,7 +66,7 @@ SWMF_petlist_bounds: 0 -1
 SWMF_attributes::
 ::
 RIM_model: rim
-RIM_petlist_bounds: -2 -1 # can not use more than 2
+RIM_petlist_bounds: 0 1 # can not use more than 2
 RIM_attributes::
 ::
 #
