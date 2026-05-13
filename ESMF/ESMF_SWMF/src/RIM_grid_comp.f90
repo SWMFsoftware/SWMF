@@ -309,7 +309,7 @@ contains
     character(len=ESMF_MAXSTR) :: TimeStr
     integer:: i, j, iLeft, iRight, iLon, iLat, iTheta, iPsi
     real(ESMF_KIND_R8):: Exact_V(2), LonMag, dLon, CoefL, CoefR
-    real(ESMF_KIND_R8):: CoLat, SinLat, SinI
+    real(ESMF_KIND_R8):: SinLat, SinI
     !--------------------------------------------------------------------------
     call write_log("RIM_grid_comp:run routine called")
     iError = ESMF_FAILURE
@@ -425,9 +425,9 @@ contains
     end if
 
     ! The dipole field at Earth's surface is:
-    ! Br ~ 2*cos(lat), B_theta ~ sin(lat), where lat is the colatitude.
+    ! Br ~ 2*cos(colat), B_theta ~ sin(colat), where colat is the colatitude.
     ! So, for the angle I between the magnetic field line and the surface:
-    ! tan(I) = Br/B_theta = 2 tan(lat).
+    ! tan(I) = Br/B_theta = 2 cot (colat) = 2 tan(lat), where lat = 90 - colat
 
     ! We will need sin(I) later:
     ! sin(I) =  tan(I)/sqrt(1+tan^2(I))
@@ -442,15 +442,14 @@ contains
     ! IPE_Plasma_Class.F90::Calculate_Field_Line_Integrals and
     ! the 1995 Richmond paper (https://doi.org/10.5636/jgg.47.191), IPE conductance
     ! is integrated along field lines. At a given location, the field line
-    ! length l ~= h/sin(I)
+    ! length l ~= h/|sin(I)|
 
     ! So, the height-integrated conductance should be cond_IE = cond_IPE*sin(I)
 
     do iLat = MinLat, MaxLat
-     
-       CoLat = (LatSm_I(iLat) + 90)
-       SinLat = sin(CoLat*cDegToRad)
-       SinI = 2*SinLat/sqrt(1 + 3*SinLat**2)       
+
+       SinLat = sin(LatSm_I(iLat)*cDegToRad)
+       SinI = 2*abs(SinLat)/sqrt(1 + 3*SinLat**2)
 
        if(LatSm_I(iLat) > -0.001 .and. LatSm_I(MaxLat) > 0)then
           ! Northern hemisphere: iLat = nLat/2..nLat, iTheta = 1..nLat/2
