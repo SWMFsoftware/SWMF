@@ -42,7 +42,7 @@ module RIM_grid_comp
   use ModProcIE, ONLY: iProcIE => iProc
 
   use CON_world, ONLY: is_proc
-  
+
   ! Conversion to radians
 
   implicit none
@@ -280,6 +280,7 @@ contains
   end subroutine my_data_init
   !============================================================================
   subroutine my_run(gComp, iError)
+    use ModNumConst, ONLY: cDegToRad
 
     type(ESMF_GridComp):: gComp
     integer, intent(out):: iError
@@ -308,14 +309,15 @@ contains
     character(len=ESMF_MAXSTR) :: TimeStr
     integer:: i, j, iLeft, iRight, iLon, iLat, iTheta, iPsi
     real(ESMF_KIND_R8):: Exact_V(2), LonMag, dLon, CoefL, CoefR
+    real(ESMF_KIND_R8):: CoLat, SinLat, SinI
     !--------------------------------------------------------------------------
     call write_log("RIM_grid_comp:run routine called")
     iError = ESMF_FAILURE
 
-    if(.not.is_proc('IE')) then 
-     write(*,*)"Error: iProc = ", iProcIE, ' is not runing IE! Fix ESMF_SWMF.inp!'
-     return
-    end if 
+    if(.not.is_proc('IE')) then
+       write(*,*)"Error: iProc = ", iProcIE, ' is not runing IE! Fix ESMF_SWMF.inp!'
+       return
+    end if
 
     ! Query component
     call NUOPC_ModelGet(gComp, modelClock=Clock, &
@@ -422,7 +424,34 @@ contains
        HallNorth_II = 0.0; PedNorth_II = 0.0
     end if
 
+    ! The dipole field at Earth's surface is:
+    ! Br ~ 2*cos(lat), B_theta ~ sin(lat), where lat is the colatitude.
+    ! So, for the angle I between the magnetic field line and the surface:
+    ! tan(I) = Br/B_theta = 2 tan(lat).
+
+    ! We will need sin(I) later:
+    ! sin(I) =  tan(I)/sqrt(1+tan^2(I))
+    !        = 2*tan(Lat) / sqrt(1 + 4*tan^2(Lat))
+    !        = 2 sin(Lat) / sqrt(1 + 3*sin^2(Lat))
+
+
+    ! IPE conductance is integrated along field lines, while IE needs
+    ! height-integrated conductance.
+
+    ! Based on the IPE implementation in
+    ! IPE_Plasma_Class.F90::Calculate_Field_Line_Integrals and
+    ! the 1995 Richmond paper (https://doi.org/10.5636/jgg.47.191), IPE conductance
+    ! is integrated along field lines. At a given location, the field line
+    ! length l ~= h/sin(I)
+
+    ! So, the height-integrated conductance should be cond_IE = cond_IPE*sin(I)
+
     do iLat = MinLat, MaxLat
+     
+       CoLat = (LatSm_I(iLat) + 90)
+       SinLat = sin(CoLat*cDegToRad)
+       SinI = 2*SinLat/sqrt(1 + 3*SinLat**2)       
+
        if(LatSm_I(iLat) > -0.001 .and. LatSm_I(MaxLat) > 0)then
           ! Northern hemisphere: iLat = nLat/2..nLat, iTheta = 1..nLat/2
           iTheta = MaxLat - iLat + 1
@@ -431,8 +460,8 @@ contains
              ! iLon=nLon/2+1 is 0 deg, which iPhi=1 and nLon in RIM
              ! iLon=nLon is +180 deg, which iPhi=nLon/2+1 in RIM
              iPsi = modulo(iLon + nLon/2 - 1, nLon - 1) + 1
-             HallNorth_II(iTheta,iPsi) = Data_VII(1,iLon,iLat)
-             PedNorth_II(iTheta,iPsi)  = Data_VII(2,iLon,iLat)
+             HallNorth_II(iTheta,iPsi) = Data_VII(1,iLon,iLat)*SinI
+             PedNorth_II(iTheta,iPsi)  = Data_VII(2,iLon,iLat)*SinI
           end do
           ! Fill in periodic edge cells
           HallNorth_II(iTheta,nLon) = HallNorth_II(iTheta,1)
@@ -443,8 +472,8 @@ contains
           iTheta = nLat - iLat + 1
           do iLon = 1, nLon-1
              iPsi = modulo(iLon + nLon/2 - 1, nLon - 1) + 1
-             HallSouth_II(iTheta,iPsi) = Data_VII(1,iLon,iLat)
-             PedSouth_II(iTheta,iPsi)  = Data_VII(2,iLon,iLat)
+             HallSouth_II(iTheta,iPsi) = Data_VII(1,iLon,iLat)*SinI
+             PedSouth_II(iTheta,iPsi)  = Data_VII(2,iLon,iLat)*SinI
           end do
           HallSouth_II(iTheta,nLon) = HallSouth_II(iTheta,1)
           PedSouth_II(iTheta,nLon)  = PedSouth_II(iTheta,1)
