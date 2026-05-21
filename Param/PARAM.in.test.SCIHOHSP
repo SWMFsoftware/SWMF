@@ -873,11 +873,9 @@ F			DoTraceShock
 T			UsePoissonBracket
 
 #LOWERENDBC
-T			UseLowerEndBc
 inject			TypeLowerEndBc
 
 #UPPERENDBC
-T			UseUpperEndBc
 lism			TypeUpperEndBc
 usoskin			TypeLisBc
 T			UseModulationPot
