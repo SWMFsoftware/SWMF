@@ -39,7 +39,7 @@ module CON_domain_decomposition
      ! nDim := the dimensionality of the generalized coordinate space
      integer ::nDim
      ! CoordMin_D:=Coordinates of the left corner of the domain
-     ! CoordMax_D:=Coordinates of the right corner of the domai
+     ! CoordMax_D:=Coordinates of the right corner of the domain
      real, pointer :: CoordMin_D(:), CoordMax_D(:)
      ! Root decomposition:=  decomposition of the domain for
      ! iRootMapDim_D(1)*iRootMamDim_D(2)*.....iRootMapDim_D(nDim)
