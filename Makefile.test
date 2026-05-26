@@ -1995,7 +1995,7 @@ test12_rundir:
 #		> ${TESTDIR}/NOGW_150308_UT19_MHDINPUTS.dat
 
 test12_run:
-	cd ${TESTDIR}; ${MPIRUN} SWMF.exe > runlog
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl -m -replace RESULTS
 
 test12_check:
