@@ -599,9 +599,11 @@ contains
                   ' SWMF_WARNING: end time cannot be set internally'
           end if
 
-       case('#PLANET', '#MOON', '#COMET', '#TIMEEQUINOX',   '#ORBIT',         &
-            '#IDEALAXES', '#ROTATIONAXIS', '#MAGNETICAXIS', '#MAGNETICCENTER',&
-            '#ROTATION', '#NONDIPOLE', '#DIPOLE', '#MULTIPOLEB0')
+       case('#PLANET', '#MOON', '#COMET', &
+            '#TIMEEQUINOX', '#ANGLEEQUINOX', '#ORBIT', &
+            '#IDEALAXES', '#ROTATIONAXIS', '#ROTATION', &
+            '#MAGNETICAXIS', '#MAGNETICCENTER', &
+            '#DIPOLE', '#NONDIPOLE', '#MULTIPOLEB0')
           if(.not.is_first_read())then
              if(UseStrict)RETURN
              CYCLE

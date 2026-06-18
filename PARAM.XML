@@ -282,8 +282,8 @@ run directory.
 <command name="CHECKTIMESTEP">
   <parameter name="DoCheckTimeStep" type="logical" default="T"/>
   <if expr="$DoCheckTimeStep">
-    <parameter name="DnCheckTimeStep" type="integer" minimum="2" default="10"/>
-    <parameter name="TimeStepMin" type="real" minimum="-1" default="-1"/>
+    <parameter name="DnCheckTimeStep" type="integer" min="2" default="10"/>
+    <parameter name="TimeStepMin" type="real" min="-1" default="-1"/>
   </if>
 
 #CHECKTIMESTEP
@@ -1415,6 +1415,7 @@ Another option would be to move an active region into an appropriate plane.
 Rotate the HGR system by dLongitudeHgr degrees around the Z axis.
 A negative value is interpreted as an offset angle which moves the
 planet into the -X, Z plane (so roughly towards the -X axis).
+
 Default value is 0, i.e. the true HGR system is used.
 </command>
 
@@ -1668,14 +1669,13 @@ but much shorter.
 </command>
 
 <command name="ORBIT" if="$_IsFirstSession">
-        <parameter name="OrbitalPeriodPlanet" type="real" min="0" />
-        <parameter name="rOrbitPlanet" type="real" min="0" />
-	<parameter name="Excentricity"   type="real" min="0" />
-	<parameter name="RightAscension"  type="real" min="0" />
-	<parameter name="Inclination" type="real" min="0" />
-	<parameter name="ArgPeriapsis" type="real" min="0" />
+  <parameter name="OrbitalPeriodPlanet" type="real" min="0"/>
+  <parameter name="rOrbitPlanet" type="real" min="0"/>
+  <parameter name="Excentricity" type="real" min="0" max="1"/>
+  <parameter name="RightAscension" type="real" min="0" max="360"/>
+  <parameter name="Inclination" type="real" min="0" max="90"/>
+  <parameter name="ArgPeriapsis" type="real" min="0" max="360"/>
 	
-
 #ORBIT
 3.14e7          OrbitalPeriodPlanet [s]	
 1.49e11         rOrbitPlanet [m]
@@ -1684,14 +1684,17 @@ but much shorter.
 7.155           Inclination    [deg]
 288.9           ArgPeriapsis   [deg]
 
+Set orbital parameters in HGI system.
+
+The default values are defined in share/Library/src/ModPlanetConst.f90 
 </command>
 
 <command name="TIMEEQUINOX" if="$_IsFirstSession">
-  <parameter name="iYear" type="integer" minimum="1965" default="2000"/>
-  <parameter name="iMonth" type="integer" minimum="1" default="1"/>
-  <parameter name="iDay" type="integer" minimum="1" default="1"/>
-  <parameter name="iHour" type="integer" minimum="0" default="0"/>
-  <parameter name="iMinute" type="integer" minimum="0" default="0"/>
+  <parameter name="iYear" type="integer" min="1965" default="2000"/>
+  <parameter name="iMonth" type="integer" min="1" default="1"/>
+  <parameter name="iDay" type="integer" min="1" default="1"/>
+  <parameter name="iHour" type="integer" min="0" default="0"/>
+  <parameter name="iMinute" type="integer" min="0" default="0"/>
 
 #TIMEEQUINOX
 2000                    iYear
@@ -1700,9 +1703,26 @@ but much shorter.
 0                       iHour
 0                       iMinute
 
-Reset the time of eqinox for any planet
+Set the time of equinox for any planet.
+
+The default value is defined in share/Library/src/ModPlanetConst.f90
 </command>
 
+<command name="ANGLEEQUINOX" if="$_IsFirstSession">
+  <parameter name="AngleEquinox" type="real" min="0" max="360"/>
+
+#ANGLEEQUINOX
+135.32                AngleEquinox
+
+Set the longitude of midnight at the default equinox time or the time
+defined by #TIMEEQUINOX. This angle is needed to calculate the rotation
+angle between the GEO and GEI coordinate systems. This can be determined
+from the time of day for Earth, but for other planets there is a much more
+complicated procedure that will be provided by the
+share/Python/Scripts/get_planet_const.py Python script.
+
+The default values will be provided in share/Library/src/ModPlanetConst.f90
+</command>
 
 </commandgroup>
 
@@ -1723,8 +1743,8 @@ Another star can be selected with the #STAR command.
 
 <command name="STAR" if="$_IsFirstSession">
   <parameter name="NameStar" type="string" case="upper" default="SUN"/>
-  <parameter name="RadiusStar" type="real" minimum="0" default="1"/>
-  <parameter name="MassStar"   type="real" minimum="0" default="1"/>
+  <parameter name="RadiusStar" type="real" min="0" default="1"/>
+  <parameter name="MassStar"   type="real" min="0" default="1"/>
   <parameter name="RotationPeriodStar" type="real"/>
 
 #STAR
@@ -1742,11 +1762,11 @@ By default the Sun is the central star.
 </command>
 
 <command name="HGRALIGNMENTTIME" if="$_IsFirstSession">
-  <parameter name="iYear" type="integer" minimum="1965" default="1965"/>
-  <parameter name="iMonth" type="integer" minimum="1" default="1"/>
-  <parameter name="iDay" type="integer" minimum="1" default="1"/>
-  <parameter name="iHour" type="integer" minimum="0" default="0"/>
-  <parameter name="iMinute" type="integer" minimum="0" default="0"/>
+  <parameter name="iYear" type="integer" min="1965" default="1965"/>
+  <parameter name="iMonth" type="integer" min="1" default="1"/>
+  <parameter name="iDay" type="integer" min="1" default="1"/>
+  <parameter name="iHour" type="integer" min="0" default="0"/>
+  <parameter name="iMinute" type="integer" min="0" default="0"/>
 
 #HGRALIGNMENTTIME
 1965                    iYear
@@ -1757,14 +1777,12 @@ By default the Sun is the central star.
 
 Reset the time at which HGR and HGI are aligned. In application to stars
 it may be needed to match the magnetogram (in HGR coords) to the
-exoplanet orbital elements (in HGI coords) 
+exoplanet orbital elements (in HGI coords).
 
+The default alignment time is valid for the true HGR and HGI coordinates.
 </command>
 
-
-
 </commandgroup>
-
 
 <commandgroup name="STUB COMPONENTS">
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -1774,8 +1792,8 @@ If SWMF is compiled with the interface in srcCON/Stubs,
 the stub components recognize only one command #TIMESTEP.
 
 <command name="TIMESTEP">
-	<parameter name="DtRun" type="real" min="0" />
-	<parameter name="DtCpu" type="real" min="0" />
+  <parameter name="DtRun" type="real" min="0" />
+  <parameter name="DtCpu" type="real" min="0" />
 
 #TIMESTEP
 0.01       DtRun (the typical time step of the component)
