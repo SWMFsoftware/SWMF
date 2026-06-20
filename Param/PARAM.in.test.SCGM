@@ -72,6 +72,7 @@ DIPOLE			TypeBField
 1			iDay
 0			iHour
 0			iMinute
+0.0			AngleEquinox
 
 #HGRALIGNMENTTIME
 2000			iYear
