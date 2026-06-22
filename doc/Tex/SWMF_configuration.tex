@@ -242,15 +242,13 @@ in the main SWMF directory
 \begin{verbatim}
 Config.pl -o=GM:e=MhdIonsPe
 \end{verbatim}
-To set the grid for GITM, for example, 
+To set the size of the longitude-latitude grid for the IE model, for example, 
 \begin{verbatim}
-  Config.pl -o=UA:g=36,36,50,16
+  Config.pl -o=IE:g=181,361
 \end{verbatim}
-will set the blocks size to $36\times 36\times 50$ and the number of blocks to 
-16 for the UA/GITM2 component. This command runs the {\tt Config.pl}
-script of the selected UA component. 
-On machines with limited memory it is especially important to
-set the number of blocks correctly. 
+will set the ``theta-phi'' grid size to $181\times 361$ for both hemispheres,
+so it is half degree resolution in colatitude and one degree in longitude.
+This command runs the {\tt Config.pl} script of the selected IE component. 
 
 Of course, the SWMF code has to be recompiled after any of these changes with
 \begin{verbatim}
