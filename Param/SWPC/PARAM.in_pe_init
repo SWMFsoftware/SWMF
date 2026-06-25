@@ -235,6 +235,7 @@ T			DoTraceIE
 
 #IEPRECIP
 T			UseIePrecip
+T			UseIeTraceState
 
 #END_COMP GM -----------------------------------------------------------------
 

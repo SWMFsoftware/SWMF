@@ -166,6 +166,7 @@ T			DoTraceIE
 
 #IEPRECIP
 T			UseIePrecip
+T			UseIeTraceState
 
 #CONSERVATIVECRITERIA
 1			nConservCrit
