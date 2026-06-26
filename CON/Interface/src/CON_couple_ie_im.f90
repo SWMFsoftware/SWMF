@@ -13,16 +13,16 @@ module CON_couple_ie_im
   use CON_coupler
   use CON_world, ONLY: use_comp
   use CON_comp_param, ONLY: UA_
-  use CON_transfer_data, ONLY: transfer_real_array
+  use CON_transfer_data, ONLY: transfer_real_array, transfer_string_array
 
   use IE_wrapper, ONLY: IE_get_for_im, IE_put_from_im, IE_put_from_im_complete,&
-                        IE_get_info_for_im
+                        IE_get_info_for_im, IE_put_from_im_mpi
 
   use IE_wrapper, ONLY: IE_get_for_gm ! this is used by RAM-SCB coupler ???
   use IE_wrapper, ONLY: IE_run        ! forces IE and IM run sequentially???
 
   use IM_wrapper, ONLY: IM_get_info_for_ie, IM_get_for_ie, IM_put_from_ie_mpi, &
-       IM_put_from_ie, IM_put_from_ie_complete
+       IM_put_from_ie, IM_put_from_ie_complete, IM_get_for_ie_mpi
 
   implicit none
 
@@ -77,39 +77,39 @@ contains
     if(IsInitialized) RETURN
     IsInitialized = .true.
 
+    call get_comp_info(IM_,NameVersion=NameVersionIm)
+    if(NameVersionIm(1:3) == 'RAM' .or. NameVersionIm(1:3) == 'CIM' .and. &
+      (is_proc(IE_) .or. is_proc(IM_))) then
+       ! Get extra info from IM when using RAM or CIMI
+       if(is_proc(IM_)) call IM_get_info_for_ie(nEngIM)
+
+       call transfer_integer(IM_, IE_, nEngIM, UseSourceRootOnly=.false.)
+
+       if(is_proc(IE_)) call IE_get_info_for_im(use_comp(UA_), nEngIM, nVarImIe)
+
+       call transfer_integer(IE_, IM_, nVarImIe)
+
+       ! Allocate the array holding the variable names.
+       if(allocated(EngIM)) deallocate(EngIM)
+       allocate(EngIM(2, nEngIM))
+
+       if(is_proc(IM_)) call IM_get_info_for_ie(nEngIM, EngIM)
+
+       call transfer_real_array(IM_, IE_, 2*nEngIM, &
+            EngIM, UseSourceRootOnly=.false.)
+
+       if(is_proc(IE_)) call IE_get_info_for_im(use_comp(UA_), nEngIM, &
+                                              nVarImIe, EngIM)
+    end if
+
     ! This coupler does not work for RAM, because RAM grid is not on the
     ! ionosphere.
-    call get_comp_info(IM_,NameVersion=NameVersionIm)
     if(NameVersionIm(1:3) == 'RAM')then
        ! IE-IM/RAM coupling uses MPI
+
        nTheta = size(Grid_C(IE_) % Coord1_I)
        nPhi   = size(Grid_C(IE_) % Coord2_I)
     else
-       ! Get extra info from IE when using CIMI
-       if(NameVersionIm(1:3) == 'CIM' .and. &
-         (is_proc(IE_) .or. is_proc(IM_))) then
-         ! IE-IM/CIMI coupling is being updated
-         if(is_proc(IM_)) call IM_get_info_for_ie(nEngIM)
-
-         call transfer_integer(IM_, IE_, nEngIM, UseSourceRootOnly=.false.)
-
-         if(is_proc(IE_)) call IE_get_info_for_im(use_comp(UA_), nEngIM, nVarImIe)
-
-         call transfer_integer(IE_, IM_, nVarImIe)
-
-         ! Allocate the array holding the variable names.
-         if(allocated(EngIM)) deallocate(EngIM)
-         allocate(EngIM(2, nEngIM))
-
-         if(is_proc(IM_)) call IM_get_info_for_ie(nEngIM, EngIM)
-
-         call transfer_real_array(IM_, IE_, 2*nEngIM, &
-               EngIM, UseSourceRootOnly=.false.)
-
-         if(is_proc(IE_)) call IE_get_info_for_im(use_comp(UA_), nEngIM, &
-                                                  nVarImIe, EngIM)
-      end if
-
        ! IE-IM/RCM coupling uses the coupling toolkit
        call init_coupler(                 &
             iCompSource=IE_,              &
@@ -167,15 +167,56 @@ contains
     !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
 
-    ! After everything is initialized exclude PEs which are not involved
-    if(.not.RouterImIe%IsProc) RETURN
+    if(NameVersionIm(1:3) == 'RAM')then
+      call couple_mpi_im_ie
+    else
+      ! After everything is initialized exclude PEs which are not involved
+      if(.not.RouterImIe%IsProc) RETURN
 
-    call couple_comp(&
-         RouterImIe, nVarImIe, &
-         fill_buffer =IM_get_for_ie,&
-         apply_buffer=IE_put_from_im)
+      call couple_comp(&
+          RouterImIe, nVarImIe, &
+          fill_buffer =IM_get_for_ie,&
+          apply_buffer=IE_put_from_im)
 
-    if(is_proc(IE_)) call IE_put_from_im_complete
+      if(is_proc(IE_)) call IE_put_from_im_complete
+    end if 
+
+    contains
+    !==========================================================================
+
+    subroutine couple_mpi_im_ie
+
+      character (len=*), parameter :: NameSubSub=NameSub//'.couple_mpi_im_ie'
+
+      ! Variable to pass potential on the 2D IE grid
+      real, allocatable :: Buffer_IIV(:,:,:)
+      character(len=3) :: NameVarImIe_V(nVarImIe)
+      !------------------------------------------------------------------------
+
+      ! After everything is initialized exclude PEs which are not involved
+      if(.not. is_proc(IM_) .and. .not. is_proc(IE_)) RETURN
+
+      if(DoTest)write(*,*)NameSubSub,', iProc=', i_Proc()
+
+      ! Allocate buffer both on IM and IE processors. IE sends two variables.
+      allocate(Buffer_IIV(nTheta,nPhi,nVarImIe))
+
+      if(is_proc(IM_)) call IM_get_for_ie_mpi(nTheta, nPhi, Buffer_IIV, &
+                                              nVarImIe, NameVarImIe_V)
+
+      call transfer_real_array(IM_, IE_, nTheta*nPhi*nVarImIe, Buffer_IIV)
+      call transfer_string_array(IM_, IE_, nVarImIe, NameVarImIe_V, &
+         UseSourceRootOnly=.false.)
+
+      if(is_proc(IE_)) &
+           call IE_put_from_im_mpi(Buffer_IIV, nTheta, nPhi, &
+                                  nVarImIe, NameVarImIe_V)
+      deallocate(Buffer_IIV)
+
+      if(DoTest)write(*,*)NameSubSub,' finished, iProc=',i_proc()
+
+    end subroutine couple_mpi_im_ie
+    !==========================================================================
 
   end subroutine couple_im_ie
   !============================================================================
@@ -197,7 +238,7 @@ contains
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
 
     if(NameVersionIm(1:3) == 'RAM')then
-       call couple_mpi
+       call couple_mpi_ie_im
     else
        ! After everything is initialized exclude PEs which are not involved
        if(.not.RouterIeIm%IsProc) RETURN
@@ -220,17 +261,19 @@ contains
   contains
     !==========================================================================
 
-    subroutine couple_mpi
+    subroutine couple_mpi_ie_im
 
-      character (len=*), parameter :: NameSubSub=NameSub//'.couple_mpi'
+      character (len=*), parameter :: NameSubSub=NameSub//'.couple_mpi_ie_im'
 
-      ! Variable to pass potential on the 2D IE grid
+      ! Variable to pass fluxes on the 2D IE grid
       real, allocatable :: Buffer_IIV(:,:,:)
 
       integer, parameter:: nVar = 1
       !------------------------------------------------------------------------
 
       ! After everything is initialized exclude PEs which are not involved
+      if(.not. is_proc(IM_) .and. .not. is_proc(IE_)) RETURN
+
       if(DoTest)write(*,*)NameSubSub,', iProc=', i_Proc()
 
       ! Allocate buffer both on IM and IE processors. IE sends two variables.
@@ -248,7 +291,7 @@ contains
 
       if(DoTest)write(*,*)NameSubSub,' finished, iProc=',i_proc()
 
-    end subroutine couple_mpi
+    end subroutine couple_mpi_ie_im
     !==========================================================================
 
   end subroutine couple_ie_im

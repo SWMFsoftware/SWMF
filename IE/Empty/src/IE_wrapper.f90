@@ -277,6 +277,19 @@ contains
 
   end subroutine IE_put_from_im_complete
   !============================================================================
+  subroutine IE_put_from_im_mpi(Buffer_IIV, iSize, jSize, nVarIn, NameVarImIn_V)
+
+    integer, intent(in) :: iSize, jSize, nVarIn
+    real, dimension(iSize,jSize,nVarIn), intent(in) :: Buffer_IIV
+    character(len=3) :: NameVarImIn_V(nVarIn)
+
+    character (len=*), parameter :: NameSub='IE_put_from_im_mpi'
+
+
+    call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
+
+  end subroutine IE_put_from_im_mpi
+  !============================================================================
 end module IE_wrapper
 !============================================================================
 subroutine SPS_put_into_ie(Buffer_II, iSize, jSize, NameVar, iBlock)
