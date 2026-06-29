@@ -78,8 +78,8 @@ contains
     IsInitialized = .true.
 
     call get_comp_info(IM_,NameVersion=NameVersionIm)
-    if(NameVersionIm(1:3) == 'RAM' .or. NameVersionIm(1:3) == 'CIM' .and. &
-      (is_proc(IE_) .or. is_proc(IM_))) then
+    if((NameVersionIm(1:6) == 'RAM_SCB' .or. NameVersionIm(1:3) == 'CIM') &
+      .and. (is_proc(IE_) .or. is_proc(IM_))) then
        ! Get extra info from IM when using RAM or CIMI
        if(is_proc(IM_)) call IM_get_info_for_ie(nEngIM)
 
