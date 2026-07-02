@@ -99,7 +99,8 @@ contains
        case(PT_)
           call PT_put_coupling_param(Source_, TimeIn)
        case default
-          call CON_stop('The target model it BL is not allowed')
+          call CON_stop('The component '//NameComp_I(BL_)//&
+            ' is not allowed as BL component')
        end select
      end subroutine BL_put_coupling_param
   !============================================================================
@@ -112,7 +113,8 @@ contains
     case(PT_)
        call PT_adjust_lines(Source_)
     case default
-       call CON_stop('The target model it BL is not allowed')
+       call CON_stop('The component '//NameComp_I(BL_)//&
+            ' is not allowed as BL component')
     end select
   end subroutine BL_adjust_lines
   !============================================================================
@@ -292,6 +294,9 @@ contains
     if(DoTest.and.is_proc0(SC_))&
          write(*,'(a,es12.5)')NameSub//': couple to SC,time=', DataInputTime
     if(is_proc(BL_))then
+       ! Store RhoOld UOld BOld
+       ! Nullify MhData array except for the lagrangian coorinate
+       ! Do not touch State_VIB array
        call BL_put_coupling_param(Source_ = SC_, TimeIn  = DataInputTime)
        if(IsSource4BL_C(IH_))then
           call BL_get_bounds(rMinIn = RScMin, rMaxIn = RScMax,&
