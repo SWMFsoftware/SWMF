@@ -685,26 +685,15 @@ contains
     DoAdjustUp = Source_ == Upper_
     line:do iLine = 1, nLine
        if(.not. Used_B(iLine))CYCLE line
-       if(nVertex_B(iLine) < 10)then
-          write(*,*)NameSub//':iProc in BL=', iProc, ' iLine=',iLine
-          write(*,*)NameSub//':RInterface Min, Max=', RInterfaceMin, &
-               RInterfaceMax
-          write(*,*)NameSub//':nVertex_B', nVertex_B(iLine)
-          do iVertex = 1, nVertex_B(iLine)
-             write(*,*)iVertex, MHData_VIB(LagrID_:Z_,iVertex,iLine), &
-                  State_VIB(R_,iVertex,iLine)
-          end do
-          write(*,*)NameSub//':Too short line deleted'
-          ! Remove too short lines
-          Used_B(iLine) = .false.
-          ! nVertex_B(iLine)=0
-          CYCLE line
-       end if
        iBegin = 1
        if(DoAdjustLo)then
           iOffset_B(iLine) = 0
           do while(all(MHData_VIB(X_:Z_,iBegin,iLine)==0.0))
              iBegin = iBegin + 1
+             if(iBegin > nVertex_B(iLine))then
+                call save_mhd(TimeBl, iLine, 'No grid point in the low model')
+                Used_B(iLine) = .false.
+             end if
           end do
        end if
        if(DoAdjustUp)then
@@ -721,7 +710,6 @@ contains
        end if
        PARTICLE: do while(iParticle_I(1) < iParticle_I(2))
           iVertex = iParticle_I(iLoop) ! iBegin for SC, iEnd for IH
-          R = State_VIB(R_,iVertex,iLine)
           ! account for all missing partiles along the line;
           ! --------------------------------------------------------
           ! particle import MUST be performed in order from lower to upper
@@ -753,14 +741,6 @@ contains
 
           ! when looping Up-2-Lo and particle is in other model ->
           ! adjustments are no longer allowed
-          ! if(iLoop == Up_ .and. (&
-          !     R <  RInterfaceMin&
-          !     .or.&
-          !     R >= RInterfaceMax)&
-          !     )then
-          !   DoAdjustLo = .false.
-          !   DoAdjustUp = .false.
-          ! end if
 
           ! determine whether particle is missing
           IsMissing = all(MHData_VIB(X_:Z_,iVertex,iLine)==0.0)
@@ -768,8 +748,13 @@ contains
              iParticle_I = iParticle_I + iIncrement_II(:,iLoop)
              CYCLE PARTICLE
           end if
+          ! We can only decide the particle location based on
+          ! the previous value of R
+          R = State_VIB(R_,iVertex,iLine)
           ! if need to adjust lower, but not upper boundary -> ADJUST
           if(DoAdjustLo .and. R < 1.10*rMinBl)then
+             ! The current particle was close to inner bounday,
+             ! is, probably gone thorugh the inner boundary
              ! push iBegin in front of current particle;
              ! it will be pushed until it finds a non-missing particle
              iBegin = iVertex + 1
@@ -786,66 +771,38 @@ contains
           end if
           ! missing point in the lower part of the domain -> ERROR
           if(R < RInterfaceMin)then
-             if(Source_==Lower_)write(*,*)'Is Lower Model'
-             if(Source_==Upper_)write(*,*)'Is Upper Model'
+             if(Source_==Lower_)write(*,*)'Particle is lost in Lower Model'
+             if(Source_==Upper_)write(*,*)'Particle is lost in Upper Model'
              write(*,*)'iProc in BL=', iProc
              write(*,*)'RInterface Min, Max=', RInterfaceMin, RInterfaceMax
              write(*,*)'iVertex, R=', iVertex, R
              write(*,*)'iBegin, iEnd',  iBegin, iEnd
-             do iVertex = iBegin,iEnd
-                write(*,*)iVertex, MHData_VIB(LagrID_:Z_,iVertex,iLine), &
-                     State_VIB(R_,iVertex,iLine)
-             end do
-             write(*,'(a)')NameSub//": particle has been lost"
+             call save_mhd(TimeBl, iLine, NameSub//": particle has been lost")
              Used_B(iLine)  = .false.
-             nVertex_B(iLine) = 0
              CYCLE line
           end if
           ! missing point in the upper part of the domain -> IGNORE;
-          ! if needed to adjust beginning, then it is done,
-          ! switch left -> right end of range and start adjusting
-          ! tail of the line, if it has reentered current part of the domain
+          ! will be added in the coupling with the upper model
           if(R >= RInterfaceMax)then
-             ! if(iLoop == Lo_)&
-             !     iLoop = Up_
-             ! iParticle_I = iParticle_I + iIncrement_II(:,iLoop)
-             ! if(DoAdjustLo)then
-             !   DoAdjustLo = .false.
-             !   DoAdjustUp = .true.
-             ! end if
              iParticle_I = iParticle_I + iIncrement_II(:,iLoop)
              CYCLE PARTICLE
           end if
 
-          ! if point used to be in a upper buffer -> IGNORE
-          ! if(R >= rBufferUp .and. R < rInterfaceMax)then
-          !   iParticle_I = iParticle_I + iIncrement_II(:,iLoop)
-          !   CYCLE PARTICLE
-          ! end if
-
           ! If this is the upper model and the missing point is not
           ! near the upper boundary, nothing can be done
           if(DoAdjustUp)then
-             write(*,*)'In the Upper Model'
+             write(*,*)'Particle is lost in the Upper Model'
              write(*,*)'iProc in BL=', iProc
              write(*,*)'RInterface Min, Max=', RInterfaceMin, RInterfaceMax
              write(*,*)'iVertex, R=', iVertex, R
              write(*,*)'iBegin, iEnd',  iBegin, iEnd
-             do iVertex = iBegin,iEnd
-                write(*,*)iVertex, MHData_VIB(LagrID_:Z_,iVertex,iLine), &
-                     State_VIB(R_,iVertex,iLine)
-             end do
-             write(*,'(a)')NameSub//": particle has been lost"
+             call save_mhd(TimeBl, iLine, NameSub//": particle has been lost")
              Used_B(iLine)  = .false.
-             nVertex_B(iLine) = 0
              CYCLE line
           end if
 
           iParticle_I = iParticle_I + iIncrement_II(:,iLoop)
        end do PARTICLE
-
-       ! DoAdjustLo = Source_ == Lower_
-       ! DoAdjustUp = Source_ == Upper_
        if(iBegin/=1)then
           ! Offset particle arrays
           iEnd   = nVertex_B(iLine)
@@ -855,8 +812,22 @@ contains
           State_VIB(R_         , 1:iEnd+iOffset_B(iLine), iLine) = &
                State_VIB(R_         , iBegin:iEnd, iLine)
           nVertex_B(iLine) = nVertex_B(iLine) + iOffset_B(iLine)
+          MHData_VIB(:, nVertex_B(iLine)+1:, iLine) = 0.0
           ! need to recalculate footpoints
           call set_line_foot(iLine)
+       end if
+       if(nVertex_B(iLine) < 10)then
+          write(*,*)NameSub//':iProc in BL=', iProc, ' iLine=',iLine
+          write(*,*)NameSub//':RInterface Min, Max=', RInterfaceMin, &
+               RInterfaceMax
+          write(*,*)NameSub//':nVertex_B', nVertex_B(iLine)
+          do iVertex = 1, nVertex_B(iLine)
+             write(*,*)iVertex, MHData_VIB(LagrID_:Z_,iVertex,iLine), &
+                  State_VIB(R_,iVertex,iLine)
+          end do
+          write(*,*)NameSub//':Too short line deleted'
+          Used_B(iLine) = .false.
+          CYCLE line
        end if
     end do line
     ! may need to add particles to the beginning of lines
@@ -880,10 +851,14 @@ contains
          ! large:
          if(norm2(MHData_VIB(X_:Z_,2,iLine) - &
               MHData_VIB(X_:Z_,1,iLine)) > DistMax*rMinBl)then
+            State_VIB(R_,          1, iLine) = 0.5*(  &
+                 norm2(MHData_VIB(X_:Z_,  1, iLine)) +&
+                 norm2(MHData_VIB(X_:Z_,  2, iLine))  ) 
             MHData_VIB(X_:Z_,1,iLine) = 0.5*&
                  (MHData_VIB(X_:Z_,2,iLine) + MHData_VIB(X_:Z_,1,iLine))
-            State_VIB(R_,          1, iLine) = &
-                 norm2(MHData_VIB(X_:Z_,  1, iLine))
+            MHData_VIB(X_:Z_,  1, iLine) = MHData_VIB(X_:Z_,  1, iLine)/&
+                 norm2(MHData_VIB(X_:Z_,  1, iLine))*                   &
+                 State_VIB(R_,          1, iLine)     
          end if
          ! check if the beginning of the line moved far enough from its
          ! footprint on the solar surface
@@ -989,21 +964,25 @@ contains
     FootPoint_VB(LagrID_,    iLine) = MHData_VIB(LagrID_,1,iLine) - 1.0
   end subroutine set_line_foot
   !============================================================================
-  subroutine make_file_name(Time, iLine, NameOut)
+  subroutine make_file_name(Time, iLine, NameOut, NameError)
     ! creates a string with file name and stores in NameOut;
     ! result is as follows:
     !   StringBase_Lon=?.?_Lat=?.?][_t?].NameExtension
     real,                 intent(in) :: Time
     integer,              intent(in) :: iLine
     character(len=100),   intent(out):: NameOut
+    character(len=*), OPTIONAL, intent(in) :: NameError
 
     ! timetag
     character(len=8):: StringTime
     ! lon, lat indexes corresponding to iLineAll
     integer:: iLon, iLat
     !--------------------------------------------------------------------------
-    write(NameOut,'(a)')trim(NameMHData)
-
+    if(present(NameError))then
+       write(NameOut,'(a)')'failed'
+    else
+       write(NameOut,'(a)')trim(NameMHData)
+    end if
     call BL_iblock_to_lon_lat(iLine, iLon, iLat)
     write(NameOut,'(a,i3.3,a,i3.3)') &
          trim(NameOut)//'_',iLon,'_',iLat
@@ -1034,7 +1013,7 @@ contains
          int( Time-(   60.*int(Time/   60.)))            ! # seconds
   end subroutine get_time_string
   !============================================================================
-  subroutine save_mhd(Time)
+  subroutine save_mhd(Time, iLineIn, NameError)
     use ModPlotFile, ONLY: save_plot_file
     ! write the output data
     ! separate file is created for each field line,
@@ -1042,23 +1021,37 @@ contains
     ! MH_data_<iLon>_<iLat>_n<ddhhmmss>_n<iIter>.{out/dat}
     ! name of the output file
     real, intent(in) :: Time
+    ! These optional parameters are used for diagnostic output
+    ! Failed line number
+    integer, OPTIONAL, intent(in) :: iLineIn
+    character(len=*), OPTIONAL, intent(in) :: NameError
     character(len=100):: NameFile
     ! header for the file
     character(len=500):: StringHeader
     ! loop variables
-    integer:: iLine
+    integer:: iLine, iLineStart, iLineLast
     ! index of last particle on the field line
     integer:: iLast
     character(len=*), parameter:: NameSub = 'save_mhd'
     !--------------------------------------------------------------------------
-    ! Write ouput files themselves
-    StringHeader = &
-         'MFLAMPA: data along a field line; '//&
-         'Coordindate system: '//trim(TypeCoordBl)//'; '
-    do iLine = 1, nLine
+    !
+    if(present(NameError))then
+       StringHeader = NameError
+    else
+       StringHeader = &
+            'MFLAMPA: data along a field line; '//&
+            'Coordindate system: '//trim(TypeCoordBl)//'; '
+    end if
+    if(present(iLineIn))then
+       iLineStart = iLineIn; iLineLast = iLineIn
+    else
+       iLineStart = 1      ; iLineLast = nLine
+    end if
+    do iLine = iLineStart, iLineLast
        call make_file_name(Time,   &
             iLine         = iLine, &
-            NameOut       = NameFile)
+            NameOut       = NameFile, &
+            NameError     = NameError)
          ! get min and max particle indexes on this field line
          iLast  = nVertex_B(   iLine)
          ! print data to file
