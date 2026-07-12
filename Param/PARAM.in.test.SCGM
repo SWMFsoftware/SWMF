@@ -61,10 +61,11 @@ DIPOLE			TypeBField
 #ORBIT
 1.728e5			OrbitalPeriodPlanet [s]
 6.96e9			rOrbitPlanet  [m]
-0.0			Excentricity
-0.0			RightAscension [deg]
+0.0			Eccentricity
 0.0			Inclination [deg]
-0.0			ArgPeriapsis [deg]
+0.0			MeanLongitude [deg]
+0.0			LongitudePeri [deg]
+0.0			LongitudeNode [deg]
 
 #TIMEEQUINOX
 2000			iYear

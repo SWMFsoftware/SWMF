@@ -1670,21 +1670,28 @@ but much shorter.
 
 <command name="ORBIT" if="$_IsFirstSession">
   <parameter name="OrbitalPeriodPlanet" type="real" min="0"/>
-  <parameter name="rOrbitPlanet" type="real" min="0"/>
-  <parameter name="Excentricity" type="real" min="0" max="1"/>
-  <parameter name="RightAscension" type="real" min="0" max="360"/>
-  <parameter name="Inclination" type="real" min="0" max="90"/>
-  <parameter name="ArgPeriapsis" type="real" min="0" max="360"/>
+  <parameter name="rOrbitPlanet"  type="real" min="0"/>
+  <parameter name="Eccentricity"  type="real" min="0" max="1"/>
+  <parameter name="Inclination"   type="real" min="0" max="90"/>
+  <parameter name="MeanLongitude" type="real" min="0" max="360"/>
+  <parameter name="LongitudePeri" type="real" min="0" max="360"/>
+  <parameter name="LongitudeNode" type="real" min="0" max="360"/>
 	
 #ORBIT
 3.14e7          OrbitalPeriodPlanet [s]	
 1.49e11         rOrbitPlanet [m]
-0.016           Excentricity
-174.9           RightAscension [deg]
-7.155           Inclination    [deg]
-288.9           ArgPeriapsis   [deg]
+0.016           Eccentricity
+7.155           Inclination   [deg]
+122.4           MeanLongitude [deg]
+288.9           LongitudePeri [deg]
+174.9           LongitudeNode [deg]
 
-Set orbital parameters in HGI system.
+Set orbital parameters in HGI system. The inclination is relative to
+the HGI/solar equator. The MeanLongitude is the phase of the orbit
+assuming a constant angular velocity (this is then corrected to the
+true longitude). LongitudeNode is the location of the vernal equinox
+(only meaningful for non-zero Inclination) and LongitudePeri is the
+longitude of the perihelion (only meaningful for non-zero Eccentricity).
 
 The default values are defined in share/Library/src/ModPlanetConst.f90 
 </command>
