@@ -63,7 +63,7 @@ DIPOLE			TypeBField
 6.96e9			rOrbitPlanet  [m]
 0.0			Eccentricity
 0.0			Inclination [deg]
-0.0			MeanLongitude [deg]
+180.0			MeanLongitude [deg]
 0.0			LongitudePeri [deg]
 0.0			LongitudeNode [deg]
 
