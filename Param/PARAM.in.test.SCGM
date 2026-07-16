@@ -67,13 +67,10 @@ DIPOLE			TypeBField
 0.0			LongitudePeri [deg]
 0.0			LongitudeNode [deg]
 
-#TIMEEQUINOX
-2000			iYear
-1			iMonth
-1			iDay
-0			iHour
-0			iMinute
-0.0			AngleEquinox
+#ROTATIONAXIS
+T			IsRotAxisPrimary
+0.0			RotAxisTheta
+90.0			RotAxisPhi
 
 #HGRALIGNMENTTIME
 2000			iYear
