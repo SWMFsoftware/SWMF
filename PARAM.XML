@@ -1696,34 +1696,6 @@ longitude of the perihelion (only meaningful for non-zero Eccentricity).
 The default values are defined in share/Library/src/ModPlanetConst.f90 
 </command>
 
-<command name="TIMEEQUINOX" if="$_IsFirstSession">
-  <parameter name="iYear" type="integer" min="1965" default="2000"/>
-  <parameter name="iMonth" type="integer" min="1" default="1"/>
-  <parameter name="iDay" type="integer" min="1" default="1"/>
-  <parameter name="iHour" type="integer" min="0" default="0"/>
-  <parameter name="iMinute" type="integer" min="0" default="0"/>
-  <parameter name="AngleEquinox" type="real" min="0" max="360"/>
-
-#TIMEEQUINOX
-2000                    iYear
-1                       iMonth
-1                       iDay
-0                       iHour
-0                       iMinute
-135.32                  AngleEquinox
-
-Set the time of equinox for any planet.
-
-The AngleEquinox parameter gives the longitude of the midnight direction
-at the equinox time. This is needed to calculate the rotation
-angle between the GEO and GEI coordinate systems. This can be determined
-from the time of day for Earth, but for other planets there is a much more
-complicated procedure that will be provided by the
-share/Python/Scripts/get_planet_const.py Python script.
-
-The default values are defined in share/Library/src/ModPlanetConst.f90
-</command>
-
 </commandgroup>
 
 <commandgroup name="STAR COMMANDS">
