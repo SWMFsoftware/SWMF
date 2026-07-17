@@ -52,11 +52,7 @@ New			NamePlanet
 6378.0e3		RadiusPlanet [m]
 5.0e+24			MassPlanet   [kg]
 0.0			OmegaPlanet  [radian/s]
-0.0			TiltRotation [degree]
-DIPOLE			TypeBField
-0.0			MagAxisThetaGeo [degree]
-0.0			MagAxisPhiGeo   [degree]
-0.0			DipoleStrength  [T]
+NONE			TypeBField
 
 #ORBIT
 1.728e5			OrbitalPeriodPlanet [s]

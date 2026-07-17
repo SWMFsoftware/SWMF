@@ -1454,82 +1454,85 @@ The real planet parameters can be modified and simplified
 with the other planet commands listed in this subsection.
 These modifier commands cannot proceed the #PLANET command!
 
-<command name="PLANET" if="$_IsFirstSession">
-	<parameter name="NamePlanet" type="string" case="upper" input="select">
-		<option name="NONE"			/>
-		<option name="NEW" 			/>
-		<option name="MERCURY"			/>
-		<option name="VENUS"			/>
-		<option name="EARTH" default="T"	/>
-		<option name="MARS"			/>
-		<option name="JUPITER"			/>
-		<option name="SATURN"			/>
-		<option name="URANUS"			/>
-		<option name="NEPTUNE" 			/>
-		<option name="PLUTO" 			/>
-		<option name="MOON"			/>
-		<option name="IO"			/>
-		<option name="EUROPA"			/>
-		<option name="TITAN"			/>
-		<option name="ENCELADUS"		/>
-		<option name="HALLEY"			/>
-		<option name="COMET1P"			/>
-		<option name="BORRELLY"			/>
-		<option name="COMET19P"			/>
-		<option name="CHURYUMOVGERASIMENKO"	/>
-		<option name="COMET67P"			/>
-		<option name="HALEBOPP"			/>
-	</parameter>
-	<if expr="$NamePlanet eq 'NEW'">
-		<parameter name="RadiusPlanet" type="real" min="0" />
-		<parameter name="MassPlanet"   type="real" min="0" />
-		<parameter name="OmegaPlanet"  type="real" min="0" />
-		<parameter name="TiltRotation" type="real" min="0" />
-		<parameter name="TypeBField"   type="string" input="select">
-			<option name="NONE" />
-			<option name="DIPOLE" default="T" />
-		</parameter>
-	</if>
-	<if expr="$TypeBField eq 'DIPOLE'">
-		<parameter name="MagAxisThetaGeo" type="real" 
-						min="0" max="180"/>
-		<parameter name="MagAxisPhiGeo"   type="real"
-						min="0" max="360"/>
-		<parameter name="DipoleStrength"  type="real"    />
-	</if>
-	<rule expr="not $PlanetCommand">
-		PLANET should precede $PlanetCommand
-	</rule>
+<command name="PLANET" alias="MOON,COMET"  if="$_IsFirstSession">
+  <parameter name="NamePlanet" type="string" case="upper" input="select">
+    <option name="NONE"			/>
+    <option name="NEW"                  />
+    <option name="MERCURY"		/>
+    <option name="VENUS"		/>
+    <option name="EARTH" default="T"	/>
+    <option name="MARS"			/>
+    <option name="JUPITER"		/>
+    <option name="SATURN"		/>
+    <option name="URANUS"		/>
+    <option name="NEPTUNE" 		/>
+    <option name="PLUTO" 		/>
+    <option name="MOON"			/>
+    <option name="IO"			/>
+    <option name="EUROPA"		/>
+    <option name="GANYMEDE"		/>
+    <option name="TITAN"		/>
+    <option name="ENCELADUS"		/>
+    <option name="HALLEY"		/>
+    <option name="COMET1P"		/>
+    <option name="BORRELLY"		/>
+    <option name="COMET19P"		/>
+    <option name="CHURYUMOVGERASIMENKO"	/>
+    <option name="COMET67P"		/>
+    <option name="HALEBOPP"		/>
+  </parameter>
+  <if expr="$NamePlanet =~ /NEW|GANYMEDE|COMET[16]|BORRELLY|PLUTO|NEPTUNE/">
+    <parameter name="RadiusPlanet" type="real" min="0" />
+    <parameter name="MassPlanet"   type="real" min="0" />
+    <parameter name="OmegaPlanet"  type="real" min="0" />
+    <if expr="$OmegaPlanet">
+      <parameter name="RotAxisTheta" type="real" min="0" max="90"/>
+      <parameter name="RotAxisPhi" type="real" min="0" max="360" if="$RotAxisTheta"/>
+    </if>
+    <parameter name="TypeBField"   type="string" input="select">
+      <option name="NONE" />
+      <option name="DIPOLE" default="T" />
+    </parameter>
+  </if>
+  <if expr="$TypeBField eq 'DIPOLE'">
+    <parameter name="MagAxisTheta" type="real" min="0" max="180"/>
+    <parameter name="MagAxisPhi"   type="real" min="0" max="360" if="$MaxAxisTheta"/>
+    <parameter name="DipoleStrength"  type="real"    />
+  </if>
+  <rule expr="not $PlanetCommand">
+    PLANET should precede $PlanetCommand
+  </rule>
 
 #PLANET
-New			NamePlanet (rest of parameters read for unknown planet)
+NEW			NamePlanet (rest of parameters read for unknown planet)
 6300000.0		RadiusPlanet [m]
 5.976E+24		MassPlanet   [kg]
 0.000000199		OmegaPlanet  [radian/s]
-23.5			TiltRotation [degree]
+23.5			RotAxisTheta [deg] read if OmegaPlanet is not 0
+130.0			RotAxisPhi   [deg] read if RotAxisTheta is not 0
 DIPOLE			TypeBField
-11.0			MagAxisThetaGeo [degree]
-289.1			MagAxisPhiGeo   [degree]
--31100.0E-9		DipoleStrength  [T]
+11.0			MagAxisTheta [deg] rest read if TypeBField=DIPOLE
+289.1			MagAxisPhi   [deg] read if MaxAxisTheta is not 0
+-31100.0E-9		DipoleStrength [T]
 
 The NamePlanet parameter contains the name of the planet
 with arbitrary capitalization. In case the name of the planet
 is not recognized, the following variables are read:
 RadiusPlanet is the radius of the planet,
-MassPlanet is the mass of the planet, 
-OmegaPlanet is the angular speed relative to an inertial frame,
-TiltRotation is the tilt of the rotation axis relative to ecliptic North,
-TypeBField, which can be "NONE" or "DIPOLE". 
-TypeBField="NONE" means that the planet does not have magnetic field. 
-It TypeBField is set to "DIPOLE" than the following variables are read:
-MagAxisThetaGeo and MagAxisPhiGeo are the colatitude and longitude
-of the north magnetic pole in corotating planetocentric coordinates.
+MassPlanet is the mass of the planet,
+OmegaPlanet is the angular speed relative to an inertial frame, and
+RotAxisTheta is the tilt of the rotation axis relative to ecliptic North,
+RotAxisPhi is the orientation relative to the GSE X axis.
+TypeBField can be "NONE" or "DIPOLE".
+TypeBField="NONE" means that the planet does not have magnetic field.
+If TypeBField is set to "DIPOLE" then the following variables are read:
+MagAxisTheta and MagAxisPhi are the colatitude and longitude
+of the north magnetic pole in GSE coordinates.
 Finally DipoleStrength is the equatorial strength of the magnetic dipole
 field. The units are indicated in the above example, which shows the
 Earth values approximately.
 
-The default value is NamePlanet="Earth", which is currently
-the only recognized planet.
+The default value is NamePlanet="Earth".
 </command>
 
 <command name="ROTATIONAXIS" if="$_IsFirstSession">
