@@ -286,9 +286,10 @@ body2orbit		TypeBcBody2
 
 #SAVEPLOT
 1			nPlotFile
-y=0 MHD tcp		StringPlot
+y=0 MHD idl		StringPlot
 20000			DnSavePlot
--1			DtSavePlot
+-1.0			DtSavePlot
+-1.0			DxSavePlot
 
 #SAVEINITIAL
 T			DoSaveInitial
@@ -408,9 +409,10 @@ dt rho mx my mz p bx by bz pmin pmax dst_sm dstflx		NameLogVars
 
 #SAVEPLOT
 1			nPlotFile
-y=0 MHD tcp		StringPlot
+y=0 MHD idl		StringPlot
 20000			DnSavePlot
--1.			DtSavePlot
+-1.0			DtSavePlot
+-1.0			DxSavePlot
 
 #SAVEINITIAL
 T			DoSaveInitial
@@ -438,9 +440,10 @@ GM			NameTarget
 
 #SAVEPLOT
 1			nPlotFile
-z=0 MHD tcp		StringPlot
+z=0 MHD idl		StringPlot
 -1			DnSavePlot
 1800.			DtSavePlot
+-1.0			DxSavePlot
 
 #END_COMP SC -----------------------------------------------------------------
 
@@ -456,9 +459,10 @@ float			TypeBc6
 
 #SAVEPLOT
 1			nPlotFile
-y=0 MHD tcp		StringPlot
+y=0 MHD idl		StringPlot
 -1			DnSavePlot
 1800.			DtSavePlot
+-1.0			DxSavePlot
 
 #END_COMP GM -----------------------------------------------------------------
 
