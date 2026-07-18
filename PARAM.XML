@@ -1496,7 +1496,7 @@ These modifier commands cannot proceed the #PLANET command!
   </if>
   <if expr="$TypeBField eq 'DIPOLE'">
     <parameter name="MagAxisTheta" type="real" min="0" max="180"/>
-    <parameter name="MagAxisPhi"   type="real" min="0" max="360" if="$MaxAxisTheta"/>
+    <parameter name="MagAxisPhi"   type="real" min="0" max="360" if="$MagAxisTheta"/>
     <parameter name="DipoleStrength"  type="real"    />
   </if>
   <rule expr="not $PlanetCommand">
@@ -1512,7 +1512,7 @@ NEW			NamePlanet (rest of parameters read for unknown planet)
 130.0			RotAxisPhi   [deg] read if RotAxisTheta is not 0
 DIPOLE			TypeBField
 11.0			MagAxisTheta [deg] rest read if TypeBField=DIPOLE
-289.1			MagAxisPhi   [deg] read if MaxAxisTheta is not 0
+289.1			MagAxisPhi   [deg] read if MagAxisTheta is not 0
 -31100.0E-9		DipoleStrength [T]
 
 The NamePlanet parameter contains the name of the planet
