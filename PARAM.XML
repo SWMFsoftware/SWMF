@@ -1485,9 +1485,10 @@ These modifier commands cannot proceed the #PLANET command!
     <parameter name="RadiusPlanet" type="real" min="0" />
     <parameter name="MassPlanet"   type="real" min="0" />
     <parameter name="OmegaPlanet"  type="real" min="0" />
-    <if expr="$OmegaPlanet">
+    <if expr="$OmegaPlanet != 0">
       <parameter name="RotAxisTheta" type="real" min="0" max="90"/>
-      <parameter name="RotAxisPhi" type="real" min="0" max="360" if="$RotAxisTheta"/>
+      <parameter name="RotAxisPhi" type="real" min="0" max="360"
+		 if="$RotAxisTheta != 0"/>
     </if>
     <parameter name="TypeBField"   type="string" input="select">
       <option name="NONE" />
@@ -1496,7 +1497,8 @@ These modifier commands cannot proceed the #PLANET command!
   </if>
   <if expr="$TypeBField eq 'DIPOLE'">
     <parameter name="MagAxisTheta" type="real" min="0" max="180"/>
-    <parameter name="MagAxisPhi"   type="real" min="0" max="360" if="$MagAxisTheta"/>
+    <parameter name="MagAxisPhi"   type="real" min="0" max="360"
+	       if="$MagAxisTheta != 0"/>
     <parameter name="DipoleStrength"  type="real"    />
   </if>
   <rule expr="not $PlanetCommand">
