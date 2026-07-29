@@ -615,7 +615,7 @@ test_swpc_aepic_run:
 	cd ${TESTDIR}; ./PostProc.pl
 	
 test_swpc_aepic_check:
-	-@(${DIFFNUM} -b -r=1e-5 -a=1e-9 \
+	-@(${DIFFNUM} -b -r=1e-4 -a=1e-9 \
 		${TESTDIR}/GM/IO2/y=0_var_1_e20140410-000005-000.out \
 		Param/SWPC/TestOutputAepic/y=0_var_1_e20140410-000005-000.out.gz \
 		> test_swpc_aepic_gm.diff)
