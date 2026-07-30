@@ -7,6 +7,9 @@ Param/PARAM.in.test.GMUA.MGITM		StringDescription
 GM 0 -1 1		CompMap
 UA 0 -1 1		CompMap
 
+#TEST
+init_axes		StringTest
+
 #TIMEACCURATE
 F			IsTimeAccurate
 
@@ -202,7 +205,7 @@ NOGW_150308_UT19_MHDINPUTS.dat		NameFileTGCM
 #SOLARCONDITION
 solarmin		TypeSolarCond
 
-check SMDist
+True SMDist
 1.43050
 
 #REACTIONS
