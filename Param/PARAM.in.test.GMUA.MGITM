@@ -164,7 +164,7 @@ T			UseMarsB0
 60			NNm
 marsmgsp.txt		NameFileB0
 
-MSO
+#MSO
 T			UseMso
 
 MARSATMOSPHEREFILE
