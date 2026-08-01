@@ -1582,6 +1582,17 @@ length of the astronomical day.
 The default is to use rotation with the real rotation period of the planet.
 </command>
 
+<command name="#MERIDIAN" if="$_IsFirstSession">
+  <parameter name="MeridianGeo" type="real" min="0" max="360"/>
+
+#MERIDIAN
+180.0			MeridianGeo [deg]
+
+Set the longitude of the subsolar point at the start time.
+
+The default depends on the start time and the planet rotation data.
+</command>
+
 <command name="MAGNETICAXIS"  if="$_IsFirstSession">
 	<parameter name="IsMagAxisPrimary" type="logical" default="T" />
 	<if expr="$IsMagAxisPrimary">

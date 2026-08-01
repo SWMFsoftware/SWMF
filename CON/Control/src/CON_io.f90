@@ -600,7 +600,7 @@ contains
           end if
 
        case('#PLANET', '#MOON', '#COMET', '#ORBIT', &
-            '#IDEALAXES', '#ROTATIONAXIS', '#ROTATION', &
+            '#IDEALAXES', '#ROTATIONAXIS', '#ROTATION', '#MERIDIAN', &
             '#MAGNETICAXIS', '#MAGNETICCENTER', &
             '#DIPOLE', '#NONDIPOLE', '#MULTIPOLEB0')
           if(.not.is_first_read())then
