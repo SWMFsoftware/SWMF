@@ -7,6 +7,9 @@ Param/PARAM.in.test.GMUA.MGITM		StringDescription
 GM 0 -1 1		CompMap
 UA 0 -1 1		CompMap
 
+#PLANET
+Mars			NamePlanet
+
 #TEST
 init_axes		StringTest
 
@@ -30,9 +33,6 @@ T			DoSaveRestart
 INCLUDE
 RESTART.in
 
-#PLANET
-Mars			NamePlanet
-
 #UPDATEB0
 10.0			DtUpdateB0
 
@@ -43,6 +43,9 @@ GM			NameTarget
 -1.0			DtCouple
 
 #BEGIN_COMP GM ---------------------------------------------------------------
+
+#COORDSYSTEM
+GSE			TypeCoordSystem
 
 #GRIDBLOCKALL
 10000			MaxBlock
@@ -163,9 +166,6 @@ T			UseHotO
 T			UseMarsB0
 60			NNm
 marsmgsp.txt		NameFileB0
-
-#MSO
-T			UseMso
 
 MARSATMOSPHEREFILE
 T			UseMarsAtm
