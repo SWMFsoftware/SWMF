@@ -327,7 +327,10 @@ contains
     integer                         :: iVar
 
     integer :: i, j
-    real(ESMF_KIND_R8) :: Coef, ExactValue, LonSM
+    real(ESMF_KIND_R8) :: Coef, ExactValue, LonSM, Distance
+
+    ! This is half length of a RIM cell in the longitude direction. 
+    real(ESMF_KIND_R8), parameter :: DisThreshold = 0.5
     !--------------------------------------------------------------------------
     call write_log("IPE_grid_comp run called")
     iError = ESMF_FAILURE
@@ -375,15 +378,28 @@ contains
        Data_VII(iVar,:,:) = Ptr_II
 
        Coef = 10**iVar
-       do i = MinLon, MaxLon; do j = MinLat, MaxLat
+       do i = MinLon, MaxLon
           LonSM = modulo(LonIpe_I(i) + 180 - dPhiMag2Sm, 360.0) - 180
-          ExactValue = abs(LonSM)*abs(LatIpe_I(j))*Coef
-          if( abs(Data_VII(iVar,i,j)-ExactValue) > 1.0e-6 ) then
-             write(*,*)'Error in RIM->IPE coupling for ', NameField, &
-                  ' at lon=', LonIpe_I(i), ' lat=', LatIpe_I(j), &
-                  ' value=', Data_VII(iVar,i,j), ' ExactValue=', ExactValue
-          end if
-       end do; end do
+
+          ! The slope of the test field abs(LonSM) is discontinuous at 0 and
+          ! at the periodic junction, +/-180 degrees. Linear interpolation is
+          ! exact where the slope is constant, but not when a slope
+          ! discontinuity lies inside a source cell. With the current 1-degree
+          ! RIM and 4.5-degree IPE grids, exclude IPE points less than half a
+          ! RIM cell from a slope discontinuity because the interpolated and
+          ! pointwise analytic values are not expected to agree there.
+          Distance = min(abs(LonSM), 180-abs(LonSM))
+          if(Distance < DisThreshold) cycle
+
+          do j = MinLat, MaxLat
+             ExactValue = abs(LonSM)*abs(LatIpe_I(j))*Coef
+             if(abs(Data_VII(iVar,i,j)-ExactValue) > 1.0e-6) then
+                write(*,*)'Error in RIM->IPE coupling for ', NameField, &
+                     ' at lon=', LonIpe_I(i), ' lat=', LatIpe_I(j), &
+                     ' value=', Data_VII(iVar,i,j), ' ExactValue=', ExactValue
+             end if
+          end do
+       end do
     end do
     write(*,*)'IPE_grid_comp: received=', Data_VII(1, MinLon, MinLat)
 
