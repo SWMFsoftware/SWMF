@@ -11,7 +11,7 @@ UA 0 -1 1		CompMap
 Mars			NamePlanet
 
 #TEST
-init_axes		StringTest
+init_axes UA_get_grid_info		StringTest
 
 #TIMEACCURATE
 F			IsTimeAccurate
@@ -50,9 +50,6 @@ GM_get_ua_region		StringTest
 #COORDSYSTEM
 GSE			TypeCoordSystem
 
-#GRIDBLOCKALL
-10000			MaxBlock
-
 INCLUDE
 GM/restartIN/restart.H
 
@@ -60,15 +57,12 @@ GM/restartIN/restart.H
 T			UseGravity
 0			iDirGravity
 
-IMPLICIT
-T			UsePointImplicit
-F			UsePartImplicit
-F			UseFullImplicit
-1.0			cflImpl
-
 #GRIDGEOMETRY
 spherical_genr		TypeGeometry
 GM/Param/MARS/grid_stretch.dat		NameGridFile
+
+#GRIDBLOCKALL
+10000			MaxBlock
 
 #GRID
 13			nRootBlock1
@@ -413,8 +407,6 @@ T		UseNeutralChemistry
 10			MaxIter
 -1.0			TimeMax
 
-#END
-
 #RUN ##########################################################################
 
 #TIMEACCURATE
@@ -422,9 +414,19 @@ T                       DoTimeAccurate
 
 #BEGIN_COMP GM ---------------------------------------------------------------
 
+#FIXAXIS
+T			DoFixAxis
+5.0			rFixAxis
+0.0			r2FixAxis
+
 #TIMESTEPPING
 2			nStage
 0.95			CflExpl
+
+#IMPLICIT
+T			UsePointImplicit
+F			UsePartImplicit
+F			UseFullImplicit
 
 #SAVEPLOT
 3                       nPlotFiles
@@ -451,8 +453,8 @@ z=0 MHD idl             StringPlot
 UA			NameSource
 GM			NameTarget
 -1			DnCouple
-1.0			DtCouple
+0.2			DtCouple  ! 5 minutes is more realistic
 
 #STOP
 -1			MaxIter
-10.0			TimeMax
+0.4			TimeMax
