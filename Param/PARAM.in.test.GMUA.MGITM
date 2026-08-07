@@ -44,6 +44,9 @@ GM			NameTarget
 
 #BEGIN_COMP GM ---------------------------------------------------------------
 
+#TEST
+GM_get_ua_region		StringTest
+
 #COORDSYSTEM
 GSE			TypeCoordSystem
 
