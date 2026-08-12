@@ -95,6 +95,9 @@ lightwave		testCase
 T			useFixedDt
 0.4			dt
 
+#FIXEDUMAX
+1.0			fixedUMax
+
 #PERIODICITY
 T			isPeriodicX
 T			isPeriodicY
