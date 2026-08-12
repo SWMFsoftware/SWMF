@@ -474,7 +474,7 @@ contains
              call read_var('nNext21', Couple_CC(iComp2,iComp1) % nNext)
              call read_var('tNext21', Couple_CC(iComp2,iComp1) % tNext)
           end if
-       case("#FIELDLINE","#COUPLEFIELDLINE")
+       case("#FIELDLINE","#COUPLEFIELDLINE","#RMINBL")
           call BL_read_param(NameCommand, iErrorSWMF)
           if(iErrorSWMF /= 0)RETURN
 

@@ -1146,6 +1146,26 @@ means that there is no coupling.
 The default is no coupling.
 </command>
 
+<command name="RMINBL" multiple="T">
+	<parameter name="rMinBl" type="real" min="0" />
+
+
+#RMINBL
+5.0			rMinBl
+
+Raise the inner boundary of the field line domain to rMinBl, in solar
+radii. The command may be repeated in later sessions, so the boundary
+can be moved outward while the run proceeds; the vertices left inside
+are dropped at the next coupling and the foot points are moved onto the
+new sphere.
+
+The radius is only ever increased: a value below the current boundary is
+ignored, since the vertices already dropped cannot be recovered. In the
+first session the boundary is set by RScMin, RIhMin or ROhMin of the
+'#FIELDLINE' command, whichever source component applies, so this
+command takes effect from the second session onwards.
+</command>
+
 <command name="LOOKUPTABLE" multiple="T">
   <parameter name="StringCompTable" type="string" length="100"/>
     <parameter name="NameTable" type="string" length="$lLine"/>
