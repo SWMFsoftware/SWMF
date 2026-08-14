@@ -92,6 +92,9 @@ T			UseFieldLineThreads
 45			nPointThreadMax
 3.0e-3			DsThreadMin
 
+#THREADRESTART
+T			DoThreadRestart
+
 #THREADEDBC
 T			UseAlignedVelocity
 T			DoConvergenceCheck
