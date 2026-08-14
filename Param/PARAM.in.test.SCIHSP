@@ -377,6 +377,9 @@ Begin session: 2
 #DOAMR
 F			DoAmr
 
+#THREADRESTART
+T			DoThreadRestart
+
 #END_COMP SC -----------------------------------------------------------------
 
 #STOP
