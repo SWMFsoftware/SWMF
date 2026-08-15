@@ -33,7 +33,7 @@ my $MinScore =
 	 $WeightMachine{"nag"}          );
 
 # Required successrate
-my $MinRate  = 0.94; 
+my $MinRate  = 0.96;
 
 # command to merge master into stable branch
 my $merge_stable =   
