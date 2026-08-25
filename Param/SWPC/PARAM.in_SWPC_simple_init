@@ -367,7 +367,7 @@ z=0 MHD idl		StringPlot
 
 #BORIS
 T			UseBorisCorrection
-0.01			BorisClightFactor
+0.015			BorisClightFactor
 
 #TIMESTEPPING
 1			nStage

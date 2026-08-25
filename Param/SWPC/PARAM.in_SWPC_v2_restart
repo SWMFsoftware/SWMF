@@ -264,7 +264,7 @@ mc3			TypeLimiter
 
 #BORIS
 T			UseBorisCorrection
-0.01			BorisClightFactor
+0.015			BorisClightFactor
 
 #REGION
 borisregion		NameRegion
