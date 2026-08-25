@@ -181,7 +181,7 @@ T			DoAmr
 T			IsStrictAmr
 
 ! Satellite trajectories
-#INCLUDE
+INCLUDE
 SATELLITES.in
 
 #MAGNETOMETER
@@ -273,6 +273,14 @@ T			IsTimeAccurate
 T			DoSaveRestart
 -1			DnSaveRestart
 1 hour			DtSaveRestart
+
+CHECKSTOP
+T			DoCheckStop
+-1			DnCheckStop
+5 min			DtCheckStop
+
+CPUTIMEMAX
+47.5 hour		CpuTimeMax
 
 #COMPONENT
 IM			NameComp
