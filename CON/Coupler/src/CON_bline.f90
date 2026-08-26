@@ -48,7 +48,6 @@ module CON_bline
   public :: BL_interface_point_coords ! points rMinInterface<R<rMaxInterface
   public :: BL_put_line               ! points rMinBl < R < rMaxBl
   public :: BL_is_interface_block     ! to mark unusable lines
-  public :: BL_set_rmin               ! raise rMinBl, the inner boundary
   public :: save_mhd
 
   real,    public  :: TimeBl = -1.0   ! Time of the model! Time of the model
@@ -270,8 +269,19 @@ contains
           NameMHData = 'SP/IO2/MH_data'
        end select
     case("#RMINBL")
+       ! Used to reset low boundary radius
        call read_var('rMinBl', rMinBlIn)
-       call BL_set_rmin(rMinBlIn)
+       rMinBl = max(rMinBl, rMinBlIn)
+       if(IsSource4BL_C(SC_))then
+          RScMin = max(RScMin, rMinBl)
+       elseif(IsSource4BL_C(IH_))then
+          RIhMin = max(RIhMin, rMinBl)
+       elseif(IsSource4BL_C(OH_))then
+          ROhMin = max(ROhMin, rMinBl)
+       else
+          call CON_stop('Do not reset the BL low boundary '//&
+               'before it is set with #FIELDLINE command')
+       end if
     case("#COUPLEFIELDLINE")
        if(BL_ < 1)then
           if(is_proc0())write(*,'(a)') NameSub//&
@@ -518,18 +528,6 @@ contains
        rBufferUp = rMaxIn
     end if
   end subroutine BL_get_bounds
-  !============================================================================
-  subroutine BL_set_rmin(rMinIn)
-
-    ! Raise the inner boundary of the field line domain. Called from
-    ! #RMINBL, which is read in every session, so the radius can be
-    ! increased while the run proceeds. It is never decreased: vertices
-    ! already dropped below rMinBl cannot be recovered.
-
-    real, intent(in) :: rMinIn
-    !--------------------------------------------------------------------------
-    rMinBl = max(rMinBl, rMinIn)
-  end subroutine BL_set_rmin
   !============================================================================
   integer function BL_n_particle(iBlockLocal)
     integer, intent(in) :: iBlockLocal
