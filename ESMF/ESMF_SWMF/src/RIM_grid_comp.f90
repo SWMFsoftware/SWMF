@@ -511,7 +511,7 @@ contains
 
     real(ESMF_KIND_R8), pointer :: Ptr_II(:,:), Lon_I(:), Lat_I(:)
     real(ESMF_KIND_R8), allocatable :: Data_VII(:,:,:)
-    integer:: i, j, iVar, itemCount
+    integer:: i, j, iVar, itemCount, iTheta, iPsi
     character(len=4):: NameField
 
     integer:: iLeft, iRight
@@ -523,6 +523,7 @@ contains
     if(iError /= ESMF_SUCCESS) call my_error("NUOPC_ModelGet")
 
     allocate(Data_VII(nVarRim2Ipe,MinLon:MaxLon,MinLat:MaxLat))
+    Data_VII = 0.0
 
     do iVar = 1, nVarRim2Ipe
        ! Get pointers to the variables in the export state
@@ -548,14 +549,56 @@ contains
           call get_coords(Grid, Lon_I, Lat_I, iError)
           if(iError /= ESMF_SUCCESS) call my_error('get_coords')
 
-          Coef = 10**iVar
-
-          ! Add coordinate dependence
-          ! With abs(Lon)*abs(Lat) dependence, the coupling does not pass
-          ! correct values. To be investigated.
-          do j = MinLat, MaxLat; do i = MinLon, MaxLon
-             Data_VII(iVar,i,j) = abs(Lon_I(i))*abs(Lat_I(j))*Coef
-          end do; end do
+          if(DoTest) then
+             ! Fake-IPE tests require the original analytic export.
+             Coef = 10**iVar
+             do j = MinLat, MaxLat; do i = MinLon, MaxLon
+                Data_VII(iVar,i,j) = abs(Lon_I(i))*abs(Lat_I(j))*Coef
+             end do; end do
+          else
+             do j = MinLat, MaxLat
+                if(LatSm_I(j) >= 0.0) then
+                   ! The equator belongs to the northern hemisphere.
+                   iTheta = MaxLat - j + 1
+                   do i = MinLon, MaxLon
+                      iPsi = modulo(i + nLon/2 - 1, nLon - 1) + 1
+                      select case(NameField)
+                      case('jFac')
+                         if(allocated(JfacNorth_II)) &
+                              Data_VII(iVar,i,j) = JfacNorth_II(iTheta,iPsi)
+                      case('Epot')
+                         if(allocated(EpotNorth_II)) &
+                              Data_VII(iVar,i,j) = EpotNorth_II(iTheta,iPsi)
+                      case('Aver')
+                         if(allocated(AverNorth_II)) &
+                              Data_VII(iVar,i,j) = AverNorth_II(iTheta,iPsi)
+                      case('Diff')
+                         if(allocated(DiffNorth_II)) &
+                              Data_VII(iVar,i,j) = DiffNorth_II(iTheta,iPsi)
+                      end select
+                   end do
+                else
+                   iTheta = nLat - j + 1
+                   do i = MinLon, MaxLon
+                      iPsi = modulo(i + nLon/2 - 1, nLon - 1) + 1
+                      select case(NameField)
+                      case('jFac')
+                         if(allocated(JfacSouth_II)) &
+                              Data_VII(iVar,i,j) = JfacSouth_II(iTheta,iPsi)
+                      case('Epot')
+                         if(allocated(EpotSouth_II)) &
+                              Data_VII(iVar,i,j) = EpotSouth_II(iTheta,iPsi)
+                      case('Aver')
+                         if(allocated(AverSouth_II)) &
+                              Data_VII(iVar,i,j) = AverSouth_II(iTheta,iPsi)
+                      case('Diff')
+                         if(allocated(DiffSouth_II)) &
+                              Data_VII(iVar,i,j) = DiffSouth_II(iTheta,iPsi)
+                      end select
+                   end do
+                end if
+             end do
+          end if
 
           if(DoShiftDataCoupling) then
              do i = MinLon, MaxLon
