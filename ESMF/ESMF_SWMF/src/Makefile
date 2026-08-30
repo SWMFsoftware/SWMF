@@ -25,6 +25,7 @@ OBJECTS = \
 	ESMF_grid_comp.o \
 	SWMF_grid_comp.o \
 	IPE_grid_comp.o \
+	RIM_export_map.o \
 	RIM_grid_comp.o \
 	CON_cpl_comp.o
 else
@@ -33,6 +34,7 @@ OBJECTS = \
 	ESMFSWMF_variables.o \
 	ESMF_grid_comp.o \
 	SWMF_grid_comp.o \
+	RIM_export_map.o \
 	RIM_grid_comp.o \
 	CON_cpl_comp.o
 
@@ -70,8 +72,15 @@ info:
 	@echo LflagMpi=${LflagMpi}
 	@echo IPELIBS=${IPELIBS}
 
+test_rim_export_mapping: RIM_export_map.o
+	${COMPILE.f90} ${CFLAG} -o test_rim_export_mapping.o \
+		../tests/test_rim_export_mapping.f90
+	${LINK.f90} -o ../tests/test_rim_export_mapping.exe \
+		RIM_export_map.o test_rim_export_mapping.o
+	../tests/test_rim_export_mapping.exe
+
 clean: cleanfiles
+	rm -f RIM_export_map.mod test_rim_export_mapping.o \
+		../tests/test_rim_export_mapping.exe
 
 distclean: clean
-
-

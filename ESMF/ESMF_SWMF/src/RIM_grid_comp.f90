@@ -13,6 +13,8 @@ module RIM_grid_comp
   use NUOPC_Model, only: model_label_Advance => label_Advance
   use NUOPC_Model, only: model_label_Finalize => label_Finalize
 
+  use RIM_export_map, only: fill_rim_hemisphere
+
   use ESMFSWMF_variables, ONLY: &
        NameFieldIpe2Rim_V, nVarIpe2Rim, NameFieldRim2Ipe_V, nVarRim2Ipe, &
        add_fields, write_log, write_error, &
@@ -512,7 +514,7 @@ contains
 
     real(ESMF_KIND_R8), pointer :: Ptr_II(:,:), Lon_I(:), Lat_I(:)
     real(ESMF_KIND_R8), allocatable :: Data_VII(:,:,:)
-    integer:: i, j, iVar, itemCount, iTheta, iPsi
+    integer:: i, j, iVar, itemCount
     character(len=4):: NameField
 
     integer:: iLeft, iRight
@@ -557,48 +559,36 @@ contains
                 Data_VII(iVar,i,j) = abs(Lon_I(i))*abs(Lat_I(j))*Coef
              end do; end do
           else
-             do j = MinLat, MaxLat
-                if(LatSm_I(j) >= 0.0) then
-                   ! The equator belongs to the northern hemisphere.
-                   iTheta = 2*nLat - j
-                   do i = MinLon, MaxLon
-                      iPsi = modulo(i + nLon/2 - 1, nLon - 1) + 1
-                      select case(NameField)
-                      case('jFac')
-                         if(allocated(JfacNorth_II)) &
-                              Data_VII(iVar,i,j) = JfacNorth_II(iTheta,iPsi)
-                      case('Epot')
-                         if(allocated(EpotNorth_II)) &
-                              Data_VII(iVar,i,j) = EpotNorth_II(iTheta,iPsi)
-                      case('Aver')
-                         if(allocated(AverNorth_II)) &
-                              Data_VII(iVar,i,j) = AverNorth_II(iTheta,iPsi)
-                      case('Diff')
-                         if(allocated(DiffNorth_II)) &
-                              Data_VII(iVar,i,j) = DiffNorth_II(iTheta,iPsi)
-                      end select
-                   end do
-                else
-                   iTheta = nLat - j + 1
-                   do i = MinLon, MaxLon
-                      iPsi = modulo(i + nLon/2 - 1, nLon - 1) + 1
-                      select case(NameField)
-                      case('jFac')
-                         if(allocated(JfacSouth_II)) &
-                              Data_VII(iVar,i,j) = JfacSouth_II(iTheta,iPsi)
-                      case('Epot')
-                         if(allocated(EpotSouth_II)) &
-                              Data_VII(iVar,i,j) = EpotSouth_II(iTheta,iPsi)
-                      case('Aver')
-                         if(allocated(AverSouth_II)) &
-                              Data_VII(iVar,i,j) = AverSouth_II(iTheta,iPsi)
-                      case('Diff')
-                         if(allocated(DiffSouth_II)) &
-                              Data_VII(iVar,i,j) = DiffSouth_II(iTheta,iPsi)
-                      end select
-                   end do
-                end if
-             end do
+             select case(NameField)
+             case('jFac')
+                if(allocated(JfacNorth_II)) call fill_rim_hemisphere( &
+                     JfacNorth_II, Data_VII, iVar, .true., &
+                     MinLon, MaxLon, MinLat, MaxLat, nLon, nLat)
+                if(allocated(JfacSouth_II)) call fill_rim_hemisphere( &
+                     JfacSouth_II, Data_VII, iVar, .false., &
+                     MinLon, MaxLon, MinLat, MaxLat, nLon, nLat)
+             case('Epot')
+                if(allocated(EpotNorth_II)) call fill_rim_hemisphere( &
+                     EpotNorth_II, Data_VII, iVar, .true., &
+                     MinLon, MaxLon, MinLat, MaxLat, nLon, nLat)
+                if(allocated(EpotSouth_II)) call fill_rim_hemisphere( &
+                     EpotSouth_II, Data_VII, iVar, .false., &
+                     MinLon, MaxLon, MinLat, MaxLat, nLon, nLat)
+             case('Aver')
+                if(allocated(AverNorth_II)) call fill_rim_hemisphere( &
+                     AverNorth_II, Data_VII, iVar, .true., &
+                     MinLon, MaxLon, MinLat, MaxLat, nLon, nLat)
+                if(allocated(AverSouth_II)) call fill_rim_hemisphere( &
+                     AverSouth_II, Data_VII, iVar, .false., &
+                     MinLon, MaxLon, MinLat, MaxLat, nLon, nLat)
+             case('Diff')
+                if(allocated(DiffNorth_II)) call fill_rim_hemisphere( &
+                     DiffNorth_II, Data_VII, iVar, .true., &
+                     MinLon, MaxLon, MinLat, MaxLat, nLon, nLat)
+                if(allocated(DiffSouth_II)) call fill_rim_hemisphere( &
+                     DiffSouth_II, Data_VII, iVar, .false., &
+                     MinLon, MaxLon, MinLat, MaxLat, nLon, nLat)
+             end select
           end if
 
           if(DoShiftDataCoupling) then

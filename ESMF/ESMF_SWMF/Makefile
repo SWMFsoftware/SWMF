@@ -17,6 +17,7 @@ help:
 	@echo "help                - this help message"
 	@echo "install             - install ESMF_SWMF"
 	@echo "test                - run test1"
+	@echo "test_rim_export_mapping - run focused RIM export mapping test"
 	@echo "test1               - run fake IPE test on 2 processors"
 	@echo "test1 NP=4          - run test on 4 processors"
 	@echo "test1_compile       - configure and compile for test"
@@ -53,8 +54,11 @@ rundir:
 	cp -f input/PARAM.in ${RUNDIR}/
 	cd ${RUNDIR}; ln -sf ${BINDIR}/ESMF_SWMF.exe .
 
-test:
+test: test_rim_export_mapping
 	${MAKE} test1
+
+test_rim_export_mapping:
+	cd src; ${MAKE} test_rim_export_mapping
 
 test1:
 	@echo "test1_compile..." > test_esmf.diff
@@ -160,7 +164,7 @@ test3_run:
 	cd ${RUNDIR}; rm -f *ESMF_LogFile; ${MPIRUN} ./ESMF_SWMF.exe | tee runlog
 	cd ${RUNDIR}; ./PostProc.pl -M RESULTS
 
-test3_check:
+test3_check: test_rim_export_mapping
 	@(perl -ne 'print if /error/i and not /Multi_On_Error/' \
 		${RUNDIR}/PET*.ESMF_LogFile > test_esmf.diff)
 	@(perl -ne 'print if /ERROR/' ${RUNDIR}/RESULTS/runlog >> test_esmf.diff)
