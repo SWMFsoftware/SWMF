@@ -6,7 +6,7 @@ program test_rim_export_mapping
 
   integer, parameter :: nLat = 4, nLon = 7, nVar = 1
   real(real64), parameter :: Unset = -huge(1.0_real64)
-  real(real64) :: North_II(nLat,nLon), South_II(nLat,nLon)
+  real :: North_II(nLat,nLon), South_II(nLat,nLon)
   real(real64) :: Data_VII(nVar,1:nLon,1:2*nLat-1)
   integer :: iLat, iLon, iPsi, iTheta, nError
 
@@ -38,8 +38,8 @@ program test_rim_export_mapping
   call check_value('south -180 seam', Data_VII(1,1,2), -1304.0_real64)
   call check_value('south +180 seam', Data_VII(1,7,2), -1304.0_real64)
 
-  North_II = North_II + 10000.0_real64
-  South_II = South_II - 10000.0_real64
+  North_II = North_II + 10000.0
+  South_II = South_II - 10000.0
   call fill_rim_hemisphere(North_II, Data_VII, 1, .true., &
        1, nLon, 1, 2*nLat-1, nLon, nLat)
   call fill_rim_hemisphere(South_II, Data_VII, 1, .false., &
@@ -58,10 +58,10 @@ program test_rim_export_mapping
         iPsi = modulo(iLon + nLon/2 - 1, nLon - 1) + 1
         if(iLat >= nLat) then
            call check_value('full north mapping', Data_VII(1,iLon,iLat), &
-                North_II(iTheta,iPsi))
+                real(North_II(iTheta,iPsi), real64))
         else
            call check_value('full south mapping', Data_VII(1,iLon,iLat), &
-                South_II(iTheta,iPsi))
+                real(South_II(iTheta,iPsi), real64))
         end if
      end do
   end do
