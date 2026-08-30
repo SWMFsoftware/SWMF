@@ -485,7 +485,6 @@ contains
 
     if(DoShiftDataCoupling) then
        call get_sm_to_mag_angle(Clock, dPhiSm2Mag, iError)
-       call update_export_state(gComp, iError)
     else
        call ESMF_FieldGet(Field, grid=Grid, rc=iError)
        if(iError /= ESMF_SUCCESS) call my_error('ESMF_FieldGetGrid')
@@ -494,6 +493,8 @@ contains
             dPhiSm2Mag=dPhiSm2Mag, iError=iError)
        if(iError /= ESMF_SUCCESS) call my_error('update_coordinates')
     end if
+
+    call update_export_state(gComp, iError)
 
     call write_log("RIM_grid_comp:run routine returned")
 
@@ -559,7 +560,7 @@ contains
              do j = MinLat, MaxLat
                 if(LatSm_I(j) >= 0.0) then
                    ! The equator belongs to the northern hemisphere.
-                   iTheta = MaxLat - j + 1
+                   iTheta = 2*nLat - j
                    do i = MinLon, MaxLon
                       iPsi = modulo(i + nLon/2 - 1, nLon - 1) + 1
                       select case(NameField)
