@@ -183,7 +183,7 @@ contains
     ! here that it is a Lat-Lon grid, so ESMF can use it.
     ! Lon from 0 to 360-dPhi (periodic), Lat from -90 to +90
     ! Both hemispheres have nLat nodes.
-    ImportGrid = ESMF_GridCreateNoPeriDim(maxIndex=[nLon-1, 2*(nLat-1)], &
+    ImportGrid = ESMF_GridCreateNoPeriDim(maxIndex=[nLon-1, 2*nLat-1], &
          regDecomp=[1, petCount], coordDep1=[1], coordDep2=[2], &
          coordSys=ESMF_COORDSYS_CART, indexflag=ESMF_INDEX_GLOBAL, &
          petMap=petMap, name="RIM grid", rc=iError)
@@ -246,7 +246,7 @@ contains
     if(iError /= ESMF_SUCCESS) call my_error('add_fields - import')
 
     !---- Create Export grid (same as Import grid) ----------------------------
-    ExportGrid = ESMF_GridCreateNoPeriDim(maxIndex=[nLon-1, 2*(nLat-1)], &
+    ExportGrid = ESMF_GridCreateNoPeriDim(maxIndex=[nLon-1, 2*nLat-1], &
          regDecomp=[1, petCount], coordDep1=[1], coordDep2=[2], &
          coordSys=ESMF_COORDSYS_CART, indexflag=ESMF_INDEX_GLOBAL, &
          petMap=petMap, name="RIM grid", rc=iError)

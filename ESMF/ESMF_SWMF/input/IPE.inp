@@ -4,7 +4,7 @@
 &TIMESTEPPING
  TIME_STEP   = 300D0,
  START_TIME  = 0.0D0,
- END_TIME    = 600.0D0, !300.0D0,
+ END_TIME    = 900.0D0,
  MSIS_TIME_STEP   = 900.D0,
  INITIAL_TIMESTAMP = 201303160000
 /
@@ -32,7 +32,7 @@
   mesh_write      = 0
   mesh_write_file = 'ipemesh'
   mesh_fill       = 1
-  import_write    = 1
+  import_write    = 0
   export_write    = 1
   !ipe_has_import  = F
 /

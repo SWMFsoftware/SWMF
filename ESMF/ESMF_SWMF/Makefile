@@ -103,6 +103,7 @@ test2:
 	${MAKE} test2_check
 
 test2_compile:
+	${RM} src/ESMF_grid_comp.o
 	${MAKE} ESMF_SWMF EXTERNAL_IPE=yes
 	cd ../..; ${MAKE} PIDL
 
@@ -141,6 +142,7 @@ test3:
 	${MAKE} test3_check
 
 test3_compile:
+	${RM} src/ESMF_grid_comp.o
 	${MAKE} ESMF_SWMF EXTERNAL_IPE=yes
 	cd ../..; ${MAKE} PIDL
 
@@ -161,7 +163,8 @@ test3_rundir:
 	cd ${RUNDIR}; ln -sf ${BINDIR}/ESMF_SWMF.exe .
 
 test3_run:
-	cd ${RUNDIR}; rm -f *ESMF_LogFile; ${MPIRUN} ./ESMF_SWMF.exe | tee runlog
+	cd ${RUNDIR}; rm -f *ESMF_LogFile; set -o pipefail; \
+		${MPIRUN} ./ESMF_SWMF.exe | tee runlog
 	cd ${RUNDIR}; ./PostProc.pl -M RESULTS
 
 test3_check: test_rim_export_mapping
@@ -172,6 +175,9 @@ test3_check: test_rim_export_mapping
 		${RUNDIR}/RESULTS/runlog >> test_esmf.diff)
 	@(grep -q "RIM -> IPE" ${RUNDIR}/ESMF_SWMF.input || \
 		echo "ERROR: missing RIM -> IPE connector in test3 input" >> test_esmf.diff)
+	@python3 ${ipe_ROOT}/../test/scripts/check_rim_aurora_log.py \
+		${RUNDIR}/RESULTS/runlog
+	@test ! -s test_esmf.diff
 	ls -l test_esmf.diff
 
 clean:
