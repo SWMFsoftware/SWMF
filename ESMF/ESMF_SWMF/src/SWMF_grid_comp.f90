@@ -17,6 +17,7 @@ module SWMF_grid_comp
        NameSwmfComp, &
        Year_, Month_, Day_, Hour_, Minute_, Second_, MilliSec_, &
        write_log, write_error
+  use RIM_grid_comp, ONLY: refresh_export_state
 
   implicit none
 
@@ -187,6 +188,11 @@ contains
 
     call write_log("SWMF_run routine returned!")
     if(iError /= 0)call my_error('SWMF_run')
+
+    ! RIM advances before SWMF, so refresh its export state here with the
+    ! newly computed IE solution instead of leaving the previous one exported.
+    call refresh_export_state(iError)
+    if(iError /= ESMF_SUCCESS) call my_error('refresh_export_state')
 
     call write_log("SWMF_grid_comp:run routine returned")
 

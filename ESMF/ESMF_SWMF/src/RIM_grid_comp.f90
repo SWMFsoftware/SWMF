@@ -51,7 +51,7 @@ module RIM_grid_comp
 
   private
 
-  public:: set_services
+  public:: set_services, refresh_export_state
 
   ! Local variables
 
@@ -65,6 +65,8 @@ module RIM_grid_comp
   ! dPhiSm2Mag is the rotation angle from SM to MAG coordinates
   ! in the counter-clockwise direction.
   real(ESMF_KIND_R8) :: dPhiSm2Mag
+  type(ESMF_GridComp) :: RimComp
+  logical :: IsRimProc = .false.
 
 contains
   !============================================================================
@@ -73,6 +75,8 @@ contains
     type(ESMF_GridComp) :: gComp
     integer, intent(out):: iError
     !--------------------------------------------------------------------------
+    RimComp = gComp
+    IsRimProc = .true.
     call NUOPC_CompDerive(gComp, modelSS, rc=iError)
     if(iError /= ESMF_SUCCESS) call my_error('NUOPC_CompDerive')
     call ESMF_GridCompSetEntryPoint(gComp, ESMF_METHOD_INITIALIZE, &
@@ -503,6 +507,17 @@ contains
     iError = ESMF_SUCCESS
 
   end subroutine my_run
+  !============================================================================
+  subroutine refresh_export_state(iError)
+    integer, intent(out):: iError
+    !--------------------------------------------------------------------------
+    if(.not.IsRimProc) then
+       iError = ESMF_SUCCESS
+       return
+    end if
+    call update_export_state(RimComp, iError)
+
+  end subroutine refresh_export_state
   !============================================================================
   subroutine update_export_state(gComp, iError)
     type(ESMF_GridComp):: gComp
