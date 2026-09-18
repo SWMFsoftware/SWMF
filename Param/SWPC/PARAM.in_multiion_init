@@ -387,7 +387,7 @@ lcb nul tec		StringPlot  !last closed field line plots
 5.			Radius
 36			nLon
 
-#BORIS
+#BORISSIMPLE
 T			UseBorisCorrection
 0.02			BorisClightFactor
 

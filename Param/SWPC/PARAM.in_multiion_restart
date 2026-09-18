@@ -231,7 +231,7 @@ Rusanov			TypeFlux
 mc3			TypeLimiter
 1.2			LimiterBeta
 
-#BORIS
+#BORISSIMPLE
 T			UseBorisCorrection
 0.01			BorisClightFactor
 
