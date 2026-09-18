@@ -520,7 +520,7 @@ test_swpc_pe_rundir:
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cd Param/SWPC/; cp PARAM.in_pe_init PARAM.in_pe_restart *.in *.dat ../../${TESTDIR}/
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in_pe_init
-	perl -pi -e 'if(/MaxIter|MaxBlock/){s/700/70/; s/1500/200/; s/5000/350/}; s/#BORIS/BORIS/; s/^\#(COMPONENTMAP.*production)/$$1/i; s/^(COMPONENTMAP.*nightly)/\#$$1/i' ${TESTDIR}/PARAM.in_pe_init
+	perl -pi -e 'if(/MaxIter|MaxBlock/){s/700/70/; s/1500/200/; s/5000/350/}; s/01/1/ if /Clight/i; s/^\#(COMPONENTMAP.*production)/$$1/i; s/^(COMPONENTMAP.*nightly)/\#$$1/i' ${TESTDIR}/PARAM.in_pe_init
 	perl -pi -e 's/^360(\s+nGridLon)/72$$1/; s/^171(\s+nGridLat)/25$$1/;' ${TESTDIR}/PARAM.in_pe_init
 	perl -pi -e 's/^221(\s+nGridLon)/23$$1/; s/^131(\s+nGridLat)/13$$1/;' ${TESTDIR}/PARAM.in_pe_init
 	cp ${TESTDIR}/PARAM.in_pe_init ${TESTDIR}/PARAM.in
@@ -532,7 +532,7 @@ test_swpc_pe_run:
 
 test_swpc_pe_restart:
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in_pe_restart
-	perl -pi -e 's/#BORIS/BORIS/; s/^\#(COMPONENTMAP.*production)/$$1/i; s/^(COMPONENTMAP.*nightly)/\#$$1/i' ${TESTDIR}/PARAM.in_pe_restart
+	perl -pi -e 's/01/1/ if /Clight/i; s/^\#(COMPONENTMAP.*production)/$$1/i; s/^(COMPONENTMAP.*nightly)/\#$$1/i' ${TESTDIR}/PARAM.in_pe_restart
 	perl -pi -e 's/^360(\s+nGridLon)/72$$1/; s/^171(\s+nGridLat)/25$$1/;' ${TESTDIR}/PARAM.in_pe_restart
 	perl -pi -e 's/^221(\s+nGridLon)/23$$1/; s/^131(\s+nGridLat)/13$$1/;' ${TESTDIR}/PARAM.in_pe_restart
 	cd ${TESTDIR}; cp PARAM.in_pe_restart PARAM.in
