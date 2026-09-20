@@ -232,7 +232,7 @@ mc3			TypeLimiter
 1.2			LimiterBeta
 
 #BORISSIMPLE
-T			UseBorisCorrection
+T			UseBorisSimple
 0.01			BorisClightFactor
 
 #TIMESTEPPING

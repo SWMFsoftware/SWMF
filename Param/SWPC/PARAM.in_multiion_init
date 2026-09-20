@@ -388,7 +388,7 @@ lcb nul tec		StringPlot  !last closed field line plots
 36			nLon
 
 #BORISSIMPLE
-T			UseBorisCorrection
+T			UseBorisSimple
 0.02			BorisClightFactor
 
 #TIMESTEPPING
