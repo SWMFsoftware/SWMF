@@ -2894,11 +2894,10 @@ test_eeggl_rundir:
 
 test_eeggl_run:
 	cd ${TESTDIR}/SC; \
-	python3 remap_magnetogram.py fitsfile.fits map; \
-	python3  GLSETUP.py map_01.out -CMESpeed 600 \
+	python3  GLSETUP.py fitsfile.fits -CMESpeed 600 \
 		 --DoNotPlot --CMEGrid \
-		-LonPosIn 333.5 -LatPosIn 22.6 \
-		-LonNegIn 324.5 -LatNegIn 24.0 > runlog_eeggl
+		-LonPosIn -17.5 -LatPosIn 22.6 \
+		-LonNegIn -26.5 -LatNegIn 24.0 > runlog_eeggl
 
 test_eeggl_check:
 	-${DIFFNUM} -t -r=1e-7 -a=1e-9 \
