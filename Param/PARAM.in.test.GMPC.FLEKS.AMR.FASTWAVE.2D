@@ -192,6 +192,8 @@ F			useFixedDt
 
 #MONITOR
 1			dnReport
+10			dnReportLB
+F			doCompact
 
 #ELECTRON_FLEKS0
 -25.0			electronChargePerMass ratio (qom)

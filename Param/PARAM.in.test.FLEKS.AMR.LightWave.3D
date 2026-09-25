@@ -109,10 +109,11 @@ T			isPeriodicZ
 
 #MONITOR
 10			dnReport
+100			dnReportLB
+T			doCompact
 
 #DIVE
 F			doCorrectDivE
-
 
 #SAVEPLOT
 1			nPlotFile
