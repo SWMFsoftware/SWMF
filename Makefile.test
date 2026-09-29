@@ -2896,8 +2896,8 @@ test_eeggl_run:
 	cd ${TESTDIR}/SC; \
 	python3  GLSETUP.py fitsfile.fits -CMESpeed 600 \
 		 --DoNotPlot --CMEGrid \
-		-LonPosIn -17.5 -LatPosIn 22.6 \
-		-LonNegIn -26.5 -LatNegIn 24.0 > runlog_eeggl
+		-LonPosIn -26.5 -LatPosIn 22.6 \
+		-LonNegIn -35.5 -LatNegIn 24.0 > runlog_eeggl
 
 test_eeggl_check:
 	-${DIFFNUM} -t -r=1e-7 -a=1e-9 \
