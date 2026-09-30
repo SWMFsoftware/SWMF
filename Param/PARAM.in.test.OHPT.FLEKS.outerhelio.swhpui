@@ -201,13 +201,34 @@ T			UseNe4Source
 
 #STOP
 -1			MaxIter
-2 year			TimeMax
+1 year			TimeMax
 
 
 #BEGIN_COMP PT ---------------------------------------------------------------
 
 #INCLUDE
 PT/restartIN/FLEKS0_restart.H		NameIncludeFile
+
+#REGRIDONRESTART
+T			doRegridOnRestart
+
+#REGION
+box_left		regionName
+box			shape
+-400.0			xMinBox
+0.0			xMaxBox
+-200.0			yMinBox
+200.0			yMaxBox
+-200.0			zMinBox
+200.0			zMaxBox
+
+#REFINEREGION
+0			refineLev
++box_left		refineArea
+
+#REFINEREGION
+1			refineLev
+none			refineArea
 
 #INITFROMSWMF
 F			initFromSWMF
@@ -265,12 +286,12 @@ T			useAdaptiveSourcePPC
 7			nPlotFile
 y=0 var ascii planet year		StringPlot
 -1			DnSavePlot
-5 y			DtSavePlot
+0.5 y			DtSavePlot
 -1			DxSavePlot
 {fluid} neuregion ppcPop1 ppcPop2 ppcPop3 ppcPop4		NameVars
 z=0 var ascii planet year		StringPlot
 -1			DnSavePlot
-5 y			DtSavePlot
+0.5 y			DtSavePlot
 -1			DxSavePlot
 pPop1 pPop2 pPop3 pPop4		NameVars
 3d fluid amrex planet year		StringPlot
@@ -307,4 +328,46 @@ cut particlePop2 amrex planet year		StringPlot
 0			DxSavePlot
 
 #END_COMP PT -----------------------------------------------------------------
+
+#RUN ##########################################################################
+
+#TIMEACCURATE
+T			IsTimeAccurate
+
+#SAVERESTART
+T			DoSaveRestart
+-1			DnSaveRestart
+1 y			DtSaveRestart
+
+#COUPLE2
+OH			NameComp1
+PT			NameComp2
+-1			DnCouple
+0.2 year		DtCouple
+
+#BEGIN_COMP PT ---------------------------------------------------------------
+
+#REGION
+box_right		regionName
+box			shape
+0.0			xMinBox
+400.0			xMaxBox
+-100.0			yMinBox
+100.0			yMaxBox
+-100.0			zMinBox
+100.0			zMaxBox
+
+#REFINEREGION
+0			refineLev
++box_right		refineArea
+
+#REFINEREGION
+1			refineLev
++box_right		refineArea
+
+#END_COMP PT -----------------------------------------------------------------
+
+#STOP
+-1			MaxIter
+2 year			TimeMax
 
