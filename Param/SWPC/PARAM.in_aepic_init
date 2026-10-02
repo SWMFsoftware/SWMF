@@ -451,6 +451,8 @@ T			useFixedDt
 
 #MONITOR
 1			dnReport
+100			dNReportLB
+F			doCompact
 
 #PARTICLES
 3			nParticleX
