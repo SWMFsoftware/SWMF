@@ -46,7 +46,7 @@ IPEDATA = ${DIR}/ESMF/ESMF_SWMF/data
 rundir:
 	rm -rf ${RUNDIR}
 	cd ../../; ${MAKE} rundir RUNDIR=${RUNDIR}
-	cd ${RUNDIR}; rm -f SWMF.exe EIE SWMFDIR core
+	cd ${RUNDIR}; rm -f EIE SWMFDIR core
 	cp input/ESMF_SWMF.input ${RUNDIR}/
 	cp input/fd_swmf.yaml ${RUNDIR}/ 
 	cp -f input/PARAM.in ${RUNDIR}/
@@ -105,7 +105,7 @@ test2_compile:
 test2_rundir:
 	rm -rf ${RUNDIR}
 	cd ../../; ${MAKE} rundir RUNDIR=${RUNDIR}
-	cd ${RUNDIR}; rm -f SWMF.exe EIE SWMFDIR core
+	cd ${RUNDIR}; rm -f EIE SWMFDIR core
 	cp input/ESMF_SWMF.input.realIPE.twoway ${RUNDIR}/ESMF_SWMF.input
 	cp input/fd_swmf.yaml ${RUNDIR}/
 	cp -f input/PARAM.in ${RUNDIR}/
