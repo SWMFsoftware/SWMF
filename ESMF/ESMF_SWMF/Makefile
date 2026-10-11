@@ -23,7 +23,6 @@ help:
 	@echo "test1_rundir        - create run/ directory for test"
 	@echo "test1_run NP=3      - create run/ directory for test"
 	@echo "test1_check         - write test results into test_esmf.diff"
-	@echo "test2               - run real IPE one-way coupling test"
 	@echo "test3               - run real IPE two-way coupling test"
 	@echo "clean               - clean object files"
 	@echo "distclean           - uninstall"
@@ -86,45 +85,6 @@ test1_check:
 	-@(${DIFFNUM} -b -r=1e-5 -a=2e-8 \
 		${RUNDIR}/RESULTS/IE/IE*.log output/IE.log >> test_esmf.diff)
 	ls -l test_esmf.diff
-
-#### Real IPE test########################## 
-test2:
-	@echo "test2_compile..." > test_esmf.diff
-	${MAKE} test2_compile
-	@echo "test2_rundir..." >> test_esmf.diff
-	${MAKE} test2_rundir
-	@echo "test2_run..." >> test_esmf.diff
-	${MAKE} test2_run
-	@echo "test2_check..." >> test_esmf.diff
-	${MAKE} test2_check
-
-test2_compile:
-	${RM} src/ESMF_grid_comp.o
-	${MAKE} ESMF_SWMF EXTERNAL_IPE=yes
-	cd ../..; ${MAKE} PIDL
-
-test2_rundir:
-	rm -rf ${RUNDIR}
-	cd ../../; ${MAKE} rundir RUNDIR=${RUNDIR}
-	cd ${RUNDIR}; rm -f SWMF.exe EIE SWMFDIR core
-	cp input/ESMF_SWMF.input.realIPE ${RUNDIR}/ESMF_SWMF.input
-	cp input/fd_swmf.yaml ${RUNDIR}/ 
-	cp -f input/PARAM.in ${RUNDIR}/
-	cp input/ionprof ${RUNDIR}/
-	cp input/tiros_spectra ${RUNDIR}/
-	cp input/IPE.inp ${RUNDIR}/ 
-	cp input/wam_input_f107_kp.txt ${RUNDIR}/
-	ln -sf ${IPEDATA}/IPE_Grid.nc ${RUNDIR}/
-	ln -sf ${IPEDATA}/IPE_State.apex.201303160000.nc ${RUNDIR}/
-	ln -sf ${IPEDATA}/global_idea_coeff_W05*.dat ${RUNDIR}/	
-	cd ${RUNDIR}; ln -sf ${BINDIR}/ESMF_SWMF.exe .
-
-test2_run:
-	cd ${RUNDIR}; rm -f *ESMF_LogFile; ${MPIRUN} ./ESMF_SWMF.exe | tee runlog
-	cd ${RUNDIR}; ./PostProc.pl -M RESULTS
-
-test2_check:
-	# TODO: Add check for real IPE test
 
 #### Real IPE two-way coupling test##########################
 test3:
