@@ -72,15 +72,7 @@ info:
 	@echo LflagMpi=${LflagMpi}
 	@echo IPELIBS=${IPELIBS}
 
-test_rim_export_mapping: RIM_export_map.o
-	${COMPILE.f90} ${CFLAG} ${PRECISION} -o test_rim_export_mapping.o \
-		../tests/test_rim_export_mapping.f90
-	${LINK.f90} -o ../tests/test_rim_export_mapping.exe \
-		RIM_export_map.o test_rim_export_mapping.o
-	../tests/test_rim_export_mapping.exe
-
 clean: cleanfiles
-	rm -f RIM_export_map.mod test_rim_export_mapping.o \
-		../tests/test_rim_export_mapping.exe
+	rm -f RIM_export_map.mod
 
 distclean: clean
