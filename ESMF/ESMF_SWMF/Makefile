@@ -103,12 +103,8 @@ test2_compile:
 	cd ../..; ${MAKE} PIDL
 
 test2_rundir:
-	rm -rf ${RUNDIR}
-	cd ../../; ${MAKE} rundir RUNDIR=${RUNDIR}
-	cd ${RUNDIR}; rm -f EIE SWMFDIR core
+	${MAKE} rundir
 	cp input/ESMF_SWMF.input.realIPE.twoway ${RUNDIR}/ESMF_SWMF.input
-	cp input/fd_swmf.yaml ${RUNDIR}/
-	cp -f input/PARAM.in ${RUNDIR}/
 	cp input/ionprof ${RUNDIR}/
 	cp input/tiros_spectra ${RUNDIR}/
 	cp input/IPE.inp ${RUNDIR}/
@@ -116,7 +112,6 @@ test2_rundir:
 	ln -sf ${IPEDATA}/IPE_Grid.nc ${RUNDIR}/
 	ln -sf ${IPEDATA}/IPE_State.apex.201303160000.nc ${RUNDIR}/
 	ln -sf ${IPEDATA}/global_idea_coeff_W05*.dat ${RUNDIR}/
-	cd ${RUNDIR}; ln -sf ${BINDIR}/ESMF_SWMF.exe .
 
 test2_run:
 	cd ${RUNDIR}; rm -f *ESMF_LogFile; set -o pipefail; \
