@@ -23,7 +23,7 @@ help:
 	@echo "test1_rundir        - create run/ directory for test"
 	@echo "test1_run NP=3      - create run/ directory for test"
 	@echo "test1_check         - write test results into test_esmf.diff"
-	@echo "test3               - run real IPE two-way coupling test"
+	@echo "test2               - run real IPE two-way coupling test"
 	@echo "clean               - clean object files"
 	@echo "distclean           - uninstall"
 
@@ -87,22 +87,22 @@ test1_check:
 	ls -l test_esmf.diff
 
 #### Real IPE two-way coupling test##########################
-test3:
-	@echo "test3_compile..." > test_esmf.diff
-	${MAKE} test3_compile
-	@echo "test3_rundir..." >> test_esmf.diff
-	${MAKE} test3_rundir
-	@echo "test3_run..." >> test_esmf.diff
-	${MAKE} test3_run
-	@echo "test3_check..." >> test_esmf.diff
-	${MAKE} test3_check
+test2:
+	@echo "test2_compile..." > test_esmf.diff
+	${MAKE} test2_compile
+	@echo "test2_rundir..." >> test_esmf.diff
+	${MAKE} test2_rundir
+	@echo "test2_run..." >> test_esmf.diff
+	${MAKE} test2_run
+	@echo "test2_check..." >> test_esmf.diff
+	${MAKE} test2_check
 
-test3_compile:
+test2_compile:
 	${RM} src/ESMF_grid_comp.o
 	${MAKE} ESMF_SWMF EXTERNAL_IPE=yes
 	cd ../..; ${MAKE} PIDL
 
-test3_rundir:
+test2_rundir:
 	rm -rf ${RUNDIR}
 	cd ../../; ${MAKE} rundir RUNDIR=${RUNDIR}
 	cd ${RUNDIR}; rm -f SWMF.exe EIE SWMFDIR core
@@ -118,19 +118,19 @@ test3_rundir:
 	ln -sf ${IPEDATA}/global_idea_coeff_W05*.dat ${RUNDIR}/
 	cd ${RUNDIR}; ln -sf ${BINDIR}/ESMF_SWMF.exe .
 
-test3_run:
+test2_run:
 	cd ${RUNDIR}; rm -f *ESMF_LogFile; set -o pipefail; \
 		${MPIRUN} ./ESMF_SWMF.exe | tee runlog
 	cd ${RUNDIR}; ./PostProc.pl -M RESULTS
 
-test3_check:
+test2_check:
 	@(perl -ne 'print if /error/i and not /Multi_On_Error/' \
 		${RUNDIR}/PET*.ESMF_LogFile > test_esmf.diff)
 	@(perl -ne 'print if /ERROR/' ${RUNDIR}/RESULTS/runlog >> test_esmf.diff)
 	@(perl -ne 'print if /BAD TERMINATION|Abort trap|Assertion|SIGABRT/' \
 		${RUNDIR}/RESULTS/runlog >> test_esmf.diff)
 	@(grep -q "RIM -> IPE" ${RUNDIR}/ESMF_SWMF.input || \
-		echo "ERROR: missing RIM -> IPE connector in test3 input" >> test_esmf.diff)
+		echo "ERROR: missing RIM -> IPE connector in test2 input" >> test_esmf.diff)
 	@python3 ${ipe_ROOT}/../test/scripts/check_rim_aurora_log.py \
 		${RUNDIR}/RESULTS/runlog
 	@test ! -s test_esmf.diff
