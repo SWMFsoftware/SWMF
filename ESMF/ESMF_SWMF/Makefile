@@ -92,18 +92,20 @@ test2:
 	${MAKE} test2_compile
 	@echo "test2_rundir..." >> test_esmf.diff
 	${MAKE} test2_rundir
-	@echo "test2_run..." >> test_esmf.diff
-	${MAKE} test2_run
+	@echo "test2_swmf_run..." >> test_esmf.diff
+	${MAKE} test2_swmf_run
+	@echo "test2_restart..." >> test_esmf.diff
+	${MAKE} test2_restart
 	@echo "test2_check..." >> test_esmf.diff
 	${MAKE} test2_check
 
 test2_compile:
 	${RM} src/ESMF_grid_comp.o
 	${MAKE} ESMF_SWMF EXTERNAL_IPE=yes
-	cd ../..; ${MAKE} PIDL
+	cd ../..; ${MAKE} SWMF PIDL
 
 test2_rundir:
-	${MAKE} rundir
+	${MAKE} rundir		
 	cp input/ESMF_SWMF.input.realIPE.twoway ${RUNDIR}/ESMF_SWMF.input
 	cp input/ionprof ${RUNDIR}/
 	cp input/tiros_spectra ${RUNDIR}/
@@ -113,23 +115,24 @@ test2_rundir:
 	ln -sf ${IPEDATA}/IPE_State.apex.201303160000.nc ${RUNDIR}/
 	ln -sf ${IPEDATA}/global_idea_coeff_W05*.dat ${RUNDIR}/
 
-test2_run:
-	cd ${RUNDIR}; rm -f *ESMF_LogFile; set -o pipefail; \
-		${MPIRUN} ./ESMF_SWMF.exe | tee runlog
-	cd ${RUNDIR}; ./PostProc.pl -M RESULTS
+test2_swmf_run:	
+	cp input/PARAM.in.swmf.only ${RUNDIR}/PARAM.in
+	cd ${RUNDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${RUNDIR}; ./PostProc.pl RESULTS/run1
+
+test2_restart:	
+	cp input/PARAM.in.restart ${RUNDIR}/PARAM.in
+	cd ${RUNDIR}; ./Restart.pl -v -i RESULTS/run1/RESTART
+	cd ${RUNDIR}; ${MPIRUN} ./ESMF_SWMF.exe > runlog
+	cd ${RUNDIR}; ./PostProc.pl RESULTS/run2
+
 
 test2_check:
-	@(perl -ne 'print if /error/i and not /Multi_On_Error/' \
-		${RUNDIR}/PET*.ESMF_LogFile > test_esmf.diff)
-	@(perl -ne 'print if /ERROR/' ${RUNDIR}/RESULTS/runlog >> test_esmf.diff)
-	@(perl -ne 'print if /BAD TERMINATION|Abort trap|Assertion|SIGABRT/' \
-		${RUNDIR}/RESULTS/runlog >> test_esmf.diff)
-	@(grep -q "RIM -> IPE" ${RUNDIR}/ESMF_SWMF.input || \
-		echo "ERROR: missing RIM -> IPE connector in test2 input" >> test_esmf.diff)
-	@python3 ${ipe_ROOT}/../test/scripts/check_rim_aurora_log.py \
-		${RUNDIR}/RESULTS/runlog
-	@test ! -s test_esmf.diff
-	ls -l test_esmf.diff
+	-@(${DIFFNUM} -b -a=1e-6 -r=1e-4 \
+                ${RUNDIR}/RESULTS/run2/IE/it130316_001500_000.idl \
+                output/it130316_001500_000.idl.gz \
+		> test2.diff)
+		ls -l test2.diff
 
 clean:
 	@(if([ "${ESMFMKFILE}" != "" ]); then cd src; make clean; fi)
