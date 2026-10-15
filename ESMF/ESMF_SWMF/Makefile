@@ -129,8 +129,8 @@ test2_restart:
 
 test2_check:
 	-@(${DIFFNUM} -b -a=1e-6 -r=1e-4 \
-                ${RUNDIR}/RESULTS/run2/IE/it_aur_130316_001500_000.idl \
-                output/it_aur_130316_001500_000.idl.gz \
+                ${RUNDIR}/RESULTS/run2/IE/it_min_130316_001500_000.idl \
+                output/it_min_130316_001500_000.idl.gz \
 		> test2.diff)
 		ls -l test2.diff
 
