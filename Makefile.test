@@ -372,7 +372,7 @@ test1_check:
 		output/test1/IE.log \
 		> test01_ie.diff)
 	-@(${DIFFNUM} -b -r=1e-4 -a=1e-4 \
-		${TESTDIR}/RESULTS/IE/it140410_000110_000.idl \
+		${TESTDIR}/RESULTS/IE/it_min_140410_000110_000.idl \
 		output/test1/IE*.idl.gz \
 		>> test01_ie.diff)
 	ls -l test01_*.diff
@@ -481,8 +481,8 @@ test_swpc_check:
 		Param/SWPC/TestOutput/IE_t140410_000200.log \
 		> test_swpc_rcm_ie.diff)
 	-@(${DIFFNUM} -b -r=4e-4 -a=7e-5 \
-		${TESTDIR}/IE/ionosphere/it_aur_0410_000300_000.idl \
-		Param/SWPC/TestOutput/it_aur_0410_000300_000.idl.gz \
+		${TESTDIR}/IE/ionosphere/it_aur_140410_000300_000.idl \
+		Param/SWPC/TestOutput/it_aur_140410_000300_000.idl.gz \
 		>> test_swpc_rcm_ie.diff)
 	-@(${DIFFNUM} -b -r=1e-3 \
                 ${TESTDIR}/RB/plots/20140410_000300_e.fls \
@@ -574,8 +574,8 @@ test_swpc_pe_check:
 		Param/SWPC/TestOutputPe/IE_t140410_000200.log \
 		> test_swpc_pe_ie.diff)
 	-@(${DIFFNUM} -b -r=1e-3 -a=7e-5 \
-		${TESTDIR}/IE/ionosphere/it_aur_0410_000300_000.idl \
-		Param/SWPC/TestOutputPe/it_aur_0410_000300_000.idl.gz \
+		${TESTDIR}/IE/ionosphere/it_aur_140410_000300_000.idl \
+		Param/SWPC/TestOutputPe/it_aur_140410_000300_000.idl.gz \
 		>> test_swpc_pe_ie.diff)
 	ls -l test_swpc_pe_??.diff
 
@@ -702,8 +702,8 @@ test_swpc_gpu_check:
 		Param/SWPC/TestOutputGPU/IE_t140410_000200.log \
 		> test_swpc_gpu_ie.diff)
 	-@(${DIFFNUM} -b -r=2e-4 -a=1e-4 \
-		${TESTDIR}/IE/ionosphere/it_aur_0410_000300_000.idl \
-		Param/SWPC/TestOutputGPU/it_aur_0410_000300_000.idl.gz \
+		${TESTDIR}/IE/ionosphere/it_aur_140410_000300_000.idl \
+		Param/SWPC/TestOutputGPU/it_aur_140410_000300_000.idl.gz \
 		>> test_swpc_gpu_ie.diff)
 	ls -l test_swpc_gpu_??.diff
 
@@ -767,8 +767,8 @@ test_swpc_large_gpu_check:
 		Param/SWPC/TestOutputLargeGPU/IE_t140410_000000.log \
 		> test_swpc_large_gpu_ie.diff)
 	-@(${DIFFNUM} -b -r=2e-4 -a=1e-4 \
-		${TESTDIR}/IE/ionosphere/it_aur_0410_000100_000.idl \
-		Param/SWPC/TestOutputLargeGPU/it_aur_0410_000100_000.idl.gz \
+		${TESTDIR}/IE/ionosphere/it_aur_140410_000100_000.idl \
+		Param/SWPC/TestOutputLargeGPU/it_aur_140410_000100_000.idl.gz \
 		>> test_swpc_large_gpu_ie.diff)
 	ls -l test_swpc_large_gpu_??.diff
 
@@ -838,8 +838,8 @@ test_swpc_multiion_check:
 		Param/SWPC/TestOutputMultiIon/IE_t140410_000200.log \
 		> test_swpc_multiion_ie.diff)
 	-@(${DIFFNUM} -b -r=2e-4 -a=1e-4 \
-		${TESTDIR}/IE/ionosphere/it_aur_0410_000300_000.idl \
-		Param/SWPC/TestOutputMultiIon/it_aur_0410_000300_000.idl.gz \
+		${TESTDIR}/IE/ionosphere/it_aur_140410_000300_000.idl \
+		Param/SWPC/TestOutputMultiIon/it_aur_140410_000300_000.idl.gz \
 		>> test_swpc_multiion_ie.diff)
 	ls -l test_swpc_multiion_*.diff
 
@@ -909,8 +909,8 @@ test_swpc_multispecies_check:
 		Param/SWPC/TestOutputMultiSpecies/IE_t140410_000200.log \
 		> test_swpc_multispecies_ie.diff)
 	-@(${DIFFNUM} -b -r=3e-4 -a=1e-4 \
-		${TESTDIR}/IE/ionosphere/it_aur_0410_000300_000.idl \
-		Param/SWPC/TestOutputMultiSpecies/it_aur_0410_000300_000.idl.gz \
+		${TESTDIR}/IE/ionosphere/it_aur_140410_000300_000.idl \
+		Param/SWPC/TestOutputMultiSpecies/it_aur_140410_000300_000.idl.gz \
 		>> test_swpc_multispecies_ie.diff)
 	ls -l test_swpc_multispecies_*.diff
 
@@ -981,8 +981,8 @@ test_swpc_cimi_check:
 		Param/SWPC/TestOutputCimi/IE_t140410_000200.log \
 		> test_swpc_cimi_ie.diff)
 	-@(${DIFFNUM} -b -r=2e-4 -a=1e-4 \
-		${TESTDIR}/IE/ionosphere/it_aur_0410_000300_000.idl \
-		Param/SWPC/TestOutputCimi/it_aur_0410_000300_000.idl.gz \
+		${TESTDIR}/IE/ionosphere/it_aur_140410_000300_000.idl \
+		Param/SWPC/TestOutputCimi/it_aur_140410_000300_000.idl.gz \
 		>> test_swpc_cimi_ie.diff)
 	ls -l test_swpc_cimi_*.diff
 
@@ -1053,8 +1053,8 @@ test_swpc_cimi_species_check:
 		Param/SWPC/TestOutputCimiSpecies/IE_t140410_000200.log \
 		> test_swpc_cimi_species_ie.diff)
 	-@(${DIFFNUM} -b -r=2e-4 -a=5e-5 \
-		${TESTDIR}/IE/ionosphere/it_aur_0410_000300_000.idl \
-		Param/SWPC/TestOutputCimiSpecies/it_aur_0410_000300_000.idl.gz \
+		${TESTDIR}/IE/ionosphere/it_aur_140410_000300_000.idl \
+		Param/SWPC/TestOutputCimiSpecies/it_aur_140410_000300_000.idl.gz \
 		>> test_swpc_cimi_species_ie.diff)
 	ls -l test_swpc_cimi_species_*.diff
 
@@ -1125,8 +1125,8 @@ test_swpc_pwom_check:
 		Param/SWPC/TestOutputPwom/IE_t140410_000200.log \
 		> test_swpc_pwom_ie.diff)
 	-@(${DIFFNUM} -b -r=5e-4 -a=2e-4 \
-		${TESTDIR}/IE/ionosphere/it_aur_0410_000300_000.idl \
-		Param/SWPC/TestOutputPwom/it_aur_0410_000300_000.idl.gz \
+		${TESTDIR}/IE/ionosphere/it_aur_140410_000300_000.idl \
+		Param/SWPC/TestOutputPwom/it_aur_140410_000300_000.idl.gz \
 		>> test_swpc_pwom_ie.diff)
 	ls -l test_swpc_pwom_*.diff
 
@@ -1208,8 +1208,8 @@ test_swpc_pwom_species_check:
 		Param/SWPC/TestOutputPwomSpecies/IE_t140410_000200.log \
 		> test_swpc_pwom_species_ie.diff)
 	-@(${DIFFNUM} -b -r=2e-4 -a=1e-4 \
-		${TESTDIR}/IE/ionosphere/it_aur_0410_000300_000.idl \
-		Param/SWPC/TestOutputPwomSpecies/it_aur_0410_000300_000.idl.gz \
+		${TESTDIR}/IE/ionosphere/it_aur_140410_000300_000.idl \
+		Param/SWPC/TestOutputPwomSpecies/it_aur_140410_000300_000.idl.gz \
 		>> test_swpc_pwom_species_ie.diff)
 	ls -l test_swpc_pwom_species_*.diff
 
@@ -1282,8 +1282,8 @@ test_swpc_cimi_pwom_species_check:
 		Param/SWPC/TestOutputCimiPwomSpecies/IE_t140410_000200.log \
 		> test_swpc_cimi_pwom_species_ie.diff)
 	-@(${DIFFNUM} -b -r=3e-4 -a=5e-5 \
-		${TESTDIR}/IE/ionosphere/it_aur_0410_000300_000.idl \
-		Param/SWPC/TestOutputCimiPwomSpecies/it_aur_0410_000300_000.idl.gz \
+		${TESTDIR}/IE/ionosphere/it_aur_140410_000300_000.idl \
+		Param/SWPC/TestOutputCimiPwomSpecies/it_aur_140410_000300_000.idl.gz \
 		>> test_swpc_cimi_pwom_species_ie.diff)
 	ls -l test_swpc_cimi_pwom_species_*.diff
 
