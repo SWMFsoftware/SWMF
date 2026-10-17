@@ -620,7 +620,7 @@ contains
   end subroutine nearest_grid_points
   !============================================================================
   subroutine bilinear_interpolation(&
-       nDim, Coord_D, Grid, nIndex, iIndex_II, nImage, Weight_I)
+       nDim, Coord_D, Grid, nIndex, iIndex_II, nImage, Weight_I, iProcRef)
 
     ! SECOND ORDER INTERPOLATION
     ! This is a bilinear interpolation using the grid points,
@@ -634,6 +634,7 @@ contains
     integer, intent(out)  :: nImage
 
     real, intent(out):: Weight_I(2**nDim)
+    integer, optional, intent(in) :: iProcRef
 
     real   :: CoordResid_D(nDim), CoordStored_D(nDim)
     integer:: iPoints_D(nDim)
@@ -751,7 +752,7 @@ contains
   end subroutine bilinear_interpolation
   !============================================================================
   subroutine interpolation_amr_gc(&
-       nDim, Coord_D, Grid, nIndex, iIndex_II, nImage, Weight_I)
+       nDim, Coord_D, Grid, nIndex, iIndex_II, nImage, Weight_I, iProcRef)
 
     ! utilizing ghost cells
     ! This is a continuous amr interpolation using the grid points,
@@ -767,7 +768,7 @@ contains
     integer,   intent(out)  :: iIndex_II(0:nIndex,2**nDim)
     integer,   intent(out)  :: nImage
     real,      intent(out)  :: Weight_I(2**nDim)
-
+    integer, optional, intent(in) :: iProcRef
     ! memorize grid descriptor by storing it in modular variable;
     ! it is used by find_amr subroutine passed to shared interpolation routine
     !--------------------------------------------------------------------------
@@ -782,7 +783,8 @@ contains
          nGridOut    = nImage,&
          Weight_I    = Weight_I,&
          iIndexes_II = iIndex_II,&
-         UseGhostCell= .true.)
+         UseGhostCell= .true., &
+         iProcRef = iProcRef)
 
   end subroutine interpolation_amr_gc
   !============================================================================

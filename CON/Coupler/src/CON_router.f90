@@ -476,7 +476,7 @@ contains
        end subroutine mapping
        !----------------------------------------------------------------------
        subroutine interpolate(nDim, Coord_D, Grid, nIndex, iIndex_II, nImage,&
-            Weight_I)
+            Weight_I, iProcRef)
          ! interpolation on Source's grid;
          ! provides PE and indices to access images of
          ! data location and interpolation weights
@@ -493,6 +493,7 @@ contains
          integer, intent(out)     :: iIndex_II(0:nIndex,2**nDim)
          integer, intent(out)     :: nImage
          real,    intent(out)     :: Weight_I(2**nDim)
+         integer, optional, intent(in) :: iProcRef
        end subroutine interpolate
        subroutine extra_data(BlockIndex_I,&
             iGridPointInBlock, nAux, Data_V)
@@ -628,7 +629,7 @@ contains
        !----------------------------------------------------------------------
        subroutine interpolate(&
             nDim, Coord_D, Grid, &
-            nIndex, iIndex_II, nImage, Weight_I)
+            nIndex, iIndex_II, nImage, Weight_I, iProcRef)
          ! interpolation on Source's grid;
          ! provides PE and indices to access images of
          ! data location and interpolation weights
@@ -645,6 +646,7 @@ contains
          integer, intent(out)     :: iIndex_II(0:nIndex,2**nDim)
          integer, intent(out)     :: nImage
          real,    intent(out)     :: Weight_I(2**nDim)
+         integer, optional, intent(in)      :: iProcRef
        end subroutine interpolate
 
        subroutine extra_data(BlockIndex_I, iGridPointInBlock, nAux, Data_V)
@@ -1129,7 +1131,7 @@ contains
     type(GridType),    intent(in)   :: GridSource
     interface
        subroutine interpolate(nDim, Coord_D, Grid, &
-            nIndex, iIndex_II, nImage, Weight_I)
+            nIndex, iIndex_II, nImage, Weight_I, iProcRef)
          ! interpolation on Source's grid;
          ! provides PE and indices to access images of
          ! data location and interpolation weights
@@ -1146,6 +1148,7 @@ contains
          integer, intent(out):: iIndex_II(0:nIndex,2**nDim)
          integer, intent(out):: nImage
          real,    intent(out):: Weight_I(2**nDim)
+         integer, optional, intent(in) :: iProcRef
        end subroutine interpolate
     end interface
 
@@ -1239,7 +1242,19 @@ contains
          call CON_stop('Failure!!!')
       end if
       nImagePart = count(iIndexGet_II(0,1:nImage)==iProc)
-      Router%nGet_P(iProcTo) = Router%nGet_P(iProcTo) + nImagePart
+      if(nImagePart==0.and.DoInterpolate)then
+         ! Try to re-assign reference block to get interpolation
+         ! on the given PE
+         call interpolate(  &
+              nDimSource,   &
+              CoordPass_D,    &
+              GridSource,     &
+              nIndexSource, &
+              iIndexGet_II, &
+              nImage,       &
+              Weight_I, iProcRef = iProc)
+         nImagePart = count(iIndexGet_II(0,1:nImage)==iProc)
+      end if
       if(nImagePart==0)then
          Write(*,*)'Interpolation in CON_router failed on Source PE=', iProc
          write(*,*)'Point Coords=', CoordSource_D,  ' nImage=',nImage
@@ -1249,6 +1264,7 @@ contains
          end do
          call CON_stop('No image on the requested PE')
       end if
+      Router%nGet_P(iProcTo) = Router%nGet_P(iProcTo) + nImagePart
       ! indices
       do iImage=1,nImage
          if(iProc==iIndexGet_II(0,iImage))then
