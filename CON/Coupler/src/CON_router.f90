@@ -1225,7 +1225,8 @@ contains
               nIndexSource, &
               iIndexGet_II, &
               nImage,       &
-              Weight_I)
+              Weight_I,     &
+              iProcRef = iProc)
       else
          call nearest_grid_points(&
               nDim           = nDimSource, &
@@ -1242,19 +1243,6 @@ contains
          call CON_stop('Failure!!!')
       end if
       nImagePart = count(iIndexGet_II(0,1:nImage)==iProc)
-      if(nImagePart==0.and.DoInterpolate)then
-         ! Try to re-assign reference block to get interpolation
-         ! on the given PE
-         call interpolate(  &
-              nDimSource,   &
-              CoordPass_D,    &
-              GridSource,     &
-              nIndexSource, &
-              iIndexGet_II, &
-              nImage,       &
-              Weight_I, iProcRef = iProc)
-         nImagePart = count(iIndexGet_II(0,1:nImage)==iProc)
-      end if
       if(nImagePart==0)then
          Write(*,*)'Interpolation in CON_router failed on Source PE=', iProc
          write(*,*)'Point Coords=', CoordSource_D,  ' nImage=',nImage
