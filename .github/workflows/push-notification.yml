@@ -1,0 +1,46 @@
+name: Push notification email
+
+# Replaces GitHub's deprecated "email on push" feature.
+on:
+  push:
+    branches:
+      - '**'
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (shallow, for commit log)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 50
+
+      - name: Build commit summary
+        id: summary
+        run: |
+          {
+            echo "log<<EOF"
+            git log --pretty=format:'%h %an: %s' "${{ github.event.before }}..${{ github.event.after }}" 2>/dev/null \
+              || git log -1 --pretty=format:'%h %an: %s'
+            echo
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Send email
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "[${{ github.repository }}] push to ${{ github.ref_name }} by ${{ github.actor }}"
+          to: swmfnotification@gmail.com
+          from: ${{ secrets.MAIL_USERNAME }}
+          body: |
+            Repository: ${{ github.repository }}
+            Branch:     ${{ github.ref_name }}
+            Pusher:     ${{ github.actor }}
+            Compare:    ${{ github.event.compare }}
+
+            Commits:
+            ${{ steps.summary.outputs.log }}
