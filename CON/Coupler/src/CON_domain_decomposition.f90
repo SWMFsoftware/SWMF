@@ -654,7 +654,7 @@ contains
          iRootMinusOne_D(Domain%nDim), iRootMinusOneStart_D(Domain%nDim)
     !--------------------------------------------------------------------------
     ! Start from the result of the previous search
-    lFound=Domain%lSearch
+    lFound=min(Domain%lSearch, Domain%nTreeNode)
 
     ! Put the point inside the domain
     do iDim=1,Domain%nDim
