@@ -43,12 +43,13 @@ CPUTIMEMAX
 47.5 hour		CpuTimeMax
 
 #COUPLEORDER
-5			nCouple
+6			nCouple
 IE GM			NameSourceTarget
 IE IM			NameSourceTarget
 GM IE			NameSourceTarget
 GM IM			NameSourceTarget
 IM GM			NameSourceTarget
+IM IE			NameSourceTarget
 
 #COUPLE2
 GM			NameComp1
@@ -60,13 +61,13 @@ IE			NameComp2
 IM			NameComp1
 GM			NameComp2
 -1			DnCouple
-10.0			DtCouple
+5.0			DtCouple
 
-#COUPLE1
+#COUPLE2
 IE			NameSource
 IM			NameTarget
 -1			DnCouple
-10.0			DtCouple
+5.0			DtCouple
 
 #COUPLETIME
 GM			NameComp
@@ -134,6 +135,9 @@ GEO			TypeCoordGrid
 80.			GridLatMax
 -1			DnSaveMagGrid
 1 min			DtSaveMagGrid
+
+#SUPERMAGINDICES
+T			DoWriteSupermagIndices
 
 #CONSERVATIVECRITERIA
 1			nConservCrit
@@ -270,11 +274,32 @@ ellipse			TypeBoundary
 T			UseDecay
 10 hour			DecayTimescale
 
+#ELECTRONDECAY
+T			UseElectronDecay
+
+#PRECIPITATION
+T			UseAltitudePrecip
+F			UsePrecipEnergyLoss
+
 #COMPOSITION
 FIXED			TypeComposition
-0.7			DensityFraction H+
-0.3			DensityFraction O+
+0.85			DensityFraction H+
+0.15			DensityFraction O+
 1.0			DensityFraction e-
+
+#FLC
+T			UseFLC
+
+#WAVES
+T			UseWaveDiffusion
+T			UseHiss
+T			UseChorus
+D_hiss_UCLA.dat		HissWavesD
+D_LBchorus_merge3.dat	ChorusWavesD
+F			UseKpIndex
+
+#DIAGONALIZEDDIFFUSION
+T			UseDiagDiffusion
 
 #SAVELOG
 5.0			DtLogOut
@@ -285,6 +310,18 @@ FIXED			TypeComposition
 
 #RESTART
 T			DoRestart
+
+#AURORA
+T
+IMP
+
+#IM
+north			TypeImCouple
+0.0			FractionImJr
+
+False for test runs due to low GM resolution
+#IMSOUTHTRACING
+F			UseSouthTracing
 
 #SAVEPLOT
 1			nPlotFile
