@@ -63,6 +63,7 @@ test_help:
 	@(if [ -d PC/FLEKS   ]; then echo "    test16_2d                   (run GM-PC/FLEKS test in 2D)"; fi)
 	@(if [ -d PC/FLEKS   ]; then echo "    test16_3d                   (run GM-PC/FLEKS test in 3D)"; fi)
 	@(if [ -d PC/FLEKS   ]; then echo "    test17                      (run GM-PC/FLEKS test: 2D Alfven wave)"; fi)
+	@(if [ -d PC/FLEKS   ]; then echo "    test17_hybrid               (run GM-PC/FLEKS test: 2D fast wave with hybrid PIC)"; fi)
 	@(if [ -d PC/FLEKS   ]; then echo "    test18                      (run GM-PC/FLEKS test: 3D reconnection)"; fi)
 	@(if [ -d SP/MFLAMPA ]; then echo "    test19                      (run SC-IH-OH-SP/MFLAMPA test)"; fi)
 	@(if [ -d PT/FLEKS   ]; then echo "    test20                      (run OH-PT/FLEKS test: shocktube)"; fi)
@@ -126,6 +127,7 @@ test_swmf:
 	-@(if [ -d PC/FLEKS   ]; then ${MAKE} test16_2d TESTDIR=run_test16_2d; fi)
 	-@(if [ -d PC/FLEKS   ]; then ${MAKE} test16_3d TESTDIR=run_test16_3d; fi)
 	-@(if [ -d PC/FLEKS   ]; then ${MAKE} test17 TESTDIR=run_test17; fi)
+	-@(if [ -d PC/FLEKS   ]; then ${MAKE} test17_hybrid TESTDIR=run_test17_hybrid; fi)
 	-@(if [ -d PC/FLEKS   ]; then ${MAKE} test18 TESTDIR=run_test18; fi)
 	-@(if [ -d PC/FLEKS   ]; then ${MAKE} test_swpc_aepic TESTDIR=run_test_swpc_aepic; fi)
 	-@(if [ -d PT/FLEKS   ]; then ${MAKE} test20 TESTDIR=run_test20; fi)
@@ -2342,6 +2344,62 @@ test17_check:
                 >> test17_gmpc.diff)
 
 	ls -l test17_gmpc.diff
+
+
+### test17_hybrid: GM/BATSRUS+PC/FLEKS. 2D fast wave with hybrid PIC ###
+
+test17_hybrid:
+	@echo "test17_hybrid_compile..." > test17_hybrid_gmpc.diff
+	$(MAKE) test17_hybrid_compile
+	@echo "test17_hybrid_rundir..." > test17_hybrid_gmpc.diff
+	$(MAKE) test17_hybrid_rundir
+	@echo "test17_hybrid_run..." > test17_hybrid_gmpc.diff
+	$(MAKE) test17_hybrid_run
+	@echo "test17_hybrid_check..." > test17_hybrid_gmpc.diff
+	$(MAKE) test17_hybrid_check
+
+test17_hybrid_compile:
+	./Config.pl -default -amrex -v=Empty,PC/FLEKS,GM/BATSRUS
+	./Config.pl -o=GM:u=Default,e=MhdAnisoP,ng=2,g=8,8,1
+	$(MAKE) SWMF
+	$(MAKE) PIDL
+
+test17_hybrid_rundir:
+	rm -rf ${TESTDIR}
+	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR}
+	cp Param/PARAM.in.test.GMPC.FLEKS.2D.hybrid  ${TESTDIR}/PARAM.in
+	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
+
+test17_hybrid_run:
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl RESULTS/hybrid
+	cp Param/PARAM.in.test.GMPC.FLEKS.2D.hybrid.adapt  ${TESTDIR}/PARAM.in
+	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl RESULTS/hybrid_adapt
+
+test17_hybrid_check:
+	-@(${DIFFNUM} -b -r=1e-7 -a=1e-14 \
+	   ${TESTDIR}/RESULTS/hybrid/PC/z=0_fluid_region0_0_t00000005_n00000004.out \
+	   output/test17/z=0_FLEKS0_hybrid.ref.gz \
+		> test17_hybrid_gmpc.diff)
+	-@(${DIFFNUM} -b -r=1e-7 -a=1e-14 \
+	   ${TESTDIR}/RESULTS/hybrid/PC/z=0_fluid_region1_0_t00000005_n00000004.out \
+	   output/test17/z=0_FLEKS1_hybrid.ref.gz \
+		>> test17_hybrid_gmpc.diff)
+	-@(${DIFFNUM} -b -r=1e-7 -a=1e-14 \
+	   ${TESTDIR}/RESULTS/hybrid/GM/z=0_var_1_t00000005_n00000004.out \
+	   output/test17/z=0_GM_hybrid.ref.gz \
+		>> test17_hybrid_gmpc.diff)
+	-@(${DIFFNUM} -b -r=1e-7 -a=1e-14 \
+	   ${TESTDIR}/RESULTS/hybrid_adapt/PC/z=0_fluid_region0_0_t00000010_n00000008.out \
+	   output/test17/z=0_FLEKS_hybrid_adapt.ref.gz \
+		>> test17_hybrid_gmpc.diff)
+	-@(${DIFFNUM} -b -r=1e-7 -a=1e-14 \
+	   ${TESTDIR}/RESULTS/hybrid_adapt/GM/z=0_var_1_t00000010_n00000008.out \
+	   output/test17/z=0_GM_hybrid_adapt.ref.gz \
+		>> test17_hybrid_gmpc.diff)
+	ls -l test17_hybrid_gmpc.diff
 
 
 ### test18: BATSRUS+FLEKS. 3D reconnection ###
