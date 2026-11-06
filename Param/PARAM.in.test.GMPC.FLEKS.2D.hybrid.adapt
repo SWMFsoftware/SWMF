@@ -1,0 +1,262 @@
+Name Root Last Stride
+#COMPONENTMAP
+GM  0 -1  1		CompMap
+PC  0 -1  1		CompMap
+
+#DESCRIPTION
+Param/PARAM.in.test.GMPC.FLEKS.2D.hybrid.adapt: Run GM and adaptive hybrid PC on 2D fast wave		StringDescription
+
+#PLANET
+NONE			NamePlanet
+
+#SAVERESTART
+F			DoSaveRestart
+
+#COUPLE2
+GM			NameComp1
+PC			NameComp2
+-1			DnCouple
+1.28			DtCouple
+
+#PROGRESS
+1			DnProgressShort
+1			DnProgressLong
+
+#BEGIN_COMP GM ---------------------------------------------------------------
+
+#GRIDBLOCKALL
+800			MaxBlock
+
+#CHECKGRIDSIZE
+       8		nI
+       8		nJ
+       1		nK
+     100		MinBlockAll
+
+#IOUNITS
+NONE			TypeIoUnit
+
+#NORMALIZATION
+NONE			TypeNormalization
+
+#PLASMA
+1.0			FluidMass [amu]
+1.0			IonCharge [e]
+1.0			ElectronTemperatureRatio
+
+#NONCONSERVATIVE
+T			UseNonConservative
+
+#UNIFORMSTATE
+1.0			StateVar Rho
+0.0			StateVar Ux
+0.0			StateVar Uy
+0.0			StateVar Uz
+0.0			StateVar Bx
+0.04			StateVar By
+0.0			StateVar Bz
+4.5e-4			StateVar Ppar
+4.5e-4			StateVar p
+
+#WAVE
+Rho			NameVar
+1000.0			Width
+0.1			Amplitude
+32.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+0.0			Phase
+
+#WAVE
+Ux			NameVar
+1000.0			Width
+0.005			Amplitude (rho1/rho0)*cF
+32.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+0.0			Phase
+
+#WAVE
+By			NameVar
+1000.0			Width
+0.004			Amplitude (rho1/rho0)*b0
+32.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+0.0			Phase
+
+#WAVE
+Ppar			NameVar
+10000.0			Width
+4.5e-5			Amplitude (rho1/rho0)*pPar0
+32.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+0.0			Phase
+
+#WAVE
+p			NameVar
+10000.0			Width
+7.5e-5			Amplitude (rho1/rho0)*5/3*p0
+32.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+0.0			Phase
+
+#SHOCKPOSITION
+0.0			ShockPosition
+4/3			ShockSlope
+
+#GRID
+32			nRootBlock1
+24			nRootBlock2
+1			nRootBlock3
+-160/3			xMin
+ 160/3			xMax
+-160/4			yMin
+ 160/4			yMax
+-0.5			zMin
+ 0.5			zMax
+
+#FIXEDTIMESTEP
+T			UseDtFixed
+640/500			DtFixedDim
+
+#PICUNIT
+1.0			xUnitPicSi [m]
+1.0			uUnitPicSi [m/s]
+
+#PICGRID
+1			nPicGrid
+-25.1			xMinPic
+20.0			xMaxPic
+-20.0			yMinPic
+ 20.0			yMaxPic
+1.25/3			DxPic
+1.25/3			DyPic
+
+#REGION
+pic_max			NameRegion
+box			StringShape
+-25.1			xMinBox
+-20			yMinBox
+-5.0			xMaxBox
+20			yMaxBox
+
+#REGION
+pic_min			NameRegion
+shell0			StringShape
+2			RadiusInner
+8			Radius
+
+#PICREGIONMIN
++pic_min		StringPicRegionMin
+
+#PICREGIONMAX
++pic_max		StringPicRegionMax
+
+#PICCRITERIA
+1			nPicCriteria
+j/bperp			StringPicCriteria
+0.0			MinCriteriaValue
+2.5e-3			MaxCriteriaValue
+1e-2			CriteriaB1
+
+#PICADAPT
+T			DoAdaptPic
+-1			DnAdaptPic
+1.28			DtAdaptPic
+
+#PICPATCH
+2			PatchSize
+
+#PICPATCHEXTEND
+2			NxExtend
+2			NyExtend
+
+#OUTERBOUNDARY
+periodic		TypeBc1
+periodic		TypeBc2
+periodic		TypeBc3
+periodic		TypeBc4
+
+#TEST
+init_hall_resist		StringTest
+
+#B0SOURCE
+F			UseB0Source
+
+#SCHEME
+2			nOrder
+Rusanov			TypeFlux
+mc			TypeLimiter
+1.5			LimiterBeta
+
+#TIMESTEPPING
+2			nStage
+0.8			CflExpl
+
+#SAVELOGFILE
+T			DoSaveLogfile
+raw			StringLog
+1			DnSaveLogfile
+-1.			DtSaveLogfile
+
+#SAVEINITIAL
+T			DoSaveInitial
+
+#SAVEPLOT
+1			nPlotFile
+z=0 var idl_ascii		StringPlot
+1			DnSavePlot
+-0.05			DtSavePlot
+0.			DxSavePlot
+rho mx my bx by p jb jbperp pic pic_active pic_crit		NameVars
+g rbody			NamePars
+
+#END_COMP GM -----------------------------------------------------------------
+
+#BEGIN_COMP PC ---------------------------------------------------------------
+
+#FIELDSOLVER
+hybrid			fieldSolverMode
+
+#HYBRIDUPWIND
+T			useHybridUpwind
+mc			upwindLimiter
+0.0			upwindCoefWhistler
+-1.0			upwindFixedSpeed
+0.1			upwindSensorFloor
+
+#ELECTRONTEMPERATURE
+0.0			electronTemperature
+1.0			electronGamma
+1.0			electronDensity0
+
+#FIELDSUBCYCLE
+4			nSubcycle
+T			isAutoSubcycle
+64			nSubcycleMax
+
+#TIMESTEP_FLEKS0
+T			useFixedDt
+1.28			dt
+
+#PARTICLES
+10			nParticleX Region 1
+10			nParticleY
+1			nParticleZ
+
+#SAVEPLOT
+1			nPlotFile
+z=0 fluid ascii si		StringPlot
+4			DnSavePlot
+-1			DtSavePlot
+1			DxSavePlot
+
+#END_COMP PC -----------------------------------------------------------------
+
+#STOP
+-1			MaxIter
+10.24			TimeMax
+
