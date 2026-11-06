@@ -220,8 +220,8 @@ T			DoWriteSupermagIndices
 #BEGIN_COMP IE ---------------------------------------------------------------
 
 #AURORA
-T
-MAGNIT
+T			DoUseAurora
+MAGNIT			NameAuroraMod
 
 #SAVEPLOT
 1			nPlotFile
@@ -317,8 +317,8 @@ GM			NameComp2
 5.0			DtCouple
 
 #COUPLE2
-IE			NameSource
-IM			NameTarget
+IE			NameComp1
+IM			NameComp2
 -1			DnCouple
 5.0			DtCouple
 
@@ -456,8 +456,8 @@ T			UseFLC
 T			UseWaveDiffusion
 T			UseHiss
 T			UseChorus
-D_hiss_UCLA.dat		HissWavesD
-D_LBchorus_merge3.dat	ChorusWavesD
+D_hiss_UCLA.dat		NameHissFile
+D_LBchorus_merge3.dat		NameChorusFile
 F			UseKpIndex
 
 #DIAGONALIZEDDIFFUSION
@@ -471,8 +471,8 @@ T			UseDiagDiffusion
 #BEGIN_COMP IE ---------------------------------------------------------------
 
 #AURORA
-T
-IMP
+T			DoUseAurora
+IMP			NameAuroraMod
 
 #IM
 north			TypeImCouple
