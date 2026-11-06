@@ -480,7 +480,7 @@ north			TypeImCouple
 
 False for test runs due to low GM resolution
 #IMSOUTHTRACING
-T			UseSouthTracing
+F			UseSouthTracing
 
 #SAVEPLOT
 1			nPlotFile
