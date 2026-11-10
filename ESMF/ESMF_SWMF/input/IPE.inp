@@ -33,7 +33,7 @@
   mesh_write_file = 'ipemesh'
   mesh_fill       = 1
   import_write    = 0
-  export_write    = 1
+  export_write    = 0
   !ipe_has_import  = F
 /
 &ELDYN
