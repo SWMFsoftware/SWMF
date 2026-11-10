@@ -182,9 +182,9 @@ contains
     tCouple = iSec + 0.001*iMilliSec
 
     call write_log("SWMF_run routine called!")
-    write(*,*)'SWMF_run starts  with tCouple =',tCouple
+    ! write(*,*)'SWMF_run starts  with tCouple =',tCouple
     call SWMF_run('**', tCouple, tSimSwmf, DoStop, iError)
-    write(*,*)'SWMF_run returns with tSimSwmf=', tSimSwmf
+    ! write(*,*)'SWMF_run returns with tSimSwmf=', tSimSwmf
 
     call write_log("SWMF_run routine returned!")
     if(iError /= 0)call my_error('SWMF_run')
