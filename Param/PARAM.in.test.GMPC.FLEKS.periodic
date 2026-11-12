@@ -292,6 +292,8 @@ T			isPeriodicZ
 #EFIELDSOLVER
 1e-13			EFieldTol
 200			EFieldIter
+amrex			solverType
+auto			precondType
 
 #PARTICLES
 10			nParticleX per cell in X
