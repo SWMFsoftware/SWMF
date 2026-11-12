@@ -127,6 +127,8 @@ PC/restartIN/FLEKS1_restart.H
 #EFIELDSOLVER
 1e-13			EFieldTol
 200			EFieldIter
+amrex			solverType
+auto			precondType
 
 #SAVEPLOT
 1			nPlotFile
