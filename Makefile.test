@@ -265,7 +265,7 @@ test_pw_check:
 		${TESTDIR}/PW/plots/north_plots_iline0001.out \
 		${PWDIR}/data/output/Earth/north_plots_iline0001.out \
 		> test_pw.diff)
-	ls -ltr test_pw*.diff
+	ls -l test_pw.diff
 
 
 ### test_ps: Plasmasphere model DGCPM test ###
@@ -309,7 +309,7 @@ test_ps_check:
 		${TESTDIR}/RESULTS/PS/slice_*_t20011021_000000_000.dat \
 		${PSDIR}/Output/slice_L6p60_t20011021_000000_000.ref \
 		>> test_ps.diff)
-	ls -ltr test_ps*.diff
+	ls -l test_ps.diff
 
 ### test1: PW+IE+GM ###
 
@@ -377,7 +377,7 @@ test1_check:
 		${TESTDIR}/RESULTS/IE/it_minimum_140410_000110_000.idl \
 		output/test1/IE*.idl.gz \
 		>> test01_ie.diff)
-	ls -l test01_*.diff
+	ls -l test01_??.diff
 
 ### test_swpc_build: configure SWMF with GM+IE+IM+RB only. ###
 
@@ -843,7 +843,7 @@ test_swpc_multiion_check:
 		${TESTDIR}/IE/ionosphere/it_aur_140410_000300_000.idl \
 		Param/SWPC/TestOutputMultiIon/it_aur_140410_000300_000.idl.gz \
 		>> test_swpc_multiion_ie.diff)
-	ls -l test_swpc_multiion_*.diff
+	ls -l test_swpc_multiion_??.diff
 
 ### test_swpc_multispecies: GM+IE+IM with multispecies MHD ###
 
@@ -914,7 +914,7 @@ test_swpc_multispecies_check:
 		${TESTDIR}/IE/ionosphere/it_aur_140410_000300_000.idl \
 		Param/SWPC/TestOutputMultiSpecies/it_aur_140410_000300_000.idl.gz \
 		>> test_swpc_multispecies_ie.diff)
-	ls -l test_swpc_multispecies_*.diff
+	ls -l test_swpc_multispecies_??.diff
 
 ### test_swpc_cimi: GM+IE+IM/CIMI ###
 
@@ -986,7 +986,7 @@ test_swpc_cimi_check:
 		${TESTDIR}/IE/ionosphere/it_aur_140410_000300_000.idl \
 		Param/SWPC/TestOutputCimi/it_aur_140410_000300_000.idl.gz \
 		>> test_swpc_cimi_ie.diff)
-	ls -l test_swpc_cimi_*.diff
+	ls -l test_swpc_cimi_??.diff
 
 ### test_swpc_cimi_species: GM+IE+IM/CIMI ###
 
@@ -1058,7 +1058,7 @@ test_swpc_cimi_species_check:
 		${TESTDIR}/IE/ionosphere/it_aur_140410_000300_000.idl \
 		Param/SWPC/TestOutputCimiSpecies/it_aur_140410_000300_000.idl.gz \
 		>> test_swpc_cimi_species_ie.diff)
-	ls -l test_swpc_cimi_species_*.diff
+	ls -l test_swpc_cimi_species_??.diff
 
 ### test_swpc_pwom: GM+IE+IM/RCM2+PW/PWOM ###
 
@@ -1130,7 +1130,7 @@ test_swpc_pwom_check:
 		${TESTDIR}/IE/ionosphere/it_aur_140410_000300_000.idl \
 		Param/SWPC/TestOutputPwom/it_aur_140410_000300_000.idl.gz \
 		>> test_swpc_pwom_ie.diff)
-	ls -l test_swpc_pwom_*.diff
+	ls -l test_swpc_pwom_??.diff
 
 ### test_swpc_pwom_species: multispecies GM+IE+IM/RCM2+PW/PWOM ###
 
@@ -1213,7 +1213,7 @@ test_swpc_pwom_species_check:
 		${TESTDIR}/IE/ionosphere/it_aur_140410_000300_000.idl \
 		Param/SWPC/TestOutputPwomSpecies/it_aur_140410_000300_000.idl.gz \
 		>> test_swpc_pwom_species_ie.diff)
-	ls -l test_swpc_pwom_species_*.diff
+	ls -l test_swpc_pwom_species_??.diff
 
 ### test_swpc_cimi_pwom_species: GM+IE+IM/CIMI ###
 
@@ -1287,7 +1287,7 @@ test_swpc_cimi_pwom_species_check:
 		${TESTDIR}/IE/ionosphere/it_aur_140410_000300_000.idl \
 		Param/SWPC/TestOutputCimiPwomSpecies/it_aur_140410_000300_000.idl.gz \
 		>> test_swpc_cimi_pwom_species_ie.diff)
-	ls -l test_swpc_cimi_pwom_species_*.diff
+	ls -l test_swpc_cimi_pwom_species_??.diff
 
 ### test_3: configure SWMF with GM+IE+IM+UA only. ###
 
@@ -1354,7 +1354,7 @@ test3_check:
 		${TESTDIR}/RESULTS/GM/log_n000001.log \
 	 	output/test3/log_n000001.log \
 		> test03_gm.diff)
-	@ls -l test03*.diff
+	@ls -l test03_*.diff
 	
 ### test4: GM+IE+HEIDI ###
 
@@ -1397,7 +1397,7 @@ test4_check:
 		${TESTDIR}/RESULTS/IE/IE*.log \
 		output/test4/IE.log \
 		> test04_ie.diff)
-	ls -l test04_*.diff
+	ls -l test04_??.diff
 
 ### test5: Eruptive Event generator coupled to the corona ###
 test5:
@@ -1454,7 +1454,7 @@ test5_check:
 		${TESTDIR}/RESULTS/coupled/SC/log_n000070.log \
 		output/test5/SC.log \
 		> test05_sc.diff)
-	ls -l test05_*.diff
+	ls -l test05_??.diff
 
 
 ### test6: SC + IH with stream aligned field lines ###
@@ -1500,7 +1500,7 @@ test6_check:
 		${TESTDIR}/RESULTS/IH/log_n000000.log \
 		output/test6/IH_log_n000000.log \
 		> test06_ih_sa.diff)
-	ls -l test06_*.diff
+	ls -l test06_??_sa.diff
 
 ### test7: IH+OH test ###
 
@@ -1544,7 +1544,7 @@ test7_check:
 		${TESTDIR}/RESULTS/OH/log_n000000.log \
 		output/test7/Xyz_OH_log_n000000.log \
 		> test07_oh.diff)
-	ls -l test07_*.diff
+	ls -l test07_??.diff
 
 
 ### test8: SC + IH with Threaded-Field-Line boundary condition test ###
@@ -1886,7 +1886,7 @@ test11_check:
 		     ${TESTDIR}/RESULTS/GM/log_n000000.log \
 		     output/test11/GM_log_n000000.log \
 		     > test11_gm.diff)
-	ls -l test11_*.diff
+	ls -l test11_??.diff
 
 ### test9gpu: SC/AWSOM + IH/AWSOM on GPU ###
 
@@ -2007,7 +2007,7 @@ test12_check:
 	-(${DIFFNUM} -b -r=2e-2 \
 		${TESTDIR}/RESULTS/UA/log*.dat output/test12/UA.log \
 		> test12_ua.diff)
-	ls -l test12*.diff
+	ls -l test12_??.diff
 
 ### test13: Europa's exosphere model with GM and PT ###
 
@@ -2043,7 +2043,7 @@ test13_check:
 		${TESTDIR}/PT/plots/amps.dat \
 		output/test13/amps.ref_np${NAMPS} \
 		> test13_pt.diff)
-		ls -l test13*.diff
+		ls -l test13_??.diff
 
 ### test14: SC+IH+PT
 
@@ -2440,7 +2440,7 @@ test18_check:
 ### test19: SC+IH+OH+SP ###
 
 test19:
-	rm -f test19*.diff
+	rm -f test19_??.diff
 	@echo "test19_compile..." > test19_sp.diff
 	${MAKE} test19_compile
 	@echo "test19_rundir..." >> test19_sp.diff
@@ -2501,7 +2501,7 @@ test19_check:
 		${TESTDIR}/RESULTS/SP/MH_data.outs \
 		output/test19/MH_data.ref.gz \
 		> test19_sp.diff)
-	ls -l test19*.diff
+	ls -l test19_??.diff
 
 ### test20: OH/BATSRUS (single-ion) coupled with PT/FLEKS in a shocktube ###
 
@@ -2925,7 +2925,7 @@ test_ramscb_check:
 		${TESTDIR}/RESULTS/IE/IE*.log \
 		${IMDIR}/output/test_ramscb/IE.log \
 		> test_ramscb_ie.diff)
-	ls -l test_ramscb*.diff
+	ls -l test_ramscb_??.diff
 
 ###############################################################################
 test_esmf:
